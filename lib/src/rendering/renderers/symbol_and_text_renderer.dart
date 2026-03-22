@@ -138,6 +138,29 @@ class SymbolAndTextRenderer {
         paint,
       );
     }
+
+    // Render custom text label centered over the hairpin
+    if (dynamic.customText != null) {
+      final tp = TextPainter(
+        text: TextSpan(
+          text: dynamic.customText!,
+          style: TextStyle(
+            fontSize: glyphSize * 0.32,
+            fontStyle: FontStyle.italic,
+            color: theme.dynamicColor ?? Colors.black87,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      );
+      tp.layout();
+      tp.paint(
+        canvas,
+        Offset(
+          basePosition.dx + length / 2 - tp.width / 2,
+          hairpinY - tp.height / 2,
+        ),
+      );
+    }
   }
 
   String? _getDynamicGlyph(DynamicType type) {
@@ -230,26 +253,119 @@ class SymbolAndTextRenderer {
     OctaveMark octaveMark,
     Offset basePosition,
   ) {
-    // CORREÇÃO: Considerar se é 8va (acima) ou 8vb (abaixo)
-    final isAbove = octaveMark.type == OctaveType.va8 || octaveMark.type == OctaveType.va15 || octaveMark.type == OctaveType.va22;
+    final isAbove = octaveMark.type == OctaveType.va8 ||
+        octaveMark.type == OctaveType.va15 ||
+        octaveMark.type == OctaveType.va22;
     final yPosition = isAbove
-        ? coordinates.getStaffLineY(5) - (coordinates.staffSpace * 1.5) // Acima da pauta
-        : coordinates.getStaffLineY(1) + (coordinates.staffSpace * 1.5); // Abaixo da pauta
+        ? coordinates.getStaffLineY(5) - (coordinates.staffSpace * 1.5)
+        : coordinates.getStaffLineY(1) + (coordinates.staffSpace * 1.5);
 
-    _drawText(
-      canvas,
-      text: octaveMark.text,
-      position: Offset(
-        basePosition.dx,
-        yPosition,
-      ),
-      style:
-          theme.octaveTextStyle ??
-          const TextStyle(
-            fontStyle: FontStyle.italic,
-            fontWeight: FontWeight.bold,
-          ),
+    // 1. Draw the text label
+    final style = theme.octaveTextStyle ??
+        const TextStyle(
+          fontStyle: FontStyle.italic,
+          fontWeight: FontWeight.bold,
+        );
+    final tp = TextPainter(
+      text: TextSpan(text: octaveMark.text, style: style),
+      textAlign: TextAlign.left,
+      textDirection: TextDirection.ltr,
     );
+    tp.layout();
+    tp.paint(canvas, Offset(basePosition.dx, yPosition - tp.height / 2));
+    final textEndX = basePosition.dx + tp.width;
+
+    // 2. Draw a dashed horizontal line after the text
+    final lineLength = octaveMark.length > 0
+        ? octaveMark.length
+        : coordinates.staffSpace * 3;
+    final lineEndX = basePosition.dx + lineLength;
+    final lineY = yPosition;
+
+    final linePaint = Paint()
+      ..color = (style.color ?? Colors.black87)
+      ..strokeWidth = coordinates.staffSpace * 0.1
+      ..style = PaintingStyle.stroke;
+
+    _drawDashedLine(
+      canvas,
+      Offset(textEndX + coordinates.staffSpace * 0.2, lineY),
+      Offset(lineEndX, lineY),
+      linePaint,
+      coordinates.staffSpace,
+    );
+
+    // 3. Draw a vertical hook at the end if showBracket is true
+    if (octaveMark.showBracket) {
+      final hookHeight = coordinates.staffSpace * 0.75;
+      final hookEndY = isAbove ? lineY + hookHeight : lineY - hookHeight;
+      canvas.drawLine(
+        Offset(lineEndX, lineY),
+        Offset(lineEndX, hookEndY),
+        linePaint,
+      );
+    }
+  }
+
+  /// Renders a volta bracket (1st/2nd ending) above the staff
+  void renderVoltaBracket(
+    Canvas canvas,
+    VoltaBracket bracket,
+    Offset basePosition,
+  ) {
+    final yTop = coordinates.getStaffLineY(5) - (coordinates.staffSpace * 1.8);
+    final yBottom = coordinates.getStaffLineY(5) - (coordinates.staffSpace * 0.5);
+    final xLeft = basePosition.dx;
+    final xRight = basePosition.dx +
+        (bracket.length > 0 ? bracket.length : coordinates.staffSpace * 4);
+
+    final paint = Paint()
+      ..color = theme.barlineColor
+      ..strokeWidth = coordinates.staffSpace * 0.12
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.square;
+
+    // Left vertical line
+    canvas.drawLine(Offset(xLeft, yTop), Offset(xLeft, yBottom), paint);
+    // Top horizontal line
+    canvas.drawLine(Offset(xLeft, yTop), Offset(xRight, yTop), paint);
+    // Right vertical line (only if not open end)
+    if (!bracket.hasOpenEnd) {
+      canvas.drawLine(Offset(xRight, yTop), Offset(xRight, yBottom), paint);
+    }
+
+    // Label text
+    final tp = TextPainter(
+      text: TextSpan(
+        text: bracket.displayLabel,
+        style: TextStyle(
+          fontSize: coordinates.staffSpace * 1.1,
+          color: theme.barlineColor,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    );
+    tp.layout();
+    tp.paint(
+      canvas,
+      Offset(xLeft + coordinates.staffSpace * 0.3, yTop + coordinates.staffSpace * 0.1),
+    );
+  }
+
+  void _drawDashedLine(
+    Canvas canvas,
+    Offset start,
+    Offset end,
+    Paint paint,
+    double staffSpace,
+  ) {
+    final dashLen = staffSpace * 0.5;
+    final gapLen = staffSpace * 0.3;
+    double x = start.dx;
+    while (x + dashLen < end.dx) {
+      canvas.drawLine(Offset(x, start.dy), Offset(x + dashLen, start.dy), paint);
+      x += dashLen + gapLen;
+    }
   }
 
   void _drawText(
