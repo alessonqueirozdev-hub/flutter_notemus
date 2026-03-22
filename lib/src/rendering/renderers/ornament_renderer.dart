@@ -37,29 +37,45 @@ class OrnamentRenderer extends BaseGlyphRenderer {
       final glyphName = _getOrnamentGlyph(ornament.type);
       if (glyphName == null) continue;
 
-      bool ornamentAbove = _isOrnamentAbove(note, ornament);
-
-      final ornamentY = _calculateOrnamentY(
-        notePos.dy,
-        ornamentAbove,
-        staffPosition,
-      );
-      final ornamentX = _getOrnamentHorizontalPosition(note, notePos.dx);
-
-      // ✅ FIXED: Use correct size for grace notes (60% per SMuFL standard)
       final isGraceNote = _isGraceNoteOrnament(ornament.type);
       final ornamentSize = isGraceNote ? glyphSize * 0.6 : glyphSize * 0.85;
 
-      drawGlyphAlignedToAnchor(
-        canvas,
-        glyphName: glyphName,
-        anchorName: 'opticalCenter',
-        target: Offset(ornamentX, ornamentY),
-        color: theme.ornamentColor ?? theme.noteheadColor,
-        options: GlyphDrawOptions.ornamentDefault.copyWith(
-          size: ornamentSize,
-        ),
-      );
+      if (isGraceNote) {
+        // Grace notes: positioned BEFORE the main note (left X offset)
+        // and at the same vertical level as the main note (correct pitch reference)
+        final graceX = notePos.dx - (coordinates.staffSpace * 1.5);
+        final graceY = notePos.dy;
+
+        drawGlyphAlignedToAnchor(
+          canvas,
+          glyphName: glyphName,
+          anchorName: 'opticalCenter',
+          target: Offset(graceX, graceY),
+          color: theme.ornamentColor ?? theme.noteheadColor,
+          options: GlyphDrawOptions.ornamentDefault.copyWith(
+            size: ornamentSize,
+          ),
+        );
+      } else {
+        final ornamentAbove = _isOrnamentAbove(note, ornament);
+        final ornamentY = _calculateOrnamentY(
+          notePos.dy,
+          ornamentAbove,
+          staffPosition,
+        );
+        final ornamentX = _getOrnamentHorizontalPosition(note, notePos.dx);
+
+        drawGlyphAlignedToAnchor(
+          canvas,
+          glyphName: glyphName,
+          anchorName: 'opticalCenter',
+          target: Offset(ornamentX, ornamentY),
+          color: theme.ornamentColor ?? theme.noteheadColor,
+          options: GlyphDrawOptions.ornamentDefault.copyWith(
+            size: ornamentSize,
+          ),
+        );
+      }
     }
   }
 
@@ -87,22 +103,38 @@ class OrnamentRenderer extends BaseGlyphRenderer {
       final glyphName = _getOrnamentGlyph(ornament.type);
       if (glyphName == null) continue;
 
-      final ornamentY = _calculateOrnamentY(highestY, true, highestPos);
-
-      // ✅ FIXED: Use correct size for grace notes (60% per SMuFL standard)
       final isGraceNote = _isGraceNoteOrnament(ornament.type);
       final ornamentSize = isGraceNote ? glyphSize * 0.6 : glyphSize * 0.9;
 
-      drawGlyphAlignedToAnchor(
-        canvas,
-        glyphName: glyphName,
-        anchorName: 'opticalCenter',
-        target: Offset(chordPos.dx, ornamentY),
-        color: theme.ornamentColor ?? theme.noteheadColor,
-        options: GlyphDrawOptions.ornamentDefault.copyWith(
-          size: ornamentSize,
-        ),
-      );
+      if (isGraceNote) {
+        // Grace notes before the chord: same Y as highest note, X offset to left
+        final graceX = chordPos.dx - (coordinates.staffSpace * 1.5);
+        final graceY = highestY;
+
+        drawGlyphAlignedToAnchor(
+          canvas,
+          glyphName: glyphName,
+          anchorName: 'opticalCenter',
+          target: Offset(graceX, graceY),
+          color: theme.ornamentColor ?? theme.noteheadColor,
+          options: GlyphDrawOptions.ornamentDefault.copyWith(
+            size: ornamentSize,
+          ),
+        );
+      } else {
+        final ornamentY = _calculateOrnamentY(highestY, true, highestPos);
+
+        drawGlyphAlignedToAnchor(
+          canvas,
+          glyphName: glyphName,
+          anchorName: 'opticalCenter',
+          target: Offset(chordPos.dx, ornamentY),
+          color: theme.ornamentColor ?? theme.noteheadColor,
+          options: GlyphDrawOptions.ornamentDefault.copyWith(
+            size: ornamentSize,
+          ),
+        );
+      }
     }
   }
 
