@@ -460,10 +460,7 @@ class LayoutEngine {
     );
 
     // Analisar cada beam group
-    int groupIndex = 0;
     for (final beamGroup in beamGroups) {
-      groupIndex++;
-
       if (beamGroup.isValid && beamGroup.notes.length >= 2) {
         try {
           final advancedGroup = _beamAnalyzer.analyzeAdvancedBeamGroup(
@@ -474,8 +471,10 @@ class LayoutEngine {
             noteYPositions: _noteYPositions,
           );
           _advancedBeamGroups.add(advancedGroup);
-        } catch (e, stackTrace) {}
-      } else {}
+        } catch (_) {
+          // Ignore beam analysis errors for individual groups
+        }
+      }
     }
   }
 
@@ -782,8 +781,9 @@ class LayoutEngine {
       return totalWidth;
     }
 
-    if (element is TempoMark)
+    if (element is TempoMark) {
       return 0.0; // TempoMark renderizado acima, sem largura
+    }
 
     return staffSpace;
   }

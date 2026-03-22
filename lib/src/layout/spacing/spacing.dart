@@ -16,7 +16,7 @@
 /// final final = engine.combineSpacings(...);
 /// engine.applyOpticalCompensation(...);
 /// ```
-library intelligent_spacing;
+library;
 
 export 'spacing_model.dart';
 export 'spacing_preferences.dart';

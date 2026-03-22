@@ -7,6 +7,7 @@
 /// - Regras profissionais de quebra de beams seguindo Behind Bars
 /// - Geometria precisa baseada em especificações SMuFL
 /// - Beat position calculation (Behind Bars) para quebras inteligentes
+library;
 
 export 'beam_types.dart';
 export 'beam_segment.dart';

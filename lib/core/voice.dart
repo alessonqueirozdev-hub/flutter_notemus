@@ -176,6 +176,8 @@ enum StemDirection {
 /// measure.addVoice(voice2);
 /// ```
 class MultiVoiceMeasure extends Measure {
+  MultiVoiceMeasure();
+
   /// Map of voice number to Voice object
   final Map<int, Voice> voices = {};
 

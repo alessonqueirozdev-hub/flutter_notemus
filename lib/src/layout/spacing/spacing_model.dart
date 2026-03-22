@@ -1,8 +1,9 @@
 /// Modelos matemáticos de espaçamento duracional
-/// 
+///
 /// Baseado em pesquisa acadêmica e implementações profissionais:
 /// - Modelo de Raiz Quadrada (Dorico) - RECOMENDADO
 /// - Modelo Logarítmico (MuseScore antigo)
+library;
 /// - Modelo Linear
 /// - Modelo Exponencial (Lime)
 import 'dart:math';

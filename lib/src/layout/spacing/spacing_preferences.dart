@@ -1,7 +1,9 @@
 /// Preferências configuráveis de espaçamento
-/// 
+///
 /// Permite aos usuários ajustar o comportamento do sistema de espaçamento
 /// para balancear estética, densidade e legibilidade.
+library;
+
 import 'spacing_model.dart';
 
 /// Preferências globais de espaçamento

@@ -214,7 +214,7 @@ class AdaptiveMusicScoreTheme extends MusicScoreTheme {
       // Simple black/white based on background luminance
       return background.computeLuminance() > 0.5
           ? Colors.black87 // Dark foreground for light background
-          : Colors.white87; // Light foreground for dark background
+          : const Color(0xDEFFFFFF); // Light foreground for dark background
     }
   }
 

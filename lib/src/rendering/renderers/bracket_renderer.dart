@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import '../../../core/staff_group.dart';
 import '../staff_coordinate_system.dart';
 import '../../theme/music_score_theme.dart';
-import 'base_glyph_renderer.dart';
 
 /// Renderer for staff group brackets and braces
 ///
@@ -16,10 +15,13 @@ import 'base_glyph_renderer.dart';
 /// References:
 /// - "Behind Bars" by Elaine Gould - Chapter on Score Layout
 /// - SMuFL specification for brace glyphs
-class BracketRenderer extends BaseGlyphRenderer {
+class BracketRenderer {
+  final StaffCoordinateSystem coordinates;
+  final MusicScoreTheme theme;
+
   BracketRenderer({
-    required super.coordinates,
-    required super.theme,
+    required this.coordinates,
+    required this.theme,
   });
 
   /// Render bracket/brace for a staff group

@@ -273,7 +273,7 @@ class SmuflPositioning {
   /// @param scaleX Escala horizontal
   /// @param scaleY Escala vertical
   static Matrix4 getScaleMatrix(double scaleX, double scaleY) {
-    return Matrix4.identity()..scale(scaleX, scaleY);
+    return Matrix4.diagonal3Values(scaleX, scaleY, 1.0);
   }
 }
 
