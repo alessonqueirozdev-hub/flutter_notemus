@@ -1,0 +1,28 @@
+name: flutter_notemus_example
+description: Demonstrates how to use the flutter_notemus package.
+publish_to: 'none' # Prevent accidental publishing to pub.dev
+
+environment:
+  sdk: '>=3.1.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Esta é a linha mais importante:
+  # Ela diz a este aplicativo de exemplo para usar a biblioteca
+  # que está na pasta pai (../).
+  flutter_notemus:
+    path: ../
+
+  # PDF export dependencies
+  pdf: ^3.10.4
+  printing: ^5.11.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
+
+flutter:
+  uses-material-design: true

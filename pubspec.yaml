@@ -1,0 +1,38 @@
+name: flutter_notemus
+description: "Flutter package for music notation rendering with SMuFL support."
+version: 0.1.0
+homepage:
+
+environment:
+  sdk: ^3.8.1
+  flutter: ">=1.17.0"
+
+dependencies:
+  collection: ^1.19.1
+  flutter:
+    sdk: flutter
+  xml: ^6.5.0
+  pdf: ^3.11.1  # ✅ PDF generation
+  printing: ^5.13.2  # ✅ PDF preview and printing
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  test: ^1.24.0  # Para testes unitários do StaffPositionCalculator
+
+# For information on the generic Dart part of this file, see the
+# following page: https://dart.dev/tools/pub/pubspec
+
+# The following section is specific to Flutter packages.
+flutter:
+  # Para que a aplicação que usar seu pacote possa acessar os assets
+  assets:
+    - assets/smufl/bravura_metadata.json # CORRIGIDO
+    - assets/smufl/glyphnames.json      # CORRIGIDO
+
+  # Para declarar a fonte
+  fonts:
+    - family: Bravura
+      fonts:
+        - asset: assets/smufl/Bravura.otf # CORRIGIDO

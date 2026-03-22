@@ -1,0 +1,243 @@
+{
+  "title": "Exemplo Complexo SMuFL Renderer",
+  "composer": "Sistema Automático",
+  "measures": [
+    {
+      "elements": [
+        {
+          "type": "clef",
+          "clefType": "g"
+        },
+        {
+          "type": "keySignature",
+          "count": 2
+        },
+        {
+          "type": "timeSignature",
+          "numerator": 4,
+          "denominator": 4
+        },
+        {
+          "type": "note",
+          "pitch": {
+            "step": "D",
+            "octave": 4,
+            "alter": 0
+          },
+          "duration": {
+            "type": "quarter"
+          },
+          "articulations": ["accent"],
+          "dynamics": {
+            "type": "forte",
+            "placement": "below"
+          }
+        },
+        {
+          "type": "note",
+          "pitch": {
+            "step": "F",
+            "octave": 4,
+            "alter": 1
+          },
+          "duration": {
+            "type": "eighth"
+          },
+          "articulations": ["staccato"],
+          "beam": "start"
+        },
+        {
+          "type": "note",
+          "pitch": {
+            "step": "A",
+            "octave": 4,
+            "alter": 0
+          },
+          "duration": {
+            "type": "eighth"
+          },
+          "beam": "end"
+        },
+        {
+          "type": "note",
+          "pitch": {
+            "step": "B",
+            "octave": 4,
+            "alter": 0
+          },
+          "duration": {
+            "type": "quarter"
+          },
+          "ornaments": [
+            {
+              "type": "trill",
+              "placement": "above"
+            }
+          ],
+          "tie": "start"
+        }
+      ]
+    },
+    {
+      "elements": [
+        {
+          "type": "note",
+          "pitch": {
+            "step": "B",
+            "octave": 4,
+            "alter": 0
+          },
+          "duration": {
+            "type": "half"
+          },
+          "tie": "end"
+        },
+        {
+          "type": "chord",
+          "notes": [
+            {
+              "pitch": {
+                "step": "D",
+                "octave": 4,
+                "alter": 0
+              }
+            },
+            {
+              "pitch": {
+                "step": "F",
+                "octave": 4,
+                "alter": 1
+              }
+            },
+            {
+              "pitch": {
+                "step": "A",
+                "octave": 4,
+                "alter": 0
+              }
+            }
+          ],
+          "duration": {
+            "type": "quarter"
+          },
+          "dynamics": {
+            "type": "crescendo",
+            "isHairpin": true,
+            "length": 60
+          }
+        },
+        {
+          "type": "rest",
+          "duration": {
+            "type": "quarter"
+          }
+        }
+      ]
+    },
+    {
+      "elements": [
+        {
+          "type": "tuplet",
+          "actualNotes": 3,
+          "normalNotes": 2,
+          "showBracket": true,
+          "showNumber": true,
+          "elements": [
+            {
+              "type": "note",
+              "pitch": {
+                "step": "G",
+                "octave": 4,
+                "alter": 0
+              },
+              "duration": {
+                "type": "eighth"
+              }
+            },
+            {
+              "type": "note",
+              "pitch": {
+                "step": "A",
+                "octave": 4,
+                "alter": 0
+              },
+              "duration": {
+                "type": "eighth"
+              }
+            },
+            {
+              "type": "note",
+              "pitch": {
+                "step": "B",
+                "octave": 4,
+                "alter": 0
+              },
+              "duration": {
+                "type": "eighth"
+              }
+            }
+          ]
+        },
+        {
+          "type": "note",
+          "pitch": {
+            "step": "C",
+            "octave": 5,
+            "alter": 1
+          },
+          "duration": {
+            "type": "quarter"
+          },
+          "accidentalType": "quarterToneSharp"
+        },
+        {
+          "type": "breath",
+          "breathType": "comma"
+        },
+        {
+          "type": "note",
+          "pitch": {
+            "step": "D",
+            "octave": 5,
+            "alter": 0
+          },
+          "duration": {
+            "type": "quarter"
+          },
+          "articulations": ["tenuto"],
+          "slur": "start"
+        },
+        {
+          "type": "note",
+          "pitch": {
+            "step": "C",
+            "octave": 5,
+            "alter": 0
+          },
+          "duration": {
+            "type": "quarter"
+          },
+          "slur": "end"
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "tempo": {
+      "bpm": 120,
+      "beatUnit": "quarter",
+      "text": "Moderato"
+    },
+    "key": "D Major",
+    "timeSignature": "4/4",
+    "techniques": [
+      "Standard notation",
+      "Microtonal accidentals",
+      "Advanced ornaments",
+      "Dynamic markings",
+      "Tuplets",
+      "Slurs and ties",
+      "Breath marks"
+    ]
+  }
+}

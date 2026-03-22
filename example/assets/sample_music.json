@@ -1,0 +1,82 @@
+{
+  "measures": [
+    {
+      "elements": [
+        {
+          "type": "clef",
+          "clefType": "g"
+        },
+        {
+          "type": "keySignature",
+          "count": 0
+        },
+        {
+          "type": "timeSignature",
+          "numerator": 4,
+          "denominator": 4
+        },
+        {
+          "type": "note",
+          "pitch": {
+            "step": "C",
+            "octave": 4,
+            "alter": 0
+          },
+          "duration": {
+            "type": "quarter"
+          },
+          "slur": "start"
+        },
+        {
+          "type": "note",
+          "pitch": {
+            "step": "D",
+            "octave": 4,
+            "alter": 0
+          },
+          "duration": {
+            "type": "quarter"
+          }
+        },
+        {
+          "type": "note",
+          "pitch": {
+            "step": "E",
+            "octave": 4,
+            "alter": 0
+          },
+          "duration": {
+            "type": "quarter"
+          }
+        },
+        {
+          "type": "note",
+          "pitch": {
+            "step": "F",
+            "octave": 4,
+            "alter": 0
+          },
+          "duration": {
+            "type": "quarter"
+          },
+          "slur": "end"
+        }
+      ]
+    },
+    {
+      "elements": [
+        {
+          "type": "note",
+          "pitch": {
+            "step": "G",
+            "octave": 4,
+            "alter": 0
+          },
+          "duration": {
+            "type": "whole"
+          }
+        }
+      ]
+    }
+  ]
+}
