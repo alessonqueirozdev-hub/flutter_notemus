@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../core/core.dart';
 import '../../layout/slur_calculator.dart';
 import '../../layout/layout_engine.dart'; // PositionedElement
+import '../../layout/skyline_calculator.dart';
 import '../../engraving/engraving_rules.dart';
 import '../staff_position_calculator.dart';
 import '../../smufl/smufl_metadata_loader.dart'; // SmuflMetadata
@@ -26,11 +27,13 @@ class SlurRenderer {
   final EngravingRules rules;
   final SmuflMetadata metadata;
   final double staffSpace;
-  
+  final SkyBottomLineCalculator? skylineCalculator;
+
   SlurRenderer({
     required this.staffSpace,
     required this.metadata,
     EngravingRules? rules,
+    this.skylineCalculator,
   }) : rules = rules ?? EngravingRules();
   
   /// Renderiza ligaduras de expressão (slurs)
@@ -89,7 +92,7 @@ class SlurRenderer {
       // Calcular curva usando SlurCalculator avançado
       final calculator = SlurCalculator(
         rules: rules,
-        skylineCalculator: null, // TODO: integrar com skyline
+        skylineCalculator: skylineCalculator,
       );
 
       final curve = calculator.calculateSlur(

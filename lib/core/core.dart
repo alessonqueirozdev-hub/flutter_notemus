@@ -45,6 +45,7 @@ export 'tempo.dart';
 // === ESTRUTURAS E NAVEGAÇÃO ===
 export 'repeat.dart';
 export 'breath.dart';
+export 'volta_bracket.dart';
 
 // === TEXTO E ANOTAÇÕES ===
 export 'text.dart';

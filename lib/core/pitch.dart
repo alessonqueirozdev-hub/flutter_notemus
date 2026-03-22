@@ -69,7 +69,19 @@ const Map<AccidentalType, String> accidentalToGlyph = {
   AccidentalType.sagittal11LargeDiesisDown: 'accSagittal11LargeDiesisDown',
 };
 
-/// Representa a altura musical de uma nota.
+/// Represents the musical pitch of a note.
+///
+/// A pitch is fully described by its diatonic [step] (`"C"`–`"B"`),
+/// [octave] number, and optional chromatic [alter] value. Microtonal
+/// alterations are supported through fractional [alter] values and the
+/// [accidentalType] field.
+///
+/// Example:
+/// ```dart
+/// const Pitch(step: 'F', octave: 4, alter: 1.0) // F-sharp 4
+/// Pitch.withAccidental(step: 'B', octave: 3, accidentalType: AccidentalType.flat) // B-flat 3
+/// Pitch.fromString('C#5') // C-sharp 5
+/// ```
 class Pitch {
   /// A letra da nota (C, D, E, F, G, A, B).
   final String step;

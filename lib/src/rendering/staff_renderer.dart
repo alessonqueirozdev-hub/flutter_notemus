@@ -20,6 +20,7 @@ import 'renderers/ornament_renderer.dart';
 import 'renderers/rest_renderer.dart';
 import 'renderers/slur_renderer.dart'; // ✅ NOVO: Ligaduras profissionais
 import 'renderers/symbol_and_text_renderer.dart';
+import '../layout/skyline_calculator.dart';
 import 'renderers/tuplet_renderer.dart';
 import 'smufl_positioning_engine.dart';
 import 'staff_coordinate_system.dart';
@@ -83,7 +84,7 @@ class StaffRenderer {
   late final RestRenderer restRenderer;
   late final SymbolAndTextRenderer symbolAndTextRenderer;
   late final TupletRenderer tupletRenderer;
-  late final SlurRenderer slurRenderer; // ✅ NOVO: Renderizador profissional
+  late SlurRenderer slurRenderer; // ✅ NOVO: Renderizador profissional
 
   StaffRenderer({
     required this.coordinates,
@@ -262,7 +263,38 @@ class StaffRenderer {
       if (layoutEngine == null || layoutEngine.advancedBeamGroups.isEmpty) {
         groupRenderer.renderBeams(canvas, elements, currentClef!);
       }
-      
+
+      // Build skyline from positioned elements for slur collision avoidance
+      final skylineCalc = SkyBottomLineCalculator();
+      if (elements.isNotEmpty) {
+        final maxX =
+            elements.fold(0.0, (m, e) => e.position.dx > m ? e.position.dx : m) +
+            coordinates.staffSpace * 2;
+        skylineCalc.initialize(maxX);
+        for (final pe in elements) {
+          if (pe.element is Note || pe.element is Rest) {
+            final hw = coordinates.staffSpace * 0.6;
+            skylineCalc.updateSkyLineRange(
+              pe.position.dx - hw,
+              pe.position.dx + hw,
+              pe.position.dy - coordinates.staffSpace * 2.5,
+            );
+            skylineCalc.updateBottomLineRange(
+              pe.position.dx - hw,
+              pe.position.dx + hw,
+              pe.position.dy + coordinates.staffSpace * 2.5,
+            );
+          }
+        }
+      }
+
+      // Rebuild slurRenderer with the new skyline calculator
+      slurRenderer = SlurRenderer(
+        staffSpace: coordinates.staffSpace,
+        metadata: metadata,
+        skylineCalculator: skylineCalc,
+      );
+
       // ✅ USAR SLURRENDERER PROFISSIONAL ao invés do GroupRenderer
       final tieGroups = groupRenderer.identifyTieGroups(elements);
       final slurGroups = groupRenderer.identifySlurGroups(elements);
@@ -404,6 +436,8 @@ class StaffRenderer {
       symbolAndTextRenderer.renderCaesura(canvas, element, basePosition);
     } else if (element is OctaveMark) {
       symbolAndTextRenderer.renderOctaveMark(canvas, element, basePosition);
+    } else if (element is VoltaBracket) {
+      symbolAndTextRenderer.renderVoltaBracket(canvas, element, basePosition);
     }
   }
 }

@@ -64,6 +64,11 @@ class LayoutCursor {
     _currentX += width;
   }
 
+  /// Set cursor X to an absolute position (used for multi-voice layout)
+  void setX(double x) {
+    _currentX = x;
+  }
+
   bool needsSystemBreak(double measureWidth) {
     if (_isFirstMeasureInSystem) return false;
     return _currentX + measureWidth > systemMargin + usableWidth;
@@ -553,12 +558,66 @@ class LayoutEngine {
     return totalWidth < minWidth ? minWidth : totalWidth;
   }
 
+  void _layoutMultiVoiceMeasure(
+    MultiVoiceMeasure measure,
+    LayoutCursor cursor,
+    List<PositionedElement> positionedElements,
+    bool isFirstInSystem,
+  ) {
+    final startX = cursor.currentX;
+    double maxAdvanceX = startX;
+
+    for (final voice in measure.sortedVoices) {
+      // Reset X to start of measure for each voice (voices share the same timeline)
+      cursor.setX(startX);
+
+      final voiceOffset = voice.getHorizontalOffset(cursor.staffSpace);
+      final elementsToRender = voice.elements.where((element) {
+        return isFirstInSystem || !_isSystemElement(element);
+      }).toList();
+
+      for (int i = 0; i < elementsToRender.length; i++) {
+        final element = elementsToRender[i];
+
+        if (i > 0) {
+          final previousElement = elementsToRender[i - 1];
+          final rhythmicSpacing = _calculateRhythmicSpacing(
+            element,
+            previousElement,
+          );
+          cursor.advance(rhythmicSpacing);
+        }
+
+        // Apply voice-specific horizontal offset to this element's X
+        final elementX = cursor.currentX + voiceOffset;
+        final savedX = cursor.currentX;
+        cursor.setX(elementX);
+        cursor.addElement(element, positionedElements);
+        cursor.setX(savedX);
+
+        cursor.advance(_getElementWidthSimple(element));
+
+        if (cursor.currentX > maxAdvanceX) {
+          maxAdvanceX = cursor.currentX;
+        }
+      }
+    }
+
+    // Advance cursor past the maximum extent of all voices
+    cursor.setX(maxAdvanceX);
+  }
+
   void _layoutMeasureCursor(
     Measure measure,
     LayoutCursor cursor,
     List<PositionedElement> positionedElements,
     bool isFirstInSystem,
   ) {
+    // Handle MultiVoiceMeasure: layout each voice independently
+    if (measure is MultiVoiceMeasure) {
+      _layoutMultiVoiceMeasure(measure, cursor, positionedElements, isFirstInSystem);
+      return;
+    }
     // CORREÇÃO #9: Processar beaming considerando anacrusis
     final processedElements = _processBeamsWithAnacrusis(
       measure.elements,

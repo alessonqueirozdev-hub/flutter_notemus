@@ -1,6 +1,33 @@
 // lib/flutter_notemus.dart
 // VERSÃO CORRIGIDA: Widget principal com todas as melhorias
 
+/// Flutter Notemus — professional music notation rendering for Flutter.
+///
+/// This package provides a complete solution for rendering high-quality
+/// music notation in Flutter apps, built on the SMuFL (Standard Music
+/// Font Layout) specification using the Bravura font.
+///
+/// ## Quick Start
+/// ```dart
+/// import 'package:flutter_notemus/flutter_notemus.dart';
+///
+/// MusicScore(
+///   staff: Staff(measures: [
+///     Measure()
+///       ..add(Note(pitch: Pitch(step: 'C', octave: 4), duration: Duration(DurationType.quarter)))
+///   ]),
+/// )
+/// ```
+///
+/// ## Key Classes
+/// - [MusicScore]: The main Flutter widget to embed in your app
+/// - [Staff]: Top-level container for music notation
+/// - [Measure]: Container for musical elements within a bar
+/// - [Note]: A pitched note with duration, articulations, and ornaments
+/// - [Rest]: A rest (silence) with duration
+/// - [Chord]: Multiple simultaneous notes
+library;
+
 import 'package:flutter/material.dart';
 import 'core/core.dart'; // 🆕 Usar tipos do core
 import 'src/layout/layout_engine.dart';
@@ -24,11 +51,39 @@ export 'src/rendering/staff_renderer.dart';
 export 'src/rendering/renderers/base_glyph_renderer.dart';
 export 'src/layout/collision_detector.dart';
 
-/// Widget principal para renderização de partituras musicais
-/// VERSÃO CORRIGIDA E COMPLETA
+/// The main Flutter widget for rendering music notation.
+///
+/// [MusicScore] asynchronously loads SMuFL font metadata and then renders
+/// the provided [Staff] using a [CustomPaint] canvas. It supports horizontal
+/// and vertical scrolling out of the box and applies viewport culling so only
+/// visible systems are repainted.
+///
+/// Example:
+/// ```dart
+/// MusicScore(
+///   staff: Staff(measures: [
+///     Measure()
+///       ..add(Note(
+///         pitch: const Pitch(step: 'C', octave: 4),
+///         duration: const Duration(DurationType.quarter),
+///       )),
+///   ]),
+/// )
+/// ```
 class MusicScore extends StatefulWidget {
+  /// The [Staff] containing all measures and musical elements to render.
   final Staff staff;
+
+  /// Visual theme controlling colors, line widths, and font sizes.
+  ///
+  /// Defaults to [MusicScoreTheme] with standard values.
   final MusicScoreTheme theme;
+
+  /// Size of one staff space in logical pixels.
+  ///
+  /// A staff space is the distance between two adjacent staff lines.
+  /// The default value of `12.0` produces a standard-size score.
+  /// Increase this value to render a larger score, decrease for smaller.
   final double staffSpace;
 
   const MusicScore({
@@ -140,21 +195,37 @@ class _MusicScoreState extends State<MusicScore> {
   }
 }
 
-/// Painter customizado para renderização da partitura
-/// VERSÃO OTIMIZADA: Canvas Clipping + Viewport Culling
+/// Custom [CustomPainter] that renders positioned music notation elements.
 ///
-/// **OTIMIZAÇÕES:**
-/// - Renderiza apenas sistemas visíveis no viewport
-/// - Usa clipRect para segurança
-/// - RepaintBoundary para evitar repaints desnecessários
+/// Optimised for large scores through viewport culling: only systems that
+/// intersect the current scroll viewport are painted. A [RepaintBoundary]
+/// wraps this painter so that scrolling does not trigger full repaints.
+///
+/// This class is used internally by [MusicScore] and is exposed publicly so
+/// that advanced users can integrate it into their own [CustomPaint] widgets.
 class MusicScorePainter extends CustomPainter {
+  /// Pre-computed list of elements with absolute canvas positions.
   final List<PositionedElement> positionedElements;
+
+  /// SMuFL metadata providing glyph bounding boxes and advance widths.
   final SmuflMetadata metadata;
+
+  /// Visual theme applied during rendering.
   final MusicScoreTheme theme;
+
+  /// Staff space in logical pixels (same value passed to [LayoutEngine]).
   final double staffSpace;
+
+  /// Optional reference to the [LayoutEngine] for beam-group data.
   final LayoutEngine? layoutEngine;
+
+  /// Current viewport size, used to determine which systems are visible.
   final Size viewportSize;
+
+  /// Horizontal scroll offset in logical pixels.
   final double scrollOffsetX;
+
+  /// Vertical scroll offset in logical pixels.
   final double scrollOffsetY;
 
   MusicScorePainter({

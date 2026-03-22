@@ -45,17 +45,15 @@ class RestRenderer extends BaseGlyphRenderer {
     switch (rest.duration.type) {
       case DurationType.whole:
         glyphName = 'restWhole';
-        // Behind Bars: Whole rest hangs BELOW the 4th line (from bottom)
-        // staffPosition = 2 (4th line: 2 staff positions above center)
-        // Visual: barra superior toca a linha 4, pausa "pendurada"
-        staffPosition = 2;
+        // Behind Bars / SMuFL: Whole rest hangs BELOW line 4
+        // staffPosition = 3 (hangs below line 4)
+        staffPosition = 3;
         break;
       case DurationType.half:
         glyphName = 'restHalf';
-        // Behind Bars: Half rest sits ON the 3rd line (middle line)
-        // staffPosition = 0 (center line of staff)
-        // Visual: barra inferior toca a linha 3, pausa "apoiada"
-        staffPosition = 0;
+        // Behind Bars / SMuFL: Half rest sits ON line 3
+        // staffPosition = 1 (sits on line 3)
+        staffPosition = 1;
         break;
       case DurationType.quarter:
         glyphName = 'restQuarter';

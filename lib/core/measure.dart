@@ -6,8 +6,23 @@ import 'rest.dart';
 import 'time_signature.dart';
 import 'duration.dart';
 
-/// Representa um compasso, que contém elementos musicais.
+/// Represents a single bar of music containing an ordered list of
+/// [MusicalElement]s.
+///
+/// Use [add] to append elements. When a [TimeSignature] is present (or
+/// inherited from a previous measure) the [add] method enforces capacity:
+/// adding a note that would exceed the bar's rhythmic value throws a
+/// [MeasureCapacityException].
+///
+/// Example:
+/// ```dart
+/// final measure = Measure()
+///   ..add(TimeSignature(numerator: 4, denominator: 4))
+///   ..add(Note(pitch: const Pitch(step: 'C', octave: 4),
+///             duration: const Duration(DurationType.whole)));
+/// ```
 class Measure {
+  /// All musical elements in this measure, in order.
   final List<MusicalElement> elements = [];
 
   /// Controla se as notas devem ser automaticamente agrupadas com beams
@@ -25,6 +40,19 @@ class Measure {
   /// TimeSignature herdado de compasso anterior (usado para validação preventiva)
   TimeSignature? inheritedTimeSignature;
 
+  /// Creates a new [Measure].
+  ///
+  /// [autoBeaming] defaults to `true` so that eighth notes and smaller are
+  /// automatically grouped with beams. Set to `false` to use individual flags.
+  ///
+  /// [beamingMode] controls the beaming strategy; normally [BeamingMode.automatic].
+  ///
+  /// [manualBeamGroups] is a list of index groups for explicit beam control.
+  /// Example: `[[0, 1, 2], [3, 4]]` groups the first three notes and the
+  /// next two notes into separate beams.
+  ///
+  /// [inheritedTimeSignature] is set automatically by [LayoutEngine] when no
+  /// [TimeSignature] is present in the measure but one was declared earlier.
   Measure({
     this.autoBeaming = true,
     this.beamingMode = BeamingMode.automatic,

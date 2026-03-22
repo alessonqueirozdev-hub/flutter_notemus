@@ -54,6 +54,15 @@ class Note extends MusicalElement with BoundingBoxSupport {
   /// null = voz única (padrão)
   final int? voice;
 
+  /// Número de traços de tremolo (0 = nenhum, 1-5 = número de traços)
+  final int tremoloStrokes;
+
+  /// Indica se esta nota é uma grace note (nota de ornamento)
+  final bool isGraceNote;
+
+  /// Altura alternativa para grace notes com uma altura específica
+  final Pitch? alternatePitch;
+
   Note({
     required this.pitch,
     required this.duration,
@@ -65,5 +74,8 @@ class Note extends MusicalElement with BoundingBoxSupport {
     this.dynamicElement,
     this.techniques = const [],
     this.voice,
+    this.tremoloStrokes = 0,
+    this.isGraceNote = false,
+    this.alternatePitch,
   });
 }

@@ -175,7 +175,7 @@ class NoteRenderer extends BaseGlyphRenderer {
       // POLYPHONIC: Determine stem direction based on voice (if specified) or default position
       final stemUp = _getStemDirection(note, staffPosition);
       final beamCount = _getBeamCount(note.duration.type);
-      
+
       final stemEnd = stemRenderer.render(
         canvas,
         notePos,
@@ -184,10 +184,28 @@ class NoteRenderer extends BaseGlyphRenderer {
         stemUp,
         beamCount,
       );
-      
+
       // Desenhar bandeirola se necessário
       if (note.duration.type.value < 0.25) {
         flagRenderer.render(canvas, stemEnd, note.duration.type, stemUp);
+      }
+
+      // Tremolo strokes
+      if (note.tremoloStrokes > 0 && note.tremoloStrokes <= 5) {
+        final tremoloGlyph = 'tremolo${note.tremoloStrokes}';
+        final tremoloY = stemUp
+            ? stemEnd.dy - coordinates.staffSpace * 0.8
+            : stemEnd.dy + coordinates.staffSpace * 0.8;
+        drawGlyphWithBBox(
+          canvas,
+          glyphName: tremoloGlyph,
+          position: Offset(notePos.dx, tremoloY),
+          color: theme.noteheadColor,
+          options: const GlyphDrawOptions(
+            centerHorizontally: true,
+            centerVertically: true,
+          ),
+        );
       }
     }
 

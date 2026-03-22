@@ -71,6 +71,41 @@ class BarElementRenderer {
     Clef currentClef,
     Offset basePosition,
   ) {
+    double currentX = basePosition.dx;
+    const spacing = 0.8;
+
+    // Draw natural cancellation signs for the previous key signature
+    if (ks.previousCount != null && ks.previousCount != 0) {
+      final prevCount = ks.previousCount!;
+      final prevPositions = _getKeySignaturePositionsCorrected(
+        currentClef.actualClefType,
+        prevCount > 0,
+      );
+      final naturalsCount = prevCount.abs();
+
+      for (int i = 0; i < naturalsCount && i < prevPositions.length; i++) {
+        final staffPos = prevPositions[i];
+        final y =
+            coordinates.staffBaseline.dy -
+            (staffPos * coordinates.staffSpace * 0.5);
+
+        _drawGlyph(
+          canvas,
+          glyphName: 'accidentalNatural',
+          position: Offset(currentX, y),
+          size: glyphSize * 0.9,
+          color: theme.keySignatureColor,
+          centerVertically: true,
+        );
+
+        currentX += spacing * coordinates.staffSpace;
+      }
+
+      // Small gap after naturals before the new key
+      currentX += 0.5 * coordinates.staffSpace;
+    }
+
+    // Draw the new key signature accidentals (skip if C major / count == 0)
     if (ks.count == 0) return;
 
     final glyphName = ks.count > 0 ? 'accidentalSharp' : 'accidentalFlat';
@@ -79,9 +114,6 @@ class BarElementRenderer {
       currentClef.actualClefType,
       ks.count > 0,
     );
-
-    double currentX = basePosition.dx;
-    const spacing = 0.8;
 
     for (int i = 0; i < count && i < positions.length; i++) {
       final staffPos = positions[i];
