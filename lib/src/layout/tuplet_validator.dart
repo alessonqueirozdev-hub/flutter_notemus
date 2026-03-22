@@ -1,7 +1,6 @@
 // lib/src/layout/tuplet_validator.dart
 
 import '../../core/core.dart';
-import '../../core/tuplet_number.dart';
 
 /// Validador de quiálteras baseado em teoria musical
 class TupletValidator {

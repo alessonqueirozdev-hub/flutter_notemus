@@ -128,7 +128,6 @@ class SlurRenderer {
       }
 
       final startNote = startElement.element as Note;
-      final endNote = endElement.element as Note;
 
       // Ties seguem direção OPOSTA às hastes
       final staffPos = StaffPositionCalculator.calculate(

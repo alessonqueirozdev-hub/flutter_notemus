@@ -1,6 +1,7 @@
 // lib/src/layout/measure_validator.dart
 // Sistema de validação rigorosa de compassos baseado em teoria musical
 
+import 'package:flutter/foundation.dart';
 import '../../core/core.dart';
 
 /// Resultado detalhado da validação de um compasso
@@ -509,9 +510,9 @@ class MeasureValidator {
 
   /// Imprime relatório completo de validação
   static void printValidationReport(List<MeasureValidationResult> results) {
-    print('\n╔═══════════════════════════════════════════════════════╗');
-    print('║     RELATÓRIO DE VALIDAÇÃO DE COMPASSOS              ║');
-    print('╚═══════════════════════════════════════════════════════╝\n');
+    debugPrint('\n╔═══════════════════════════════════════════════════════╗');
+    debugPrint('║     RELATÓRIO DE VALIDAÇÃO DE COMPASSOS              ║');
+    debugPrint('╚═══════════════════════════════════════════════════════╝\n');
 
     int validCount = 0;
     int invalidCount = 0;
@@ -523,17 +524,17 @@ class MeasureValidator {
         validCount++;
       } else {
         invalidCount++;
-        print('📊 COMPASSO ${i + 1}:');
-        print(result.getSummary());
+        debugPrint('📊 COMPASSO ${i + 1}:');
+        debugPrint(result.getSummary());
       }
     }
 
-    print('\n╔═══════════════════════════════════════════════════════╗');
-    print('║ RESUMO FINAL                                          ║');
-    print('╠═══════════════════════════════════════════════════════╣');
-    print('║ Total de compassos: ${results.length.toString().padLeft(31)} ║');
-    print('║ Compassos válidos: ${validCount.toString().padLeft(32)} ║');
-    print('║ Compassos inválidos: ${invalidCount.toString().padLeft(30)} ║');
-    print('╚═══════════════════════════════════════════════════════╝\n');
+    debugPrint('\n╔═══════════════════════════════════════════════════════╗');
+    debugPrint('║ RESUMO FINAL                                          ║');
+    debugPrint('╠═══════════════════════════════════════════════════════╣');
+    debugPrint('║ Total de compassos: ${results.length.toString().padLeft(31)} ║');
+    debugPrint('║ Compassos válidos: ${validCount.toString().padLeft(32)} ║');
+    debugPrint('║ Compassos inválidos: ${invalidCount.toString().padLeft(30)} ║');
+    debugPrint('╚═══════════════════════════════════════════════════════╝\n');
   }
 }

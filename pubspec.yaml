@@ -1,25 +1,40 @@
 name: flutter_notemus
-description: "Flutter package for music notation rendering with SMuFL support."
+description: "Professional music notation rendering for Flutter. SMuFL-compliant with 2932 Bravura glyphs, beams, dynamics, articulations, and JSON import/export."
 version: 0.1.0
-homepage:
+homepage: https://github.com/alessonqueirozdev-hub
+repository: https://github.com/alessonqueirozdev-hub/flutter_notemus
+issue_tracker: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues
+
+topics:
+  - flutter
+  - music
+  - notation
+  - rendering
+  - smufl
+
+screenshots:
+  - description: 'Complete music score with professional engraving, dynamics, and proper spacing'
+    path: assets/readme/Captura de tela 2025-11-06 141401.png
+  - description: 'Detailed musical elements with SMuFL glyphs, dotted notes, and breath marks'
+    path: assets/readme/Captura de tela 2025-11-06 141533.png
 
 environment:
   sdk: ^3.8.1
-  flutter: ">=1.17.0"
+  flutter: ">=3.0.0"
 
 dependencies:
   collection: ^1.19.1
   flutter:
     sdk: flutter
   xml: ^6.5.0
-  pdf: ^3.11.1  # ✅ PDF generation
-  printing: ^5.13.2  # ✅ PDF preview and printing
+  pdf: ^3.11.1
+  printing: ^5.13.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^5.0.0
-  test: ^1.24.0  # Para testes unitários do StaffPositionCalculator
+  flutter_lints: ^6.0.0
+  test: ^1.24.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
