@@ -18,6 +18,27 @@ enum DurationType {
   final String glyphName;
 
   const DurationType(this.value, this.glyphName);
+
+  /// O nome do glifo SMuFL para a pausa correspondente a esta duração.
+  String get restGlyphName => switch (this) {
+    DurationType.whole => 'restWhole',
+    DurationType.half => 'restHalf',
+    DurationType.quarter => 'restQuarter',
+    DurationType.eighth => 'rest8th',
+    DurationType.sixteenth => 'rest16th',
+    DurationType.thirtySecond => 'rest32nd',
+    DurationType.sixtyFourth => 'rest64th',
+    DurationType.oneHundredTwentyEighth => 'rest128th',
+  };
+
+  /// Se notas desta duração precisam de haste.
+  bool get needsStem => this != DurationType.whole;
+
+  /// Se notas desta duração precisam de bandeirola (flag).
+  bool get needsFlag => value <= DurationType.eighth.value;
+
+  /// Se a cabeça desta nota é preenchida (colcheia em diante).
+  bool get isFilled => value <= DurationType.quarter.value;
 }
 
 /// Representa a duração de uma nota ou pausa.
@@ -31,8 +52,13 @@ class Duration {
   const Duration(this.type, {this.dots = 0});
 
   /// Calcula a duração real incluindo pontos de aumento.
+  ///
+  /// Alias para [absoluteValue].
+  double get realValue => absoluteValue;
+
+  /// Calcula a duração real incluindo pontos de aumento.
   /// Fórmula: valor_original + (valor_original * 0.5^1) + (valor_original * 0.5^2) + ...
-  double get realValue {
+  double get absoluteValue {
     double value = type.value;
     double addedValue = 0;
     double currentDot = type.value * 0.5;

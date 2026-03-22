@@ -221,5 +221,20 @@ class MultiVoiceMeasure extends Measure {
 
     return measure;
   }
+
+  /// Factory: Create measure with 3 voices
+  factory MultiVoiceMeasure.threeVoices({
+    required List<MusicalElement> voice1Elements,
+    required List<MusicalElement> voice2Elements,
+    required List<MusicalElement> voice3Elements,
+  }) {
+    final measure = MultiVoiceMeasure();
+
+    measure.addVoice(Voice.voice1(elements: voice1Elements));
+    measure.addVoice(Voice.voice2(elements: voice2Elements));
+    measure.addVoice(Voice(number: 3, elements: voice3Elements));
+
+    return measure;
+  }
 }
 

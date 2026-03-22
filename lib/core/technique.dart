@@ -25,6 +25,7 @@ enum TechniqueType {
   flutter,
   whistle,
   growl,
+  tremolo,
 }
 
 /// Representa uma técnica de execução

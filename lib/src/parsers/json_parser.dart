@@ -595,6 +595,7 @@ class JsonMusicParser {
   static String _tieTypeToString(TieType type) {
     switch (type) {
       case TieType.start: return 'start';
+      case TieType.inner: return 'continue';
       case TieType.end: return 'end';
     }
   }
@@ -602,6 +603,7 @@ class JsonMusicParser {
   static String _slurTypeToString(SlurType type) {
     switch (type) {
       case SlurType.start: return 'start';
+      case SlurType.inner: return 'continue';
       case SlurType.end: return 'end';
     }
   }

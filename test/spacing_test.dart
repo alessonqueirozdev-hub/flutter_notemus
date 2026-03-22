@@ -1,6 +1,7 @@
-/// Testes do Sistema de Espaçamento Inteligente
-/// 
-/// Valida os modelos matemáticos, compensação óptica e combinação adaptativa.
+// Testes do Sistema de Espaçamento Inteligente
+// Valida os modelos matemáticos, compensação óptica e combinação adaptativa.
+library;
+
 import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_notemus/src/layout/spacing/spacing.dart';

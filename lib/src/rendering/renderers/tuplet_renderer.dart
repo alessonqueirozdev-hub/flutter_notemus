@@ -101,6 +101,46 @@ class TupletRenderer {
     }
   }
 
+  /// Calcula a posição Y do colchete do tuplet, com clamping dentro dos limites do pentagrama.
+  ///
+  /// Para hastes para cima: bracket acima das pontas das hastes, limitado a 2 SS acima da linha 5.
+  /// Para hastes para baixo: bracket abaixo das pontas das hastes, limitado a 1 SS abaixo da linha 1.
+  double _calculateBracketY(List<Offset> notePositions) {
+    final staffCenterY = coordinates.staffBaseline.dy;
+    final averageY =
+        notePositions.map((p) => p.dy).reduce((a, b) => a + b) /
+        notePositions.length;
+    final stemUp = averageY > staffCenterY;
+
+    double extremeY;
+    if (stemUp) {
+      extremeY = notePositions.map((p) => p.dy).reduce((a, b) => a < b ? a : b);
+    } else {
+      extremeY = notePositions.map((p) => p.dy).reduce((a, b) => a > b ? a : b);
+    }
+
+    final stemLength = coordinates.staffSpace * 3.5;
+    final clearance = coordinates.staffSpace * 0.75;
+    final bracketOffset = stemLength + clearance;
+
+    double bracketY = stemUp
+        ? extremeY - bracketOffset
+        : extremeY + bracketOffset;
+
+    // ✅ Clamp: evitar colchetes muito distantes do pentagrama
+    if (stemUp) {
+      // Acima: não passar de 2 SS acima da linha 5 (topo)
+      final minY = coordinates.getStaffLineY(5) - coordinates.staffSpace * 2.0;
+      if (bracketY < minY) bracketY = minY;
+    } else {
+      // Abaixo: não passar de 1 SS abaixo da linha 1 (base)
+      final maxY = coordinates.getStaffLineY(1) + coordinates.staffSpace * 1.0;
+      if (bracketY > maxY) bracketY = maxY;
+    }
+
+    return bracketY;
+  }
+
   void _drawTupletBracket(
     Canvas canvas,
     List<Offset> notePositions,
@@ -117,33 +157,11 @@ class TupletRenderer {
     final noteHeadWidth = coordinates.staffSpace * 1.2;
     final actualLastX = lastNotePos.dx + noteHeadWidth;
 
-    // ✅ CORREÇÃO P9: Determinar direção da haste (Behind Bars standard)
     final staffCenterY = coordinates.staffBaseline.dy;
     final averageY = notePositions.map((p) => p.dy).reduce((a, b) => a + b) / notePositions.length;
-    final stemUp = averageY > staffCenterY; // Se média está abaixo do centro, haste vai para cima
+    final stemUp = averageY > staffCenterY;
 
-    // ✅ CORREÇÃO P9: Encontrar nota extrema baseada na direção da haste
-    double extremeY;
-    if (stemUp) {
-      // Stems up: bracket ABOVE (find highest note = lowest Y)
-      extremeY = notePositions.map((p) => p.dy).reduce((a, b) => a < b ? a : b);
-    } else {
-      // Stems down: bracket BELOW (find lowest note = highest Y)
-      extremeY = notePositions.map((p) => p.dy).reduce((a, b) => a > b ? a : b);
-    }
-
-    // ✅ CORREÇÃO P9: Calcular offset dinamicamente baseado em direção
-    // Stem length típico: 3.5 SS (SMuFL spec)
-    // Adicionar margem de 1.0 SS para clearance
-    // Total: ~4.5 SS de offset
-    final stemLength = coordinates.staffSpace * 3.5;
-    final clearance = coordinates.staffSpace * 1.0;
-    final bracketOffset = stemLength + clearance;
-
-    // Bracket adapts to stem direction
-    final bracketY = stemUp
-        ? extremeY - bracketOffset  // Above for stems up
-        : extremeY + bracketOffset; // Below for stems down
+    final bracketY = _calculateBracketY(notePositions);
 
     // Espessura do bracket
     final paint = Paint()
@@ -203,37 +221,19 @@ class TupletRenderer {
     final noteHeadWidth = coordinates.staffSpace * 1.2;
     final actualLastX = lastNotePos.dx + noteHeadWidth;
 
-    // ✅ CORREÇÃO P9: Determinar direção da haste (Behind Bars standard)
     final staffCenterY = coordinates.staffBaseline.dy;
     final averageY = notePositions.map((p) => p.dy).reduce((a, b) => a + b) / notePositions.length;
     final stemUp = averageY > staffCenterY;
 
-    // ✅ CORREÇÃO P9: Encontrar nota extrema baseada na direção da haste
-    double extremeY;
-    if (stemUp) {
-      extremeY = notePositions.map((p) => p.dy).reduce((a, b) => a < b ? a : b);
-    } else {
-      extremeY = notePositions.map((p) => p.dy).reduce((a, b) => a > b ? a : b);
-    }
-
-    // ✅ CORREÇÃO P9: Usar MESMO offset dinâmico do bracket
-    final stemLength = coordinates.staffSpace * 3.5;
-    final clearance = coordinates.staffSpace * 1.0;
-    final bracketOffset = stemLength + clearance;
-
-    // Bracket adapts to stem direction
-    final bracketY = stemUp
-        ? extremeY - bracketOffset
-        : extremeY + bracketOffset;
+    // Usar o mesmo cálculo clamped do bracket
+    final bracketY = _calculateBracketY(notePositions);
 
     final centerX = (firstNotePos.dx + actualLastX) / 2;
 
-    // ✅ CORREÇÃO P9: Número adapta à direção (Behind Bars standard)
-    // Stems up: number ABOVE bracket (negative offset)
-    // Stems down: number BELOW bracket (positive offset)
+    // Número fica ACIMA do colchete para hastes para cima, ABAIXO para hastes para baixo
     final numberOffset = stemUp
-        ? -coordinates.staffSpace * 0.8  // Above
-        : coordinates.staffSpace * 0.8;  // Below
+        ? -coordinates.staffSpace * 0.7  // Acima do bracket
+        : coordinates.staffSpace * 0.7;  // Abaixo do bracket
     final numberY = bracketY + numberOffset;
 
     final glyphName = 'tuplet$number';

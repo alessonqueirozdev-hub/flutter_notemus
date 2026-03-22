@@ -371,16 +371,16 @@ class StaffRenderer {
       final endX = bounds.endX + (coordinates.staffSpace + margin);
 
       // Desenhar as 5 linhas do pentagrama para este sistema
+      // ✅ CORREÇÃO: Usar coordinates.getStaffLineY() diretamente, que já tem
+      // a posição Y correta para este sistema (baseada em staffBaseline.dy).
+      // NÃO usar bounds.y pois pode ser a posição Y de uma nota (pitch-based)
+      // e não o centro da pauta.
       for (int line = 1; line <= 5; line++) {
-        // Calcular Y baseado no sistema (cada sistema tem seu próprio Y)
-        final baseY = bounds.y;
-        final lineY =
-            baseY +
-            (coordinates.getStaffLineY(line) - coordinates.getStaffLineY(3));
+        final lineY = coordinates.getStaffLineY(line);
 
         canvas.drawLine(
           Offset(coordinates.staffBaseline.dx, lineY),
-          Offset(endX, lineY), // Linhas param no fim do sistema!
+          Offset(endX, lineY),
           paint,
         );
       }

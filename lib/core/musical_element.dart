@@ -7,10 +7,10 @@ abstract class MusicalElement {}
 enum BeamType { start, inner, end }
 
 /// Define se uma nota inicia ou termina uma ligadura de valor (tie).
-enum TieType { start, end }
+enum TieType { start, inner, end }
 
 /// Define se uma nota inicia ou termina uma ligadura de expressão (slur).
-enum SlurType { start, end }
+enum SlurType { start, inner, end }
 
 /// Modos de beaming para controle fino do agrupamento
 enum BeamingMode {
