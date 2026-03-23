@@ -4,6 +4,13 @@ All notable changes to Flutter Notemus are documented in this file.
 
 The format is based on Keep a Changelog and this project follows Semantic Versioning.
 
+## [2.2.1] - 2026-03-23
+
+### Fixed
+
+- Replaced `LICENSE` content with canonical Apache-2.0 text so pub.dev can recognize an OSI-approved license.
+- Moved third-party license attributions to `THIRD_PARTY_LICENSES.md`.
+
 ## [2.2.0] - 2026-03-23
 
 ### Changed
