@@ -18,8 +18,10 @@ class PositionedElement {
   final MusicalElement element;
   final Offset position;
   final int system;
+  /// Número da voz (1, 2, ...) em contextos polifônicos. Null = voz única.
+  final int? voiceNumber;
 
-  PositionedElement(this.element, this.position, {this.system = 0});
+  PositionedElement(this.element, this.position, {this.system = 0, this.voiceNumber});
 }
 
 class LayoutCursor {
@@ -109,10 +111,7 @@ class LayoutCursor {
     // Padding agora aplicado ANTES da barline no layout principal
   }
 
-  void addElement(MusicalElement element, List<PositionedElement> elements) {
-    // BoundingBox support comentado temporariamente
-    // TODO: Reativar quando BoundingBoxSupport estiver disponível
-
+  void addElement(MusicalElement element, List<PositionedElement> elements, {int? voiceNumber}) {
     // Rastrear clave atual
     if (element is Clef) {
       _currentClef = element;
@@ -121,68 +120,38 @@ class LayoutCursor {
     // ✅ SUPORTE A ACORDES: Expandir notas do acorde em elementos separados
     if (element is Chord && _currentClef != null) {
       for (final note in element.notes) {
-        // Calcular posição Y para cada nota do acorde
-        final staffPosition = StaffPositionCalculator.calculate(
-          note.pitch,
-          _currentClef!,
-        );
-        
-        final noteY = StaffPositionCalculator.toPixelY(
-          staffPosition,
-          staffSpace,
-          _currentY,
-        );
-        
-        // Registrar nota para beaming
+        final staffPosition = StaffPositionCalculator.calculate(note.pitch, _currentClef!);
+        final noteY = StaffPositionCalculator.toPixelY(staffPosition, staffSpace, _currentY);
         noteXPositions?[note] = _currentX;
         noteStaffPositions?[note] = staffPosition;
         noteYPositions?[note] = noteY;
-        
-        // Adicionar cada nota do acorde como elemento separado (mesma pos X, Y diferente)
-        elements.add(
-          PositionedElement(
-            note,
-            Offset(_currentX, noteY),
-            system: _currentSystem,
-          ),
-        );
+        elements.add(PositionedElement(
+          note,
+          Offset(_currentX, noteY),
+          system: _currentSystem,
+          voiceNumber: voiceNumber,
+        ));
       }
-      return; // Não adicionar o Chord como elemento único
+      return;
     }
-    
-    // Calcular posição Y específica para notas (baseado no pitch)
-    double elementY = _currentY; // Default: baseline do sistema
-    
-    // Capturar posições de notas para beaming avançado
+
+    double elementY = _currentY;
+
     if (element is Note && _currentClef != null) {
       noteXPositions?[element] = _currentX;
-
-      // ✅ USAR STAFFPOSITIONCALCULATOR (fonte oficial de verdade!)
-      final staffPosition = StaffPositionCalculator.calculate(
-        element.pitch,
-        _currentClef!,
-      );
+      final staffPosition = StaffPositionCalculator.calculate(element.pitch, _currentClef!);
       noteStaffPositions?[element] = staffPosition;
-
-      // ✅ Converter para Y absoluto usando método oficial
-      final noteY = StaffPositionCalculator.toPixelY(
-        staffPosition,
-        staffSpace,
-        _currentY, // baseline do sistema
-      );
+      final noteY = StaffPositionCalculator.toPixelY(staffPosition, staffSpace, _currentY);
       noteYPositions?[element] = noteY;
-      
-      // ✅ CRÍTICO: Usar o noteY calculado, não o _currentY genérico!
       elementY = noteY;
     }
 
-    elements.add(
-      PositionedElement(
-        element,
-        Offset(_currentX, elementY), // ✅ Usar elementY específico!
-        system: _currentSystem,
-      ),
-    );
+    elements.add(PositionedElement(
+      element,
+      Offset(_currentX, elementY),
+      system: _currentSystem,
+      voiceNumber: voiceNumber,
+    ));
   }
 }
 
@@ -586,33 +555,57 @@ class LayoutEngine {
   ) {
     final startX = cursor.currentX;
     double maxAdvanceX = startX;
+    // Tracks where musical elements (post clef/key/time) start in voice 1.
+    // Voices 2+ must start at this X so notes align with voice 1.
+    double firstMusicX = startX;
 
-    for (final voice in measure.sortedVoices) {
-      // Reset X to start of measure for each voice (voices share the same timeline)
-      cursor.setX(startX);
+    final sortedVoices = measure.sortedVoices;
+
+    for (int voiceIdx = 0; voiceIdx < sortedVoices.length; voiceIdx++) {
+      final voice = sortedVoices[voiceIdx];
+
+      // Voices 2+ skip system elements and start where voice 1's music begins
+      final isLeadVoice = voiceIdx == 0;
+      cursor.setX(isLeadVoice ? startX : firstMusicX);
 
       final voiceOffset = voice.getHorizontalOffset(cursor.staffSpace);
-      final elementsToRender = voice.elements.where((element) {
+
+      // Processar beaming separadamente para cada voz
+      final processedElements = _processBeamsWithAnacrusis(
+        voice.elements,
+        measure.timeSignature,
+        autoBeaming: measure.autoBeaming,
+        beamingMode: measure.beamingMode,
+        manualBeamGroups: measure.manualBeamGroups,
+      );
+
+      // Voice 2+ never renders system elements (clef/key/time sig belong to voice 1)
+      final elementsToRender = processedElements.where((element) {
+        if (!isLeadVoice && _isSystemElement(element)) return false;
         return isFirstInSystem || !_isSystemElement(element);
       }).toList();
+
+      bool seenFirstMusicElement = !isLeadVoice; // voice 2+ already positioned past system elements
 
       for (int i = 0; i < elementsToRender.length; i++) {
         final element = elementsToRender[i];
 
         if (i > 0) {
           final previousElement = elementsToRender[i - 1];
-          final rhythmicSpacing = _calculateRhythmicSpacing(
-            element,
-            previousElement,
-          );
-          cursor.advance(rhythmicSpacing);
+          cursor.advance(_calculateRhythmicSpacing(element, previousElement));
         }
 
-        // Apply voice-specific horizontal offset to this element's X
+        // Record where voice 1's first non-system element lands so other voices align
+        if (isLeadVoice && !seenFirstMusicElement && !_isSystemElement(element)) {
+          seenFirstMusicElement = true;
+          firstMusicX = cursor.currentX;
+        }
+
+        // Aplicar offset horizontal da voz à posição X
         final elementX = cursor.currentX + voiceOffset;
         final savedX = cursor.currentX;
         cursor.setX(elementX);
-        cursor.addElement(element, positionedElements);
+        cursor.addElement(element, positionedElements, voiceNumber: voice.number);
         cursor.setX(savedX);
 
         cursor.advance(_getElementWidthSimple(element));
@@ -623,7 +616,6 @@ class LayoutEngine {
       }
     }
 
-    // Advance cursor past the maximum extent of all voices
     cursor.setX(maxAdvanceX);
   }
 

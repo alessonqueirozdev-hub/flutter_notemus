@@ -35,53 +35,57 @@ class RestRenderer extends BaseGlyphRenderer {
          collisionDetector: collisionDetector, // CORREÇÃO: Passar para super
        );
 
-  void render(Canvas canvas, Rest rest, Offset position) {
+  void render(Canvas canvas, Rest rest, Offset position, {int? voiceNumber}) {
     String glyphName;
-    // CORREÇÃO: Usar staffPosition relativo ao centro da pauta
-    // staffPosition 0 = linha do meio (linha 3)
-    // Positive = acima, Negative = abaixo
     int staffPosition;
+
+    // Posições padrão (voz única ou voz 1):
+    //   whole  → staffPos 3  (pende da linha 4)
+    //   half   → staffPos 1  (assenta na linha 3)
+    //   outras → staffPos 0  (centro)
+    //
+    // Voz 2 (par): deslocar para baixo (-4 semi-espaços = 2 espaços):
+    //   whole  → staffPos -1 (assenta na linha 2)
+    //   half   → staffPos -3 (pende da linha 1)
+    //   outras → staffPos -4 (abaixo do centro)
+    //
+    // Convenção: vozes pares = para baixo, vozes ímpares = para cima (padrão)
+    final isVoiceDown = voiceNumber != null && voiceNumber.isEven;
 
     switch (rest.duration.type) {
       case DurationType.whole:
         glyphName = 'restWhole';
-        // Behind Bars / SMuFL: Whole rest hangs BELOW line 4
-        // staffPosition = 3 (hangs below line 4)
-        staffPosition = 3;
+        staffPosition = isVoiceDown ? -1 : 3;
         break;
       case DurationType.half:
         glyphName = 'restHalf';
-        // Behind Bars / SMuFL: Half rest sits ON line 3
-        // staffPosition = 1 (sits on line 3)
-        staffPosition = 1;
+        staffPosition = isVoiceDown ? -3 : 1;
         break;
       case DurationType.quarter:
         glyphName = 'restQuarter';
-        // Quarter rest and smaller: centered on staff
-        staffPosition = 0;
+        staffPosition = isVoiceDown ? -4 : 0;
         break;
       case DurationType.eighth:
         glyphName = 'rest8th';
-        staffPosition = 0;
+        staffPosition = isVoiceDown ? -4 : 0;
         break;
       case DurationType.sixteenth:
         glyphName = 'rest16th';
-        staffPosition = 0;
+        staffPosition = isVoiceDown ? -4 : 0;
         break;
       case DurationType.thirtySecond:
         glyphName = 'rest32nd';
-        staffPosition = 0;
+        staffPosition = isVoiceDown ? -4 : 0;
         break;
       case DurationType.sixtyFourth:
         glyphName = 'rest64th';
-        staffPosition = 0;
+        staffPosition = isVoiceDown ? -4 : 0;
         break;
       default:
         glyphName = 'restQuarter';
-        staffPosition = 0;
+        staffPosition = isVoiceDown ? -4 : 0;
     }
 
-    // Calcular Y baseado no staff position (mesmo método usado para notas)
     final restY =
         coordinates.staffBaseline.dy -
         (staffPosition * coordinates.staffSpace * 0.5);

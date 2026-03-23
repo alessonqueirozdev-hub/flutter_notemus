@@ -405,22 +405,21 @@ class StaffRenderer {
     } else if (element is TimeSignature) {
       barElementRenderer.renderTimeSignature(canvas, element, basePosition);
     } else if (element is Note && currentClef != null) {
-      // Renderizar noteheads sempre!
-      // Se a nota está em advanced beam, renderizar apenas notehead (sem stem/flag)
       final onlyNotehead = _notesInAdvancedBeams.contains(element);
       noteRenderer.render(
-        canvas, 
-        element, 
-        basePosition, 
+        canvas,
+        element,
+        basePosition,
         currentClef!,
         renderOnlyNotehead: onlyNotehead,
+        voiceNumber: positioned.voiceNumber,
       );
     } else if (element is Rest) {
-      restRenderer.render(canvas, element, basePosition);
+      restRenderer.render(canvas, element, basePosition, voiceNumber: positioned.voiceNumber);
     } else if (element is Barline) {
       barlineRenderer.render(canvas, element, basePosition);
     } else if (element is Chord && currentClef != null) {
-      chordRenderer.render(canvas, element, basePosition, currentClef!);
+      chordRenderer.render(canvas, element, basePosition, currentClef!, voiceNumber: positioned.voiceNumber);
     } else if (element is Tuplet && currentClef != null) {
       tupletRenderer.render(canvas, element, basePosition, currentClef!);
     } else if (element is RepeatMark) {

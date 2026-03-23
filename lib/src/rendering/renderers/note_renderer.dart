@@ -109,58 +109,39 @@ class NoteRenderer extends BaseGlyphRenderer {
     Offset basePosition,
     Clef currentClef, {
     bool renderOnlyNotehead = false,
+    int? voiceNumber,
   }) {
-    // MELHORIA: Usar StaffPositionCalculator unificado
     final staffPosition = StaffPositionCalculator.calculate(note.pitch, currentClef);
 
-    // POLYPHONIC: Apply voice-based horizontal offset
-    final voiceOffset = _getVoiceHorizontalOffset(note);
-    final adjustedBasePosition = Offset(
-      basePosition.dx + voiceOffset,
-      basePosition.dy,
-    );
-
-    // Converter posição da pauta para coordenada Y em pixels
+    // O offset horizontal da voz já está embutido em basePosition (aplicado pelo layout engine).
+    // Não aplicar offset novamente aqui.
     final noteY = StaffPositionCalculator.toPixelY(
       staffPosition,
       coordinates.staffSpace,
       coordinates.staffBaseline.dy,
     );
 
-    // Preparar glyph da cabeça de nota
     final noteheadGlyph = note.duration.type.glyphName;
 
-    // 🆕 Delegar para LedgerLineRenderer
-    ledgerLineRenderer.render(canvas, adjustedBasePosition.dx, staffPosition, noteheadGlyph);
+    ledgerLineRenderer.render(canvas, basePosition.dx, staffPosition, noteheadGlyph);
 
-    // Preparar posição da cabeça de nota
-    // A correção de baseline SMuFL é aplicada automaticamente em drawGlyphWithBBox
-    final notePos = Offset(adjustedBasePosition.dx, noteY);
+    final notePos = Offset(basePosition.dx, noteY);
 
-    // CORREÇÃO CRÍTICA: Calcular o CENTRO REAL da cabeça de nota (horizontal E vertical)
-    // Como noteheads usam centerHorizontally: false e centerVertically: false,
-    // notePos é a posição da borda ESQUERDA e BASELINE do TextPainter
-    // Mas articulações, ornamentos, e PONTOS esperam o CENTRO real da nota
     final noteheadInfo = metadata.getGlyphInfo(noteheadGlyph);
     final bbox = noteheadInfo?.boundingBox;
-    
+
     final centerX = bbox != null
         ? ((bbox.bBoxSwX + bbox.bBoxNeX) / 2) * coordinates.staffSpace
-        : (1.18 / 2) * coordinates.staffSpace; // Fallback para noteheadBlack
-    
-    // CORREÇÃO CRÍTICA: noteY é a baseline do TextPainter, não o centro vertical!
-    // Precisamos adicionar o centerY do bounding box SMuFL
+        : (1.18 / 2) * coordinates.staffSpace;
+
     final centerY = bbox != null
         ? (bbox.centerY * coordinates.staffSpace)
-        : 0.0; // Se não tiver bbox, assumir que noteY já está correto
+        : 0.0;
 
-    final noteCenter = Offset(adjustedBasePosition.dx + centerX, noteY + centerY);
+    final noteCenter = Offset(basePosition.dx + centerX, noteY + centerY);
 
-    // 🆕 Delegar para AccidentalRenderer
     accidentalRenderer.render(canvas, note, notePos, staffPosition.toDouble());
 
-    // MELHORIA: Desenhar cabeça de nota usando BaseGlyphRenderer
-    // Usa drawGlyphWithBBox que automaticamente aplica bounding box SMuFL
     drawGlyphWithBBox(
       canvas,
       glyphName: noteheadGlyph,
@@ -169,11 +150,9 @@ class NoteRenderer extends BaseGlyphRenderer {
       options: GlyphDrawOptions.noteheadDefault,
     );
 
-    // 🆕 Delegar para StemRenderer e FlagRenderer
-    // APENAS se não for renderOnlyNotehead E não tiver beam
     if (!renderOnlyNotehead && note.duration.type != DurationType.whole && note.beam == null) {
-      // POLYPHONIC: Determine stem direction based on voice (if specified) or default position
-      final stemUp = _getStemDirection(note, staffPosition);
+      // Direção da haste: forçada por voz em contexto polifônico, senão por posição
+      final stemUp = _getStemDirectionByVoice(note, staffPosition, voiceNumber);
       final beamCount = _getBeamCount(note.duration.type);
 
       final stemEnd = stemRenderer.render(
@@ -227,7 +206,7 @@ class NoteRenderer extends BaseGlyphRenderer {
 
     // Renderizar dinâmicas se presente
     if (note.dynamicElement != null) {
-      _renderDynamic(canvas, note.dynamicElement!, adjustedBasePosition, staffPosition);
+      _renderDynamic(canvas, note.dynamicElement!, basePosition, staffPosition);
     }
 
     // 🆕 Delegar para DotRenderer
@@ -257,41 +236,26 @@ class NoteRenderer extends BaseGlyphRenderer {
     symbolAndTextRenderer.renderDynamic(canvas, dynamic, basePosition);
   }
 
-  /// Get horizontal offset based on note's voice
+  /// Determina a direção da haste pela voz (polifonia) ou pela posição na pauta.
   ///
-  /// Voice 1: no offset (0.0)
-  /// Voice 2: 0.6 staff spaces right
-  /// Voice 3+: incremental offset
-  double _getVoiceHorizontalOffset(Note note) {
-    if (note.voice == null) return 0.0;
-
-    // Create Voice instance to get proper offset calculation
-    final voice = Voice(number: note.voice!);
-    return voice.getHorizontalOffset(coordinates.staffSpace);
-  }
-
-  /// Determine stem direction based on voice or staff position
+  /// Em contexto polifônico (voiceNumber != null):
+  ///   - Voz ímpar (1, 3, ...): haste sempre para cima
+  ///   - Voz par (2, 4, ...): haste sempre para baixo
   ///
-  /// If note has voice specified, use voice-based direction:
-  /// - Voice 1: stems up
-  /// - Voice 2: stems down
-  /// - Voice 3+: stems up
-  ///
-  /// If no voice, use traditional rule: stems up if below middle line
-  bool _getStemDirection(Note note, int staffPosition) {
-    if (note.voice == null) {
-      // Traditional rule: stems up if note is below or on middle line (staff position 0)
-      return staffPosition <= 0;
+  /// Sem voz: regra tradicional — haste para cima se a nota está na linha do
+  /// meio ou abaixo (staffPosition <= 0).
+  bool _getStemDirectionByVoice(Note note, int staffPosition, int? voiceNumber) {
+    // Voz explícita via parâmetro (propagada pelo layout engine)
+    if (voiceNumber != null) {
+      return voiceNumber.isOdd; // ímpar = up, par = down
     }
 
-    // Voice-based stem direction
-    final voice = Voice(number: note.voice!);
-    final direction = voice.getStemDirection();
+    // Voz definida diretamente na nota
+    if (note.voice != null) {
+      return note.voice!.isOdd;
+    }
 
-    return switch (direction) {
-      StemDirection.up => true,
-      StemDirection.down => false,
-      StemDirection.auto => staffPosition <= 0, // Fall back to position-based
-    };
+    // Regra posicional (voz única)
+    return staffPosition <= 0;
   }
 }
