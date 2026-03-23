@@ -96,11 +96,27 @@ class MusicScore extends StatefulWidget {
   /// Increase this value to render a larger score, decrease for smaller.
   final double staffSpace;
 
+  /// Enables automatic scale-down on narrow screens (useful for mobile web).
+  ///
+  /// When enabled, [staffSpace] is reduced proportionally below
+  /// [responsiveBreakpointWidth], preserving readability while preventing
+  /// cramped or clipped layouts.
+  final bool enableResponsiveLayout;
+
+  /// Viewport width (logical px) below which responsive scale-down starts.
+  final double responsiveBreakpointWidth;
+
+  /// Minimum scale factor applied to [staffSpace] in responsive mode.
+  final double minResponsiveScale;
+
   const MusicScore({
     super.key,
     required this.staff,
     this.theme = const MusicScoreTheme(),
     this.staffSpace = 12.0,
+    this.enableResponsiveLayout = true,
+    this.responsiveBreakpointWidth = 640.0,
+    this.minResponsiveScale = 0.72,
   });
 
   factory MusicScore.fromJson({
@@ -211,10 +227,14 @@ class _MusicScoreState extends State<MusicScore> {
 
         return LayoutBuilder(
           builder: (BuildContext context, BoxConstraints constraints) {
+            final viewportWidth = _resolveViewportWidth(context, constraints);
+            final effectiveStaffSpace =
+                _resolveEffectiveStaffSpace(viewportWidth);
+
             final layoutEngine = LayoutEngine(
               widget.staff,
-              availableWidth: constraints.maxWidth,
-              staffSpace: widget.staffSpace,
+              availableWidth: viewportWidth,
+              staffSpace: effectiveStaffSpace,
               metadata: _metadata,
             );
 
@@ -224,7 +244,14 @@ class _MusicScoreState extends State<MusicScore> {
               return const Center(child: Text('Partitura vazia'));
             }
 
-            final totalHeight = _calculateTotalHeight(positionedElements);
+            final totalHeight =
+                _calculateTotalHeight(positionedElements, effectiveStaffSpace);
+            final viewportSize = Size(
+              viewportWidth,
+              constraints.hasBoundedHeight && constraints.maxHeight.isFinite
+                  ? constraints.maxHeight
+                  : totalHeight,
+            );
 
             return SingleChildScrollView(
               scrollDirection: Axis.horizontal,
@@ -234,14 +261,14 @@ class _MusicScoreState extends State<MusicScore> {
                 controller: _verticalController,
                 child: RepaintBoundary(
                   child: CustomPaint(
-                    size: Size(constraints.maxWidth, totalHeight),
+                    size: Size(viewportWidth, totalHeight),
                     painter: MusicScorePainter(
                       positionedElements: positionedElements,
                       metadata: SmuflMetadata(),
                       theme: widget.theme,
-                      staffSpace: widget.staffSpace,
+                      staffSpace: effectiveStaffSpace,
                       layoutEngine: layoutEngine,
-                      viewportSize: constraints.biggest,
+                      viewportSize: viewportSize,
                       scrollOffsetX: _horizontalController.hasClients
                           ? _horizontalController.offset
                           : 0.0,
@@ -259,7 +286,31 @@ class _MusicScoreState extends State<MusicScore> {
     );
   }
 
-  double _calculateTotalHeight(List<PositionedElement> elements) {
+  double _resolveViewportWidth(
+      BuildContext context, BoxConstraints constraints) {
+    if (constraints.hasBoundedWidth &&
+        constraints.maxWidth.isFinite &&
+        constraints.maxWidth > 0) {
+      return constraints.maxWidth;
+    }
+    return MediaQuery.sizeOf(context).width;
+  }
+
+  double _resolveEffectiveStaffSpace(double viewportWidth) {
+    if (!widget.enableResponsiveLayout ||
+        !viewportWidth.isFinite ||
+        viewportWidth <= 0 ||
+        viewportWidth >= widget.responsiveBreakpointWidth) {
+      return widget.staffSpace;
+    }
+
+    final scale = (viewportWidth / widget.responsiveBreakpointWidth)
+        .clamp(widget.minResponsiveScale, 1.0);
+    return widget.staffSpace * scale;
+  }
+
+  double _calculateTotalHeight(
+      List<PositionedElement> elements, double effectiveStaffSpace) {
     if (elements.isEmpty) return 200;
 
     int maxSystem = 0;
@@ -269,8 +320,8 @@ class _MusicScoreState extends State<MusicScore> {
       }
     }
 
-    final systemHeight = widget.staffSpace * 10;
-    final margins = widget.staffSpace * 6;
+    final systemHeight = effectiveStaffSpace * 10;
+    final margins = effectiveStaffSpace * 6;
 
     return margins + ((maxSystem + 1) * systemHeight);
   }
