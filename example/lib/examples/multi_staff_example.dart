@@ -1595,19 +1595,19 @@ class MultiStaffDemoApp extends StatelessWidget {
     return _buildSATBStaff(
       clef: ClefType.treble,
       measure1: const [
-        Pitch(step: 'G', octave: 5),
-        Pitch(step: 'A', octave: 5),
-        Pitch(step: 'G', octave: 5),
+        Pitch(step: 'C', octave: 5),
+        Pitch(step: 'B', octave: 4),
+        Pitch(step: 'C', octave: 5),
       ],
       measure2: const [
-        Pitch(step: 'F', octave: 5),
-        Pitch(step: 'E', octave: 5),
-        Pitch(step: 'F', octave: 5),
-        Pitch(step: 'G', octave: 5),
+        Pitch(step: 'C', octave: 5),
+        Pitch(step: 'D', octave: 5),
+        Pitch(step: 'D', octave: 5),
+        Pitch(step: 'C', octave: 5),
       ],
       measure3: const [
-        Pitch(step: 'A', octave: 5),
-        Pitch(step: 'G', octave: 5),
+        Pitch(step: 'B', octave: 4),
+        Pitch(step: 'C', octave: 5),
       ],
     );
   }
@@ -1616,19 +1616,19 @@ class MultiStaffDemoApp extends StatelessWidget {
     return _buildSATBStaff(
       clef: ClefType.treble,
       measure1: const [
-        Pitch(step: 'E', octave: 5),
-        Pitch(step: 'F', octave: 5),
-        Pitch(step: 'E', octave: 5),
+        Pitch(step: 'E', octave: 4),
+        Pitch(step: 'D', octave: 4),
+        Pitch(step: 'E', octave: 4),
       ],
       measure2: const [
-        Pitch(step: 'D', octave: 5),
-        Pitch(step: 'C', octave: 5),
-        Pitch(step: 'D', octave: 5),
-        Pitch(step: 'E', octave: 5),
+        Pitch(step: 'E', octave: 4),
+        Pitch(step: 'F', octave: 4),
+        Pitch(step: 'F', octave: 4),
+        Pitch(step: 'E', octave: 4),
       ],
       measure3: const [
-        Pitch(step: 'F', octave: 5),
-        Pitch(step: 'E', octave: 5),
+        Pitch(step: 'F', octave: 4),
+        Pitch(step: 'E', octave: 4),
       ],
     );
   }
@@ -1637,19 +1637,19 @@ class MultiStaffDemoApp extends StatelessWidget {
     return _buildSATBStaff(
       clef: ClefType.treble8vb,
       measure1: const [
-        Pitch(step: 'C', octave: 4),
-        Pitch(step: 'D', octave: 4),
-        Pitch(step: 'C', octave: 4),
+        Pitch(step: 'G', octave: 4),
+        Pitch(step: 'G', octave: 4),
+        Pitch(step: 'G', octave: 4),
       ],
       measure2: const [
-        Pitch(step: 'B', octave: 3),
-        Pitch(step: 'A', octave: 3),
-        Pitch(step: 'B', octave: 3),
-        Pitch(step: 'C', octave: 4),
+        Pitch(step: 'G', octave: 4),
+        Pitch(step: 'G', octave: 4),
+        Pitch(step: 'G', octave: 4),
+        Pitch(step: 'G', octave: 4),
       ],
       measure3: const [
-        Pitch(step: 'D', octave: 4),
-        Pitch(step: 'C', octave: 4),
+        Pitch(step: 'G', octave: 4),
+        Pitch(step: 'G', octave: 4),
       ],
     );
   }
@@ -1659,17 +1659,17 @@ class MultiStaffDemoApp extends StatelessWidget {
       clef: ClefType.bass,
       measure1: const [
         Pitch(step: 'C', octave: 3),
-        Pitch(step: 'D', octave: 3),
+        Pitch(step: 'G', octave: 2),
         Pitch(step: 'C', octave: 3),
       ],
       measure2: const [
+        Pitch(step: 'G', octave: 3),
+        Pitch(step: 'G', octave: 3),
         Pitch(step: 'G', octave: 2),
-        Pitch(step: 'A', octave: 2),
         Pitch(step: 'G', octave: 2),
-        Pitch(step: 'C', octave: 3),
       ],
       measure3: const [
-        Pitch(step: 'D', octave: 3),
+        Pitch(step: 'G', octave: 2),
         Pitch(step: 'C', octave: 3),
       ],
     );

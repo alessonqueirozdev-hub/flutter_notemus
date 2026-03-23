@@ -39,15 +39,22 @@ class RestRenderer extends BaseGlyphRenderer {
     String glyphName;
     int staffPosition;
 
-    // Posições padrão (voz única ou voz 1):
-    //   whole  → staffPos 3  (pende da linha 4)
-    //   half   → staffPos 1  (assenta na linha 3)
-    //   outras → staffPos 0  (centro)
+    // Posicionamento conforme Behind Bars (Gould, p. 109-110) e SMuFL:
     //
-    // Voz 2 (par): deslocar para baixo (-4 semi-espaços = 2 espaços):
-    //   whole  → staffPos -1 (assenta na linha 2)
-    //   half   → staffPos -3 (pende da linha 1)
-    //   outras → staffPos -4 (abaixo do centro)
+    // A correção de baseline em drawGlyphWithBBox posiciona o SMuFL Y=0 exatamente
+    // em restY (= toPixelY(staffPosition)). Por isso:
+    //
+    //   restWhole: topo do glifo em Y=0, corpo desce → restY = linha da qual pende
+    //     Voz 1: pende da linha 4  → staffPos = +2  (toPixelY(2) = baseline − ss)
+    //     Voz 2: pende da linha 2  → staffPos = −2  (toPixelY(−2) = baseline + ss)
+    //
+    //   restHalf: base do glifo em Y=0, corpo sobe → restY = linha sobre a qual senta
+    //     Voz 1: senta na linha 3  → staffPos =  0  (toPixelY(0)  = baseline)
+    //     Voz 2: senta na linha 1  → staffPos = −4  (toPixelY(−4) = baseline + 2ss)
+    //
+    //   Pausas curtas (quarter, 8th…): glifo centrado em Y=0
+    //     Voz 1: centro da pauta   → staffPos =  0
+    //     Voz 2: metade inferior   → staffPos = −4 (2 espaços abaixo do centro)
     //
     // Convenção: vozes pares = para baixo, vozes ímpares = para cima (padrão)
     final isVoiceDown = voiceNumber != null && voiceNumber.isEven;
@@ -55,11 +62,11 @@ class RestRenderer extends BaseGlyphRenderer {
     switch (rest.duration.type) {
       case DurationType.whole:
         glyphName = 'restWhole';
-        staffPosition = isVoiceDown ? -1 : 3;
+        staffPosition = isVoiceDown ? -2 : 2;
         break;
       case DurationType.half:
         glyphName = 'restHalf';
-        staffPosition = isVoiceDown ? -3 : 1;
+        staffPosition = isVoiceDown ? -4 : 0;
         break;
       case DurationType.quarter:
         glyphName = 'restQuarter';
