@@ -16,7 +16,7 @@ Flutter Notemus é um pacote Flutter para exibir notação musical de alta quali
 
 - [Demonstração visual](#demonstração-visual)
 - [Funcionalidades](#funcionalidades)
-- [Status no pub.dev e evolução desde 0.1.0](#status-no-pubdev-e-evolução-desde-010)
+- [Status no pub.dev e evolução para 2.0.0](#status-no-pubdev-e-evolução-para-200)
 - [Novidades pós-first commit](#novidades-pós-first-commit)
 - [Instalação](#instalação)
 - [Início rápido](#início-rápido)
@@ -148,12 +148,12 @@ Tema completo com controle individual de cor para cada elemento: pauta, cabeça 
 
 ---
 
-## Status no pub.dev e evolução desde 0.1.0
+## Status no pub.dev e evolução para 2.0.0
 
 A versão publicada no pub.dev hoje é a **`0.1.0`**:
 - [flutter_notemus 0.1.0](https://pub.dev/packages/flutter_notemus)
 
-Este repositório já contém trabalho **além do pacote publicado**, incluindo correções e novas funcionalidades ainda não refletidas em uma release nova no pub.dev.
+Neste repositório, a versão alvo já está em **`2.0.0`**, com trabalho **além do pacote publicado** (novas features, correções e aperfeiçoamentos).
 
 ### O que você ganha nesta branch em relação ao `0.1.0`
 - Camada MIDI nativa da biblioteca (`package:flutter_notemus/midi.dart`)
@@ -184,7 +184,7 @@ Adicione ao `pubspec.yaml` do seu projeto:
 
 ```yaml
 dependencies:
-  flutter_notemus: ^0.1.0
+  flutter_notemus: ^2.0.0
 ```
 
 Execute:

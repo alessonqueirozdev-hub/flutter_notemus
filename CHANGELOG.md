@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.0.0] - 2026-03-23
+
+### Added
+
+- First-party MIDI module exposed via `package:flutter_notemus/midi.dart`
+- `MidiMapper.fromStaff` and `MidiMapper.fromScore` for notation-to-MIDI conversion
+- Repeat expansion for playback order (`repeatForward`, `repeatBackward`, `repeatBoth`) with `VoltaBracket` pass filtering
+- Tuplet/polyphony/tie-aware event generation
+- Metronome track generation synchronized with the expanded timeline
+- Standard MIDI File writer (`MidiFileWriter`) without external package dependency
+- Native low-latency backend contract (`MidiNativeAudioBackend`) for C/C++ integration
+- Unit tests for MIDI mapping and file export
+
+### Changed
+
+- Public API now includes MIDI exports through `flutter_notemus.dart` and `midi.dart`
+- README updated with version status, post-`0.1.0` evolution summary, and MIDI documentation
+
+### Notes
+
+- This is a major version bump from `0.1.0` due to significant API surface growth and new playback/export capabilities.
+
+---
+
 ## [0.1.0] - 2025-11-04
 
 ### 🎉 Initial Release
