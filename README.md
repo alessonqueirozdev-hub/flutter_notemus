@@ -141,7 +141,7 @@ Suporte a JSON, MusicXML (`score-partwise` e `score-timewise`) e MEI, com normal
 - Suporte a tuplets, polifonia (`MultiVoiceMeasure`) e tie-merge durante geração de eventos
 - Geração de trilha de metrônomo (canal de percussão) sincronizada com o timeline expandido
 - Exportação de arquivo Standard MIDI File (`.mid`) sem dependências externas via `MidiFileWriter`
-- Contrato de backend nativo (`MidiNativeAudioBackend`) para integração futura com engine C/C++
+- Implementação nativa first-party via `MethodChannelMidiNativeAudioBackend` + `MidiNativeSequenceBridge` para envio de tempo/compasso/notas/ties/metrônomo ao backend de áudio
 
 ### Personalização visual
 Tema completo com controle individual de cor para cada elemento: pauta, cabeça de nota, haste, clave, barra de compasso, articulação, dinâmica, ligadura, beam, acidente, marcação de oitava, texto e muito mais.
@@ -160,6 +160,7 @@ Neste repositório, a versão alvo já está em **`2.0.0`**, com trabalho **alé
 - Mapeamento de notação para timeline MIDI com repetições e volta
 - Trilha de metrônomo derivada da partitura
 - Writer `.mid` embutido (`MidiFileWriter`)
+- Integração nativa pronta para engine própria (MethodChannel + sequence bridge), mantendo o pipeline MIDI first-party da biblioteca
 - Melhorias contínuas de parser/layout/renderização acumuladas após a publicação
 
 ---
@@ -912,26 +913,45 @@ final bytes = MidiFileWriter.write(sequence);
 // bytes prontos para salvar/enviar como arquivo .mid
 ```
 
-#### 4) Contrato para backend nativo de baixa latência
+#### 4) Integração nativa já implementada na biblioteca (v2.0.0)
 
-Para integração com engine própria em C/C++ (clock mestre, playback sample-accurate, SoundFont), a biblioteca já inclui o contrato:
+A biblioteca já inclui implementação first-party para ponte com engine nativa, sem depender de pacote externo para o pipeline de notação -> MIDI:
+
+- `MidiNativeAudioBackend`: contrato para backends nativos
+- `MethodChannelMidiNativeAudioBackend`: backend pronto para platform channel (`flutter_notemus/native_audio`)
+- `MidiNativeSequenceBridge`: upload da `MidiSequence` para o backend (tempo, compasso, notas, tie-processing e metrônomo)
+- `extractScheduledNotes`: conversão de pares note-on/note-off em notas agendadas com duração em ticks
 
 ```dart
-abstract class MidiNativeAudioBackend { ... }
-```
+final backend = MethodChannelMidiNativeAudioBackend();
+final bridge = MidiNativeSequenceBridge(backend);
 
-Esse contrato permite plugar backend nativo sem alterar o pipeline de notação -> MIDI.
+await backend.initialize(
+  primarySoundFontPath: '/data/user/0/app/files/gm.sf2',
+  metronomeSoundFontPath: '/data/user/0/app/files/click.sf2',
+  sampleRate: 48000,
+);
+
+await bridge.uploadAndStart(
+  sequence,
+  includeMetronome: true,
+  countInBeats: 1,
+);
+```
 
 #### 5) Viabilidade C/C++ para áudio, clock mestre e metrônomo
 
-É viável implementar no próprio `flutter_notemus` um backend nativo C/C++ de alta performance, usando o pipeline:
+É viável implementar (ou conectar) um engine próprio em C/C++ no `flutter_notemus` com o desenho abaixo:
 
-- Mapper Dart (`MidiMapper`) para gerar eventos PPQ determinísticos
-- Bridge nativa (FFI/platform channel) para enviar eventos ao engine
-- Sequencer nativo sample-accurate para clock mestre e tie processing
-- Synth SoundFont nativo para timbres e clique de metrônomo
+- Mapper Dart (`MidiMapper`) gera timeline PPQ determinística
+- Bridge nativa (MethodChannel hoje; FFI opcional em evolução) envia eventos para o engine
+- Sequencer nativo sample-accurate mantém clock mestre, playback e tie processing
+- Synth SoundFont nativo entrega múltiplos timbres e clique de metrônomo
 
-Esse desenho mantém a biblioteca independente no nível de API (sem dependências de pacote para o mapeamento/export MIDI) e permite evolução para playback de baixa latência por plataforma.
+Referência de destino já existente para implementação nativa:
+- `C:\Users\Alesson Queiroz\OneDrive\MusiMind\app\src\main\cpp`
+
+Esse desenho mantém a biblioteca independente no nível de API (sem dependências de pacote para mapeamento/export MIDI) e permite evolução progressiva da camada nativa por plataforma.
 
 ---
 
@@ -1088,10 +1108,12 @@ flutter_notemus/
 │   │   └── score.dart              # Score, StaffGroup
 │   └── src/
 │       ├── midi/
-│       │   ├── midi_models.dart          # Eventos, tracks, sequência e opções
-│       │   ├── midi_mapper.dart          # Notação -> timeline MIDI
-│       │   ├── midi_file_writer.dart     # Escrita de arquivo .mid (SMF)
-│       │   └── native_audio_contract.dart # Contrato para backend nativo
+│       │   ├── midi_models.dart                  # Eventos, tracks, sequência e opções
+│       │   ├── midi_mapper.dart                  # Notação -> timeline MIDI
+│       │   ├── midi_file_writer.dart             # Escrita de arquivo .mid (SMF)
+│       │   ├── method_channel_native_backend.dart # Backend MethodChannel para engine nativa
+│       │   ├── midi_native_sequence_bridge.dart   # Bridge de sequência para backend nativo
+│       │   └── native_audio_contract.dart         # Contrato para backend nativo
 │       ├── layout/
 │       │   ├── layout_engine.dart          # Posicionamento de elementos
 │       │   └── collision_detector.dart     # Detecção de colisão (skyline)
