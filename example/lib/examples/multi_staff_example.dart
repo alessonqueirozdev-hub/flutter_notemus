@@ -352,19 +352,21 @@ class _GrandStaffScoreState extends State<GrandStaffScore> {
 
             final canvasHeight = bottomBaselineY + (widget.staffSpace * 5);
 
-            return CustomPaint(
-              size: Size(availableWidth, canvasHeight),
-              painter: _GrandStaffPainter(
-                metadata: _metadata,
-                theme: widget.theme,
-                staffSpace: widget.staffSpace,
-                topBaselineY: topBaselineY,
-                bottomBaselineY: bottomBaselineY,
-                trebleElements: aligned.trebleElements,
-                bassElements: shiftedBass,
-                barlineXs: aligned.sharedBarlineXs,
-                trebleLayout: trebleLayout,
-                bassLayout: bassLayout,
+            return ClipRect(
+              child: CustomPaint(
+                size: Size(availableWidth, canvasHeight),
+                painter: _GrandStaffPainter(
+                  metadata: _metadata,
+                  theme: widget.theme,
+                  staffSpace: widget.staffSpace,
+                  topBaselineY: topBaselineY,
+                  bottomBaselineY: bottomBaselineY,
+                  trebleElements: aligned.trebleElements,
+                  bassElements: shiftedBass,
+                  barlineXs: aligned.sharedBarlineXs,
+                  trebleLayout: trebleLayout,
+                  bassLayout: bassLayout,
+                ),
               ),
             );
           },
@@ -382,26 +384,54 @@ class _GrandStaffScoreState extends State<GrandStaffScore> {
 
     final segmentCount = math.max(
         1, math.min(trebleBoundaries.length, bassBoundaries.length) - 1);
-    final sharedBoundaries = <double>[
-      math.max(trebleBoundaries.first, bassBoundaries.first),
-    ];
+    final trebleSourceBoundaries =
+        trebleBoundaries.take(segmentCount + 1).toList();
+    final bassSourceBoundaries = bassBoundaries.take(segmentCount + 1).toList();
 
-    for (int i = 1; i <= segmentCount; i++) {
-      final trebleWidth = trebleBoundaries[i] - trebleBoundaries[i - 1];
-      final bassWidth = bassBoundaries[i] - bassBoundaries[i - 1];
-      sharedBoundaries.add(
-        sharedBoundaries.last + math.max(trebleWidth, bassWidth),
-      );
+    final trebleStart = trebleSourceBoundaries.first;
+    final bassStart = bassSourceBoundaries.first;
+    final trebleEnd = trebleSourceBoundaries.last;
+    final bassEnd = bassSourceBoundaries.last;
+
+    final sharedStart = math.max(trebleStart, bassStart);
+    double sharedEnd = math.min(trebleEnd, bassEnd);
+    if (sharedEnd <= sharedStart) {
+      sharedEnd = math.max(trebleEnd, bassEnd);
     }
+
+    final sharedBoundaries = <double>[sharedStart];
+    if (segmentCount > 1) {
+      for (int i = 1; i < segmentCount; i++) {
+        final trebleProgress = _safeProgress(
+          value: trebleSourceBoundaries[i],
+          start: trebleStart,
+          end: trebleEnd,
+        );
+        final bassProgress = _safeProgress(
+          value: bassSourceBoundaries[i],
+          start: bassStart,
+          end: bassEnd,
+        );
+        final targetProgress = math.max(trebleProgress, bassProgress);
+        var targetX =
+            sharedStart + ((sharedEnd - sharedStart) * targetProgress);
+
+        if (targetX <= sharedBoundaries.last) {
+          targetX = sharedBoundaries.last + 0.01;
+        }
+        sharedBoundaries.add(targetX);
+      }
+    }
+    sharedBoundaries.add(sharedEnd);
 
     final alignedTreble = _remapElementsX(
       elements: trebleElements,
-      originalBoundaries: trebleBoundaries.take(segmentCount + 1).toList(),
+      originalBoundaries: trebleSourceBoundaries,
       targetBoundaries: sharedBoundaries,
     );
     final alignedBass = _remapElementsX(
       elements: bassElements,
-      originalBoundaries: bassBoundaries.take(segmentCount + 1).toList(),
+      originalBoundaries: bassSourceBoundaries,
       targetBoundaries: sharedBoundaries,
     );
 
@@ -456,6 +486,18 @@ class _GrandStaffScoreState extends State<GrandStaffScore> {
     return elements.map((element) => element.position.dx).reduce(math.min);
   }
 
+  double _safeProgress({
+    required double value,
+    required double start,
+    required double end,
+  }) {
+    final span = end - start;
+    if (span.abs() < 0.0001) {
+      return 1.0;
+    }
+    return ((value - start) / span).clamp(0.0, 1.0).toDouble();
+  }
+
   bool _isSystemElement(MusicalElement element) {
     return element is Clef ||
         element is KeySignature ||
@@ -476,12 +518,9 @@ class _GrandStaffScoreState extends State<GrandStaffScore> {
           targetBoundaries.length,
         ) -
         1;
-    final leadingShift = targetBoundaries.first - originalBoundaries.first;
-    final trailingShift = targetBoundaries.last - originalBoundaries.last;
-
     double mapX(double x) {
       if (x <= originalBoundaries.first) {
-        return x + leadingShift;
+        return x;
       }
 
       for (int i = 0; i < segmentCount; i++) {
@@ -500,7 +539,8 @@ class _GrandStaffScoreState extends State<GrandStaffScore> {
         }
       }
 
-      return x + trailingShift;
+      final overflowAfterEnd = x - originalBoundaries.last;
+      return targetBoundaries.last + overflowAfterEnd;
     }
 
     return elements
@@ -577,6 +617,9 @@ class _GrandStaffPainter extends CustomPainter {
       return;
     }
 
+    canvas.save();
+    canvas.clipRect(Rect.fromLTWH(0, 0, size.width, size.height));
+
     final topCoordinates = StaffCoordinateSystem(
       staffSpace: staffSpace,
       staffBaseline: Offset(0, topBaselineY),
@@ -627,6 +670,8 @@ class _GrandStaffPainter extends CustomPainter {
         barlineConnectorPaint,
       );
     }
+
+    canvas.restore();
   }
 
   @override
