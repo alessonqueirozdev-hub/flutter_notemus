@@ -260,7 +260,13 @@ class PolyphonyExampleWidget extends StatelessWidget {
     return staff;
   }
 
-  Widget _buildSection({required String title, required String description, required Staff staff}) {
+  Widget _buildSection(
+      {required String title,
+      required String description,
+      required BuildContext context,
+      required Staff staff}) {
+    final viewportWidth = MediaQuery.sizeOf(context).width;
+    final scoreHeight = viewportWidth < 600 ? 220.0 : 190.0;
     return Card(
       elevation: 2,
       margin: const EdgeInsets.only(bottom: 16),
@@ -274,7 +280,8 @@ class PolyphonyExampleWidget extends StatelessWidget {
             Text(description, style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
             const SizedBox(height: 12),
             Container(
-              height: 120,
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              height: scoreHeight,
               decoration: BoxDecoration(
                 color: Colors.white,
                 border: Border.all(color: Colors.grey.shade300),
@@ -316,18 +323,21 @@ class PolyphonyExampleWidget extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             _buildSection(
-              title: 'Two Voices — Melody + Accompaniment',
+              title: 'Two Voices - Melody + Accompaniment',
               description: 'Voice 1 (stems above): melody in eighth notes. Voice 2 (stems below): accompaniment in half notes.',
+              context: context,
               staff: _buildTwoVoiceStaff(),
             ),
             _buildSection(
-              title: 'Contraponto ao Estilo Bach',
+              title: 'Bach-Style Counterpoint',
               description: 'Two independent voices in contrary motion.',
+              context: context,
               staff: _buildCounterpointStaff(),
             ),
             _buildSection(
-              title: 'Guitarra Fingerstyle',
+              title: 'Fingerstyle Guitar',
               description: 'Melody in eighth notes (voice 1) + bass in half notes (voice 2).',
+              context: context,
               staff: _buildGuitarStaff(),
             ),
           ],
