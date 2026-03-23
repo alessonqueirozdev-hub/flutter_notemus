@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 
-/// Um widget de página que demonstra a renderização de barras de ligação (beams).
+/// A page widget that demonstrates the rendering of beams.
 class BeamsExample extends StatelessWidget {
   const BeamsExample({super.key});
 
@@ -121,7 +121,7 @@ class BeamsExample extends StatelessWidget {
             ),
             _buildSection(
               title: 'Semicolcheias (2 Barras)',
-              description: 'Grupo de semicolcheias ligadas por duas barras.',
+              description: 'Group of sixteenth notes connected by two beams.',
               elements: sixteenthNoteBeams,
             ),
             _buildSection(
@@ -131,7 +131,7 @@ class BeamsExample extends StatelessWidget {
             ),
             _buildSection(
               title: 'Semifusas (4 Barras)',
-              description: 'Grupo de semifusas ligadas por quatro barras.',
+              description: 'Group of sixty-fourth notes connected by four beams.',
               elements: sixtyFourthNoteBeams,
             ),
             _buildSection(

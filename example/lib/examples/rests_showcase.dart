@@ -1,5 +1,5 @@
 // example/lib/examples/rests_showcase.dart
-// Showcase de TODAS as pausas em suas posições corretas segundo Behind Bars
+// Showcase of ALL pauses in their correct positions according to Behind Bars
 
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
@@ -76,8 +76,8 @@ class RestsShowcaseExample extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            _buildSpecItem('• Whole rest: hangs BELOW the 4th line (barra superior toca a linha)'),
-            _buildSpecItem('• Half rest: sits ON the 3rd line/center (barra inferior toca a linha)'),
+            _buildSpecItem('• Whole rest: hangs BELOW the 4th line (upper bar touches the line)'),
+            _buildSpecItem('• Half rest: sits ON the 3rd line/center (bottom bar touches the line)'),
             _buildSpecItem('• Quarter rest and smaller: centered on staff'),
             const SizedBox(height: 8),
             Text(
@@ -202,7 +202,7 @@ class RestsShowcaseExample extends StatelessWidget {
     final staff = Staff();
     
     final measure1 = Measure();
-    // Whole rest (ocupa o compasso todo)
+    // Whole rest (takes up the entire measure)
     measure1.add(Rest(duration: const Duration(DurationType.whole)));
 
     final measure2 = Measure();

@@ -231,7 +231,7 @@ class MultiStaffExampleWidget extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Group ${index + 1}: ${group.name ?? 'Unnamed'}',
+                        'Group ${index + 1}: ${group.name ??'Unnamed'}',
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -255,11 +255,11 @@ class MultiStaffExampleWidget extends StatelessWidget {
   }
 }
 
-/// Widget principal para demonstração de multi-pauta
-/// Renderiza duas pautas (clave de sol + clave de fá) com timeline compartilhada.
+/// Main widget for multi-story demo
+/// Renders two staves (treble clef + bass clef) with shared timeline.
 ///
 /// Esta implementação evita o desalinhamento de figuras e conecta visualmente as
-/// barras de compasso entre as duas pautas, como no grand staff de piano.
+/// bars between the two staves, as in the grand piano staff.
 class GrandStaffScore extends StatefulWidget {
   final Staff trebleStaff;
   final Staff bassStaff;
@@ -1678,7 +1678,7 @@ class MultiStaffDemoApp extends StatelessWidget {
   Widget _buildGrandStaffSection() {
     return _buildSection(
       title: '🎹 Grand Staff (Piano)',
-      description: 'Clave de sol (mão direita) + clave de fá (mão esquerda)',
+      description: 'Treble clef (right hand) + bass clef (left hand)',
       children: [
         Container(
           height: 220,
@@ -1711,7 +1711,7 @@ class MultiStaffDemoApp extends StatelessWidget {
     return _buildSection(
       title: 'Coral SATB',
       description:
-          'Quatro pautas alinhadas, clave de tenor oitavada para baixo e barras conectadas',
+          'Four staves aligned, tenor clef octave downwards and connected bars',
       children: [
         Container(
           height: 360,
@@ -1777,7 +1777,7 @@ class MultiStaffDemoApp extends StatelessWidget {
                     Row(children: [
                       Icon(Icons.info_outline, color: Colors.indigo.shade700),
                       const SizedBox(width: 8),
-                      Text('Sobre Multi-Pauta',
+                      Text('About Multi-Tariff',
                           style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: Colors.indigo.shade800,
@@ -1785,7 +1785,7 @@ class MultiStaffDemoApp extends StatelessWidget {
                     ]),
                     const SizedBox(height: 8),
                     const Text(
-                        'Notação multi-pauta usa várias pautas simultâneas para diferentes instrumentos ou vozes. O grand staff do piano é o exemplo mais comum.',
+                        'Multi-staff notation uses several simultaneous staffs for different instruments or voices. The grand piano staff is the most common example.',
                         style: TextStyle(fontSize: 13)),
                   ],
                 ),

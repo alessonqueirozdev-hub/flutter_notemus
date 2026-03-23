@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 
-/// Demonstra marcações de oitava: 8va, 8vb, 15ma, 15mb
+/// Demonstrates octave markings: 8va, 8vb, 15ma, 15mb
 class OctaveMarksExample extends StatelessWidget {
   const OctaveMarksExample({super.key});
 
@@ -11,7 +11,7 @@ class OctaveMarksExample extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Marcações de Oitava'),
+        title: const Text('Octave markings'),
         backgroundColor: Colors.teal.shade700,
       ),
       body: SingleChildScrollView(
@@ -22,38 +22,38 @@ class OctaveMarksExample extends StatelessWidget {
             _buildInfo(),
             const SizedBox(height: 16),
             _buildSection(
-              title: '8va — Uma Oitava Acima',
+              title: '8va — An Octave Higher',
               description:
-                  'Indica que as notas devem ser tocadas uma oitava mais '
-                  'alta do que escrito. Economiza linhas suplementares agudas.',
+                  'Indicates that notes should be played one octave higher'
+                  'higher than written. Saves acute supplementary lines.',
               score: _build8va(),
             ),
             _buildSection(
-              title: '8vb — Uma Oitava Abaixo',
+              title: '8vb — One Octave Below',
               description:
-                  'Indica que as notas devem ser tocadas uma oitava mais '
-                  'baixa do que escrito. Aparece abaixo da pauta.',
+                  'Indicates that notes should be played one octave higher'
+                  'lower than written. Appears below the agenda.',
               score: _build8vb(),
             ),
             _buildSection(
-              title: '15ma — Duas Oitavas Acima',
+              title: '15ma — Two Octaves Up',
               description:
-                  'Indica que as notas devem ser tocadas duas oitavas mais '
+                  'Indicates that notes should be played two octaves higher'
                   'altas do que escrito.',
               score: _build15ma(),
             ),
             _buildSection(
-              title: '15mb — Duas Oitavas Abaixo',
+              title: '15mb — Two Octaves Below',
               description:
-                  'Indica que as notas devem ser tocadas duas oitavas mais '
+                  'Indicates that notes should be played two octaves higher'
                   'baixas do que escrito.',
               score: _build15mb(),
             ),
             _buildSection(
               title: 'Combinação: 8va + 8vb',
               description:
-                  'Uso combinado de marcações acima e abaixo da pauta no '
-                  'mesmo trecho musical.',
+                  'Combined use of markings above and below the staff in'
+                  'same musical passage.',
               score: _buildCombined(),
             ),
           ],
@@ -75,7 +75,7 @@ class OctaveMarksExample extends StatelessWidget {
                 Icon(Icons.info_outline, color: Colors.teal.shade700),
                 const SizedBox(width: 8),
                 Text(
-                  'Sobre Marcações de Oitava',
+                  'About Octave Markings',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: Colors.teal.shade800,
@@ -86,11 +86,11 @@ class OctaveMarksExample extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             const Text(
-              'Marcações de oitava (ottava) são usadas para indicar que '
-              'uma passagem deve ser executada em uma oitava diferente '
-              'da escrita, evitando o uso excessivo de linhas suplementares. '
-              'A linha tracejada indica o trecho afetado e o colchete '
-              'vertical marca o fim da transposição.',
+              'Octave markings (ottava) are used to indicate that'
+              'a passage must be performed in a different octave'
+              'from notation, avoiding excessive use of ledger lines. '
+              'The dashed line indicates the affected section and the bracket'
+              'vertical marks the end of the transposition.',
               style: TextStyle(fontSize: 13),
             ),
           ],
@@ -278,7 +278,7 @@ class OctaveMarksExample extends StatelessWidget {
   Widget _buildCombined() {
     final staff = Staff();
 
-    // Compasso 1: 8va
+    // Measure 1: 8va
     final measure1 = Measure();
     measure1.add(Clef(clefType: ClefType.treble));
     measure1.add(TimeSignature(numerator: 4, denominator: 4));
@@ -298,7 +298,7 @@ class OctaveMarksExample extends StatelessWidget {
       duration: const Duration(DurationType.half),
     ));
 
-    // Compasso 2: notas normais
+    // Bar 2: normal notes
     final measure2 = Measure();
     measure2.add(Note(
       pitch: const Pitch(step: 'E', octave: 5),

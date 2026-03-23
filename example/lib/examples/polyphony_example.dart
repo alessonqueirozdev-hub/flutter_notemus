@@ -309,7 +309,7 @@ class PolyphonyExampleWidget extends StatelessWidget {
                       Text('Sobre Polifonia', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.purple.shade800, fontSize: 16)),
                     ]),
                     const SizedBox(height: 8),
-                    const Text('Polifonia é a técnica de escrever múltiplas vozes independentes numa mesma pauta. A voz 1 tem hastes para cima; a voz 2, para baixo.', style: TextStyle(fontSize: 13)),
+                    const Text('Polyphony is the technique of writing multiple independent voices on the same staff. Voice 1 has upward stems; voice 2, down.', style: TextStyle(fontSize: 13)),
                   ],
                 ),
               ),
@@ -317,7 +317,7 @@ class PolyphonyExampleWidget extends StatelessWidget {
             const SizedBox(height: 16),
             _buildSection(
               title: 'Duas Vozes — Melodia + Acompanhamento',
-              description: 'Voz 1 (hastes acima): melodia em colcheias. Voz 2 (hastes abaixo): acompanhamento em mínimas.',
+              description: 'Voice 1 (stems above): melody in eighth notes. Voice 2 (stems below): accompaniment in half notes.',
               staff: _buildTwoVoiceStaff(),
             ),
             _buildSection(

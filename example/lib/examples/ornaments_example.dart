@@ -4,9 +4,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 
-/// Widget que demonstra a renderização de todos os ornamentos musicais,
+/// Widget that demonstrates the rendering of all musical ornaments,
 /// seguindo as regras tipográficas profissionais.
-/// Este arquivo é a fonte única da verdade para exemplos de ornamentos.
+/// This file is the single source of truth for ornament examples.
 class OrnamentsExample extends StatelessWidget {
   const OrnamentsExample({super.key});
 
@@ -14,7 +14,7 @@ class OrnamentsExample extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Guia Completo de Ornamentos'),
+        title: const Text('Complete Ornament Guide'),
         backgroundColor: Colors.green.shade800,
         foregroundColor: Colors.white,
       ),
@@ -24,25 +24,25 @@ class OrnamentsExample extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildHeader(
-              'Guia de Ornamentos SMuFL',
-              'Demonstração do posicionamento correto de ornamentos conforme as regras de notação profissional.',
+              'SMuFL Ornaments Guide',
+              'Demonstration of the correct positioning of ornaments according to professional notation rules.',
             ),
             _buildSection(
               title: 'Regra Fundamental: Posicionamento em Voz Única',
               description:
-                  'Em música de voz única, ornamentos como trilos e mordentes são SEMPRE posicionados ACIMA da pauta, independentemente da direção da haste da nota.',
+                  'In single-voice music, ornaments such as trills and mordants are ALWAYS positioned ABOVE the staff, regardless of the direction of the note stem.',
               staff: _createSingleVoiceStaff(),
             ),
             _buildSection(
               title: 'Regra de Polifonia: Múltiplas Vozes',
               description:
-                  'Em pautas com múltiplas vozes, os ornamentos são posicionados na parte externa: acima para a voz superior (soprano) e abaixo para a voz inferior (contralto).',
+                  'In staves with multiple voices, the ornaments are positioned on the outside: above for the upper voice (soprano) and below for the lower voice (contralto).',
               staff: _createDoubleVoiceStaff(),
             ),
             _buildSection(
               title: 'Trilos (Trills)',
               description:
-                  'Trinados simples e com alterações cromáticas. O posicionamento é sempre acima em voz única.',
+                  'Simple trills and chromatic changes. The positioning is always above in a single voice.',
               staff: _createTrillsStaff(),
             ),
             _buildSection(
@@ -53,31 +53,31 @@ class OrnamentsExample extends StatelessWidget {
             ),
             _buildSection(
               title: 'Grupetos (Turns)',
-              description: 'Grupetos simples, invertidos e com corte.',
+              description: 'Simple, inverted, and cut turns.',
               staff: _createTurnsStaff(),
             ),
             _buildSection(
-              title: 'Apojaturas e Acciaccaturas (Grace Notes)',
+              title: 'Grace Notes e Acciaccaturas (Grace Notes)',
               description:
-                  'Notas de ornamento que precedem a nota principal. A ligadura para a nota principal é essencial.',
+                  'Ornamental notes that precede the main note. The ligature for the main note is essential.',
               staff: _createGraceNotesStaff(),
             ),
             _buildSection(
               title: 'Fermatas',
               description:
-                  'A fermata padrão é sempre acima. Versões específicas como a "fermataBelow" são usadas para posicionamento inferior explícito.',
+                  'The default fermata is always above. Specific versions like "fermataBelow" are used for explicit bottom positioning.',
               staff: _createFermatasStaff(),
             ),
             _buildSection(
               title: 'Arpejos e Glissandos',
               description:
-                  'Arpejos são posicionados à esquerda do acorde. Glissandos são representados por linhas entre as notas.',
+                  'Arpeggios are positioned to the left of the chord. Glissandos are represented by lines between notes.',
               staff: _createArpeggiosAndGlissandosStaff(),
             ),
             _buildSection(
               title: 'Efeitos de Articulação (Jazz/Moderno)',
               description:
-                  'Scoop, Fall, Doit e Plop, comuns em notação de jazz.',
+                  'Scoop, Fall, Doit and Plop, common in jazz notation.',
               staff: _createJazzEffectsStaff(),
             ),
           ],
@@ -111,7 +111,7 @@ class OrnamentsExample extends StatelessWidget {
     );
   }
 
-  /// Constrói uma seção de exemplo com título, descrição e partitura.
+  /// Builds an example section with title, description, and score.
   Widget _buildSection({
     required String title,
     required String description,
@@ -153,31 +153,31 @@ class OrnamentsExample extends StatelessWidget {
     );
   }
 
-  /// Exemplo da regra fundamental para voz única.
+  /// Example of the fundamental rule for single voice.
   Staff _createSingleVoiceStaff() {
     final staff = Staff();
     final measure = Measure();
     measure.add(Clef(clefType: ClefType.treble));
 
-    // Nota com haste para CIMA -> Ornamento ACIMA
+    // Note with stem UP -> Ornament UP
     measure.add(Note(
       pitch: const Pitch(step: 'E', octave: 4),
       duration: const Duration(DurationType.quarter),
       ornaments: [Ornament(type: OrnamentType.trill)],
     ));
-    // Nota com haste para BAIXO -> Ornamento ACIMA
+    // Note with stem DOWN -> Ornament UP
     measure.add(Note(
       pitch: const Pitch(step: 'C', octave: 5),
       duration: const Duration(DurationType.quarter),
       ornaments: [Ornament(type: OrnamentType.mordent)],
     ));
-    // Nota muito grave (haste para CIMA) -> Ornamento ACIMA
+    // Very low note (stem UP) -> Ornament UP
     measure.add(Note(
       pitch: const Pitch(step: 'D', octave: 3),
       duration: const Duration(DurationType.quarter),
       ornaments: [Ornament(type: OrnamentType.turn)],
     ));
-    // Nota muito aguda (haste para BAIXO) -> Ornamento ACIMA
+    // Very high note (stem DOWN) -> Ornament UP
     measure.add(Note(
       pitch: const Pitch(step: 'A', octave: 5),
       duration: const Duration(DurationType.quarter),
@@ -188,14 +188,14 @@ class OrnamentsExample extends StatelessWidget {
     return staff;
   }
 
-  /// Exemplo da regra para múltiplas vozes.
+  /// Example of the rule for multiple voices.
   Staff _createDoubleVoiceStaff() {
     final staff = Staff();
     final measure = Measure();
     measure.add(Clef(clefType: ClefType.treble));
     measure.add(TimeSignature(numerator: 2, denominator: 4));
 
-    // Voz 1 (Soprano) - Hastes para CIMA, Ornamentos ACIMA
+    // Voice 1 (Soprano) - Rods UP, Ornaments UP
     measure.add(Note(
       pitch: const Pitch(step: 'A', octave: 4),
       duration: const Duration(DurationType.quarter),
@@ -203,7 +203,7 @@ class OrnamentsExample extends StatelessWidget {
       ornaments: [Ornament(type: OrnamentType.trill)],
     ));
 
-    // Voz 2 (Contralto) - Hastes para BAIXO, Ornamentos ABAIXO
+    // Voice 2 (Contralto) - Stems DOWN, Ornaments DOWN
     measure.add(Note(
       pitch: const Pitch(step: 'F', octave: 4),
       duration: const Duration(DurationType.quarter),
@@ -215,7 +215,7 @@ class OrnamentsExample extends StatelessWidget {
     return staff;
   }
 
-  /// Exemplo focado em Trilos.
+  /// Example focused on Trilos.
   Staff _createTrillsStaff() {
     final staff = Staff();
     final measure = Measure();
@@ -246,7 +246,7 @@ class OrnamentsExample extends StatelessWidget {
     return staff;
   }
 
-  /// Exemplo focado em Mordentes.
+  /// Example focused on Jaws.
   Staff _createMordentsStaff() {
     final staff = Staff();
     final measure = Measure();
@@ -277,7 +277,7 @@ class OrnamentsExample extends StatelessWidget {
     return staff;
   }
 
-  /// Exemplo focado em Grupetos.
+  /// Example focused on Groups.
   Staff _createTurnsStaff() {
     final staff = Staff();
     final measure = Measure();
@@ -304,7 +304,7 @@ class OrnamentsExample extends StatelessWidget {
     return staff;
   }
 
-  /// Exemplo focado em Notas de Graça.
+  /// Example focused on Grace Notes.
   Staff _createGraceNotesStaff() {
     final staff = Staff();
     final measure = Measure();
@@ -336,20 +336,20 @@ class OrnamentsExample extends StatelessWidget {
     return staff;
   }
 
-  /// Exemplo focado em Fermatas.
+  /// Example focused on Fermatas.
   Staff _createFermatasStaff() {
     final staff = Staff();
     final measure = Measure();
     measure.add(Clef(clefType: ClefType.treble));
 
-    // Fermata padrão acima
+    // Standard Fermata above
     measure.add(Note(
       pitch: const Pitch(step: 'G', octave: 4),
       duration: const Duration(DurationType.half),
       ornaments: [Ornament(type: OrnamentType.fermata)],
     ));
 
-    // Fermata explícita abaixo
+    // Explicit Fermata below
     measure.add(Note(
       pitch: const Pitch(step: 'A', octave: 4),
       duration: const Duration(DurationType.half),
@@ -360,7 +360,7 @@ class OrnamentsExample extends StatelessWidget {
     return staff;
   }
 
-  /// Exemplo focado em Arpejos e Glissandos.
+  /// Example focused on Arpeggios and Glissandos.
   Staff _createArpeggiosAndGlissandosStaff() {
     final staff = Staff();
     final measure = Measure();
@@ -383,7 +383,7 @@ class OrnamentsExample extends StatelessWidget {
       ornaments: [Ornament(type: OrnamentType.arpeggio)],
     ));
 
-    // Glissando (requer duas notas para desenhar a linha)
+    // Glissando (requires two notes to draw the line)
     measure.add(Note(
       pitch: const Pitch(step: 'C', octave: 5),
       duration: const Duration(DurationType.quarter),
@@ -400,7 +400,7 @@ class OrnamentsExample extends StatelessWidget {
     return staff;
   }
 
-  /// Exemplo focado em efeitos de jazz e música moderna.
+  /// Example focused on jazz and modern music effects.
   Staff _createJazzEffectsStaff() {
     final staff = Staff();
     final measure = Measure();

@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 
-/// 🎼 EXEMPLO PROFISSIONAL DE QUIÁLTERAS
+/// 🎼 PROFESSIONAL EXAMPLE OF QUIALTERES
 /// Baseado em Behind Bars (Elaine Gould)
 class TupletsProfessionalExample extends StatelessWidget {
   const TupletsProfessionalExample({super.key});
@@ -24,26 +24,26 @@ class TupletsProfessionalExample extends StatelessWidget {
           _categoryTitle('TEMPO SIMPLES (4/4)'),
           _categoryDesc('Numerador > Denominador (contraentes)'),
           
-          _example(1, 'Tercina (3:2)', '3 colcheias no lugar de 2', _triplet()),
-          _example(2, 'Quintina (5:4)', '5 semicolcheias no lugar de 4', _quintuplet()),
-          _example(3, 'Sextina (6:4)', '6 semicolcheias no lugar de 4', _sextuplet()),
-          _example(4, 'Septina (7:4)', '7 semicolcheias no lugar de 4', _septuplet()),
+          _example(1, 'Tercina (3:2)', '3 eighth notes in the space of 2', _triplet()),
+          _example(2, 'Quintina (5:4)', '5 sixteenth notes in the space of 4', _quintuplet()),
+          _example(3, 'Sextina (6:4)', '6 sixteenth notes in the space of 4', _sextuplet()),
+          _example(4, 'Septina (7:4)', '7 sixteenth notes in the space of 4', _septuplet()),
           
           const SizedBox(height: 32),
           _categoryTitle('TEMPO COMPOSTO (6/8)'),
           _categoryDesc('Dupleto (2:3) - quiáltera expansiva'),
           
-          _example(5, 'Dupleto (2:3)', '2 colcheias no lugar de 3', _duplet()),
-          _example(6, 'Quadrupleto (4:6)', '4 no lugar de 6', _quadruplet()),
+          _example(5, 'Dupleto (2:3)', '2 eighth notes in the space of 3', _duplet()),
+          _example(6, 'Quadrupleto (4:6)', '4 in the space of 6', _quadruplet()),
           
           const SizedBox(height: 32),
           _categoryTitle('CASOS ESPECIAIS'),
           
           _example(7, 'Irracional (7:5)', 'SEMPRE razão completa!', _irrational(), true),
-          _example(8, 'Sem Colchete', 'Quando notas são beamed', _noBracket()),
-          _example(9, 'Com Pausas', 'Colchete obrigatório', _withRests()),
+          _example(8, 'Sem Colchete', 'When notes are beamed', _noBracket()),
+          _example(9, 'With Pauses', 'Colchete obrigatório', _withRests()),
           _example(10, 'Semínimas', 'Durações mais longas', _quarters()),
-          _example(11, 'Nontupleto (9:8)', '9 fusas no lugar de 8', _nonuplet()),
+          _example(11, 'Nontupleto (9:8)', '9 thirty-second notes in the space of 8', _nonuplet()),
           
           const SizedBox(height: 24),
           _footer(),
@@ -73,7 +73,7 @@ class TupletsProfessionalExample extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               'Implementação baseada em "Behind Bars" de Elaine Gould. '
-              'Demonstra todas as regras de notação profissional.',
+              'Demonstrates all professional notation rules.',
               style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
             ),
           ],
@@ -159,7 +159,7 @@ class TupletsProfessionalExample extends StatelessWidget {
     );
   }
 
-  // === EXEMPLOS ===
+  // === EXAMPLES ===
 
   Staff _triplet() {
     final staff = Staff();

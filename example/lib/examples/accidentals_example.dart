@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 
-/// Um widget de página que demonstra a renderização dos acidentes musicais.
+/// A page widget that demonstrates the rendering of musical accidentals.
 class AccidentalsExample extends StatelessWidget {
   const AccidentalsExample({super.key});
 
@@ -41,7 +41,7 @@ class AccidentalsExample extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Família de Símbolos: Acidentes'),
+        title: const Text('Symbol Family: Accidentals'),
         backgroundColor: Colors.purple.shade700,
       ),
       body: SingleChildScrollView(
@@ -50,9 +50,9 @@ class AccidentalsExample extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildSection(
-              title: 'Acidentes Musicais',
+              title: 'Musical Accidentals',
               description:
-                  'Exibe os acidentes mais comuns: sustenido, bemol, bequadro, dobrado sustenido e dobrado bemol. Verifique o alinhamento de cada acidente à esquerda da cabeça da nota.',
+                  'Displays the most common accidentals: sharp, flat, natural sign, double sharp and double flat. Check the alignment of each accidental to the left of the note head.',
               elements: accidentalElements,
             ),
           ],

@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 
-/// Widget que demonstra a renderização de dinâmicas musicais
+/// Widget that demonstrates the rendering of musical dynamics
 class DynamicsExample extends StatelessWidget {
   const DynamicsExample({super.key});
 

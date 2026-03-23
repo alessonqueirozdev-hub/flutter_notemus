@@ -1,5 +1,5 @@
 // example/lib/examples/complete_advanced_elements.dart
-// Demonstração completa de elementos avançados: acordes, tuplets, dinâmicas, etc.
+// Complete demonstration of advanced elements: chords, tuplets, dynamics, etc.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
@@ -18,11 +18,11 @@ class CompleteAdvancedElementsExample extends StatelessWidget {
           children: [
             _buildHeader(
               'Elementos Avançados Completos',
-              'Acordes, Quiálteras, Ligaduras e Dinâmicas',
+              'Chords, Quialteres, Ligatures and Dynamics',
             ),
             const SizedBox(height: 32),
             _buildSection(
-              'Acordes Complexos',
+              'Complex Chords',
               'Tríades, tétrades e cluster chords',
               _createComplexChords(),
             ),
@@ -34,14 +34,14 @@ class CompleteAdvancedElementsExample extends StatelessWidget {
             ),
             const SizedBox(height: 32),
             _buildSection(
-              'Ligaduras de Expressão (Slurs)',
+              'Expression Ligatures (Slurs)',
               'Frasagem e articulação',
               _createSlurs(),
             ),
             const SizedBox(height: 32),
             _buildSection(
-              'Ligaduras de Prolongamento (Ties)',
-              'Notas sustentadas',
+              'Extension Bandages (Ties)',
+              'Supported notes',
               _createTies(),
             ),
             const SizedBox(height: 32),
@@ -136,12 +136,12 @@ class CompleteAdvancedElementsExample extends StatelessWidget {
   Widget _createComplexChords() {
     final staff = Staff();
 
-    // Compasso 1: Tríades
+    // Bar 1: Triads
     final measure1 = Measure();
     measure1.add(Clef(clefType: ClefType.treble));
     measure1.add(TimeSignature(numerator: 4, denominator: 4));
 
-    // Acorde Maior (C-E-G)
+    // Major Chord (C-E-G)
     measure1.add(Chord(
       notes: [
         Note(
@@ -160,7 +160,7 @@ class CompleteAdvancedElementsExample extends StatelessWidget {
       duration: const Duration(DurationType.quarter),
     ));
 
-    // Acorde menor (D-F-A)
+    // Minor chord (D-F-A)
     measure1.add(Chord(
       notes: [
         Note(
@@ -236,7 +236,7 @@ class CompleteAdvancedElementsExample extends StatelessWidget {
   Widget _createTuplets() {
     final staff = Staff();
 
-    // Compasso 1: Tercinas
+    // Bar 1: Triplets
     final measure1 = Measure();
     measure1.add(Clef(clefType: ClefType.treble));
     measure1.add(TimeSignature(numerator: 4, denominator: 4));
@@ -290,7 +290,7 @@ class CompleteAdvancedElementsExample extends StatelessWidget {
       duration: const Duration(DurationType.quarter),
     ));
 
-    // Compasso 2: Quintinas
+    // Measure 2: Quintinas
     final measure2 = Measure();
 
     measure2.add(Tuplet(
@@ -380,7 +380,7 @@ class CompleteAdvancedElementsExample extends StatelessWidget {
   Widget _createTies() {
     final staff = Staff();
 
-    // Compasso 1
+    // Measure 1
     final measure1 = Measure();
     measure1.add(Clef(clefType: ClefType.treble));
     measure1.add(TimeSignature(numerator: 4, denominator: 4));
@@ -397,7 +397,7 @@ class CompleteAdvancedElementsExample extends StatelessWidget {
       tie: TieType.end,
     ));
 
-    // Compasso 2
+    // Measure 2
     final measure2 = Measure();
 
     measure2.add(Note(
@@ -432,7 +432,7 @@ class CompleteAdvancedElementsExample extends StatelessWidget {
   Widget _createDynamics() {
     final staff = Staff();
 
-    // Compasso 1: Dinâmicas básicas
+    // Bar 1: Basic dynamics
     final measure1 = Measure();
     measure1.add(Clef(clefType: ClefType.treble));
     measure1.add(TimeSignature(numerator: 4, denominator: 4));
@@ -461,7 +461,7 @@ class CompleteAdvancedElementsExample extends StatelessWidget {
       dynamicElement: Dynamic(type: DynamicType.forte),
     ));
 
-    // Compasso 2: Dinâmicas extremas
+    // Bar 2: Extreme dynamics
     final measure2 = Measure();
 
     measure2.add(Note(
@@ -484,7 +484,7 @@ class CompleteAdvancedElementsExample extends StatelessWidget {
 
     measure2.add(Rest(duration: const Duration(DurationType.quarter)));
 
-    // Compasso 3: Crescendo e Diminuendo
+    // Compass 3: Crescendo and Diminuendo
     final measure3 = Measure();
 
     measure3.add(Note(
@@ -560,7 +560,7 @@ class CompleteAdvancedElementsExample extends StatelessWidget {
   Widget _createRepeats() {
     final staff = Staff();
 
-    // Compasso 1
+    // Measure 1
     final measure1 = Measure();
     measure1.add(Clef(clefType: ClefType.treble));
     measure1.add(TimeSignature(numerator: 4, denominator: 4));
@@ -582,7 +582,7 @@ class CompleteAdvancedElementsExample extends StatelessWidget {
       duration: const Duration(DurationType.half),
     ));
 
-    // Compasso 2
+    // Measure 2
     final measure2 = Measure();
 
     measure2.add(Note(

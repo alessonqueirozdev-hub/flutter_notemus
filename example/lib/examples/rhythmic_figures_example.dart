@@ -11,8 +11,8 @@ class RhythmicFigure {
   const RhythmicFigure(this.name, this.durationType);
 }
 
-/// Um widget de página que demonstra a renderização de todas as figuras rítmicas
-/// de forma organizada, pareando cada nota com sua respectiva pausa.
+/// A page widget that demonstrates the rendering of all rhythmic figures
+/// in an organized way, pairing each note with its respective rest.
 class RhythmicFiguresExample extends StatelessWidget {
   const RhythmicFiguresExample({super.key});
 
@@ -40,7 +40,7 @@ class RhythmicFiguresExample extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: figures.map((figure) {
-            // Para cada figura, cria uma lista de elementos com a nota e a pausa
+            // For each figure, create a list of elements with the note and rest
             final elements = [
               Clef(clefType: ClefType.treble),
               Note(
@@ -60,7 +60,7 @@ class RhythmicFiguresExample extends StatelessWidget {
     );
   }
 
-  /// Constrói uma seção de teste para cada par de nota/pausa.
+  /// Constructs a test section for each note/rest pair.
   Widget _buildSection({
     required String title,
     required List<MusicalElement> elements,

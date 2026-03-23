@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 
-/// Widget que demonstra a renderização de indicações de tempo e agógica
+/// Widget that demonstrates the rendering of time and agogical indications
 class TempoAgogicsExample extends StatelessWidget {
   const TempoAgogicsExample({super.key});
 
@@ -48,7 +48,7 @@ class TempoAgogicsExample extends StatelessWidget {
               ],
             ),
             _buildSection(
-              title: 'Diferentes Unidades de Tempo',
+              title: 'Different Beat Units',
               description: 'Variações de unidade métrica para o metrônomo.',
               elements: [
                 Clef(clefType: ClefType.treble),
@@ -152,7 +152,7 @@ class TempoAgogicsExample extends StatelessWidget {
               ],
             ),
             _buildSection(
-              title: 'Respirações e Pausas',
+              title: 'Breaths and Pauses',
               description: 'Indicações de respiração e interrupção.',
               elements: [
                 Clef(clefType: ClefType.treble),

@@ -1,5 +1,5 @@
 // example/lib/examples/complete_articulations_ornaments.dart
-// Demonstração completa de articulações e ornamentos
+// Complete demonstration of articulations and ornaments
 
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
@@ -17,8 +17,8 @@ class CompleteArticulationsOrnamentsExample extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildHeader(
-              'Articulações e Ornamentos Completos',
-              'Demonstração de todos os símbolos de expressão musical',
+              'Joints and Complete Ornaments',
+              'Demonstration of all musical expression symbols',
             ),
             const SizedBox(height: 32),
             _buildSection(
@@ -34,26 +34,26 @@ class CompleteArticulationsOrnamentsExample extends StatelessWidget {
             ),
             const SizedBox(height: 32),
             _buildSection(
-              'Ornamentos Barrocos',
+              'Baroque Ornaments',
               'Trinos, Mordentes, Grupetos',
               _createBaroqueOrnaments(),
             ),
             const SizedBox(height: 32),
             _buildSection(
-              'Ornamentos Modernos',
+              'Modern Ornaments',
               'Glissando, Bends, Slides',
               _createModernOrnaments(),
             ),
             const SizedBox(height: 32),
             _buildSection(
-              'Fermatas e Pausas de Respiração',
-              'Diferentes tipos de fermatas',
+              'Fermatas and Breathing Pauses',
+              'Different fermata types',
               _createFermatasAndBreaths(),
             ),
             const SizedBox(height: 32),
             _buildSection(
               'Combinações Complexas',
-              'Múltiplas articulações e ornamentos',
+              'Multiple articulations and ornaments',
               _createComplexCombinations(),
             ),
           ],
@@ -308,7 +308,7 @@ class CompleteArticulationsOrnamentsExample extends StatelessWidget {
   Widget _createFermatasAndBreaths() {
     final staff = Staff();
 
-    // Compasso 1: Fermatas
+    // Compass 1: Fermatas
     final measure1 = Measure();
     measure1.add(Clef(clefType: ClefType.treble));
     measure1.add(TimeSignature(numerator: 4, denominator: 4));

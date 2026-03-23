@@ -32,14 +32,14 @@ import 'examples/multi_staff_example.dart';
 import 'examples/octave_marks_example.dart';
 import 'examples/volta_brackets_example.dart';
 
-// Novos exemplos completos
+// New full examples
 import 'examples/complete_clefs_demo.dart';
 import 'examples/complete_articulations_ornaments.dart';
 import 'examples/complete_advanced_elements.dart';
 import 'examples/complete_music_piece.dart';
 import 'examples/complete_improvements_demo.dart';
 
-// Exemplos JSON
+// JSON Examples
 import 'examples/simple_json_example.dart';
 import 'examples/json_ode_example.dart';
 import 'examples/professional_json_example.dart';
@@ -64,7 +64,7 @@ class MusicNotationApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Flutter Notemus Exemplos',
+      title: 'Flutter Note Examples',
       theme: ThemeData(
         primarySwatch: Colors.blue,
         useMaterial3: true,
@@ -86,38 +86,38 @@ class _MainScreenState extends State<MainScreen> {
 
   final List<String> _titles = [
     '🔍 TESTE: Precisão de Alturas',
-    '🎯 TESTE: Pontos de Aumento',
-    'Claves',
-    'Armaduras de Clave',
+    '🎯 TESTE: Augmentation Dots',
+    'Keys',
+    'Key Signatures',
     'Figuras Rítmicas',
-    'Acidentes',
+    'Accidents',
     'Articulações',
-    'Pontos e Linhas Suplementares',
-    'Acordes',
+    'Supplementary Points and Lines',
+    'Chords',
     'Barras de Ligação (Beams)',
     '🎵 Beaming Avançado (Showcase)',
-    'Ornamentos',
+    'Ornaments',
     'Dinâmicas',
     'Tempo e Agógica',
     'Repetições',
-    'Apojaturas e Notas de Graça',
-    'Ligaduras',
+    'Apogiaturas and Grace Notes',
+    'Ligatures',
     'Quiálteras (Tuplets)',
     '🎼 Quiálteras Profissionais',
     'Bandeiras vs Barras',
-    'Ornamentos Profissionais',
-    'Ornamentos Corrigidos',
-    'Pausas (Rests Showcase)',
+    'Professional Ornaments',
+    'Fixed Ornaments',
+    'Rests Showcase',
     'Polifonia (Múltiplas Vozes)',
     'Multi-Pauta (Grand Staff)',
-    '🎵 Marcações de Oitava (8va/8vb)',
-    '🎵 Colchetes de Volta (1ª/2ª Vez)',
-    '🎼 DEMO: Todas as Claves',
+    '🎵 Octave markings (8va/8vb)',
+    '🎵 Volta Brackets (1ª/2ª Vez)',
+    '🎼 DEMO: All Clefs',
     '🎵 DEMO: Articulações Completas',
     '🎸 DEMO: Elementos Avançados',
     '🎹 DEMO: Peça Musical Completa',
-    '⚙️ DEMO: Melhorias Completas',
-    '📄 JSON: Exemplo Simples',
+    '⚙️ DEMO: Complete Improvements',
+    '📄 JSON: Simple Example',
     '📄 JSON: Ode à Alegria',
     '📄 JSON: Profissional Completo',
   ];
@@ -150,13 +150,13 @@ class _MainScreenState extends State<MainScreen> {
     MultiStaffDemoApp(),
     OctaveMarksExample(),
     VoltaBracketsExample(),
-    // Novos exemplos completos
+    // New full examples
     CompleteClefsDemoExample(),
     CompleteArticulationsOrnamentsExample(),
     CompleteAdvancedElementsExample(),
     CompleteMusicPieceExample(),
     ImprovementsDemoPage(),
-    // Exemplos JSON
+    // JSON Examples
     SimpleJsonExample(),
     JsonOdeExample(),
     ProfessionalJsonExample(),
@@ -194,7 +194,7 @@ class _MainScreenState extends State<MainScreen> {
                   ),
                   SizedBox(height: 4),
                   Text(
-                    'Exemplos por Família de Símbolos',
+                    'Examples by Symbol Family',
                     style: TextStyle(
                       color: Colors.white70,
                       fontSize: 14,
@@ -249,7 +249,7 @@ class _MainScreenState extends State<MainScreen> {
       case 11:
         return const Icon(Icons.repeat); // Repetições
       case 12:
-        return const Icon(Icons.scatter_plot); // Apojaturas
+        return const Icon(Icons.scatter_plot); // Grace Notes
       case 13:
         return const Icon(Icons.trending_up); // Ligaduras
       default:

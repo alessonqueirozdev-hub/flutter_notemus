@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 
-/// Exemplo demonstrando posicionamento correto dos ornamentos
+/// Example demonstrating correct placement of ornaments
 /// seguindo regras tipográficas profissionais de notação musical
 class CorrectedOrnamentsExample extends StatelessWidget {
   const CorrectedOrnamentsExample({Key? key}) : super(key: key);
@@ -10,7 +10,7 @@ class CorrectedOrnamentsExample extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Ornamentos: Posicionamento Tipográfico Correto'),
+        title: const Text('Ornaments: Correct Typographic Positioning'),
         backgroundColor: Colors.green[800],
         foregroundColor: Colors.white,
       ),
@@ -25,38 +25,38 @@ class CorrectedOrnamentsExample extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Demonstra a implementação das regras tipográficas profissionais para ornamentos musicais.',
+              'Demonstrates the implementation of professional typographic rules for musical ornaments.',
               style: TextStyle(fontSize: 14, color: Colors.grey[600]),
             ),
             const SizedBox(height: 24),
 
             _buildExampleSection(
-              'REGRA CORRETA: Ornamentos SEMPRE Acima',
-              'TODOS os ornamentos ficam ACIMA, independente da direção da haste',
+              'CORRECT RULE: Ornaments ALWAYS Above',
+              'ALL ornaments are UP, regardless of stem direction',
               _createSingleVoiceStaff(),
             ),
 
             _buildExampleSection(
               'Vozes Duplas - Soprano e Contralto',
-              'Soprano: ornamentos acima (externa superior) | Contralto: ornamentos abaixo (externa inferior)',
+              'Soprano: ornaments above (top exterior) | Contralto: ornaments below (lower outer)',
               _createDoubleVoiceStaff(),
             ),
 
             _buildExampleSection(
-              'Notas Extremas - Região Alta',
-              'Notas na região alta do pentagrama com ornamentos corretos',
+              'Extreme Notes - Upper Region',
+              'Notes in the upper region of the pentagram with correct ornaments',
               _createHighRegionStaff(),
             ),
 
             _buildExampleSection(
-              'Notas Extremas - Região Baixa',
-              'Notas na região baixa do pentagrama com ornamentos corretos',
+              'Extreme Notes - Lower Region',
+              'Notes in the lower region of the pentagram with correct ornaments',
               _createLowRegionStaff(),
             ),
 
             _buildExampleSection(
               'Fermatas Especiais',
-              'Fermatas acima e abaixo conforme especificação tipográfica',
+              'Fermatas above and below according to typographic specification',
               _createFermataStaff(),
             ),
           ],
@@ -95,7 +95,7 @@ class CorrectedOrnamentsExample extends StatelessWidget {
     );
   }
 
-  /// Voz única - todos os ornamentos devem ficar acima
+  /// Single voice - all ornaments must be above
   Staff _createSingleVoiceStaff() {
     final staff = Staff();
     final measure = Measure();
@@ -103,8 +103,8 @@ class CorrectedOrnamentsExample extends StatelessWidget {
     measure.add(Clef(clefType: ClefType.treble));
     measure.add(TimeSignature(numerator: 4, denominator: 4));
 
-    // DEMONSTRAÇÃO DA REGRA CORRETA:
-    // TODAS as notas têm ornamentos ACIMA, independente da direção da haste
+    // DEMONSTRATION OF THE CORRECT RULE:
+    // ALL notes have ABOVE ornaments, regardless of stem direction
 
     measure.add(Note(
       pitch: const Pitch(step: 'C', octave: 4), // Haste para CIMA → ornamento ACIMA ✓
@@ -134,7 +134,7 @@ class CorrectedOrnamentsExample extends StatelessWidget {
     return staff;
   }
 
-  /// Vozes duplas - soprano acima, contralto abaixo
+  /// Double voices - soprano above, alto below
   Staff _createDoubleVoiceStaff() {
     final staff = Staff();
     final measure = Measure();
@@ -142,7 +142,7 @@ class CorrectedOrnamentsExample extends StatelessWidget {
     measure.add(Clef(clefType: ClefType.treble));
     measure.add(TimeSignature(numerator: 4, denominator: 4));
 
-    // Voz 1 - Soprano (ornamentos acima)
+    // Voice 1 - Soprano (ornaments above)
     measure.add(Note(
       pitch: const Pitch(step: 'G', octave: 4),
       duration: const Duration(DurationType.quarter),
@@ -157,7 +157,7 @@ class CorrectedOrnamentsExample extends StatelessWidget {
       ornaments: [Ornament(type: OrnamentType.mordent)],
     ));
 
-    // Voz 2 - Contralto (ornamentos abaixo)
+    // Voice 2 - Contralto (ornaments below)
     measure.add(Note(
       pitch: const Pitch(step: 'E', octave: 4),
       duration: const Duration(DurationType.quarter),
@@ -184,7 +184,7 @@ class CorrectedOrnamentsExample extends StatelessWidget {
     measure.add(Clef(clefType: ClefType.treble));
     measure.add(TimeSignature(numerator: 4, denominator: 4));
 
-    // Notas altas - ornamentos devem ficar acima (externa superior)
+    // High notes - ornaments should be above (upper outer)
     measure.add(Note(
       pitch: const Pitch(step: 'F', octave: 5), // 5ª linha
       duration: const Duration(DurationType.quarter),
@@ -215,7 +215,7 @@ class CorrectedOrnamentsExample extends StatelessWidget {
     measure.add(Clef(clefType: ClefType.bass));
     measure.add(TimeSignature(numerator: 4, denominator: 4));
 
-    // Notas baixas - ornamentos devem ficar acima (externa superior)
+    // Low notes - ornaments should be above (upper outer)
     measure.add(Note(
       pitch: const Pitch(step: 'C', octave: 2), // Muito baixa
       duration: const Duration(DurationType.quarter),
@@ -246,14 +246,14 @@ class CorrectedOrnamentsExample extends StatelessWidget {
     measure.add(Clef(clefType: ClefType.treble));
     measure.add(TimeSignature(numerator: 4, denominator: 4));
 
-    // Fermata padrão (sempre acima)
+    // Standard Fermata (always above)
     measure.add(Note(
       pitch: const Pitch(step: 'G', octave: 4),
       duration: const Duration(DurationType.half),
       ornaments: [Ornament(type: OrnamentType.fermata)],
     ));
 
-    // Fermata explicitamente abaixo
+    // Fermata explicitly below
     measure.add(Note(
       pitch: const Pitch(step: 'A', octave: 4),
       duration: const Duration(DurationType.half),

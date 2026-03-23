@@ -4,6 +4,15 @@ All notable changes to Flutter Notemus are documented in this file.
 
 The format is based on Keep a Changelog and this project follows Semantic Versioning.
 
+## [2.2.0] - 2026-03-23
+
+### Changed
+
+- Translated example app UI texts to English across example pages and labels.
+- Added web plugin support entry with `FlutterNotemusWeb`.
+- Added Swift Package Manager manifests and source targets for iOS and macOS plugin integration.
+- Normalized license metadata and Apache-2.0 declaration in `pubspec.yaml`.
+
 ## [2.1.0] - 2026-03-23
 
 ### Changed

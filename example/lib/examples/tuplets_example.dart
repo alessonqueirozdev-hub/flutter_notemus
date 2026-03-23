@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 
-/// Widget que demonstra a renderização de quiálteras (tuplets)
+/// Widget that demonstrates the rendering of tuplets
 class TupletsExample extends StatelessWidget {
   const TupletsExample({super.key});
 
@@ -49,7 +49,7 @@ class TupletsExample extends StatelessWidget {
             ),
             _buildSection(
               title: 'Quinta (5:4)',
-              description: 'Cinco semicolcheias no lugar de quatro.',
+              description: 'Five sixteenth notes in the space of four.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 Tuplet(
@@ -85,7 +85,7 @@ class TupletsExample extends StatelessWidget {
             ),
             _buildSection(
               title: 'Sextina (6:4)',
-              description: 'Seis semicolcheias no lugar de quatro.',
+              description: 'Six sixteenth notes in the space of four.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 Tuplet(
@@ -125,7 +125,7 @@ class TupletsExample extends StatelessWidget {
             ),
             _buildSection(
               title: 'Septina (7:4)',
-              description: 'Sete fusas no lugar de quatro.',
+              description: 'Seven thirty-second notes in the space of four.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 Tuplet(
@@ -168,8 +168,8 @@ class TupletsExample extends StatelessWidget {
               ],
             ),
             _buildSection(
-              title: 'Tercina com Pausas',
-              description: 'Tercina incluindo pausas no agrupamento.',
+              title: 'Triplet with Rests',
+              description: 'Triplet including rests in the grouping.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 Tuplet(
@@ -193,8 +193,8 @@ class TupletsExample extends StatelessWidget {
               ],
             ),
             _buildSection(
-              title: 'Tercina Sem Suporte',
-              description: 'Tercina mostrando apenas o número, sem linha de suporte.',
+              title: 'Triplet Without Bracket',
+              description: 'Triplet showing only the number, with no support line.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 Tuplet(

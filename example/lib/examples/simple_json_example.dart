@@ -57,11 +57,11 @@ class SimpleJsonExample extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Compassos: ${staff.measures.length}',
+                  'Compasses: ${staff.measures.length}',
                   style: const TextStyle(fontSize: 14),
                 ),
                 Text(
-                  'Notas: 14',
+                  'Ratings: 14',
                   style: const TextStyle(fontSize: 14),
                 ),
                 Text(

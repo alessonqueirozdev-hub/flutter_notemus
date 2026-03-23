@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 
-/// Widget que demonstra a renderização de ligaduras (slurs e ties)
+/// Widget that demonstrates the rendering of bandages (slurs and ties)
 class SlursTiesExample extends StatelessWidget {
   const SlursTiesExample({super.key});
 
@@ -11,7 +11,7 @@ class SlursTiesExample extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Família de Símbolos: Ligaduras'),
+        title: const Text('Symbol Family: Ligatures'),
         backgroundColor: Colors.cyan.shade700,
       ),
       body: SingleChildScrollView(
@@ -20,8 +20,8 @@ class SlursTiesExample extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildSection(
-              title: 'Ligaduras de Valor (Ties)',
-              description: 'Ligaduras que conectam notas da mesma altura.',
+              title: 'Value Bonds (Ties)',
+              description: 'Ligatures that connect notes of the same pitch.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 Note(
@@ -47,8 +47,8 @@ class SlursTiesExample extends StatelessWidget {
               ],
             ),
             _buildSection(
-              title: 'Ligaduras de Expressão (Slurs)',
-              description: 'Ligaduras que conectam notas de alturas diferentes.',
+              title: 'Expression Ligatures (Slurs)',
+              description: 'Ligatures that connect notes of different pitches.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 Note(
@@ -73,7 +73,7 @@ class SlursTiesExample extends StatelessWidget {
             ),
             _buildSection(
               title: 'Slurs Curtos',
-              description: 'Ligaduras de expressão entre duas notas.',
+              description: 'Expression slurs between two notes.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 Note(
@@ -100,7 +100,7 @@ class SlursTiesExample extends StatelessWidget {
             ),
             _buildSection(
               title: 'Slurs Longos',
-              description: 'Ligaduras de expressão sobre frases extensas.',
+              description: 'Expression ligatures over extended sentences.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 Note(
@@ -132,8 +132,8 @@ class SlursTiesExample extends StatelessWidget {
               ],
             ),
             _buildSection(
-              title: 'Ties em Acordes',
-              description: 'Ligaduras de valor aplicadas a acordes.',
+              title: 'Ties in Chords',
+              description: 'Value ligatures applied to chords.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 Chord(
@@ -179,8 +179,8 @@ class SlursTiesExample extends StatelessWidget {
               ],
             ),
             _buildSection(
-              title: 'Slurs em Acordes',
-              description: 'Ligaduras de expressão conectando acordes.',
+              title: 'Slurs in Chords',
+              description: 'Expression ligatures connecting chords.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 Chord(
@@ -222,8 +222,8 @@ class SlursTiesExample extends StatelessWidget {
               ],
             ),
             _buildSection(
-              title: 'Ligaduras Avançadas',
-              description: 'Ligaduras com direções específicas.',
+              title: 'Advanced Ligatures',
+              description: 'Ligatures with specific directions.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 Note(
@@ -244,8 +244,8 @@ class SlursTiesExample extends StatelessWidget {
               ],
             ),
             _buildSection(
-              title: 'Slurs com Direção para Baixo',
-              description: 'Ligaduras forçadas para baixo.',
+              title: 'Slurs with Downward Direction',
+              description: 'Forced downward bandages.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 Note(
@@ -267,7 +267,7 @@ class SlursTiesExample extends StatelessWidget {
             ),
             _buildSection(
               title: 'Slurs Aninhados',
-              description: 'Múltiplas ligaduras sobrepostas.',
+              description: 'Multiple overlapping ligatures.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 // Slur longo (externo)

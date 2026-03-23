@@ -8,7 +8,7 @@ class FlagsVsBeamsExample extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Exemplo: Flags vs Beams'),
+        title: const Text('Example: Flags vs Beams'),
         backgroundColor: Colors.blue[800],
         foregroundColor: Colors.white,
       ),
@@ -18,38 +18,38 @@ class FlagsVsBeamsExample extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Controle de Beaming vs Flags',
+              'Beaming vs Flags Control',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 20),
 
             _buildExampleSection(
               'Beaming Automático (Padrão)',
-              'As notas são automaticamente agrupadas baseado na fórmula de compasso.',
+              'Notes are automatically grouped based on the time signature.',
               _createAutomaticBeamingStaff(),
             ),
 
             _buildExampleSection(
               'Flags Individuais',
-              'Todas as notas usam bandeirolas (flags) individuais.',
+              'All notes use individual flags.',
               _createFlagsOnlyStaff(),
             ),
 
             _buildExampleSection(
               'Beaming Conservador',
-              'Apenas grupos óbvios de 2 notas consecutivas.',
+              'Just obvious groups of 2 consecutive notes.',
               _createConservativeBeamingStaff(),
             ),
 
             _buildExampleSection(
               'Forçar Beam em Todas',
-              'Agrupa todas as notas possíveis em um único beam.',
+              'Groups all possible notes into a single beam.',
               _createForceBeamAllStaff(),
             ),
 
             _buildExampleSection(
               'Beaming Manual',
-              'Grupos personalizados: [0,1,2] e [4,5] (nota 3 com flag individual).',
+              'Custom groups: [0,1,2] and [4,5] (note 3 with individual flag).',
               _createManualBeamingStaff(),
             ),
           ],
@@ -91,7 +91,7 @@ class FlagsVsBeamsExample extends StatelessWidget {
   Staff _createAutomaticBeamingStaff() {
     final staff = Staff();
 
-    // Compasso com beaming automático (padrão)
+    // Compass with automatic beaming (default)
     final measure = Measure(
       autoBeaming: true,
       beamingMode: BeamingMode.automatic,
@@ -117,7 +117,7 @@ class FlagsVsBeamsExample extends StatelessWidget {
   Staff _createFlagsOnlyStaff() {
     final staff = Staff();
 
-    // Compasso forçando flags individuais
+    // Compass forcing individual flags
     final measure = Measure(
       autoBeaming: false, // Desabilita beaming
       beamingMode: BeamingMode.forceFlags,
@@ -143,7 +143,7 @@ class FlagsVsBeamsExample extends StatelessWidget {
   Staff _createConservativeBeamingStaff() {
     final staff = Staff();
 
-    // Compasso com beaming conservador
+    // Compass with conservative beaming
     final measure = Measure(
       autoBeaming: true,
       beamingMode: BeamingMode.conservative,
@@ -169,7 +169,7 @@ class FlagsVsBeamsExample extends StatelessWidget {
   Staff _createForceBeamAllStaff() {
     final staff = Staff();
 
-    // Compasso forçando beam em todas as notas
+    // Measure forcing beam on all notes
     final measure = Measure(
       autoBeaming: true,
       beamingMode: BeamingMode.forceBeamAll,
@@ -195,7 +195,7 @@ class FlagsVsBeamsExample extends StatelessWidget {
   Staff _createManualBeamingStaff() {
     final staff = Staff();
 
-    // Compasso com beaming manual personalizado
+    // Compass with custom manual beaming
     final measure = Measure(
       autoBeaming: true,
       beamingMode: BeamingMode.manual,
@@ -213,7 +213,7 @@ class FlagsVsBeamsExample extends StatelessWidget {
     measure.add(Clef(clefType: ClefType.treble));
     measure.add(TimeSignature(numerator: 4, denominator: 4));
 
-    // 8 colcheias - agrupamento definido pelos índices acima
+    // 8 eighth notes - grouping defined by the indices above
     measure.add(Note(pitch: const Pitch(step: 'C', octave: 4), duration: const Duration(DurationType.eighth))); // 0
     measure.add(Note(pitch: const Pitch(step: 'D', octave: 4), duration: const Duration(DurationType.eighth))); // 1
     measure.add(Note(pitch: const Pitch(step: 'E', octave: 4), duration: const Duration(DurationType.eighth))); // 2

@@ -3,13 +3,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 
-/// Um widget de página que demonstra a renderização dos sinais de articulação.
+/// A page widget that demonstrates the rendering of articulation signals.
 class ArticulationsExample extends StatelessWidget {
   const ArticulationsExample({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Notas com haste para CIMA (articulação ABAIXO)
+    // Notes with stem UP (joint DOWN)
     final List<MusicalElement> stemsUpElements = [
       Clef(clefType: ClefType.treble),
       Note(
@@ -34,7 +34,7 @@ class ArticulationsExample extends StatelessWidget {
       ),
     ];
 
-    // Notas com haste para BAIXO (articulação ACIMA)
+    // Notes with stem DOWN (joint UP)
     final List<MusicalElement> stemsDownElements = [
       Clef(clefType: ClefType.treble),
       Note(
@@ -72,13 +72,13 @@ class ArticulationsExample extends StatelessWidget {
             _buildSection(
               title: 'Articulações (Hastes para Baixo)',
               description:
-                  'Exibe staccato, accent, tenuto e marcato em notas com haste para baixo. A articulação deve aparecer ACIMA da cabeça da nota.',
+                  'Displays staccato, accent, tenuto and Marcato on notes with stem down. The articulation must appear ABOVE the note head.',
               elements: stemsDownElements,
             ),
             _buildSection(
               title: 'Articulações (Hastes para Cima)',
               description:
-                  'Exibe as mesmas articulações em notas com haste para cima. A articulação deve aparecer ABAIXO da cabeça da nota.',
+                  'Displays the same articulations on stem-up notes. The articulation should appear BELOW the note head.',
               elements: stemsUpElements,
             ),
           ],

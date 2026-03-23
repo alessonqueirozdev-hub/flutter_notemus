@@ -10,7 +10,7 @@ class JsonOdeExample extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 🎵 Ode à Alegria em JSON COMPLETO (igual ao exemplo profissional)
+    // 🎵 Ode to Joy in FULL JSON (same as professional example)
     final jsonString = '''
     {
       "measures": [
@@ -71,7 +71,7 @@ class JsonOdeExample extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Ludwig van Beethoven - Renderizado a partir de JSON',
+              'Ludwig van Beethoven - Rendered from JSON',
               style: TextStyle(
                 fontSize: 16,
                 color: Colors.grey[700],
@@ -103,7 +103,7 @@ class JsonOdeExample extends StatelessWidget {
                               ),
                             ),
                             Text(
-                              'Criado a partir de JSON completo',
+                              'Created from full JSON',
                               style: TextStyle(
                                 fontSize: 14,
                                 color: Colors.grey[600],
@@ -114,9 +114,9 @@ class JsonOdeExample extends StatelessWidget {
                       ],
                     ),
                     const Divider(height: 24),
-                    _buildInfoRow('Tonalidade:', 'Ré Maior (2 sustenidos)'),
-                    _buildInfoRow('Compasso:', '4/4'),
-                    _buildInfoRow('Compassos:', '${staff.measures.length}'),
+                    _buildInfoRow('Tonalidade:', 'D major (2 sharps)'),
+                    _buildInfoRow('Compass:', '4/4'),
+                    _buildInfoRow('Compasses:', '${staff.measures.length}'),
                     _buildInfoRow('Formato:', 'JSON Completo (compatível com MusicXML)'),
                   ],
                 ),
@@ -125,7 +125,7 @@ class JsonOdeExample extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            // 🎼 PARTITURA
+            // 🎼SCORE
             Card(
               elevation: 2,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -135,7 +135,7 @@ class JsonOdeExample extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Partitura',
+                      'Score',
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,

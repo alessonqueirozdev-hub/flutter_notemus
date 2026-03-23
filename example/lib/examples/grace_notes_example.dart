@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 
-/// Widget que demonstra a renderização de apojaturas e notas de ornamento
+/// Widget that demonstrates the rendering of appoggiaturas and ornamental notes
 class GraceNotesExample extends StatelessWidget {
   const GraceNotesExample({super.key});
 
@@ -11,7 +11,7 @@ class GraceNotesExample extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Família de Símbolos: Apojaturas e Notas de Graça'),
+        title: const Text('Family of Symbols: Appoggiaturas and Grace Notes'),
         backgroundColor: Colors.teal.shade700,
       ),
       body: SingleChildScrollView(
@@ -20,8 +20,8 @@ class GraceNotesExample extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildSection(
-              title: 'Apojaturas Simples',
-              description: 'Apojaturas de diferentes durações.',
+              title: 'Simple Grace Notes',
+              description: 'Grace Notes de diferentes durações.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 // Apogiatura simples
@@ -46,7 +46,7 @@ class GraceNotesExample extends StatelessWidget {
             ),
             _buildSection(
               title: 'Acciaccaturas',
-              description: 'Notas de graça cortadas (acciaccaturas).',
+              description: 'Cut grace notes (acciaccaturas).',
               elements: [
                 Clef(clefType: ClefType.treble),
                 // Acciaccatura simples
@@ -77,8 +77,8 @@ class GraceNotesExample extends StatelessWidget {
               ],
             ),
             _buildSection(
-              title: 'Apojaturas Superiores',
-              description: 'Apojaturas que se resolvem descendo.',
+              title: 'Upper Grace Notes',
+              description: 'Grace notes resolving downward.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 Note(
@@ -102,8 +102,8 @@ class GraceNotesExample extends StatelessWidget {
               ],
             ),
             _buildSection(
-              title: 'Apojaturas Inferiores',
-              description: 'Apojaturas que se resolvem subindo.',
+              title: 'Lower Grace Notes',
+              description: 'Grace notes resolving upward.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 Note(
@@ -127,11 +127,11 @@ class GraceNotesExample extends StatelessWidget {
               ],
             ),
             _buildSection(
-              title: 'Grupos de Apojaturas',
-              description: 'Múltiplas notas de graça em sequência.',
+              title: 'Grace Note Groups',
+              description: 'Multiple grace notes in sequence.',
               elements: [
                 Clef(clefType: ClefType.treble),
-                // Grupo de 3 apojaturas
+                // Grupo de 3 grace notes
                 Note(
                   pitch: const Pitch(step: 'F', octave: 4),
                   duration: const Duration(DurationType.sixteenth),
@@ -148,13 +148,13 @@ class GraceNotesExample extends StatelessWidget {
                   pitch: const Pitch(step: 'B', octave: 4),
                   duration: const Duration(DurationType.quarter),
                 ),
-                // Pausa
+                // Break
                 Rest(duration: const Duration(DurationType.quarter)),
               ],
             ),
             _buildSection(
-              title: 'Apojaturas com Alterações',
-              description: 'Apojaturas com acidentes cromáticos.',
+              title: 'Grace Notes com Alterações',
+              description: 'Appliques with chromatic accidents.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 Note(
@@ -178,7 +178,7 @@ class GraceNotesExample extends StatelessWidget {
             ),
             _buildSection(
               title: 'Schleifers',
-              description: 'Ornamentos que deslizam até a nota principal.',
+              description: 'Ornaments that slide up to the main note.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 Note(
@@ -200,11 +200,11 @@ class GraceNotesExample extends StatelessWidget {
               ],
             ),
             _buildSection(
-              title: 'Apojaturas em Acordes',
-              description: 'Notas de graça aplicadas a acordes.',
+              title: 'Appoggiaturas in Chords',
+              description: 'Grace notes applied to chords.',
               elements: [
                 Clef(clefType: ClefType.treble),
-                // Acciaccatura antes de acorde
+                // Acciaccatura before chord
                 Note(
                   pitch: const Pitch(step: 'D', octave: 4),
                   duration: const Duration(DurationType.sixteenth),
@@ -231,8 +231,8 @@ class GraceNotesExample extends StatelessWidget {
               ],
             ),
             _buildSection(
-              title: 'Apojaturas com Ligaduras',
-              description: 'Apojaturas conectadas à nota principal por ligadura.',
+              title: 'Appujaturas with Ligatures',
+              description: 'Appoggiaturas connected to the main note by ligature.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 Note(

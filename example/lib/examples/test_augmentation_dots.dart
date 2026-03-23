@@ -12,7 +12,7 @@ class TestAugmentationDots extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('TESTE: Pontos de Aumento'),
+        title: const Text('TESTE: Augmentation Dots'),
         backgroundColor: Colors.purple.shade700,
       ),
       body: SingleChildScrollView(
@@ -21,26 +21,26 @@ class TestAugmentationDots extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildTestSection(
-              title: 'Notas em LINHAS com Pontos',
-              description: 'Pontos devem estar no ESPAÇO acima da linha',
+              title: 'Notes in LINES with Dots',
+              description: 'Points must be in the SPACE above the line',
               elements: [
                 Clef(clefType: ClefType.treble),
-                // G4 está na linha 2 (staffPos = -2)
+                // G4 is on line 2 (staffPos = -2)
                 Note(
                   pitch: const Pitch(step: 'G', octave: 4),
                   duration: const Duration(DurationType.half, dots: 1),
                 ),
-                // B4 está na linha 3 central (staffPos = 0)
+                // B4 is on center line 3 (staffPos = 0)
                 Note(
                   pitch: const Pitch(step: 'B', octave: 4),
                   duration: const Duration(DurationType.half, dots: 2),
                 ),
-                // D5 está na linha 4 (staffPos = 2)
+                // D5 is on line 4 (staffPos = 2)
                 Note(
                   pitch: const Pitch(step: 'D', octave: 5),
                   duration: const Duration(DurationType.quarter, dots: 1),
                 ),
-                // F5 está na linha 5 superior (staffPos = 4)
+                // F5 is in the top 5 row (staffPos = 4)
                 Note(
                   pitch: const Pitch(step: 'F', octave: 5),
                   duration: const Duration(DurationType.quarter, dots: 1),
@@ -48,26 +48,26 @@ class TestAugmentationDots extends StatelessWidget {
               ],
             ),
             _buildTestSection(
-              title: 'Notas em ESPAÇOS com Pontos',
-              description: 'Pontos devem estar no MESMO espaço da nota',
+              title: 'Notes in SPACES with Points',
+              description: 'Points must be in the SAME space as the note',
               elements: [
                 Clef(clefType: ClefType.treble),
-                // F4 está no espaço 1 (abaixo da linha 2, staffPos = -3)
+                // F4 is in space 1 (below line 2, staffPos = -3)
                 Note(
                   pitch: const Pitch(step: 'F', octave: 4),
                   duration: const Duration(DurationType.half, dots: 1),
                 ),
-                // A4 está no espaço 2 (abaixo da linha 3, staffPos = -1)
+                // A4 is in space 2 (below line 3, staffPos = -1)
                 Note(
                   pitch: const Pitch(step: 'A', octave: 4),
                   duration: const Duration(DurationType.half, dots: 2),
                 ),
-                // C5 está no espaço 3 (acima da linha 3, staffPos = 1)
+                // C5 is in space 3 (above line 3, staffPos = 1)
                 Note(
                   pitch: const Pitch(step: 'C', octave: 5),
                   duration: const Duration(DurationType.quarter, dots: 1),
                 ),
-                // E5 está no espaço 4 (abaixo da linha 5, staffPos = 3)
+                // E5 is in space 4 (below line 5, staffPos = 3)
                 Note(
                   pitch: const Pitch(step: 'E', octave: 5),
                   duration: const Duration(DurationType.quarter, dots: 1),
@@ -75,21 +75,21 @@ class TestAugmentationDots extends StatelessWidget {
               ],
             ),
             _buildTestSection(
-              title: 'Clave de Fá - Notas em Linhas',
-              description: 'Pontos devem estar no espaço acima',
+              title: 'Bass Clef - Notes in Lines',
+              description: 'Dots must be in the space above',
               elements: [
                 Clef(clefType: ClefType.bass),
-                // F3 está na linha 4 (onde fica o símbolo da clave, staffPos = 2)
+                // F3 is on line 4 (where the clef symbol is, staffPos = 2)
                 Note(
                   pitch: const Pitch(step: 'F', octave: 3),
                   duration: const Duration(DurationType.half, dots: 1),
                 ),
-                // A3 está na linha 5 SUPERIOR (staffPos = 4, COM linha suplementar!)
+                // A3 is on TOP 5 line (staffPos = 4, WITH supplementary line!)
                 Note(
                   pitch: const Pitch(step: 'A', octave: 3),
                   duration: const Duration(DurationType.half, dots: 2),
                 ),
-                // C4 está ACIMA do pentagrama com linha suplementar (staffPos = 6)
+                // C4 is ABOVE the staff with supplementary line (staffPos = 6)
                 Note(
                   pitch: const Pitch(step: 'C', octave: 4),
                   duration: const Duration(DurationType.quarter, dots: 1),
@@ -172,15 +172,15 @@ class TestAugmentationDots extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             const Text(
-              'Pontos de Aumento:',
+              'Augmentation Dots:',
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             ...[
-              '✓ Se a nota está em uma LINHA: ponto vai no ESPAÇO acima',
-              '✓ Se a nota está em um ESPAÇO: ponto vai no MESMO espaço',
+              '✓ If the note is on a LINE: point goes in the SPACE above',
+              '✓ If the note is in a SPACE: point goes in the SAME space',
               '✓ Múltiplos pontos: espaçamento horizontal de 0.7 staff spaces',
-              '✓ Distância da nota: ~1.2 staff spaces à direita',
+              '✓ Note distance: ~1.2 staff spaces on the right',
             ].map((text) => Padding(
                   padding: const EdgeInsets.only(left: 16, top: 4),
                   child: Text(

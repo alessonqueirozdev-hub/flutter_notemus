@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 
-/// Um widget de página que demonstra a renderização de todas as armaduras de clave.
+/// A page widget that demonstrates the rendering of all key signatures.
 class KeySignaturesExample extends StatelessWidget {
   const KeySignaturesExample({super.key});
 
@@ -11,7 +11,7 @@ class KeySignaturesExample extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Família de Símbolos: Armaduras de Clave'),
+        title: const Text('Symbol Family: Key Signatures'),
         backgroundColor: Colors.green.shade700,
       ),
       body: SingleChildScrollView(
@@ -20,16 +20,16 @@ class KeySignaturesExample extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildKeySignatureSection(
-              title: 'Armaduras com Sustenidos (#)',
+              title: 'Signatures with Sharps (#)',
               description:
-                  'Exibe as armaduras de clave com 1 a 7 sustenidos. A ordem dos sustenidos (Fá, Dó, Sol, Ré, Lá, Mi, Si) e seu posicionamento vertical devem estar corretos.',
+                  'Displays key signatures with 1 to 7 sharps. The order of the sharps (F, C, G, D, A, E, B) and their vertical positioning must be correct.',
               isSharp: true,
             ),
             const SizedBox(height: 24),
             _buildKeySignatureSection(
-              title: 'Armaduras com Bemóis (♭)',
+              title: 'Signatures with Flats (♭)',
               description:
-                  'Exibe as armaduras de clave com 1 a 7 bemóis. A ordem dos bemóis (Si, Mi, Lá, Ré, Sol, Dó, Fá) e seu posicionamento vertical devem estar corretos.',
+                  'Displays key signatures with 1 to 7 flats. The order of the flats (B, E, A, D, G, C, F) and their vertical positioning must be correct.',
               isSharp: false,
             ),
           ],
@@ -38,13 +38,13 @@ class KeySignaturesExample extends StatelessWidget {
     );
   }
 
-  /// Constrói uma seção de teste para armaduras de clave.
+  /// Builds a test section for key signatures.
   Widget _buildKeySignatureSection({
     required String title,
     required String description,
     required bool isSharp,
   }) {
-    // Gera uma lista de elementos musicais para cada armadura de 1 a 7 acidentes
+    // Generates a list of musical elements for each signature from 1 to 7 accidentals
     final List<List<MusicalElement>> allKeySignatures =
         List.generate(7, (index) {
       final count = index + 1;
@@ -73,7 +73,7 @@ class KeySignaturesExample extends StatelessWidget {
               style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
             ),
             const SizedBox(height: 16),
-            // Renderiza uma pauta para cada armadura
+            // Renders a staff for each armature
             ...allKeySignatures.map((elements) {
               final staff = Staff();
               final measure = Measure();

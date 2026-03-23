@@ -88,7 +88,7 @@ class CompleteMusicPieceExample extends StatelessWidget {
             ),
             const Divider(height: 24),
             _buildInfoRow('Tonalidade:', 'Ré Maior'),
-            _buildInfoRow('Compasso:', '4/4'),
+            _buildInfoRow('Compass:', '4/4'),
             _buildInfoRow('Andamento:', 'Allegro assai ♩= 120'),
             _buildInfoRow('Ano:', '1824'),
           ],
@@ -136,7 +136,7 @@ class CompleteMusicPieceExample extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Partitura Completa',
+              'Complete Sheet Music',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -174,7 +174,7 @@ class CompleteMusicPieceExample extends StatelessWidget {
       bpm: 120,
     ));
 
-    // F# F# G A (Fá# Fá# Sol Lá) - F# já está na armadura!
+    // F# F# G A (F# F# G A) - F# is already in the armature!
     measure1.add(Note(
       pitch: const Pitch(step: 'F', octave: 5), // F# implícito (armadura)
       duration: const Duration(DurationType.quarter),
@@ -196,7 +196,7 @@ class CompleteMusicPieceExample extends StatelessWidget {
       duration: const Duration(DurationType.quarter),
     ));
 
-    // === COMPASSO 2: A G F# E ===
+    // === COMPASS 2: A G F# E ===
     final measure2 = Measure();
 
     // A G F# E (Lá Sol Fá# Mi)
@@ -220,7 +220,7 @@ class CompleteMusicPieceExample extends StatelessWidget {
       duration: const Duration(DurationType.quarter),
     ));
 
-    // === COMPASSO 3: D D E F# ===
+    // === COMPASS 3: D D E F# ===
     final measure3 = Measure();
 
     // D D E F# (Ré Ré Mi Fá#)
@@ -244,7 +244,7 @@ class CompleteMusicPieceExample extends StatelessWidget {
       duration: const Duration(DurationType.quarter),
     ));
 
-    // === COMPASSO 4: F#. E E ===
+    // === COMPASS 4: F#. AND AND ===
     final measure4 = Measure();
 
     // F#. (Fá# pontuado - semínima pontuada)
@@ -265,10 +265,10 @@ class CompleteMusicPieceExample extends StatelessWidget {
       duration: const Duration(DurationType.half),
     ));
     
-    // RESPIRAÇÃO (vírgula) - como na partitura de referência
+    // BREATH (comma) - as in the reference score
     measure4.add(Breath(type: BreathType.comma));
 
-    // === COMPASSO 5: F# F# G A (repetição) ===
+    // === BAR 5: F# F# G A (repeat) ===
     final measure5 = Measure();
     
     measure5.add(Note(
@@ -291,7 +291,7 @@ class CompleteMusicPieceExample extends StatelessWidget {
       duration: const Duration(DurationType.quarter),
     ));
 
-    // === COMPASSO 6: A G F# E ===
+    // === COMPASS 6: A G F# E ===
     final measure6 = Measure();
     
     measure6.add(Note(
@@ -314,7 +314,7 @@ class CompleteMusicPieceExample extends StatelessWidget {
       duration: const Duration(DurationType.quarter),
     ));
 
-    // === COMPASSO 7: D D E F# ===
+    // === COMPASS 7: D D E F# ===
     final measure7 = Measure();
     
     measure7.add(Note(
@@ -337,7 +337,7 @@ class CompleteMusicPieceExample extends StatelessWidget {
       duration: const Duration(DurationType.quarter),
     ));
 
-    // === COMPASSO 8: E. D D (termina em D) ===
+    // === METER 8: E. D D (ends in D) ===
     final measure8 = Measure();
     
     // E. (Mi pontuado - semínima pontuada)
@@ -361,8 +361,8 @@ class CompleteMusicPieceExample extends StatelessWidget {
     // RESPIRAÇÃO (vírgula)
     measure8.add(Breath(type: BreathType.comma));
 
-    // === COMPASSO 9: E E F# D (seção contrastante) ===
-    // BARRA DE REPETIÇÃO - Início da seção B (como na partitura)
+    // === METER 9: E E F# D (contrasting section) ===
+    // REPEAT BAR - Start of section B (as in sheet music)
     final measure9 = Measure();
     measure9.add(Barline(type: BarlineType.repeatForward)); // ‖:
     
@@ -386,7 +386,7 @@ class CompleteMusicPieceExample extends StatelessWidget {
       duration: const Duration(DurationType.quarter),
     ));
 
-    // === COMPASSO 10: E F# G F# D ===
+    // === COMPASS 10: E F# G F# D ===
     final measure10 = Measure();
     
     measure10.add(Note(
@@ -415,7 +415,7 @@ class CompleteMusicPieceExample extends StatelessWidget {
       duration: const Duration(DurationType.quarter),
     ));
 
-    // === COMPASSO 11: E F# G F# E ===
+    // === COMPASS 11: E F# G F# E ===
     final measure11 = Measure();
     
     measure11.add(Note(
@@ -444,7 +444,7 @@ class CompleteMusicPieceExample extends StatelessWidget {
       duration: const Duration(DurationType.quarter),
     ));
 
-    // === COMPASSO 12: D E A (nota grave) ===
+    // === COMPASS 12: D E A (low note) ===
     final measure12 = Measure();
     
     measure12.add(Note(
@@ -457,7 +457,7 @@ class CompleteMusicPieceExample extends StatelessWidget {
       duration: const Duration(DurationType.quarter),
     ));
     
-    // A grave (oitava 4)
+    // A bass (octave 4)
     measure12.add(Note(
       pitch: const Pitch(step: 'A', octave: 4),
       duration: const Duration(DurationType.half),
@@ -466,7 +466,7 @@ class CompleteMusicPieceExample extends StatelessWidget {
     // RESPIRAÇÃO (vírgula)
     measure12.add(Breath(type: BreathType.comma));
 
-    // === COMPASSO 13: F# F# G A (retorno ao tema) ===
+    // === BAR 13: F# F# G A (return to theme) ===
     final measure13 = Measure();
     
     measure13.add(Note(
@@ -489,7 +489,7 @@ class CompleteMusicPieceExample extends StatelessWidget {
       duration: const Duration(DurationType.quarter),
     ));
 
-    // === COMPASSO 14: A G F# E ===
+    // === COMPASS 14: A G F# E ===
     final measure14 = Measure();
     
     measure14.add(Note(
@@ -512,7 +512,7 @@ class CompleteMusicPieceExample extends StatelessWidget {
       duration: const Duration(DurationType.quarter),
     ));
 
-    // === COMPASSO 15: D D E F# ===
+    // === COMPASS 15: D D E F# ===
     final measure15 = Measure();
     
     measure15.add(Note(
@@ -535,7 +535,7 @@ class CompleteMusicPieceExample extends StatelessWidget {
       duration: const Duration(DurationType.quarter),
     ));
 
-    // === COMPASSO 16: E. D D (final) ===
+    // === COMPASS 16: E. D D (final) ===
     final measure16 = Measure();
     
     // E. (Mi pontuado - semínima pontuada)
@@ -604,16 +604,16 @@ class CompleteMusicPieceExample extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Elementos Demonstrados:',
+            'Elements Demonstrated:',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 12),
-          _buildLegendRow('🎼', 'Clave de Sol em Ré Maior (2 sustenidos)'),
-          _buildLegendRow('🎵', 'Tema COMPLETO da 9ª Sinfonia (16 compassos)'),
-          _buildLegendRow('📝', 'Compasso 4/4 (Comum)'),
+          _buildLegendRow('🎼', 'Treble Clef in D Major (2 sharps)'),
+          _buildLegendRow('🎵', 'COMPLETE theme of the 9th Symphony (16 measures)'),
+          _buildLegendRow('📝', '4/4 Time (Common)'),
           _buildLegendRow('⏱️', 'Allegro assai ♩= 120'),
           _buildLegendRow('🎹', '4 frases: A A B A (forma clássica)'),
           _buildLegendRow('🎻', 'Melodia completa com dinâmicas'),

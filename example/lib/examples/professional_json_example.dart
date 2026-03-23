@@ -11,7 +11,7 @@ class ProfessionalJsonExample extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // 🎵 ODE À ALEGRIA - JSON PROFISSIONAL COMPLETO
-    // Este JSON é equivalente ao exemplo complete_music_piece.dart
+    // This JSON is equivalent to the complete_music_piece.dart example
     const jsonString = '''
     {
       "measures": [
@@ -88,7 +88,7 @@ class ProfessionalJsonExample extends StatelessWidget {
     // 📊 PARSEAR JSON → STAFF
     print('🎵 Parseando JSON profissional...');
     final staff = JsonMusicParser.parseStaff(jsonString);
-    print('✅ Staff criado com ${staff.measures.length} compassos');
+    print('✅ Staff created with ${staff.measures.length} measures');
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
@@ -110,7 +110,7 @@ class ProfessionalJsonExample extends StatelessWidget {
             _buildInfoCard(staff),
             const SizedBox(height: 24),
 
-            // 🎼 PARTITURA
+            // 🎼SCORE
             _buildScoreCard(staff),
             const SizedBox(height: 24),
 
@@ -192,7 +192,7 @@ class ProfessionalJsonExample extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        'Formato completo com todos os recursos',
+                        'Complete format with all features',
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey,
@@ -204,12 +204,12 @@ class ProfessionalJsonExample extends StatelessWidget {
               ],
             ),
             const Divider(height: 32),
-            _buildInfoRow('📊 Compassos', '${staff.measures.length}'),
-            _buildInfoRow('🎼 Tonalidade', 'Ré Maior (2 sustenidos)'),
-            _buildInfoRow('⏱️ Compasso', '4/4'),
+            _buildInfoRow('📊 Compasses', '${staff.measures.length}'),
+            _buildInfoRow('🎼 Tonalidade', 'D major (2 sharps)'),
+            _buildInfoRow('⏱️ Compass', '4/4'),
             _buildInfoRow('🎵 Formato', 'JSON Profissional (JsonMusicParser)'),
             _buildInfoRow(
-                '✨ Recursos', 'Clefs, Armaduras, Pontos de Aumento, Barlines'),
+                '✨ Recursos', 'Clefs, Armor, Boost Points, Barlines'),
           ],
         ),
       ),
@@ -230,7 +230,7 @@ class ProfessionalJsonExample extends StatelessWidget {
                 const Icon(Icons.piano, color: Colors.deepPurple, size: 28),
                 const SizedBox(width: 12),
                 const Text(
-                  'Partitura Renderizada',
+                  'Rendered score',
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
@@ -286,7 +286,7 @@ class ProfessionalJsonExample extends StatelessWidget {
                     color: Colors.deepPurple, size: 28),
                 const SizedBox(width: 12),
                 const Text(
-                  'Sobre este Exemplo',
+                  'About this Example',
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
@@ -297,19 +297,19 @@ class ProfessionalJsonExample extends StatelessWidget {
             const SizedBox(height: 16),
             _buildExplanationPoint(
               '✅ JSON Profissional',
-              'Este exemplo usa o JsonMusicParser, que suporta TODOS os recursos do Flutter Notemus.',
+              'This example uses JsonMusicParser, which supports ALL Flutter Notemus features.',
             ),
             _buildExplanationPoint(
               '🎼 Estrutura Completa',
-              'Claves, armaduras de clave, fórmulas de compasso, notas com pontos de aumento, barlines.',
+              'Clefs, key signatures, time signatures, notes with augmentation points, barlines.',
             ),
             _buildExplanationPoint(
-              '🔄 Equivalente ao Exemplo Manual',
-              'Esta partitura é idêntica ao exemplo complete_music_piece.dart, mas criada a partir de JSON!',
+              '🔄 Equivalent to Manual Example',
+              'This score is identical to the complete_music_piece.dart example, but created from JSON!',
             ),
             _buildExplanationPoint(
               '📊 Formato Robusto',
-              'Compatível com MusicXML e ideal para integração com bancos de dados.',
+              'Compatible with MusicXML and ideal for integration with databases.',
             ),
             const Divider(height: 24),
             Container(
@@ -324,7 +324,7 @@ class ProfessionalJsonExample extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Este é o formato recomendado para partituras profissionais!',
+                      'This is the recommended format for professional sheet music!',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,

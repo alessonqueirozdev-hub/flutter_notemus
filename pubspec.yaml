@@ -1,6 +1,7 @@
 name: flutter_notemus
 description: "Professional music notation rendering for Flutter. SMuFL-compliant with 2932 Bravura glyphs, beams, dynamics, articulations, and JSON import/export."
-version: 2.1.0
+version: 2.2.0
+license: Apache-2.0
 homepage: https://github.com/alessonqueirozdev-hub
 repository: https://github.com/alessonqueirozdev-hub/flutter_notemus
 issue_tracker: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues
@@ -25,6 +26,8 @@ environment:
 dependencies:
   collection: ^1.19.1
   flutter:
+    sdk: flutter
+  flutter_web_plugins:
     sdk: flutter
   xml: ^6.5.0
   pdf: ^3.11.1
@@ -52,15 +55,18 @@ flutter:
         pluginClass: FlutterNotemusPlugin
       macos:
         pluginClass: FlutterNotemusPlugin
+      web:
+        pluginClass: FlutterNotemusWeb
+        fileName: flutter_notemus_web.dart
       windows:
         pluginClass: FlutterNotemusPluginCApi
-  # Para que a aplicação que usar seu pacote possa acessar os assets
+  # Expose package assets to applications that depend on this plugin.
   assets:
-    - assets/smufl/bravura_metadata.json # CORRIGIDO
-    - assets/smufl/glyphnames.json      # CORRIGIDO
+    - assets/smufl/bravura_metadata.json
+    - assets/smufl/glyphnames.json
 
-  # Para declarar a fonte
+  # Declare Bravura font for SMuFL rendering.
   fonts:
     - family: Bravura
       fonts:
-        - asset: assets/smufl/Bravura.otf # CORRIGIDO
+        - asset: assets/smufl/Bravura.otf

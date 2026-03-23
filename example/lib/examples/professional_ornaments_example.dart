@@ -8,7 +8,7 @@ class ProfessionalOrnamentsExample extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Ornamentos: Posicionamento Profissional SMuFL'),
+        title: const Text('Ornaments: SMuFL Professional Positioning'),
         backgroundColor: Colors.deepPurple[800],
         foregroundColor: Colors.white,
       ),
@@ -18,43 +18,43 @@ class ProfessionalOrnamentsExample extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Posicionamento Dinâmico de Ornamentos',
+              'Dynamic Ornament Positioning',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(
-              'Demonstra o posicionamento inteligente baseado em diretrizes SMuFL e padrões profissionais.',
+              'Demonstrates intelligent positioning based on SMuFL guidelines and professional standards.',
               style: TextStyle(fontSize: 14, color: Colors.grey[600]),
             ),
             const SizedBox(height: 24),
 
             _buildExampleSection(
               'Posicionamento Baseado em Haste',
-              'Ornamentos posicionados no lado oposto da haste (padrão profissional)',
+              'Ornaments positioned on the opposite side of the rod (professional standard)',
               _createStemBasedPositioningStaff(),
             ),
 
             _buildExampleSection(
-              'Notas Altas - Ornamentos Embaixo',
-              'Notas na região alta automaticamente posicionam ornamentos embaixo',
+              'High Notes - Ornaments Below',
+              'Notes in the high region automatically position ornaments below',
               _createHighNotesStaff(),
             ),
 
             _buildExampleSection(
-              'Notas Baixas - Ornamentos Acima',
-              'Notas na região baixa sempre posicionam ornamentos acima',
+              'Low Notes - Ornaments Above',
+              'Notes in the low region always position ornaments above',
               _createLowNotesStaff(),
             ),
 
             _buildExampleSection(
               'Arpejos - Posicionamento Lateral',
-              'Arpejos posicionados à esquerda com altura variável',
+              'Left-positioned arpeggios with variable height',
               _createArpeggioStaff(),
             ),
 
             _buildExampleSection(
-              'Glissandos - Linhas Dinâmicas',
-              'Glissandos renderizados como linhas onduladas',
+              'Glissandos - Dynamic Lines',
+              'Glissandos rendered as wavy lines',
               _createGlissandoStaff(),
             ),
           ],
@@ -100,7 +100,7 @@ class ProfessionalOrnamentsExample extends StatelessWidget {
     measure.add(Clef(clefType: ClefType.treble));
     measure.add(TimeSignature(numerator: 4, denominator: 4));
 
-    // Notas na região central - ornamentos no lado oposto da haste
+    // Notes in the central region - ornaments on the opposite side of the stem
     measure.add(Note(
       pitch: const Pitch(step: 'C', octave: 4), // Haste para cima, trill embaixo
       duration: const Duration(DurationType.quarter),
@@ -136,7 +136,7 @@ class ProfessionalOrnamentsExample extends StatelessWidget {
     measure.add(Clef(clefType: ClefType.treble));
     measure.add(TimeSignature(numerator: 4, denominator: 4));
 
-    // Notas altas - ornamentos automaticamente embaixo
+    // High notes - automatically ornaments underneath
     measure.add(Note(
       pitch: const Pitch(step: 'F', octave: 5), // Acima da 5ª linha
       duration: const Duration(DurationType.quarter),
@@ -166,7 +166,7 @@ class ProfessionalOrnamentsExample extends StatelessWidget {
     measure.add(Clef(clefType: ClefType.bass));
     measure.add(TimeSignature(numerator: 4, denominator: 4));
 
-    // Notas baixas - ornamentos sempre acima
+    // Low notes - ornaments always above
     measure.add(Note(
       pitch: const Pitch(step: 'C', octave: 2), // Muito baixa
       duration: const Duration(DurationType.quarter),
@@ -226,7 +226,7 @@ class ProfessionalOrnamentsExample extends StatelessWidget {
     measure.add(Clef(clefType: ClefType.treble));
     measure.add(TimeSignature(numerator: 4, denominator: 4));
 
-    // Notas com glissandos - linhas onduladas
+    // Notes with glissandos - wavy lines
     measure.add(Note(
       pitch: const Pitch(step: 'C', octave: 4),
       duration: const Duration(DurationType.quarter),

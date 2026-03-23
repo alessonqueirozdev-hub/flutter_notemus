@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 
-/// Demonstra colchetes de volta (prima e seconda volta)
+/// Demonstrates round brackets (first and second round)
 class VoltaBracketsExample extends StatelessWidget {
   const VoltaBracketsExample({super.key});
 
@@ -11,7 +11,7 @@ class VoltaBracketsExample extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Colchetes de Volta (1ª e 2ª Vez)'),
+        title: const Text('Volta Brackets (1ª e 2ª Vez)'),
         backgroundColor: Colors.deepOrange.shade700,
       ),
       body: SingleChildScrollView(
@@ -24,7 +24,7 @@ class VoltaBracketsExample extends StatelessWidget {
             _buildSection(
               title: '1ª e 2ª Volta — Finale Fechada',
               description:
-                  'Prima volta (1.) com final fechado: o colchete tem linha '
+                  'First ending (1.) with closed end: the bracket has a vertical line '
                   'vertical no início, no topo e no final. A 2ª volta '
                   'substitui a 1ª na repetição.',
               score: _buildFirstAndSecond(),
@@ -32,9 +32,9 @@ class VoltaBracketsExample extends StatelessWidget {
             _buildSection(
               title: '1ª Volta — Final Aberto',
               description:
-                  'Prima volta com hasOpenEnd: true — sem linha vertical '
+                  'Press back with hasOpenEnd: true — no vertical line'
                   'no final. Indica que a música continua diretamente '
-                  'para a repetição sem pausa.',
+                  'for repetition without pause.',
               score: _buildOpenEnd(),
             ),
             _buildSection(
@@ -47,7 +47,7 @@ class VoltaBracketsExample extends StatelessWidget {
             _buildSection(
               title: 'Rótulo Personalizado (1.-3. e 4.)',
               description:
-                  'VoltaBracket com label personalizado. A primeira volta '
+                  'VoltaBracket with custom label. The first ending '
                   '"1.-3." é tocada nas 3 primeiras repetições; '
                   '"4." apenas na última.',
               score: _buildCustomLabel(),
@@ -71,7 +71,7 @@ class VoltaBracketsExample extends StatelessWidget {
                 Icon(Icons.info_outline, color: Colors.deepOrange.shade700),
                 const SizedBox(width: 8),
                 Text(
-                  'Sobre Colchetes de Volta',
+                  'About Volta Brackets',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: Colors.deepOrange.shade800,
@@ -82,10 +82,10 @@ class VoltaBracketsExample extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             const Text(
-              'Colchetes de volta (volta bracket ou ending bracket) indicam '
+              'Volta brackets (ending brackets) indicate '
               'finais alternativos para seções repetidas. Na primeira vez, '
               'toca-se a passagem sob o colchete "1."; na repetição, '
-              'pula-se para o colchete "2." (ou "3.", etc.). '
+              'you skip to bracket "2." (or "3.", etc.). '
               'Geralmente aparecem em conjunto com barras de repetição.',
               style: TextStyle(fontSize: 13),
             ),

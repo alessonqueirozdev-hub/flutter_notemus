@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 
-/// Um widget de página que demonstra a renderização de pontos de aumento e linhas suplementares.
+/// A page widget that demonstrates the rendering of augmentation points and supplementary lines.
 class DotsAndLedgersExample extends StatelessWidget {
   const DotsAndLedgersExample({super.key});
 
@@ -26,7 +26,7 @@ class DotsAndLedgersExample extends StatelessWidget {
       ),
     ];
 
-    // Elementos para demonstrar linhas suplementares
+    // Elements to demonstrate supplementary lines
     final List<MusicalElement> ledgerLinesElements = [
       Clef(clefType: ClefType.treble),
       Note(
@@ -57,7 +57,7 @@ class DotsAndLedgersExample extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Família: Pontos e Linhas Suplementares'),
+        title: const Text('Family: Supplementary Points and Lines'),
         backgroundColor: Colors.teal.shade700,
       ),
       body: SingleChildScrollView(
@@ -66,15 +66,15 @@ class DotsAndLedgersExample extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildSection(
-              title: 'Pontos de Aumento',
+              title: 'Augmentation Dots',
               description:
-                  'Exibe notas com um e dois pontos de aumento. Verifique a distância do(s) ponto(s) em relação à cabeça da nota e o alinhamento (ao lado da cabeça em espaços, acima da linha em linhas).',
+                  'Displays notes with one and two increments. Check the distance of the dot(s) from the note head and the alignment (next to the head in spaces, above the line in lines).',
               elements: dottedNotesElements,
             ),
             _buildSection(
-              title: 'Linhas Suplementares (Ledger Lines)',
+              title: 'Supplementary Lines (Ledger Lines)',
               description:
-                  'Exibe notas que requerem linhas suplementares acima e abaixo da pauta. Verifique a espessura e a extensão horizontal das linhas.',
+                  'Displays notes that require supplementary lines above and below the staff. Check the thickness and horizontal extension of the lines.',
               elements: ledgerLinesElements,
             ),
           ],

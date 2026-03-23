@@ -1,5 +1,5 @@
 // example/lib/examples/complete_clefs_demo.dart
-// Demonstração completa de todas as claves suportadas
+// Full demo of all supported keys
 
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
@@ -17,43 +17,43 @@ class CompleteClefsDemoExample extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildHeader(
-              'Demonstração Completa de Claves',
-              'Todas as claves implementadas com escalas e armaduras',
+              'Complete Clef Demonstration',
+              'All keys implemented with scales and signatures',
             ),
             const SizedBox(height: 32),
             _buildSection(
-              'Clave de Sol (G Clef)',
+              'Treble Clef (G Clef)',
               'Tessitura aguda - Violino, Flauta, Oboé',
               _createTrebleClefExample(),
             ),
             const SizedBox(height: 32),
             _buildSection(
-              'Clave de Fá (F Clef)',
-              'Tessitura grave - Violoncelo, Contrabaixo, Fagote',
+              'Bass Clef (F Clef)',
+              'Low range – Cello, Double bass, Bassoon',
               _createBassClefExample(),
             ),
             const SizedBox(height: 32),
             _buildSection(
-              'Clave de Dó Alto (C Clef - Alto)',
+              'High C Clef (C Clef - High)',
               'Tessitura média - Viola',
               _createAltoClefExample(),
             ),
             const SizedBox(height: 32),
             _buildSection(
-              'Clave de Dó Tenor (C Clef - Tenor)',
+              'C Clef Tenor (C Clef - Tenor)',
               'Tessitura médio-grave - Trombone, Violoncelo agudo',
               _createTenorClefExample(),
             ),
             const SizedBox(height: 32),
             _buildSection(
-              'Claves com Oitavas',
-              'Transposições de oitava',
+              'Clefs with Octaves',
+              'Octave transpositions',
               _createOctaveClefExample(),
             ),
             const SizedBox(height: 32),
             _buildSection(
               'Comparação de Alturas',
-              'Mesma nota em diferentes claves',
+              'Same note in different keys',
               _createComparisonExample(),
             ),
           ],
@@ -130,7 +130,7 @@ class CompleteClefsDemoExample extends StatelessWidget {
   Widget _createTrebleClefExample() {
     final staff = Staff();
 
-    // Compasso 1: Clave + Armadura (2 sustenidos) + Fórmula
+    // Bar 1: Clef + Key signature (2 sharps) + Formula
     final measure1 = Measure();
     measure1.add(Clef(clefType: ClefType.treble));
     measure1.add(KeySignature(2)); // Ré Maior
@@ -154,7 +154,7 @@ class CompleteClefsDemoExample extends StatelessWidget {
       duration: const Duration(DurationType.quarter),
     ));
 
-    // Compasso 2: Continuação da escala
+    // Measure 2: Continuation of the scale
     final measure2 = Measure();
     measure2.add(Note(
       pitch: const Pitch(step: 'A', octave: 4),
@@ -188,7 +188,7 @@ class CompleteClefsDemoExample extends StatelessWidget {
   Widget _createBassClefExample() {
     final staff = Staff();
 
-    // Compasso 1: Clave de Fá + Armadura (3 bemóis) + Fórmula
+    // Measure 1: Bass Clef + Signature (3 flats) + Formula
     final measure1 = Measure();
     measure1.add(Clef(clefType: ClefType.bass));
     measure1.add(KeySignature(-3)); // Mi♭ Maior
@@ -208,7 +208,7 @@ class CompleteClefsDemoExample extends StatelessWidget {
       duration: const Duration(DurationType.quarter),
     ));
 
-    // Compasso 2
+    // Measure 2
     final measure2 = Measure();
     measure2.add(Note(
       pitch: Pitch.withAccidental(step: 'A', octave: 2, accidentalType: AccidentalType.flat),
@@ -223,7 +223,7 @@ class CompleteClefsDemoExample extends StatelessWidget {
       duration: const Duration(DurationType.quarter),
     ));
 
-    // Compasso 3
+    // Measure 3
     final measure3 = Measure();
     measure3.add(Note(
       pitch: const Pitch(step: 'D', octave: 3),
@@ -251,7 +251,7 @@ class CompleteClefsDemoExample extends StatelessWidget {
   Widget _createAltoClefExample() {
     final staff = Staff();
 
-    // Compasso 1: Clave de Dó (Alto) + Armadura + Fórmula
+    // Measure 1: C Clef (Alto) + Key signature + Formula
     final measure1 = Measure();
     measure1.add(Clef(clefType: ClefType.alto));
     measure1.add(KeySignature(1)); // Sol Maior
@@ -275,7 +275,7 @@ class CompleteClefsDemoExample extends StatelessWidget {
       duration: const Duration(DurationType.quarter),
     ));
 
-    // Compasso 2
+    // Measure 2
     final measure2 = Measure();
     measure2.add(Note(
       pitch: const Pitch(step: 'D', octave: 4),
@@ -309,7 +309,7 @@ class CompleteClefsDemoExample extends StatelessWidget {
   Widget _createTenorClefExample() {
     final staff = Staff();
 
-    // Compasso 1: Clave de Dó (Tenor) + Armadura + Fórmula
+    // Measure 1: C Clef (Tenor) + Key signature + Formula
     final measure1 = Measure();
     measure1.add(Clef(clefType: ClefType.tenor));
     measure1.add(KeySignature(-2)); // Si♭ Maior
@@ -355,8 +355,8 @@ class CompleteClefsDemoExample extends StatelessWidget {
   Widget _createOctaveClefExample() {
     final staff = Staff();
 
-    // Comparação de claves com oitavas
-    // Compasso 1: Sol normal
+    // Comparison of clefs with octaves
+    // Measure 1: Normal G
     final measure1 = Measure();
     measure1.add(Clef(clefType: ClefType.treble));
     measure1.add(TimeSignature(numerator: 4, denominator: 4));
@@ -365,7 +365,7 @@ class CompleteClefsDemoExample extends StatelessWidget {
       duration: const Duration(DurationType.whole),
     ));
 
-    // Compasso 2: Sol 8va (uma oitava acima)
+    // Measure 2: G 8va (one octave higher)
     final measure2 = Measure();
     measure2.add(Clef(clefType: ClefType.treble8va));
     measure2.add(Note(
@@ -373,7 +373,7 @@ class CompleteClefsDemoExample extends StatelessWidget {
       duration: const Duration(DurationType.whole),
     ));
 
-    // Compasso 3: Sol 8vb (uma oitava abaixo)
+    // Measure 3: G 8vb (one octave lower)
     final measure3 = Measure();
     measure3.add(Clef(clefType: ClefType.treble8vb));
     measure3.add(Note(
@@ -398,7 +398,7 @@ class CompleteClefsDemoExample extends StatelessWidget {
     return Column(
       children: [
         Text(
-          'Nota Dó Central (C4) em cada clave:',
+          'Note Middle C (C4) in each key:',
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.bold,
@@ -406,13 +406,13 @@ class CompleteClefsDemoExample extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        _createComparisonStaff(ClefType.treble, 'Clave de Sol'),
+        _createComparisonStaff(ClefType.treble, 'Treble clef'),
         const SizedBox(height: 8),
-        _createComparisonStaff(ClefType.bass, 'Clave de Fá'),
+        _createComparisonStaff(ClefType.bass, 'Bass clef'),
         const SizedBox(height: 8),
-        _createComparisonStaff(ClefType.alto, 'Clave de Dó (Alto)'),
+        _createComparisonStaff(ClefType.alto, 'Clef of C (Alto)'),
         const SizedBox(height: 8),
-        _createComparisonStaff(ClefType.tenor, 'Clave de Dó (Tenor)'),
+        _createComparisonStaff(ClefType.tenor, 'Clef of C (Tenor)'),
       ],
     );
   }

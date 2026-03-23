@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 
-/// Widget que demonstra a renderização de sinais de repetição
+/// Widget that demonstrates the rendering of repeat signals
 class RepeatsExample extends StatelessWidget {
   const RepeatsExample({super.key});
 
@@ -21,7 +21,7 @@ class RepeatsExample extends StatelessWidget {
           children: [
             _buildSection(
               title: 'Barras de Repetição Básicas',
-              description: 'Início e fim de seções repetidas.',
+              description: 'Start and end of repeated sections.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 Barline(
@@ -128,8 +128,8 @@ class RepeatsExample extends StatelessWidget {
               ],
             ),
             _buildSection(
-              title: 'Repetições de Compassos',
-              description: 'Símbolos para repetir compassos específicos.',
+              title: 'Bar Repeats',
+              description: 'Symbols for repeating specific measures.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 Note(
@@ -152,8 +152,8 @@ class RepeatsExample extends StatelessWidget {
               ],
             ),
             _buildSection(
-              title: 'Repetições Múltiplas de Compassos',
-              description: 'Símbolos para repetir múltiplos compassos.',
+              title: 'Multiple Bar Repeats',
+              description: 'Symbols for repeating multiple measures.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 Note(
@@ -233,7 +233,7 @@ class RepeatsExample extends StatelessWidget {
               ],
             ),
             _buildSection(
-              title: 'Marcas de Ensaio',
+              title: 'Assay Marks',
               description: 'Letras e números para referência.',
               elements: [
                 Clef(clefType: ClefType.treble),

@@ -1,7 +1,7 @@
 // example/lib/examples/complete_improvements_demo.dart
-// Demonstração Completa das Melhorias - Fases 1, 2 e 3
+// Complete Demonstration of Improvements - Phases 1, 2 and 3
 //
-// Este exemplo demonstra todas as melhorias implementadas:
+// This example demonstrates all the improvements implemented:
 // ✅ Fase 1: StaffPositionCalculator + BaseGlyphRenderer
 // ✅ Fase 2: Refatoração de ChordRenderer, RestRenderer, GroupRenderer
 // ✅ Fase 3: Sistema de Detecção de Colisões
@@ -22,7 +22,7 @@ class ImprovementsDemoApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Notemus - Melhorias Completas',
+      title: 'Flutter Notemus - Complete Improvements',
       theme: ThemeData(
         primarySwatch: Colors.blue,
         brightness: Brightness.light,
@@ -72,22 +72,22 @@ class _ImprovementsDemoPageState extends State<ImprovementsDemoPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  '🎼 Demonstração Completa das Melhorias',
+                  '🎼 Full Demonstration of Improvements',
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  '✅ Fase 1: StaffPositionCalculator + BaseGlyphRenderer\n'
-                  '✅ Fase 2: ChordRenderer, RestRenderer, GroupRenderer refatorados\n'
+                  '✅ Fase 1: StaffPositionCalculator + BaseGlyphRenderer\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\n'
+                  '✅ Fase 2: ChordRenderer, RestRenderer, GroupRenderer refatorados\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\n'
                   '✅ Fase 3: Sistema de Detecção de Colisões (Algoritmo Skyline)',
                   style: TextStyle(fontSize: 14),
                 ),
                 if (_showCollisionStats && _collisionStats != null) ...[
                   const Divider(),
                   Text(
-                    '📊 Estatísticas de Colisões:\n'
-                    'Elementos: ${_collisionStats!.totalElements}\n'
-                    'Colisões: ${_collisionStats!.totalCollisions}\n'
+                    '📊 Estatísticas de Colisões:\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\n'
+                    'Elementos: ${_collisionStats!.totalElements}\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\n'
+                    'Colisões: ${_collisionStats!.totalCollisions}\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\n'
                     'Taxa: ${(_collisionStats!.collisionRate * 100).toStringAsFixed(1)}%',
                     style: const TextStyle(
                       fontSize: 12,
@@ -100,7 +100,7 @@ class _ImprovementsDemoPageState extends State<ImprovementsDemoPage> {
             ),
           ),
 
-          // Partitura
+          // Score
           Expanded(
             child: Container(
               color: Colors.white,
@@ -118,7 +118,7 @@ class _ImprovementsDemoPageState extends State<ImprovementsDemoPage> {
             padding: const EdgeInsets.all(12),
             color: Colors.grey.shade100,
             child: const Text(
-              'Melhorias: -193 linhas de código | 100% SMuFL compliant | +67% performance | Sistema de colisões profissional',
+              'Improvements: -193 lines of code | 100% SMuFL compliant | +67% performance | Professional collision system',
               style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
               textAlign: TextAlign.center,
             ),
@@ -132,13 +132,13 @@ class _ImprovementsDemoPageState extends State<ImprovementsDemoPage> {
     // Criar staff demonstrando todas as funcionalidades
     final staff = Staff();
 
-    // Compasso 1: Demonstração de notas individuais (NoteRenderer)
+    // Measure 1: Demonstration of individual notes (NoteRenderer)
     final measure1 = Measure();
     measure1.add(Clef(clefType: ClefType.treble));
     measure1.add(KeySignature(2)); // 2 sustenidos (D Major)
     measure1.add(TimeSignature(numerator: 4, denominator: 4));
 
-    // Notas com diferentes alturas (demonstra StaffPositionCalculator)
+    // Notes with different heights (demonstrates StaffPositionCalculator)
     measure1.add(Note(
       pitch: const Pitch(step: 'D', octave: 5),
       duration: const Duration(DurationType.quarter),
@@ -157,7 +157,7 @@ class _ImprovementsDemoPageState extends State<ImprovementsDemoPage> {
     ));
     staff.add(measure1);
 
-    // Compasso 2: Acordes (ChordRenderer refatorado)
+    // Bar 2: Chords (ChordRenderer refactored)
     final measure2 = Measure();
     measure2.add(Chord(
       notes: [
@@ -195,7 +195,7 @@ class _ImprovementsDemoPageState extends State<ImprovementsDemoPage> {
     ));
     staff.add(measure2);
 
-    // Compasso 3: Pausas (RestRenderer refatorado)
+    // Measure 3: Rests (refactored RestRenderer)
     final measure3 = Measure();
     measure3.add(Rest(duration: const Duration(DurationType.quarter)));
     measure3.add(Note(
@@ -215,7 +215,7 @@ class _ImprovementsDemoPageState extends State<ImprovementsDemoPage> {
     ));
     staff.add(measure3);
 
-    // Compasso 4: Grupos com beams (GroupRenderer refatorado)
+    // Measure 4: Groups with beams (GroupRenderer refactored)
     final measure4 = Measure();
     measure4.add(Note(
       pitch: const Pitch(step: 'D', octave: 5),
@@ -244,7 +244,7 @@ class _ImprovementsDemoPageState extends State<ImprovementsDemoPage> {
     measure4.add(Rest(duration: const Duration(DurationType.quarter)));
     staff.add(measure4);
 
-    // Compasso 5: Linhas suplementares (demonstra needsLedgerLines)
+    // Bar 5: Supplementary Lines (demonstrates needsLedgerLines)
     final measure5 = Measure();
     measure5.add(Note(
       pitch: const Pitch(step: 'C', octave: 6), // Acima da pauta
@@ -280,7 +280,7 @@ class _ImprovementsDemoPageState extends State<ImprovementsDemoPage> {
   }
 }
 
-/// Painter customizado que demonstra o sistema de colisões
+/// Custom painter demonstrating the collision system
 class ImprovementsScorePainter extends CustomPainter {
   final Staff staff;
   final Function(CollisionStatistics)? onStatsCalculated;
@@ -304,7 +304,7 @@ class ImprovementsScorePainter extends CustomPainter {
       },
     );
 
-    // Renderizar partitura com sistema unificado
+    // Render sheet music with unified system
     _renderStaffWithCollisionDetection(
       canvas,
       size,

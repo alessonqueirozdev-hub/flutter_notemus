@@ -3,13 +3,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 
-/// Um widget de página que demonstra a renderização de acordes.
+/// A page widget that demonstrates chord rendering.
 class ChordsExample extends StatelessWidget {
   const ChordsExample({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Acordes de 3 notas (Tríades)
+    // 3-Note Chords (Triads)
     final List<MusicalElement> triadElements = [
       Clef(clefType: ClefType.treble),
       Chord(
@@ -42,7 +42,7 @@ class ChordsExample extends StatelessWidget {
       ),
     ];
 
-    // Acordes de 4 notas (Tétrades)
+    // 4 note chords (Tetrades)
     final List<MusicalElement> tetradElements = [
       Clef(clefType: ClefType.treble),
       Chord(
@@ -81,7 +81,7 @@ class ChordsExample extends StatelessWidget {
       ),
     ];
 
-    // Acordes com 5 notas e com segundas (para testar colisões)
+    // Chords with 5 notes and with seconds (to test collisions)
     final List<MusicalElement> complexChordElements = [
       Clef(clefType: ClefType.treble),
       Chord(
@@ -122,7 +122,7 @@ class ChordsExample extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Família de Símbolos: Acordes'),
+        title: const Text('Symbol Family: Chords'),
         backgroundColor: Colors.indigo.shade700,
       ),
       body: SingleChildScrollView(
@@ -131,21 +131,21 @@ class ChordsExample extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildSection(
-              title: 'Acordes de 3 Notas (Tríades)',
+              title: '3-Note Chords (Triads)',
               description:
-                  'Exibe acordes básicos de 3 notas. Verifique se a haste tem o tamanho correto (fator 4.5).',
+                  'Displays basic 3-note chords. Check that the rod is the correct size (factor 4.5).',
               elements: triadElements,
             ),
             _buildSection(
-              title: 'Acordes de 4 Notas (Tétrades)',
+              title: '4-Note Chords (Tetrads)',
               description:
-                  'Exibe acordes com 4 notas. A haste deve ser visivelmente mais longa (fator 5.5).',
+                  'Displays 4-note chords. The stem should be noticeably longer (factor 5.5).',
               elements: tetradElements,
             ),
             _buildSection(
-              title: 'Acordes Complexos',
+              title: 'Complex Chords',
               description:
-                  'Exibe acordes com 5 notas (haste ainda mais longa, fator 6.5) e acordes com segundas para testar o deslocamento horizontal das cabeças de nota.',
+                  'Displays chords with 5 notes (even longer stem, factor 6.5) and chords with seconds to test the horizontal displacement of the note heads.',
               elements: complexChordElements,
             ),
           ],

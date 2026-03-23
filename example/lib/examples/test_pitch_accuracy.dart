@@ -21,11 +21,11 @@ class TestPitchAccuracy extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildTestSection(
-              title: 'CLAVE DE SOL - Escala Diatônica',
-              description: 'G4 DEVE estar na 2ª linha (de baixo para cima)',
+              title: 'TREBLE CLEF - Diatonic Scale',
+              description: 'G4 MUST be on the 2nd line (from bottom to top)',
               elements: [
                 Clef(clefType: ClefType.treble),
-                // Começar com G4 que deve estar na 2ª linha
+                // Start with G4 which must be on the 2nd line
                 Note(
                     pitch: const Pitch(step: 'G', octave: 4),
                     duration: const Duration(DurationType.whole)),
@@ -50,7 +50,7 @@ class TestPitchAccuracy extends StatelessWidget {
                 Note(
                     pitch: const Pitch(step: 'G', octave: 5),
                     duration: const Duration(DurationType.whole)),
-                // Adicionar nota que precisa de linha suplementar
+                // Add note that needs additional line
                 Note(
                     pitch: const Pitch(step: 'A', octave: 5),
                     duration: const Duration(DurationType.whole)),
@@ -58,11 +58,11 @@ class TestPitchAccuracy extends StatelessWidget {
             ),
             _buildReferenceGuide(),
             _buildTestSection(
-              title: 'CLAVE DE FÁ - Nota de Referência',
-              description: 'F3 DEVE estar na 4ª linha',
+              title: 'BASS CLEF - Reference Note',
+              description: 'F3 MUST be on the 4th line',
               elements: [
                 Clef(clefType: ClefType.bass),
-                // Começar com F3 que deve estar na 4ª linha
+                // Start with F3 which should be on the 4th line
                 Note(
                     pitch: const Pitch(step: 'F', octave: 3),
                     duration: const Duration(DurationType.whole)),
@@ -78,18 +78,18 @@ class TestPitchAccuracy extends StatelessWidget {
                 Note(
                     pitch: const Pitch(step: 'C', octave: 4),
                     duration: const Duration(DurationType.whole)),
-                // Adicionar nota que precisa de linha suplementar inferior
+                // Add note that needs supplementary bottom line
                 Note(
                     pitch: const Pitch(step: 'C', octave: 3),
                     duration: const Duration(DurationType.whole)),
               ],
             ),
             _buildTestSection(
-              title: 'CLAVE DE DÓ (ALTO) - Nota de Referência',
-              description: 'C4 DEVE estar na 3ª linha (meio)',
+              title: 'C CLEF (ALTO) - Reference Note',
+              description: 'C4 MUST be on the 3rd line (middle)',
               elements: [
                 Clef(clefType: ClefType.alto),
-                // Começar com C4 que deve estar na linha central
+                // Start with C4 which should be on the center line
                 Note(
                     pitch: const Pitch(step: 'C', octave: 4),
                     duration: const Duration(DurationType.whole)),
@@ -105,7 +105,7 @@ class TestPitchAccuracy extends StatelessWidget {
                 Note(
                     pitch: const Pitch(step: 'G', octave: 4),
                     duration: const Duration(DurationType.whole)),
-                // Adicionar nota que precisa de linha suplementar superior
+                // Add note that needs top supplementary line
                 Note(
                     pitch: const Pitch(step: 'A', octave: 4),
                     duration: const Duration(DurationType.whole)),
@@ -181,7 +181,7 @@ class TestPitchAccuracy extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              '📏 GUIA DE REFERÊNCIA - CLAVE DE SOL',
+              '📏 REFERENCE GUIDE - TREBLE CLEF',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
@@ -191,15 +191,15 @@ class TestPitchAccuracy extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             ...[
-              'Linha 1: E4',
+              'Line 1: E4',
               'Espaço 1: F4',
-              'Linha 2: G4 ⭐ (NOTA DE REFERÊNCIA DA CLAVE)',
+              'Line 2: G4 ⭐ (CLAVE REFERENCE NOTE)',
               'Espaço 2: A4',
-              'Linha 3: B4 (meio da pauta)',
+              'Line 3: B4 (middle of the staff)',
               'Espaço 3: C5',
-              'Linha 4: D5',
+              'Row 4: D5',
               'Espaço 4: E5',
-              'Linha 5: F5',
+              'Line 5: F5',
             ].map((text) => Padding(
                   padding: const EdgeInsets.only(left: 16, top: 4),
                   child: Text(

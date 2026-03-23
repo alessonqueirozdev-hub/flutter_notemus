@@ -1,5 +1,5 @@
 // example/lib/examples/beaming_showcase.dart
-// Exemplo visual do Sistema de Beaming Avançado
+// Visual example of the Advanced Beaming System
 // Mostra primary beams, secondary beams, e broken beams (fractional)
 
 import 'package:flutter/material.dart';
@@ -26,11 +26,11 @@ class BeamingShowcase extends StatelessWidget {
             _buildTitle('Sistema de Beaming Avançado'),
             const SizedBox(height: 8),
             _buildDescription(
-              'Demonstração de beams profissionais seguindo especificações SMuFL e Behind Bars',
+              'Demonstration of professional beams following SMuFL and Behind Bars specifications',
             ),
             const SizedBox(height: 24),
             
-            // Exemplo 1: Primary Beams (Colcheias)
+            // Example 1: Primary Beams (Eighth Notes)
             _buildExampleSection(
               title: '1️⃣ Primary Beams - Colcheias (8th notes)',
               description: '4 colcheias conectadas por um beam primário',
@@ -39,16 +39,16 @@ class BeamingShowcase extends StatelessWidget {
             
             const SizedBox(height: 32),
             
-            // Exemplo 2: Secondary Beams (Semicolcheias)
+            // Example 2: Secondary Beams (Sixteenth Notes)
             _buildExampleSection(
               title: '2️⃣ Secondary Beams - Semicolcheias (16th notes)',
-              description: '4 semicolcheias com primary e secondary beams',
+              description: '4 sixteenth notes with primary and secondary beams',
               staff: _createSecondaryBeamsExample(),
             ),
             
             const SizedBox(height: 32),
             
-            // Exemplo 3: Broken Beams (Ritmo pontuado)
+            // Example 3: Broken Beams (Dotted rhythm)
             _buildExampleSection(
               title: '3️⃣ Broken Beams - Ritmo Pontuado',
               description: 'Colcheia pontuada + semicolcheia (beam fracionado)',
@@ -57,7 +57,7 @@ class BeamingShowcase extends StatelessWidget {
             
             const SizedBox(height: 32),
             
-            // Exemplo 4: Tertiary Beams (Fusas)
+            // Example 4: Tertiary Beams (Spindles)
             _buildExampleSection(
               title: '4️⃣ Tertiary Beams - Fusas (32nd notes)',
               description: '8 fusas com três níveis de beams',
@@ -66,7 +66,7 @@ class BeamingShowcase extends StatelessWidget {
             
             const SizedBox(height: 32),
             
-            // Exemplo 5: Beams Complexos
+            // Example 5: Complex Beams
             _buildExampleSection(
               title: '5️⃣ Padrões Complexos',
               description: 'Combinação de diferentes durações',
@@ -165,7 +165,7 @@ class BeamingShowcase extends StatelessWidget {
           _buildFeature('✅ Beam thickness: 0.5 staff spaces (SMuFL)'),
           _buildFeature('✅ Beam gap: 0.25 staff spaces (SMuFL)'),
           _buildFeature('✅ Inclinação automática baseada em intervalos'),
-          _buildFeature('✅ Quebra automática (regra "dois níveis acima")'),
+          _buildFeature('✅ Automatic breaking ("two levels up" rule)'),
           _buildFeature('✅ Broken beams para ritmos pontuados'),
           _buildFeature('✅ Suporte até 5 níveis de beams (128th notes)'),
         ],
@@ -180,9 +180,9 @@ class BeamingShowcase extends StatelessWidget {
     );
   }
 
-  // EXEMPLO 1: Primary Beams (4 colcheias)
+  // EXAMPLE 1: Primary Beams (4 eighth notes)
   Staff _createPrimaryBeamsExample() {
-    print('\n📊 CRIANDO EXEMPLO 1: Primary Beams');
+    print('\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\n📊 CREATING EXAMPLE 1: Primary Beams');
     final staff = Staff();
     final measure = Measure(); // AUTO-BEAMING ativado
     
@@ -214,14 +214,14 @@ class BeamingShowcase extends StatelessWidget {
     print('   ✓ Adicionado: Rest (half note)');
     
     staff.add(measure);
-    print('   ✓ Staff criado com ${staff.measures.length} compasso(s)');
-    print('   ✓ Total de elementos no compasso: ${measure.elements.length}');
+    print('✓ Staff created with ${staff.measures.length} measure(s)');
+    print('✓ Total elements in the measure: ${measure.elements.length}');
     return staff;
   }
 
-  // EXEMPLO 2: Secondary Beams (4 semicolcheias)
+  // EXAMPLE 2: Secondary Beams (4 sixteenth notes)
   Staff _createSecondaryBeamsExample() {
-    print('\n📊 CRIANDO EXEMPLO 2: Secondary Beams');
+    print('\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\n📊 CREATING EXAMPLE 2: Secondary Beams');
     final staff = Staff();
     final measure = Measure(); // AUTO-BEAMING ativado
     
@@ -254,14 +254,14 @@ class BeamingShowcase extends StatelessWidget {
     print('   ✓ Adicionado: Rests (half + quarter)');
     
     staff.add(measure);
-    print('   ✓ Staff criado com ${staff.measures.length} compasso(s)');
-    print('   ✓ Total de elementos no compasso: ${measure.elements.length}');
+    print('✓ Staff created with ${staff.measures.length} measure(s)');
+    print('✓ Total elements in the measure: ${measure.elements.length}');
     return staff;
   }
 
-  // EXEMPLO 3: Broken Beams (ritmo pontuado)
+  // EXAMPLE 3: Broken Beams (dotted rhythm)
   Staff _createBrokenBeamsExample() {
-    print('\n📊 CRIANDO EXEMPLO 3: Broken Beams (RITMO PONTUADO)');
+    print('\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\n📊 CREATING EXAMPLE 3: Broken Beams (PUNCTUATED RHYTHM)');
     final staff = Staff();
     final measure = Measure(); // AUTO-BEAMING ativado
     
@@ -282,21 +282,21 @@ class BeamingShowcase extends StatelessWidget {
       duration: const Duration(DurationType.sixteenth),
     ));
     print('   ✓ Adicionado: Semicolcheia (sixteenth note)');
-    print('   ⚠️  ESPERADO: Broken beam entre estas 2 notas!');
+    print('⚠️ EXPECTED: Broken beam between these 2 notes!');
     
     measure.add(Rest(duration: const Duration(DurationType.half)));
     measure.add(Rest(duration: const Duration(DurationType.eighth)));
     print('   ✓ Adicionado: Rests (half + eighth)');
     
     staff.add(measure);
-    print('   ✓ Staff criado com ${staff.measures.length} compasso(s)');
-    print('   ✓ Total de elementos no compasso: ${measure.elements.length}');
+    print('✓ Staff created with ${staff.measures.length} measure(s)');
+    print('✓ Total elements in the measure: ${measure.elements.length}');
     return staff;
   }
 
-  // EXEMPLO 4: Tertiary Beams (8 fusas)
+  // EXAMPLE 4: Tertiary Beams (8 spindles)
   Staff _createTertiaryBeamsExample() {
-    print('\n📊 CRIANDO EXEMPLO 4: Tertiary Beams');
+    print('\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\n📊 CREATING EXAMPLE 4: Tertiary Beams');
     final staff = Staff();
     final measure = Measure(); // AUTO-BEAMING ativado
     
@@ -343,14 +343,14 @@ class BeamingShowcase extends StatelessWidget {
     print('   ✓ Adicionado: 8 fusas (32nd notes)');
     
     staff.add(measure);
-    print('   ✓ Staff criado com ${staff.measures.length} compasso(s)');
-    print('   ✓ Total de elementos no compasso: ${measure.elements.length}');
+    print('✓ Staff created with ${staff.measures.length} measure(s)');
+    print('✓ Total elements in the measure: ${measure.elements.length}');
     return staff;
   }
 
-  // EXEMPLO 5: Padrões Complexos
+  // EXAMPLE 5: Complex Patterns
   Staff _createComplexBeamsExample() {
-    print('\n📊 CRIANDO EXEMPLO 5: Padrões Complexos');
+    print('\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\n📊 CREATING EXAMPLE 5: Complex Patterns');
     final staff = Staff();
     final measure = Measure(); // AUTO-BEAMING ativado
     
@@ -399,9 +399,9 @@ class BeamingShowcase extends StatelessWidget {
     print('   ✓ Adicionado: Mix de durações (2 eighth + 4 sixteenth + dotted eighth + sixteenth)');
     
     staff.add(measure);
-    print('   ✓ Staff criado com ${staff.measures.length} compasso(s)');
-    print('   ✓ Total de elementos no compasso: ${measure.elements.length}');
-    print('\n' + '='*60);
+    print('✓ Staff created with ${staff.measures.length} measure(s)');
+    print('✓ Total elements in the measure: ${measure.elements.length}');
+    print('\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\n' + '='*60);
     return staff;
   }
 }

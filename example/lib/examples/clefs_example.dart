@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 
-/// Um widget de página que demonstra a renderização de todas as claves disponíveis.
+/// A page widget that demonstrates the rendering of all available clefs.
 class ClefsExample extends StatelessWidget {
   const ClefsExample({super.key});
 
@@ -11,7 +11,7 @@ class ClefsExample extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Família de Símbolos: Claves'),
+        title: const Text('Symbol Family: Clefs'),
         backgroundColor: Colors.blue.shade700,
       ),
       body: SingleChildScrollView(
@@ -20,9 +20,9 @@ class ClefsExample extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildClefSection(
-              title: 'Clave de Sol',
+              title: 'Treble clef',
               description:
-                  'A espiral central da clave de Sol (G-clef) define a posição da nota Sol (G4) na segunda linha da pauta.',
+                  'The central spiral of the G-clef defines the position of the G note (G4) on the second line of the staff.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 Note(
@@ -31,9 +31,9 @@ class ClefsExample extends StatelessWidget {
               ],
             ),
             _buildClefSection(
-              title: 'Clave de Fá',
+              title: 'Bass clef',
               description:
-                  'Os dois pontos da clave de Fá (F-clef) envolvem a quarta linha da pauta, definindo-a como a posição da nota Fá (F3).',
+                  'The two dots of the bass clef (F-clef) surround the fourth line of the staff, defining it as the position of the F note (F3).',
               elements: [
                 Clef(clefType: ClefType.bass),
                 Note(
@@ -42,9 +42,9 @@ class ClefsExample extends StatelessWidget {
               ],
             ),
             _buildClefSection(
-              title: 'Clave de Dó (Contralto)',
+              title: 'Clef of C (Contralto)',
               description:
-                  'O centro da clave de Dó (C-clef) na terceira linha define esta como a posição do Dó central (C4). É comumente usada para a viola.',
+                  'The center of the C clef (C-clef) on the third line defines this as the position of middle C (C4). It is commonly used for the viola.',
               elements: [
                 Clef(clefType: ClefType.alto),
                 Note(
@@ -53,9 +53,9 @@ class ClefsExample extends StatelessWidget {
               ],
             ),
             _buildClefSection(
-              title: 'Clave de Dó (Tenor)',
+              title: 'Clef of C (Tenor)',
               description:
-                  'Quando na quarta linha, a clave de Dó define esta como a posição do Dó central (C4). É usada para instrumentos como o violoncelo e o trombone em registros agudos.',
+                  'When in the fourth line, the C clef defines this as the position of middle C (C4). It is used for instruments such as the cello and trombone in high registers.',
               elements: [
                 Clef(clefType: ClefType.tenor),
                 Note(
@@ -64,9 +64,9 @@ class ClefsExample extends StatelessWidget {
               ],
             ),
             _buildClefSection(
-              title: 'Claves de Oitava (8va e 8vb)',
+              title: 'Octave Clefs (8va and 8vb)',
               description:
-                  'Estas claves indicam que a música deve ser tocada uma oitava acima (8va) ou abaixo (8vb) do que está escrito.',
+                  'These keys indicate that the music should be played an octave higher (8va) or lower (8vb) than what is written.',
               elements: [
                 Clef(clefType: ClefType.treble8va),
                 Note(
@@ -92,7 +92,7 @@ class ClefsExample extends StatelessWidget {
     );
   }
 
-  /// Constrói uma seção de teste para um tipo de clave.
+  /// Builds a test section for a clef type.
   Widget _buildClefSection({
     required String title,
     required String description,
