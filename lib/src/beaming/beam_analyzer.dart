@@ -165,11 +165,16 @@ class BeamAnalyzer {
       if (beams > maxBeams) maxBeams = beams;
     }
 
+    // Filtrar apenas posições das notas deste grupo (não todas as notas da peça)
+    final groupStaffPositions = group.notes
+        .map((n) => noteStaffPositions![n]!)
+        .toList();
+
     // Usar SMuFLPositioningEngine para calcular altura do beam (IGUAL ao GroupRenderer!)
     final beamHeightSpaces = positioningEngine.calculateBeamHeight(
       staffPosition: noteStaffPositions![firstNote]!,
       stemUp: group.stemDirection == StemDirection.up,
-      allStaffPositions: noteStaffPositions.values.toList(),
+      allStaffPositions: groupStaffPositions,
       beamCount: maxBeams,
     );
     final beamHeightPixels = beamHeightSpaces * staffSpace;
@@ -184,7 +189,7 @@ class BeamAnalyzer {
 
     // Calcular ângulo usando positioning engine (IGUAL ao GroupRenderer!)
     final beamAngleSpaces = positioningEngine.calculateBeamAngle(
-      noteStaffPositions: noteStaffPositions.values.toList(),
+      noteStaffPositions: groupStaffPositions,
       stemUp: group.stemDirection == StemDirection.up,
     );
     final beamAnglePixels = beamAngleSpaces * staffSpace;

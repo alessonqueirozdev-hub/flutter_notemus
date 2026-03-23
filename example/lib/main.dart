@@ -26,12 +26,18 @@ import 'examples/professional_ornaments_example.dart';
 import 'examples/corrected_ornaments_example.dart';
 import 'examples/test_pitch_accuracy.dart';
 import 'examples/test_augmentation_dots.dart';
+import 'examples/rests_showcase.dart';
+import 'examples/polyphony_example.dart';
+import 'examples/multi_staff_example.dart';
+import 'examples/octave_marks_example.dart';
+import 'examples/volta_brackets_example.dart';
 
 // Novos exemplos completos
 import 'examples/complete_clefs_demo.dart';
 import 'examples/complete_articulations_ornaments.dart';
 import 'examples/complete_advanced_elements.dart';
 import 'examples/complete_music_piece.dart';
+import 'examples/complete_improvements_demo.dart';
 
 // Exemplos JSON
 import 'examples/simple_json_example.dart';
@@ -101,10 +107,16 @@ class _MainScreenState extends State<MainScreen> {
     'Bandeiras vs Barras',
     'Ornamentos Profissionais',
     'Ornamentos Corrigidos',
+    'Pausas (Rests Showcase)',
+    'Polifonia (Múltiplas Vozes)',
+    'Multi-Pauta (Grand Staff)',
+    '🎵 Marcações de Oitava (8va/8vb)',
+    '🎵 Colchetes de Volta (1ª/2ª Vez)',
     '🎼 DEMO: Todas as Claves',
     '🎵 DEMO: Articulações Completas',
     '🎸 DEMO: Elementos Avançados',
     '🎹 DEMO: Peça Musical Completa',
+    '⚙️ DEMO: Melhorias Completas',
     '📄 JSON: Exemplo Simples',
     '📄 JSON: Ode à Alegria',
     '📄 JSON: Profissional Completo',
@@ -133,11 +145,17 @@ class _MainScreenState extends State<MainScreen> {
     FlagsVsBeamsExample(),
     ProfessionalOrnamentsExample(),
     CorrectedOrnamentsExample(),
+    RestsShowcaseExample(),
+    PolyphonyExampleWidget(),
+    MultiStaffDemoApp(),
+    OctaveMarksExample(),
+    VoltaBracketsExample(),
     // Novos exemplos completos
     CompleteClefsDemoExample(),
     CompleteArticulationsOrnamentsExample(),
     CompleteAdvancedElementsExample(),
     CompleteMusicPieceExample(),
+    ImprovementsDemoPage(),
     // Exemplos JSON
     SimpleJsonExample(),
     JsonOdeExample(),

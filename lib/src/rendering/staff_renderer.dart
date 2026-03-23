@@ -205,6 +205,7 @@ class StaffRenderer {
       glyphSize: glyphSize,
       noteRenderer: noteRenderer,
       restRenderer: restRenderer,
+      positioningEngine: positioningEngine,
     );
     
     // ✅ Inicializar SlurRenderer profissional

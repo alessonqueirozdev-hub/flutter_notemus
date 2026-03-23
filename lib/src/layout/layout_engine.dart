@@ -429,6 +429,18 @@ class LayoutEngine {
     // JUSTIFICAÇÃO HORIZONTAL: Esticar compassos para preencher largura
     _justifyHorizontally(positionedElements, systemMeasures);
 
+    // Sincronizar _noteXPositions com as posições pós-justificação.
+    // _justifyHorizontally modifica positionedElements mas não _noteXPositions,
+    // causando desalinhamento entre beams (que usam _noteXPositions) e noteheads.
+    for (final positioned in positionedElements) {
+      if (positioned.element is Note) {
+        final note = positioned.element as Note;
+        if (_noteXPositions.containsKey(note)) {
+          _noteXPositions[note] = positioned.position.dx;
+        }
+      }
+    }
+
     // ANÁLISE DE BEAMING AVANÇADO: Criar AdvancedBeamGroups
     _analyzeBeamGroups(currentTimeSignature, positionedElements);
 
@@ -456,29 +468,37 @@ class LayoutEngine {
       return;
     }
 
-    // Detectar beam groups usando as notas PROCESSADAS
-    final beamGroups = BeamGrouper.groupNotesForBeaming(
-      processedNotes,
-      timeSignature,
-      autoBeaming: true, // Usar auto-beaming padrão
-      beamingMode: BeamingMode.automatic,
-    );
-
-    // Analisar cada beam group
-    for (final beamGroup in beamGroups) {
-      if (beamGroup.isValid && beamGroup.notes.length >= 2) {
-        try {
-          final advancedGroup = _beamAnalyzer.analyzeAdvancedBeamGroup(
-            beamGroup.notes,
-            timeSignature,
-            noteXPositions: _noteXPositions,
-            noteStaffPositions: _noteStaffPositions,
-            noteYPositions: _noteYPositions,
-          );
-          _advancedBeamGroups.add(advancedGroup);
-        } catch (_) {
-          // Ignore beam analysis errors for individual groups
-        }
+    // Usar beam types já atribuídos por _processBeamsWithAnacrusis para identificar grupos.
+    // NÃO chamar BeamGrouper novamente, pois ele processa todas as notas em conjunto
+    // sem respeitar limites de compasso, causando agrupamentos incorretos entre compassos.
+    List<Note>? currentGroup;
+    for (final note in processedNotes) {
+      switch (note.beam) {
+        case BeamType.start:
+          currentGroup = [note];
+        case BeamType.inner:
+          currentGroup?.add(note);
+        case BeamType.end:
+          if (currentGroup != null) {
+            currentGroup.add(note);
+            if (currentGroup.length >= 2) {
+              try {
+                final advancedGroup = _beamAnalyzer.analyzeAdvancedBeamGroup(
+                  currentGroup,
+                  timeSignature,
+                  noteXPositions: _noteXPositions,
+                  noteStaffPositions: _noteStaffPositions,
+                  noteYPositions: _noteYPositions,
+                );
+                _advancedBeamGroups.add(advancedGroup);
+              } catch (_) {
+                // Ignore beam analysis errors for individual groups
+              }
+            }
+            currentGroup = null;
+          }
+        case null:
+          currentGroup = null;
       }
     }
   }
