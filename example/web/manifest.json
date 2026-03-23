@@ -1,6 +1,6 @@
 {
-    "name": "smufl_renderer_example",
-    "short_name": "smufl_renderer_example",
+    "name": "flutter_notemus_example",
+    "short_name": "flutter_notemus_example",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

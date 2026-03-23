@@ -1,4 +1,4 @@
-package com.example.smufl_renderer_example
+package com.example.flutter_notemus_example
 
 import io.flutter.embedding.android.FlutterActivity
 

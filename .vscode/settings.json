@@ -1,4 +1,4 @@
 {
-    "cmake.sourceDirectory": "C:/smufl_renderer/example/windows",
+    "cmake.sourceDirectory": "${workspaceFolder}/example/windows",
     "java.configuration.updateBuildConfiguration": "disabled"
 }
