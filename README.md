@@ -64,7 +64,7 @@ Professional music notation rendering for Flutter with SMuFL-compliant engraving
 
 ## Current Status
 
-- Current package release target: `2.2.0`
+- Current package release target: `2.2.1`
 - Previous pub.dev baseline before the new generation: `0.1.0`
 - Core notation rendering is production-ready.
 - MIDI mapping and `.mid` export are available in the package.
@@ -146,7 +146,7 @@ Add dependency to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  flutter_notemus: ^2.2.0
+  flutter_notemus: ^2.2.1
 ```
 
 Install packages:
@@ -639,5 +639,4 @@ flutter pub publish --dry-run
 ## License
 
 - Project code: Apache License 2.0 (`LICENSE`)
-- Bravura font: SIL Open Font License 1.1
-- SMuFL specification: W3C Music Notation Community Group
+- Third-party assets and references: `THIRD_PARTY_LICENSES.md`
