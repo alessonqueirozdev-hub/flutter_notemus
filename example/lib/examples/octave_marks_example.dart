@@ -39,18 +39,18 @@ class OctaveMarksExample extends StatelessWidget {
               title: '15ma — Two Octaves Up',
               description:
                   'Indicates that notes should be played two octaves higher'
-                  'altas do que escrito.',
+                  'higher than written.',
               score: _build15ma(),
             ),
             _buildSection(
               title: '15mb — Two Octaves Below',
               description:
                   'Indicates that notes should be played two octaves higher'
-                  'baixas do que escrito.',
+                  'lower than written.',
               score: _build15mb(),
             ),
             _buildSection(
-              title: 'Combinação: 8va + 8vb',
+              title: 'Combination: 8va + 8vb',
               description:
                   'Combined use of markings above and below the staff in'
                   'same musical passage.',

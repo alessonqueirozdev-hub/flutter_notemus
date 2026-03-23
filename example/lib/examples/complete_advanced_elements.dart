@@ -17,25 +17,25 @@ class CompleteAdvancedElementsExample extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildHeader(
-              'Elementos Avançados Completos',
+              'Complete Advanced Elements',
               'Chords, Quialteres, Ligatures and Dynamics',
             ),
             const SizedBox(height: 32),
             _buildSection(
               'Complex Chords',
-              'Tríades, tétrades e cluster chords',
+              'Triads, seventh chords, and cluster chords',
               _createComplexChords(),
             ),
             const SizedBox(height: 32),
             _buildSection(
-              'Quiálteras (Tuplets)',
-              'Tercinas, quintinas, sextinas',
+              'Tuplets',
+              'Triplets, quintinas, sextinas',
               _createTuplets(),
             ),
             const SizedBox(height: 32),
             _buildSection(
               'Expression Ligatures (Slurs)',
-              'Frasagem e articulação',
+              'Phrasing and articulation',
               _createSlurs(),
             ),
             const SizedBox(height: 32),
@@ -46,19 +46,19 @@ class CompleteAdvancedElementsExample extends StatelessWidget {
             ),
             const SizedBox(height: 32),
             _buildSection(
-              'Dinâmicas Completas',
-              'De pppp a ffff, crescendo e diminuendo',
+              'Complete Dynamics',
+              'From pppp to ffff, crescendo and diminuendo',
               _createDynamics(),
             ),
             const SizedBox(height: 32),
             _buildSection(
-              'Indicações de Tempo',
-              'Andamentos e metrônomo',
+              'Tempo Markings',
+              'Tempo styles and metronome marks',
               _createTempoMarkings(),
             ),
             const SizedBox(height: 32),
             _buildSection(
-              'Sinais de Repetição',
+              'Repeat Signs',
               'Segno, Coda, D.C., D.S.',
               _createRepeats(),
             ),
@@ -179,7 +179,7 @@ class CompleteAdvancedElementsExample extends StatelessWidget {
       duration: const Duration(DurationType.quarter),
     ));
 
-    // Tétrade (G7: G-B-D-F)
+    // Seventh chord (G7: G-B-D-F)
     measure1.add(Chord(
       notes: [
         Note(
@@ -241,7 +241,7 @@ class CompleteAdvancedElementsExample extends StatelessWidget {
     measure1.add(Clef(clefType: ClefType.treble));
     measure1.add(TimeSignature(numerator: 4, denominator: 4));
 
-    // Tercina de colcheias
+    // Triplet de eighth notes
     measure1.add(Tuplet(
       actualNotes: 3,
       normalNotes: 2,
@@ -263,7 +263,7 @@ class CompleteAdvancedElementsExample extends StatelessWidget {
       numberConfig: const TupletNumber(),
     ));
 
-    // Tercina de semicolcheias
+    // Triplet de semieighth notes
     measure1.add(Tuplet(
       actualNotes: 3,
       normalNotes: 2,
@@ -519,7 +519,7 @@ class CompleteAdvancedElementsExample extends StatelessWidget {
     measure.add(Clef(clefType: ClefType.treble));
     measure.add(TimeSignature(numerator: 4, denominator: 4));
 
-    // Adicionar indicação de tempo
+    // Add tempo marking
     measure.add(TempoMark(
       text: 'Allegro',
       beatUnit: DurationType.quarter,

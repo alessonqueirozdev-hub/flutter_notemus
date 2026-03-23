@@ -13,20 +13,20 @@ class SimpleJsonExample extends StatelessWidget {
     // 🎵 SEU JSON COM LETRAS (LYRICS)!
     const jsonString = '''
     [
-      {"note": "C4", "lyric": "Dó", "duration": "quarter"},
-      {"note": "D4", "lyric": "Ré", "duration": "quarter"},
-      {"note": "C4", "lyric": "Dó", "duration": "quarter"},
-      {"note": "D4", "lyric": "Ré", "duration": "quarter"},
-      {"note": "D4", "lyric": "Ré", "duration": "quarter"},
-      {"note": "C4", "lyric": "Dó", "duration": "quarter"},
-      {"note": "D4", "lyric": "Ré", "duration": "quarter"},
-      {"note": "C4", "lyric": "Dó", "duration": "quarter"},
-      {"note": "C4", "lyric": "Dó", "duration": "quarter"},
-      {"note": "C4", "lyric": "Dó", "duration": "quarter"},
-      {"note": "D4", "lyric": "Ré", "duration": "quarter"},
-      {"note": "D4", "lyric": "Ré", "duration": "quarter"},
-      {"note": "C4", "lyric": "Dó", "duration": "half"},
-      {"note": "D4", "lyric": "Ré", "duration": "half"}
+      {"note": "C4", "lyric": "Do", "duration": "quarter"},
+      {"note": "D4", "lyric": "Re", "duration": "quarter"},
+      {"note": "C4", "lyric": "Do", "duration": "quarter"},
+      {"note": "D4", "lyric": "Re", "duration": "quarter"},
+      {"note": "D4", "lyric": "Re", "duration": "quarter"},
+      {"note": "C4", "lyric": "Do", "duration": "quarter"},
+      {"note": "D4", "lyric": "Re", "duration": "quarter"},
+      {"note": "C4", "lyric": "Do", "duration": "quarter"},
+      {"note": "C4", "lyric": "Do", "duration": "quarter"},
+      {"note": "C4", "lyric": "Do", "duration": "quarter"},
+      {"note": "D4", "lyric": "Re", "duration": "quarter"},
+      {"note": "D4", "lyric": "Re", "duration": "quarter"},
+      {"note": "C4", "lyric": "Do", "duration": "half"},
+      {"note": "D4", "lyric": "Re", "duration": "half"}
     ]
     ''';
 
@@ -34,10 +34,10 @@ class SimpleJsonExample extends StatelessWidget {
     final staff = SimpleJsonParser.parseSimpleNotes(
       jsonString,
       clefType: ClefType.treble, // Clave de Sol
-      keySignatureFifths: 0, // Dó Maior (sem sustenidos/bemóis)
+      keySignatureFifths: 0, // Do Maior (sem sustenidos/bemóis)
       timeSignatureNumerator: 4, // 4/4
       timeSignatureDenominator: 4,
-      autoBarlines: true, // Barras de compasso automáticas
+      autoBarlines: true, // Automatic barlines
     );
 
     return Column(
@@ -50,7 +50,7 @@ class SimpleJsonExample extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  '🎵 Música criada a partir de JSON simplificado',
+                  '🎵 Music created from simplified JSON',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -66,7 +66,7 @@ class SimpleJsonExample extends StatelessWidget {
                   style: TextStyle(fontSize: 14),
                 ),
                 Text(
-                  'Formato: {"note": "C4", "lyric": "Dó", "duration": "quarter"}',
+                  'Format: {"note": "C4", "lyric": "Do", "duration": "quarter"}',
                   style: TextStyle(
                     fontSize: 12,
                     fontFamily: 'monospace',
@@ -77,7 +77,7 @@ class SimpleJsonExample extends StatelessWidget {
             ),
           ),
 
-          // 🎼 RENDERIZAÇÃO
+          // 🎼 RENDERING
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(16),

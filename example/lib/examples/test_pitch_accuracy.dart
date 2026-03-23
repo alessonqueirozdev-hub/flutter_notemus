@@ -1,10 +1,10 @@
 // example/lib/examples/test_pitch_accuracy.dart
-// TESTE DE PRECISÃO DE ALTURAS DAS NOTAS
+// NOTE PITCH ACCURACY TEST
 
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 
-/// Widget de teste para verificar se as notas estão nas alturas corretas
+/// Test widget to verify whether notes are at the correct pitches
 class TestPitchAccuracy extends StatelessWidget {
   const TestPitchAccuracy({super.key});
 
@@ -12,7 +12,7 @@ class TestPitchAccuracy extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('TESTE: Precisão de Alturas'),
+        title: const Text('TEST: Pitch Accuracy'),
         backgroundColor: Colors.red.shade700,
       ),
       body: SingleChildScrollView(
@@ -186,19 +186,19 @@ class TestPitchAccuracy extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             const Text(
-              'Posições esperadas (de baixo para cima):',
+              'Expected positions (bottom to top):',
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             ...[
               'Line 1: E4',
-              'Espaço 1: F4',
+              'Space 1: F4',
               'Line 2: G4 ⭐ (CLAVE REFERENCE NOTE)',
-              'Espaço 2: A4',
+              'Space 2: A4',
               'Line 3: B4 (middle of the staff)',
-              'Espaço 3: C5',
+              'Space 3: C5',
               'Row 4: D5',
-              'Espaço 4: E5',
+              'Space 4: E5',
               'Line 5: F5',
             ].map((text) => Padding(
                   padding: const EdgeInsets.only(left: 16, top: 4),

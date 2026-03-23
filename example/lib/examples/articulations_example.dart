@@ -61,7 +61,7 @@ class ArticulationsExample extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Família de Símbolos: Articulações'),
+        title: const Text('Symbol Family: Articulations'),
         backgroundColor: Colors.orange.shade700,
       ),
       body: SingleChildScrollView(
@@ -70,13 +70,13 @@ class ArticulationsExample extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildSection(
-              title: 'Articulações (Hastes para Baixo)',
+              title: 'Articulations (Stems Down)',
               description:
                   'Displays staccato, accent, tenuto and Marcato on notes with stem down. The articulation must appear ABOVE the note head.',
               elements: stemsDownElements,
             ),
             _buildSection(
-              title: 'Articulações (Hastes para Cima)',
+              title: 'Articulations (Stems Up)',
               description:
                   'Displays the same articulations on stem-up notes. The articulation should appear BELOW the note head.',
               elements: stemsUpElements,
@@ -87,7 +87,7 @@ class ArticulationsExample extends StatelessWidget {
     );
   }
 
-  /// Constrói uma seção de teste.
+  /// Builds a test section.
   Widget _buildSection({
     required String title,
     required String description,

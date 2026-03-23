@@ -9,7 +9,7 @@ class DotsAndLedgersExample extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Elementos para demonstrar pontos de aumento
+    // Elements to demonstrate augmentation dots
     final List<MusicalElement> dottedNotesElements = [
       Clef(clefType: ClefType.treble),
       Note(
@@ -83,7 +83,7 @@ class DotsAndLedgersExample extends StatelessWidget {
     );
   }
 
-  /// Constrói uma seção de teste.
+  /// Builds a test section.
   Widget _buildSection({
     required String title,
     required String description,

@@ -12,7 +12,7 @@ class TupletsProfessionalExample extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('🎵 Quiálteras Profissionais'),
+        title: const Text('🎵 Professional Tuplets'),
         backgroundColor: Colors.deepPurple.shade700,
       ),
       body: ListView(
@@ -21,17 +21,17 @@ class TupletsProfessionalExample extends StatelessWidget {
           _header(),
           const SizedBox(height: 24),
           
-          _categoryTitle('TEMPO SIMPLES (4/4)'),
+          _categoryTitle('SIMPLE TIME (4/4)'),
           _categoryDesc('Numerador > Denominador (contraentes)'),
           
-          _example(1, 'Tercina (3:2)', '3 eighth notes in the space of 2', _triplet()),
+          _example(1, 'Triplet (3:2)', '3 eighth notes in the space of 2', _triplet()),
           _example(2, 'Quintina (5:4)', '5 sixteenth notes in the space of 4', _quintuplet()),
           _example(3, 'Sextina (6:4)', '6 sixteenth notes in the space of 4', _sextuplet()),
           _example(4, 'Septina (7:4)', '7 sixteenth notes in the space of 4', _septuplet()),
           
           const SizedBox(height: 32),
-          _categoryTitle('TEMPO COMPOSTO (6/8)'),
-          _categoryDesc('Dupleto (2:3) - quiáltera expansiva'),
+          _categoryTitle('COMPOUND TIME (6/8)'),
+          _categoryDesc('Duplet (2:3) - expansive tuplet'),
           
           _example(5, 'Dupleto (2:3)', '2 eighth notes in the space of 3', _duplet()),
           _example(6, 'Quadrupleto (4:6)', '4 in the space of 6', _quadruplet()),
@@ -39,10 +39,10 @@ class TupletsProfessionalExample extends StatelessWidget {
           const SizedBox(height: 32),
           _categoryTitle('CASOS ESPECIAIS'),
           
-          _example(7, 'Irracional (7:5)', 'SEMPRE razão completa!', _irrational(), true),
-          _example(8, 'Sem Colchete', 'When notes are beamed', _noBracket()),
-          _example(9, 'With Pauses', 'Colchete obrigatório', _withRests()),
-          _example(10, 'Semínimas', 'Durações mais longas', _quarters()),
+          _example(7, 'Irrational (7:5)', 'ALWAYS show full ratio!', _irrational(), true),
+          _example(8, 'No Bracket', 'When notes are beamed', _noBracket()),
+          _example(9, 'With Pauses', 'Bracket required', _withRests()),
+          _example(10, 'Quarter Notes', 'Longer durations', _quarters()),
           _example(11, 'Nontupleto (9:8)', '9 thirty-second notes in the space of 8', _nonuplet()),
           
           const SizedBox(height: 24),
@@ -65,14 +65,14 @@ class TupletsProfessionalExample extends StatelessWidget {
                 Icon(Icons.music_note, color: Colors.deepPurple.shade700, size: 32),
                 const SizedBox(width: 12),
                 const Expanded(
-                  child: Text('Quiálteras Profissionais', 
+                  child: Text('Professional Tuplets', 
                     style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
             const SizedBox(height: 8),
             Text(
-              'Implementação baseada em "Behind Bars" de Elaine Gould. '
+              'Implementation based on "Behind Bars" by Elaine Gould. '
               'Demonstrates all professional notation rules.',
               style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
             ),
@@ -152,7 +152,7 @@ class TupletsProfessionalExample extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Text(
-          '📚 Referências: Behind Bars (Gould), SMuFL, Dorico, Flutter Notemus',
+          '📚 References: Behind Bars (Gould), SMuFL, Dorico, Flutter Notemus',
           style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
         ),
       ),

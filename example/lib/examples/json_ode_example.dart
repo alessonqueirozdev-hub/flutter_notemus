@@ -1,5 +1,5 @@
 // example/lib/examples/json_ode_example.dart
-// Ode à Alegria renderizada a partir de JSON simplificado
+// Ode to Joy renderizada a partir de JSON simplificado
 
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
@@ -61,7 +61,7 @@ class JsonOdeExample extends StatelessWidget {
           children: [
             // 📋 Header
             const Text(
-              'Ode à Alegria',
+              'Ode to Joy',
               style: TextStyle(
                 fontSize: 32,
                 fontWeight: FontWeight.bold,
@@ -95,7 +95,7 @@ class JsonOdeExample extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              'Informações da Peça',
+                              'Piece Information',
                               style: TextStyle(
                                 fontSize: 22,
                                 fontWeight: FontWeight.bold,
@@ -113,10 +113,10 @@ class JsonOdeExample extends StatelessWidget {
                       ],
                     ),
                     const Divider(height: 24),
-                    _buildInfoRow('Tonalidade:', 'D major (2 sharps)'),
+                    _buildInfoRow('Key:', 'D major (2 sharps)'),
                     _buildInfoRow('Compass:', '4/4'),
                     _buildInfoRow('Compasses:', '${staff.measures.length}'),
-                    _buildInfoRow('Formato:', 'JSON Completo (compatível com MusicXML)'),
+                    _buildInfoRow('Format:', 'Complete JSON (compatible with MusicXML)'),
                   ],
                 ),
               ),

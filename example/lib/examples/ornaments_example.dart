@@ -28,15 +28,15 @@ class OrnamentsExample extends StatelessWidget {
               'Demonstration of the correct positioning of ornaments according to professional notation rules.',
             ),
             _buildSection(
-              title: 'Regra Fundamental: Posicionamento em Voz Única',
+              title: 'Core Rule: Single-Voice Positioning',
               description:
                   'In single-voice music, ornaments such as trills and mordants are ALWAYS positioned ABOVE the staff, regardless of the direction of the note stem.',
               staff: _createSingleVoiceStaff(),
             ),
             _buildSection(
-              title: 'Regra de Polifonia: Múltiplas Vozes',
+              title: 'Polyphony Rule: Multiple Voices',
               description:
-                  'In staves with multiple voices, the ornaments are positioned on the outside: above for the upper voice (soprano) and below for the lower voice (contralto).',
+              'In staves with multiple voices, ornaments are positioned on the outside: above for the upper voice (soprano) and below for the lower voice (alto).',
               staff: _createDoubleVoiceStaff(),
             ),
             _buildSection(
@@ -48,7 +48,7 @@ class OrnamentsExample extends StatelessWidget {
             _buildSection(
               title: 'Mordentes (Mordents)',
               description:
-                  'Mordentes superiores e inferiores. O posicionamento segue a mesma regra dos trilos.',
+                  'Upper and lower mordents. Positioning follows the same rule as trills.',
               staff: _createMordentsStaff(),
             ),
             _buildSection(
@@ -69,13 +69,13 @@ class OrnamentsExample extends StatelessWidget {
               staff: _createFermatasStaff(),
             ),
             _buildSection(
-              title: 'Arpejos e Glissandos',
+              title: 'Arpeggios and Glissandi',
               description:
                   'Arpeggios are positioned to the left of the chord. Glissandos are represented by lines between notes.',
               staff: _createArpeggiosAndGlissandosStaff(),
             ),
             _buildSection(
-              title: 'Efeitos de Articulação (Jazz/Moderno)',
+              title: 'Articulation Effects (Jazz/Modern)',
               description:
                   'Scoop, Fall, Doit and Plop, common in jazz notation.',
               staff: _createJazzEffectsStaff(),
@@ -86,7 +86,7 @@ class OrnamentsExample extends StatelessWidget {
     );
   }
 
-  /// Constrói o cabeçalho da página.
+  /// Builds the page header.
   Widget _buildHeader(String title, String subtitle) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
@@ -203,7 +203,7 @@ class OrnamentsExample extends StatelessWidget {
       ornaments: [Ornament(type: OrnamentType.trill)],
     ));
 
-    // Voice 2 (Contralto) - Stems DOWN, Ornaments DOWN
+    // Voice 2 (Alto) - Stems DOWN, Ornaments DOWN
     measure.add(Note(
       pitch: const Pitch(step: 'F', octave: 4),
       duration: const Duration(DurationType.quarter),

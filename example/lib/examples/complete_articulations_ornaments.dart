@@ -22,14 +22,14 @@ class CompleteArticulationsOrnamentsExample extends StatelessWidget {
             ),
             const SizedBox(height: 32),
             _buildSection(
-              'Articulações Básicas',
+              'Basic Articulations',
               'Staccato, Accent, Tenuto, Marcato',
               _createBasicArticulations(),
             ),
             const SizedBox(height: 32),
             _buildSection(
-              'Articulações para Cordas',
-              'Arco para cima/baixo, Pizzicato, Harmônicos',
+              'String Articulations',
+              'Up/down bow, pizzicato, harmonics',
               _createStringArticulations(),
             ),
             const SizedBox(height: 32),
@@ -52,7 +52,7 @@ class CompleteArticulationsOrnamentsExample extends StatelessWidget {
             ),
             const SizedBox(height: 32),
             _buildSection(
-              'Combinações Complexas',
+              'Complex Combinations',
               'Multiple articulations and ornaments',
               _createComplexCombinations(),
             ),
@@ -194,7 +194,7 @@ class CompleteArticulationsOrnamentsExample extends StatelessWidget {
       articulations: [ArticulationType.downBow],
     ));
 
-    // Harmônicos
+    // Harmonics
     measure.add(Note(
       pitch: const Pitch(step: 'B', octave: 4),
       duration: const Duration(DurationType.quarter),
@@ -324,7 +324,7 @@ class CompleteArticulationsOrnamentsExample extends StatelessWidget {
       duration: const Duration(DurationType.quarter),
     ));
 
-    // Marca de respiração
+    // Breath mark
     measure1.add(Breath(type: BreathType.comma));
 
     measure1.add(Note(

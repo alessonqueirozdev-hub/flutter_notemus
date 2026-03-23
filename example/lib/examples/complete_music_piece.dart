@@ -1,5 +1,5 @@
 // example/lib/examples/complete_music_piece.dart
-// Ode à Alegria - Ludwig van Beethoven (Sinfonia nº 9)
+// Ode to Joy - Ludwig van Beethoven (Sinfonia nº 9)
 
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
@@ -32,7 +32,7 @@ class CompleteMusicPieceExample extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Ode à Alegria',
+          'Ode to Joy',
           style: TextStyle(
             fontSize: 32,
             fontWeight: FontWeight.bold,
@@ -41,7 +41,7 @@ class CompleteMusicPieceExample extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          'Ludwig van Beethoven - Sinfonia nº 9 em Ré menor, Op. 125',
+          'Ludwig van Beethoven - Symphony No. 9 in D minor, Op. 125',
           style: TextStyle(
             fontSize: 16,
             color: Colors.grey[700],
@@ -69,7 +69,7 @@ class CompleteMusicPieceExample extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Ode à Alegria',
+                      'Ode to Joy',
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
@@ -87,9 +87,9 @@ class CompleteMusicPieceExample extends StatelessWidget {
               ],
             ),
             const Divider(height: 24),
-            _buildInfoRow('Tonalidade:', 'Ré Maior'),
+            _buildInfoRow('Key:', 'D major'),
             _buildInfoRow('Compass:', '4/4'),
-            _buildInfoRow('Andamento:', 'Allegro assai ♩= 120'),
+            _buildInfoRow('Tempo:', 'Allegro assai ♩= 120'),
             _buildInfoRow('Ano:', '1824'),
           ],
         ),
@@ -166,7 +166,7 @@ class CompleteMusicPieceExample extends StatelessWidget {
     // === COMPASSO 1: F# F# G A ===
     final measure1 = Measure();
     measure1.add(Clef(clefType: ClefType.treble));
-    measure1.add(KeySignature(2)); // Ré Maior (F#, C#)
+    measure1.add(KeySignature(2)); // D major (F#, C#)
     measure1.add(TimeSignature(numerator: 4, denominator: 4));
     measure1.add(TempoMark(
       text: 'Allegro assai',
@@ -223,7 +223,7 @@ class CompleteMusicPieceExample extends StatelessWidget {
     // === COMPASS 3: D D E F# ===
     final measure3 = Measure();
 
-    // D D E F# (Ré Ré Mi Fá#)
+    // D D E F# (Re Re Mi Fá#)
     measure3.add(Note(
       pitch: const Pitch(step: 'D', octave: 5),
       duration: const Duration(DurationType.quarter),
@@ -247,19 +247,19 @@ class CompleteMusicPieceExample extends StatelessWidget {
     // === COMPASS 4: F#. AND AND ===
     final measure4 = Measure();
 
-    // F#. (Fá# pontuado - semínima pontuada)
+    // F#. (F# dotted - dotted quarter note)
     measure4.add(Note(
       pitch: const Pitch(step: 'F', octave: 5), // F# implícito
       duration: const Duration(DurationType.quarter, dots: 1),
     ));
 
-    // E (Mi - colcheia)
+    // E (Mi - eighth note)
     measure4.add(Note(
       pitch: const Pitch(step: 'E', octave: 5),
       duration: const Duration(DurationType.eighth),
     ));
 
-    // E (Mi - mínima)
+    // E (E - half note)
     measure4.add(Note(
       pitch: const Pitch(step: 'E', octave: 5),
       duration: const Duration(DurationType.half),
@@ -340,25 +340,25 @@ class CompleteMusicPieceExample extends StatelessWidget {
     // === METER 8: E. D D (ends in D) ===
     final measure8 = Measure();
     
-    // E. (Mi pontuado - semínima pontuada)
+    // E. (E dotted - dotted quarter note)
     measure8.add(Note(
       pitch: const Pitch(step: 'E', octave: 5),
       duration: const Duration(DurationType.quarter, dots: 1),
     ));
     
-    // D (Ré - colcheia)
+    // D (Re - eighth note)
     measure8.add(Note(
       pitch: const Pitch(step: 'D', octave: 5),
       duration: const Duration(DurationType.eighth),
     ));
     
-    // D (Ré - mínima)
+    // D (D - half note)
     measure8.add(Note(
       pitch: const Pitch(step: 'D', octave: 5),
       duration: const Duration(DurationType.half),
     ));
     
-    // RESPIRAÇÃO (vírgula)
+    // BREATH MARK (comma)
     measure8.add(Breath(type: BreathType.comma));
 
     // === METER 9: E E F# D (contrasting section) ===
@@ -394,7 +394,7 @@ class CompleteMusicPieceExample extends StatelessWidget {
       duration: const Duration(DurationType.quarter),
     ));
     
-    // F# G (colcheias ligadas)
+    // F# G (eighth notes ligadas)
     measure10.add(Note(
       pitch: const Pitch(step: 'F', octave: 5), // F# implícito
       duration: const Duration(DurationType.eighth),
@@ -423,7 +423,7 @@ class CompleteMusicPieceExample extends StatelessWidget {
       duration: const Duration(DurationType.quarter),
     ));
     
-    // F# G (colcheias)
+    // F# G (eighth notes)
     measure11.add(Note(
       pitch: const Pitch(step: 'F', octave: 5), // F# implícito
       duration: const Duration(DurationType.eighth),
@@ -463,7 +463,7 @@ class CompleteMusicPieceExample extends StatelessWidget {
       duration: const Duration(DurationType.half),
     ));
     
-    // RESPIRAÇÃO (vírgula)
+    // BREATH MARK (comma)
     measure12.add(Breath(type: BreathType.comma));
 
     // === BAR 13: F# F# G A (return to theme) ===
@@ -538,27 +538,27 @@ class CompleteMusicPieceExample extends StatelessWidget {
     // === COMPASS 16: E. D D (final) ===
     final measure16 = Measure();
     
-    // E. (Mi pontuado - semínima pontuada)
+    // E. (E dotted - dotted quarter note)
     measure16.add(Note(
       pitch: const Pitch(step: 'E', octave: 5),
       duration: const Duration(DurationType.quarter, dots: 1),
       articulations: const [ArticulationType.accent],
     ));
     
-    // D (Ré - colcheia)
+    // D (Re - eighth note)
     measure16.add(Note(
       pitch: const Pitch(step: 'D', octave: 5),
       duration: const Duration(DurationType.eighth),
     ));
     
-    // D (Ré - mínima FINAL)
+    // D (D - half note FINAL)
     measure16.add(Note(
       pitch: const Pitch(step: 'D', octave: 5),
       duration: const Duration(DurationType.half),
       dynamicElement: Dynamic(type: DynamicType.forte),
     ));
     
-    // RESPIRAÇÃO FINAL (vírgula)
+    // FINAL BREATH MARK (comma)
     measure16.add(Breath(type: BreathType.comma));
 
     staff.add(measure1);
@@ -615,9 +615,9 @@ class CompleteMusicPieceExample extends StatelessWidget {
           _buildLegendRow('🎵', 'COMPLETE theme of the 9th Symphony (16 measures)'),
           _buildLegendRow('📝', '4/4 Time (Common)'),
           _buildLegendRow('⏱️', 'Allegro assai ♩= 120'),
-          _buildLegendRow('🎹', '4 frases: A A B A (forma clássica)'),
-          _buildLegendRow('🎻', 'Melodia completa com dinâmicas'),
-          _buildLegendRow('✨', 'Espaçamento profissional SMuFL'),
+          _buildLegendRow('🎹', '4 phrases: A A B A (classical form)'),
+          _buildLegendRow('🎻', 'Complete melody with dynamics'),
+          _buildLegendRow('✨', 'Professional SMuFL spacing'),
         ],
       ),
     );

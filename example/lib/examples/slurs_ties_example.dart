@@ -328,7 +328,7 @@ class SlursTiesExample extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Container(
-              height: 160, // ✅ Aumentado de 120 para 160 (mais espaço vertical)
+              height: 160, // ✅ Increased from 120 to 160 (more vertical space)
               decoration: BoxDecoration(
                 color: Colors.white,
                 border: Border.all(color: Colors.grey.shade300),

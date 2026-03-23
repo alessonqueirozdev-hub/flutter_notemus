@@ -21,7 +21,7 @@ class GraceNotesExample extends StatelessWidget {
           children: [
             _buildSection(
               title: 'Simple Grace Notes',
-              description: 'Grace Notes de diferentes durações.',
+              description: 'Grace notes with different durations.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 // Apogiatura simples
@@ -153,7 +153,7 @@ class GraceNotesExample extends StatelessWidget {
               ],
             ),
             _buildSection(
-              title: 'Grace Notes com Alterações',
+              title: 'Grace Notes with Accidentals',
               description: 'Appliques with chromatic accidents.',
               elements: [
                 Clef(clefType: ClefType.treble),

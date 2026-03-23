@@ -1,5 +1,5 @@
 // example/lib/examples/professional_json_example.dart
-// Ode à Alegria - JSON Profissional Completo
+// Ode to Joy - Complete Professional JSON
 
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
@@ -9,7 +9,7 @@ class ProfessionalJsonExample extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 🎵 ODE À ALEGRIA - JSON PROFISSIONAL COMPLETO
+    // 🎵 ODE TO JOY - COMPLETE PROFESSIONAL JSON
     // This JSON is equivalent to the complete_music_piece.dart example
     const jsonString = '''
     {
@@ -85,14 +85,14 @@ class ProfessionalJsonExample extends StatelessWidget {
     ''';
 
     // 📊 PARSEAR JSON → STAFF
-    debugPrint('🎵 Parseando JSON profissional...');
+    debugPrint('🎵 Parsing professional JSON...');
     final staff = JsonMusicParser.parseStaff(jsonString);
     debugPrint('✅ Staff created with ${staff.measures.length} measures');
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text('JSON Profissional - Ode à Alegria'),
+        title: const Text('JSON Professional - Ode to Joy'),
         backgroundColor: Colors.deepPurple,
         elevation: 2,
       ),
@@ -113,7 +113,7 @@ class ProfessionalJsonExample extends StatelessWidget {
             _buildScoreCard(staff),
             const SizedBox(height: 24),
 
-            // 📝 EXPLICAÇÃO
+            // 📝 EXPLANATION
             _buildExplanationCard(),
           ],
         ),
@@ -126,7 +126,7 @@ class ProfessionalJsonExample extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Ode à Alegria',
+          'Ode to Joy',
           style: TextStyle(
             fontSize: 36,
             fontWeight: FontWeight.bold,
@@ -135,7 +135,7 @@ class ProfessionalJsonExample extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          'Ludwig van Beethoven - Sinfonia nº 9 em Ré menor, Op. 125',
+          'Ludwig van Beethoven - Symphony No. 9 in D minor, Op. 125',
           style: TextStyle(
             fontSize: 16,
             color: Colors.grey[700],
@@ -184,7 +184,7 @@ class ProfessionalJsonExample extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'JSON Profissional',
+                        'JSON Professional',
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -204,9 +204,9 @@ class ProfessionalJsonExample extends StatelessWidget {
             ),
             const Divider(height: 32),
             _buildInfoRow('📊 Compasses', '${staff.measures.length}'),
-            _buildInfoRow('🎼 Tonalidade', 'D major (2 sharps)'),
+            _buildInfoRow('🎼 Key', 'D major (2 sharps)'),
             _buildInfoRow('⏱️ Compass', '4/4'),
-            _buildInfoRow('🎵 Formato', 'JSON Profissional (JsonMusicParser)'),
+            _buildInfoRow('🎵 Format', 'Professional JSON (JsonMusicParser)'),
             _buildInfoRow(
                 '✨ Recursos', 'Clefs, Armor, Boost Points, Barlines'),
           ],
@@ -295,11 +295,11 @@ class ProfessionalJsonExample extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             _buildExplanationPoint(
-              '✅ JSON Profissional',
+              '✅ JSON Professional',
               'This example uses JsonMusicParser, which supports ALL Flutter Notemus features.',
             ),
             _buildExplanationPoint(
-              '🎼 Estrutura Completa',
+              '🎼 Complete Structure',
               'Clefs, key signatures, time signatures, notes with augmentation points, barlines.',
             ),
             _buildExplanationPoint(
@@ -307,7 +307,7 @@ class ProfessionalJsonExample extends StatelessWidget {
               'This score is identical to the complete_music_piece.dart example, but created from JSON!',
             ),
             _buildExplanationPoint(
-              '📊 Formato Robusto',
+              '📊 Robust Format',
               'Compatible with MusicXML and ideal for integration with databases.',
             ),
             const Divider(height: 24),

@@ -3,11 +3,11 @@
 //
 // This example demonstrates all the improvements implemented:
 // ✅ Fase 1: StaffPositionCalculator + BaseGlyphRenderer
-// ✅ Fase 2: Refatoração de ChordRenderer, RestRenderer, GroupRenderer
-// ✅ Fase 3: Sistema de Detecção de Colisões
+// ✅ Phase 2: ChordRenderer, RestRenderer, GroupRenderer refactor
+// ✅ Phase 3: Collision Detection System
 //
 // Data: 2025-10-09
-// Versão: 0.3.0
+// Version: 0.3.0
 
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
@@ -79,15 +79,15 @@ class _ImprovementsDemoPageState extends State<ImprovementsDemoPage> {
                 const Text(
                   '✅ Fase 1: StaffPositionCalculator + BaseGlyphRenderer\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\n'
                   '✅ Fase 2: ChordRenderer, RestRenderer, GroupRenderer refatorados\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\n'
-                  '✅ Fase 3: Sistema de Detecção de Colisões (Algoritmo Skyline)',
+                  '✅ Phase 3: Collision Detection System (Skyline Algorithm)',
                   style: TextStyle(fontSize: 14),
                 ),
                 if (_showCollisionStats && _collisionStats != null) ...[
                   const Divider(),
                   Text(
-                    '📊 Estatísticas de Colisões:\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\n'
+                    '📊 Collision Statistics:\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\n'
                     'Elementos: ${_collisionStats!.totalElements}\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\n'
-                    'Colisões: ${_collisionStats!.totalCollisions}\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\n'
+                    'Collisions: ${_collisionStats!.totalCollisions}\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\n'
                     'Taxa: ${(_collisionStats!.collisionRate * 100).toStringAsFixed(1)}%',
                     style: const TextStyle(
                       fontSize: 12,
@@ -247,7 +247,7 @@ class _ImprovementsDemoPageState extends State<ImprovementsDemoPage> {
     // Bar 5: Supplementary Lines (demonstrates needsLedgerLines)
     final measure5 = Measure();
     measure5.add(Note(
-      pitch: const Pitch(step: 'C', octave: 6), // Acima da pauta
+      pitch: const Pitch(step: 'C', octave: 6), // Above the staff
       duration: const Duration(DurationType.quarter),
     ));
     measure5.add(Note(
@@ -255,7 +255,7 @@ class _ImprovementsDemoPageState extends State<ImprovementsDemoPage> {
       duration: const Duration(DurationType.quarter),
     ));
     measure5.add(Note(
-      pitch: const Pitch(step: 'F', octave: 4, alter: 1), // Abaixo da pauta
+      pitch: const Pitch(step: 'F', octave: 4, alter: 1), // Below the staff
       duration: const Duration(DurationType.quarter),
     ));
     measure5.add(Note(
@@ -292,10 +292,10 @@ class ImprovementsScorePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Criar detector de colisões (Fase 3)
-    const staffSpace = 12.0; // CORREÇÃO: staffSpace é requerido
+    // Create collision detector (Phase 3)
+    const staffSpace = 12.0; // FIX: staffSpace is required
     final collisionDetector = CollisionDetector(
-      staffSpace: staffSpace, // CORREÇÃO: Parâmetro obrigatório
+      staffSpace: staffSpace, // FIX: required parameter
       defaultMargin: 2.0,
       categoryMargins: {
         CollisionCategory.accidental: 3.0,
@@ -317,7 +317,7 @@ class ImprovementsScorePainter extends CustomPainter {
       onStatsCalculated!(stats);
     }
 
-    // Debug: Desenhar informação de versão
+    // Debug: draw version information
     _drawVersionInfo(canvas, size);
   }
 
@@ -339,7 +339,7 @@ class ImprovementsScorePainter extends CustomPainter {
     // Carregar metadata (singleton já carregado)
     final metadata = SmuflMetadata();
 
-    // Criar renderizador com detector de colisões
+    // Create renderer with collision detector
     const theme = MusicScoreTheme();
 
     final renderer = StaffRenderer(
@@ -348,7 +348,7 @@ class ImprovementsScorePainter extends CustomPainter {
       theme: theme,
     );
 
-    // Layout e renderização
+    // Layout and rendering
     final layoutEngine = LayoutEngine(
       staff,
       availableWidth: size.width - 80,
@@ -357,14 +357,14 @@ class ImprovementsScorePainter extends CustomPainter {
 
     final positionedElements = layoutEngine.layout();
 
-    // Renderizar (o sistema de colisões é usado internamente)
+    // Render (collision system is used internally)
     renderer.renderStaff(canvas, positionedElements, size);
   }
 
   void _drawVersionInfo(Canvas canvas, Size size) {
     final textPainter = TextPainter(
       text: const TextSpan(
-        text: 'v0.3.0 - Fases 1+2+3 Completas',
+        text: 'v0.3.0 - Phases 1+2+3 Complete',
         style: TextStyle(
           color: Colors.grey,
           fontSize: 10,
@@ -385,7 +385,7 @@ class ImprovementsScorePainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
 
-/// Extensão para demonstrar uso do StaffPositionCalculator
+/// Extension to demonstrate StaffPositionCalculator usage
 extension PitchDebug on Pitch {
   String getPositionInfo(Clef clef) {
     final position = StaffPositionCalculator.calculate(this, clef);

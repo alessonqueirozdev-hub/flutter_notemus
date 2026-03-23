@@ -85,41 +85,41 @@ class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
 
   final List<String> _titles = [
-    '🔍 TESTE: Precisão de Alturas',
-    '🎯 TESTE: Augmentation Dots',
-    'Keys',
+    'TEST: Pitch Accuracy',
+    'TEST: Augmentation Dots',
+    'Clefs',
     'Key Signatures',
-    'Figuras Rítmicas',
-    'Accidents',
-    'Articulações',
-    'Supplementary Points and Lines',
+    'Rhythmic Figures',
+    'Accidentals',
+    'Articulations',
+    'Dots and Ledger Lines',
     'Chords',
-    'Barras de Ligação (Beams)',
-    '🎵 Beaming Avançado (Showcase)',
+    'Beams',
+    'Advanced Beaming (Showcase)',
     'Ornaments',
-    'Dinâmicas',
-    'Tempo e Agógica',
-    'Repetições',
-    'Apogiaturas and Grace Notes',
-    'Ligatures',
-    'Quiálteras (Tuplets)',
-    '🎼 Quiálteras Profissionais',
-    'Bandeiras vs Barras',
+    'Dynamics',
+    'Tempo and Agogics',
+    'Repeats',
+    'Grace Notes',
+    'Slurs and Ties',
+    'Tuplets',
+    'Professional Tuplets',
+    'Flags vs Beams',
     'Professional Ornaments',
     'Fixed Ornaments',
     'Rests Showcase',
-    'Polifonia (Múltiplas Vozes)',
-    'Multi-Pauta (Grand Staff)',
-    '🎵 Octave markings (8va/8vb)',
-    '🎵 Volta Brackets (1ª/2ª Vez)',
-    '🎼 DEMO: All Clefs',
-    '🎵 DEMO: Articulações Completas',
-    '🎸 DEMO: Elementos Avançados',
-    '🎹 DEMO: Peça Musical Completa',
-    '⚙️ DEMO: Complete Improvements',
-    '📄 JSON: Simple Example',
-    '📄 JSON: Ode à Alegria',
-    '📄 JSON: Profissional Completo',
+    'Polyphony (Multiple Voices)',
+    'Multi-Staff (Grand Staff)',
+    'Octave Markings (8va/8vb)',
+    'Volta Brackets (1st/2nd Endings)',
+    'DEMO: All Clefs',
+    'DEMO: Complete Articulations',
+    'DEMO: Advanced Elements',
+    'DEMO: Complete Music Piece',
+    'DEMO: Complete Improvements',
+    'JSON: Simple Example',
+    'JSON: Ode to Joy',
+    'JSON: Complete Professional',
   ];
 
   final List<Widget> _pages = const [
@@ -165,9 +165,9 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // MUDANÇA AQUI: Adicionada a AppBar
+      // App bar follows the selected example title
       appBar: AppBar(
-        title: Text(_titles[_selectedIndex]), // O título muda com a seleção
+        title: Text(_titles[_selectedIndex]), // Title changes with current selection
         backgroundColor: Colors.blue.shade800,
         foregroundColor: Colors.white,
       ),
@@ -224,34 +224,34 @@ class _MainScreenState extends State<MainScreen> {
   Icon _getIconForIndex(int index) {
     switch (index) {
       case 0:
-        return const Icon(Icons.vpn_key_outlined); // Claves
+        return const Icon(Icons.vpn_key_outlined); // Clefs
       case 1:
-        return const Icon(Icons.tag); // Armaduras
+        return const Icon(Icons.tag); // Key signatures
       case 2:
-        return const Icon(Icons.hourglass_empty); // Figuras Rítmicas
+        return const Icon(Icons.hourglass_empty); // Rhythmic Figures
       case 3:
-        return const Icon(Icons.superscript_outlined); // Acidentes
+        return const Icon(Icons.superscript_outlined); // Accidentals
       case 4:
         return const Icon(
-            Icons.arrow_drop_down_circle_outlined); // Articulações
+            Icons.arrow_drop_down_circle_outlined); // Articulations
       case 5:
-        return const Icon(Icons.more_horiz); // Pontos e Linhas
+        return const Icon(Icons.more_horiz); // Dots and ledger lines
       case 6:
-        return const Icon(Icons.view_module_outlined); // Acordes
+        return const Icon(Icons.view_module_outlined); // Chords
       case 7:
         return const Icon(Icons.link); // Beams
       case 8:
-        return const Icon(Icons.auto_awesome); // Ornamentos
+        return const Icon(Icons.auto_awesome); // Ornaments
       case 9:
-        return const Icon(Icons.volume_up); // Dinâmicas
+        return const Icon(Icons.volume_up); // Dynamics
       case 10:
-        return const Icon(Icons.speed); // Tempo e Agógica
+        return const Icon(Icons.speed); // Tempo and Agogics
       case 11:
-        return const Icon(Icons.repeat); // Repetições
+        return const Icon(Icons.repeat); // Repeats
       case 12:
         return const Icon(Icons.scatter_plot); // Grace Notes
       case 13:
-        return const Icon(Icons.trending_up); // Ligaduras
+        return const Icon(Icons.trending_up); // Slurs and ties
       default:
         return const Icon(Icons.music_note);
     }

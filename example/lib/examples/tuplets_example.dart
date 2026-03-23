@@ -11,7 +11,7 @@ class TupletsExample extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Família de Símbolos: Quiálteras (Tuplets)'),
+        title: const Text('Symbol Family: Tuplets'),
         backgroundColor: Colors.indigo.shade700,
       ),
       body: SingleChildScrollView(
@@ -20,8 +20,8 @@ class TupletsExample extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildSection(
-              title: 'Tercina Simples (3:2)',
-              description: 'Três colcheias no lugar de duas - a quiáltera mais comum.',
+              title: 'Simple Triplet (3:2)',
+              description: 'Three eighth notes in the time of two - the most common tuplet.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 Tuplet(
@@ -221,8 +221,8 @@ class TupletsExample extends StatelessWidget {
               ],
             ),
             _buildSection(
-              title: 'Duína (2:3)',
-              description: 'Duas colcheias no lugar de três - quiáltera invertida.',
+              title: 'Duplet (2:3)',
+              description: 'Two eighth notes in the time of three - inverted tuplet.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 Tuplet(
@@ -245,8 +245,8 @@ class TupletsExample extends StatelessWidget {
               ],
             ),
             _buildSection(
-              title: 'Quiáltera de Semínimas',
-              description: 'Tercina de semínimas (durações mais longas).',
+              title: 'Quarter-Note Tuplet',
+              description: 'Quarter-note triplet (longer durations).',
               elements: [
                 Clef(clefType: ClefType.treble),
                 Tuplet(

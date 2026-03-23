@@ -24,7 +24,7 @@ class FlagsVsBeamsExample extends StatelessWidget {
             const SizedBox(height: 20),
 
             _buildExampleSection(
-              'Beaming Automático (Padrão)',
+              'Automatic Beaming (Default)',
               'Notes are automatically grouped based on the time signature.',
               _createAutomaticBeamingStaff(),
             ),
@@ -42,7 +42,7 @@ class FlagsVsBeamsExample extends StatelessWidget {
             ),
 
             _buildExampleSection(
-              'Forçar Beam em Todas',
+              'Force Beam on All',
               'Groups all possible notes into a single beam.',
               _createForceBeamAllStaff(),
             ),
@@ -100,7 +100,7 @@ class FlagsVsBeamsExample extends StatelessWidget {
     measure.add(Clef(clefType: ClefType.treble));
     measure.add(TimeSignature(numerator: 4, denominator: 4));
 
-    // Colcheias que serão agrupadas automaticamente
+    // Eighth notes that will be grouped automatically
     measure.add(Note(pitch: const Pitch(step: 'C', octave: 4), duration: const Duration(DurationType.eighth)));
     measure.add(Note(pitch: const Pitch(step: 'D', octave: 4), duration: const Duration(DurationType.eighth)));
     measure.add(Note(pitch: const Pitch(step: 'E', octave: 4), duration: const Duration(DurationType.eighth)));
@@ -126,7 +126,7 @@ class FlagsVsBeamsExample extends StatelessWidget {
     measure.add(Clef(clefType: ClefType.treble));
     measure.add(TimeSignature(numerator: 4, denominator: 4));
 
-    // Mesmas colcheias, mas com flags individuais
+    // Mesmas eighth notes, mas com flags individuais
     measure.add(Note(pitch: const Pitch(step: 'C', octave: 4), duration: const Duration(DurationType.eighth)));
     measure.add(Note(pitch: const Pitch(step: 'D', octave: 4), duration: const Duration(DurationType.eighth)));
     measure.add(Note(pitch: const Pitch(step: 'E', octave: 4), duration: const Duration(DurationType.eighth)));
@@ -152,7 +152,7 @@ class FlagsVsBeamsExample extends StatelessWidget {
     measure.add(Clef(clefType: ClefType.treble));
     measure.add(TimeSignature(numerator: 4, denominator: 4));
 
-    // Mistura de colcheias e semicolcheias
+    // Mistura de eighth notes e semieighth notes
     measure.add(Note(pitch: const Pitch(step: 'C', octave: 4), duration: const Duration(DurationType.eighth)));
     measure.add(Note(pitch: const Pitch(step: 'D', octave: 4), duration: const Duration(DurationType.eighth)));
     measure.add(Note(pitch: const Pitch(step: 'E', octave: 4), duration: const Duration(DurationType.sixteenth)));
@@ -178,7 +178,7 @@ class FlagsVsBeamsExample extends StatelessWidget {
     measure.add(Clef(clefType: ClefType.treble));
     measure.add(TimeSignature(numerator: 4, denominator: 4));
 
-    // Todas as colcheias em um único beam
+    // Todas as eighth notes em um único beam
     measure.add(Note(pitch: const Pitch(step: 'C', octave: 4), duration: const Duration(DurationType.eighth)));
     measure.add(Note(pitch: const Pitch(step: 'D', octave: 4), duration: const Duration(DurationType.eighth)));
     measure.add(Note(pitch: const Pitch(step: 'E', octave: 4), duration: const Duration(DurationType.eighth)));
@@ -200,8 +200,8 @@ class FlagsVsBeamsExample extends StatelessWidget {
       autoBeaming: true,
       beamingMode: BeamingMode.manual,
       // Definir grupos manuais:
-      // - Grupo 1: notas 0, 1, 2 (primeiras 3 colcheias)
-      // - Grupo 2: notas 4, 5 (quinta e sexta colcheias)
+      // - Grupo 1: notas 0, 1, 2 (primeiras 3 eighth notes)
+      // - Grupo 2: notas 4, 5 (quinta e sexta eighth notes)
       // - Nota 3 fica com flag individual
       // - Notas 6, 7 ficam com flags individuais
       manualBeamGroups: [

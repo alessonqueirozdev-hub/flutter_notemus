@@ -1,10 +1,10 @@
 // example/lib/examples/test_augmentation_dots.dart
-// TESTE DE POSICIONAMENTO DE PONTOS DE AUMENTO
+// AUGMENTATION DOT POSITIONING TEST
 
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 
-/// Widget de teste para verificar se os pontos de aumento estão posicionados corretamente
+/// Test widget to verify whether augmentation dots are positioned correctly
 class TestAugmentationDots extends StatelessWidget {
   const TestAugmentationDots({super.key});
 
@@ -12,7 +12,7 @@ class TestAugmentationDots extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('TESTE: Augmentation Dots'),
+        title: const Text('TEST: Augmentation Dots'),
         backgroundColor: Colors.purple.shade700,
       ),
       body: SingleChildScrollView(
@@ -167,7 +167,7 @@ class TestAugmentationDots extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              '📏 REGRAS DE POSICIONAMENTO',
+              '📏 POSITIONING RULES',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
@@ -179,7 +179,7 @@ class TestAugmentationDots extends StatelessWidget {
             ...[
               '✓ If the note is on a LINE: point goes in the SPACE above',
               '✓ If the note is in a SPACE: point goes in the SAME space',
-              '✓ Múltiplos pontos: espaçamento horizontal de 0.7 staff spaces',
+              '✓ Multiple dots: horizontal spacing of 0.7 staff spaces',
               '✓ Note distance: ~1.2 staff spaces on the right',
             ].map((text) => Padding(
                   padding: const EdgeInsets.only(left: 16, top: 4),

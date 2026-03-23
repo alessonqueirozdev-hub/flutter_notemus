@@ -11,7 +11,7 @@ class RepeatsExample extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Família de Símbolos: Repetições'),
+        title: const Text('Symbol Family: Repeats'),
         backgroundColor: Colors.indigo.shade700,
       ),
       body: SingleChildScrollView(
@@ -20,7 +20,7 @@ class RepeatsExample extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildSection(
-              title: 'Barras de Repetição Básicas',
+              title: 'Basic Repeat Barlines',
               description: 'Start and end of repeated sections.',
               elements: [
                 Clef(clefType: ClefType.treble),
@@ -50,7 +50,7 @@ class RepeatsExample extends StatelessWidget {
             ),
             _buildSection(
               title: 'Segno e Coda',
-              description: 'Símbolos de navegação musical.',
+              description: 'Musical navigation symbols.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 RepeatMark(type: RepeatType.segno),
@@ -72,7 +72,7 @@ class RepeatsExample extends StatelessWidget {
             ),
             _buildSection(
               title: 'Segno e Coda Quadrados',
-              description: 'Variações dos símbolos de navegação.',
+              description: 'Variations of navigation symbols.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 RepeatMark(type: RepeatType.segnoSquare),
@@ -93,8 +93,8 @@ class RepeatsExample extends StatelessWidget {
               ],
             ),
             _buildSection(
-              title: 'Instruções de Repetição',
-              description: 'Dal Segno, Da Capo e Fine.',
+              title: 'Repeat Instructions',
+              description: 'Dal Segno, Da Capo, and Fine.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 MusicText(
@@ -174,7 +174,7 @@ class RepeatsExample extends StatelessWidget {
             ),
             _buildSection(
               title: 'Simile e Porcentagem',
-              description: 'Símbolos de repetição de padrões.',
+              description: 'Pattern repeat symbols.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 Note(
@@ -198,8 +198,8 @@ class RepeatsExample extends StatelessWidget {
               ],
             ),
             _buildSection(
-              title: 'Instruções Complexas',
-              description: 'Combinações de instruções de repetição.',
+              title: 'Complex Instructions',
+              description: 'Combinations of repeat instructions.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 MusicText(
@@ -234,7 +234,7 @@ class RepeatsExample extends StatelessWidget {
             ),
             _buildSection(
               title: 'Assay Marks',
-              description: 'Letras e números para referência.',
+              description: 'Letters and numbers for reference.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 Barline(

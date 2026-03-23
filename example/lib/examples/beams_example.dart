@@ -9,7 +9,7 @@ class BeamsExample extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Grupo de Colcheias (Eighth notes) - 1 barra
+    // Grupo de Eighth Notes (Eighth notes) - 1 barra
     final List<MusicalElement> eighthNoteBeams = [
       Clef(clefType: ClefType.treble),
       Note(
@@ -28,7 +28,7 @@ class BeamsExample extends StatelessWidget {
           beam: BeamType.end),
     ];
 
-    // Grupo de Semicolcheias (Sixteenth notes) - 2 barras
+    // Group of sixteenth notes - 2 beams
     final List<MusicalElement> sixteenthNoteBeams = [
       Clef(clefType: ClefType.treble),
       Note(
@@ -47,7 +47,7 @@ class BeamsExample extends StatelessWidget {
           beam: BeamType.end),
     ];
 
-    // Grupo de Fusas (Thirty-second notes) - 3 barras
+    // Group of thirty-second notes - 3 beams
     final List<MusicalElement> thirtySecondNoteBeams = [
       Clef(clefType: ClefType.treble),
       Note(
@@ -66,7 +66,7 @@ class BeamsExample extends StatelessWidget {
           beam: BeamType.end),
     ];
 
-    // Grupo de Semifusas (Sixty-fourth notes) - 4 barras
+    // Grupo de Sixty-fourth Notes (64th notes) - 4 barras
     final List<MusicalElement> sixtyFourthNoteBeams = [
       Clef(clefType: ClefType.treble),
       Note(
@@ -106,7 +106,7 @@ class BeamsExample extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Família de Símbolos: Barras de Ligação'),
+        title: const Text('Symbol Family: Beams'),
         backgroundColor: Colors.brown.shade700,
       ),
       body: SingleChildScrollView(
@@ -115,29 +115,29 @@ class BeamsExample extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildSection(
-              title: 'Colcheias (1 Barra)',
-              description: 'Grupos de colcheias ligadas por uma única barra.',
+              title: 'Eighth Notes (1 Beam)',
+              description: 'Groups of eighth notes connected by a single beam.',
               elements: eighthNoteBeams,
             ),
             _buildSection(
-              title: 'Semicolcheias (2 Barras)',
+              title: 'Sixteenth Notes (2 Beams)',
               description: 'Group of sixteenth notes connected by two beams.',
               elements: sixteenthNoteBeams,
             ),
             _buildSection(
-              title: 'Fusas (3 Barras)',
-              description: 'Grupo de fusas ligadas por três barras.',
+              title: 'Thirty-second Notes (3 Beams)',
+              description: 'A group of thirty-second notes connected by three beams.',
               elements: thirtySecondNoteBeams,
             ),
             _buildSection(
-              title: 'Semifusas (4 Barras)',
+              title: 'Sixty-fourth Notes (4 Beams)',
               description: 'Group of sixty-fourth notes connected by four beams.',
               elements: sixtyFourthNoteBeams,
             ),
             _buildSection(
-              title: 'Grupos Mistos',
+              title: 'Mixed Groups',
               description:
-                  'Um grupo misto. A renderização de barras parciais é uma funcionalidade avançada.',
+                  'A mixed group. Partial beam rendering is an advanced feature.',
               elements: mixedBeams,
             ),
           ],
@@ -146,7 +146,7 @@ class BeamsExample extends StatelessWidget {
     );
   }
 
-  /// Constrói uma seção de teste.
+  /// Builds a test section.
   Widget _buildSection({
     required String title,
     required String description,

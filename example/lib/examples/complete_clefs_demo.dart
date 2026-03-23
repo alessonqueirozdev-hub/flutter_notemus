@@ -23,7 +23,7 @@ class CompleteClefsDemoExample extends StatelessWidget {
             const SizedBox(height: 32),
             _buildSection(
               'Treble Clef (G Clef)',
-              'Tessitura aguda - Violino, Flauta, Oboé',
+              'High register - Violin, Flute, Oboe',
               _createTrebleClefExample(),
             ),
             const SizedBox(height: 32),
@@ -35,13 +35,13 @@ class CompleteClefsDemoExample extends StatelessWidget {
             const SizedBox(height: 32),
             _buildSection(
               'High C Clef (C Clef - High)',
-              'Tessitura média - Viola',
+              'Middle register - Viola',
               _createAltoClefExample(),
             ),
             const SizedBox(height: 32),
             _buildSection(
               'C Clef Tenor (C Clef - Tenor)',
-              'Tessitura médio-grave - Trombone, Violoncelo agudo',
+              'Middle-low register - Trombone, upper Cello',
               _createTenorClefExample(),
             ),
             const SizedBox(height: 32),
@@ -52,7 +52,7 @@ class CompleteClefsDemoExample extends StatelessWidget {
             ),
             const SizedBox(height: 32),
             _buildSection(
-              'Comparação de Alturas',
+              'Pitch Comparison',
               'Same note in different keys',
               _createComparisonExample(),
             ),
@@ -133,10 +133,10 @@ class CompleteClefsDemoExample extends StatelessWidget {
     // Bar 1: Clef + Key signature (2 sharps) + Formula
     final measure1 = Measure();
     measure1.add(Clef(clefType: ClefType.treble));
-    measure1.add(KeySignature(2)); // Ré Maior
+    measure1.add(KeySignature(2)); // D major
     measure1.add(TimeSignature(numerator: 4, denominator: 4));
 
-    // Escala de Ré Maior ascendente
+    // Escala de D major ascendente
     measure1.add(Note(
       pitch: Pitch.withAccidental(step: 'D', octave: 4, accidentalType: AccidentalType.natural),
       duration: const Duration(DurationType.quarter),
@@ -257,7 +257,7 @@ class CompleteClefsDemoExample extends StatelessWidget {
     measure1.add(KeySignature(1)); // Sol Maior
     measure1.add(TimeSignature(numerator: 4, denominator: 4));
 
-    // Escala de Sol Maior na tessitura de viola
+    // G major scale in viola register
     measure1.add(Note(
       pitch: const Pitch(step: 'G', octave: 3),
       duration: const Duration(DurationType.quarter),
@@ -315,7 +315,7 @@ class CompleteClefsDemoExample extends StatelessWidget {
     measure1.add(KeySignature(-2)); // Si♭ Maior
     measure1.add(TimeSignature(numerator: 6, denominator: 8));
 
-    // Padrão melódico em 6/8
+    // Melodic pattern in 6/8
     measure1.add(Note(
       pitch: Pitch.withAccidental(step: 'B', octave: 3, accidentalType: AccidentalType.flat),
       duration: const Duration(DurationType.eighth),

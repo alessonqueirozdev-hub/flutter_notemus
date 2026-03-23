@@ -11,7 +11,7 @@ class VoltaBracketsExample extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Volta Brackets (1ª e 2ª Vez)'),
+        title: const Text('Volta Brackets (1st and 2nd Endings)'),
         backgroundColor: Colors.deepOrange.shade700,
       ),
       body: SingleChildScrollView(
@@ -22,34 +22,34 @@ class VoltaBracketsExample extends StatelessWidget {
             _buildInfo(),
             const SizedBox(height: 16),
             _buildSection(
-              title: '1ª e 2ª Volta — Finale Fechada',
+              title: '1st and 2nd Endings — Closed Ending',
               description:
                   'First ending (1.) with closed end: the bracket has a vertical line '
-                  'vertical no início, no topo e no final. A 2ª volta '
-                  'substitui a 1ª na repetição.',
+                  'vertical line at the beginning, top, and end. The 2nd ending '
+                  'replaces the 1st on the repeat.',
               score: _buildFirstAndSecond(),
             ),
             _buildSection(
-              title: '1ª Volta — Final Aberto',
+              title: '1st Ending — Open End',
               description:
                   'Press back with hasOpenEnd: true — no vertical line'
-                  'no final. Indica que a música continua diretamente '
+                  'at the end. Indicates the music continues directly '
                   'for repetition without pause.',
               score: _buildOpenEnd(),
             ),
             _buildSection(
-              title: 'Três Voltas (1., 2., 3.)',
+              title: 'Three Endings (1., 2., 3.)',
               description:
-                  'Três finais alternativos. Cada repetição usa um '
-                  'colchete diferente. Comum em danças e formas estróficas.',
+                  'Three alternate endings. Each repeat uses a '
+                  'different bracket. Common in dances and strophic forms.',
               score: _buildThreeVoltas(),
             ),
             _buildSection(
-              title: 'Rótulo Personalizado (1.-3. e 4.)',
+              title: 'Custom Label (1.-3. and 4.)',
               description:
                   'VoltaBracket with custom label. The first ending '
-                  '"1.-3." é tocada nas 3 primeiras repetições; '
-                  '"4." apenas na última.',
+                  '"1.-3." is played on the first 3 repeats; '
+                  '"4." only on the last one.',
               score: _buildCustomLabel(),
             ),
           ],
@@ -83,10 +83,10 @@ class VoltaBracketsExample extends StatelessWidget {
             const SizedBox(height: 8),
             const Text(
               'Volta brackets (ending brackets) indicate '
-              'finais alternativos para seções repetidas. Na primeira vez, '
-              'toca-se a passagem sob o colchete "1."; na repetição, '
+              'alternate endings for repeated sections. On the first pass, '
+              'the passage under bracket "1." is played; on the repeat, '
               'you skip to bracket "2." (or "3.", etc.). '
-              'Geralmente aparecem em conjunto com barras de repetição.',
+              'They usually appear together with repeat barlines.',
               style: TextStyle(fontSize: 13),
             ),
           ],
@@ -136,7 +136,7 @@ class VoltaBracketsExample extends StatelessWidget {
   Widget _buildFirstAndSecond() {
     final staff = Staff();
 
-    // Corpo da música (repetido)
+    // Music body (repeated)
     final measure1 = Measure();
     measure1.add(Clef(clefType: ClefType.treble));
     measure1.add(TimeSignature(numerator: 4, denominator: 4));
@@ -191,7 +191,7 @@ class VoltaBracketsExample extends StatelessWidget {
   Widget _buildOpenEnd() {
     final staff = Staff();
 
-    // Corpo com barra de repetição
+    // Body with repeat barline
     final measure1 = Measure();
     measure1.add(Clef(clefType: ClefType.treble));
     measure1.add(TimeSignature(numerator: 3, denominator: 4));

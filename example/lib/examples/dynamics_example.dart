@@ -11,7 +11,7 @@ class DynamicsExample extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Família de Símbolos: Dinâmicas'),
+        title: const Text('Symbol Family: Dynamics'),
         backgroundColor: Colors.green.shade700,
       ),
       body: SingleChildScrollView(
@@ -20,8 +20,8 @@ class DynamicsExample extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildSection(
-              title: 'Dinâmicas Básicas',
-              description: 'As principais indicações de intensidade musical.',
+              title: 'Basic Dynamics',
+              description: 'The main musical intensity markings.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 Note(
@@ -43,8 +43,8 @@ class DynamicsExample extends StatelessWidget {
               ],
             ),
             _buildSection(
-              title: 'Dinâmicas Pianíssimas',
-              description: 'Gradações de pianíssimo - do mais suave ao extremo.',
+              title: 'Pianissimo Dynamics',
+              description: 'Pianissimo gradations - from softest to extreme.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 Note(
@@ -70,8 +70,8 @@ class DynamicsExample extends StatelessWidget {
               ],
             ),
             _buildSection(
-              title: 'Dinâmicas Fortíssimas',
-              description: 'Gradações de fortíssimo - do intenso ao extremo.',
+              title: 'Fortissimo Dynamics',
+              description: 'Fortissimo gradations - from intense to extreme.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 Note(
@@ -97,8 +97,8 @@ class DynamicsExample extends StatelessWidget {
               ],
             ),
             _buildSection(
-              title: 'Dinâmicas Especiais',
-              description: 'Sforzando, rinforzando e outras indicações especiais.',
+              title: 'Dynamics Especiais',
+              description: 'Sforzando, rinforzando, and other special markings.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 Note(
@@ -124,8 +124,8 @@ class DynamicsExample extends StatelessWidget {
               ],
             ),
             _buildSection(
-              title: 'Dinâmicas Combinadas',
-              description: 'Combinações como fortepiano e outras variações.',
+              title: 'Dynamics Combinadas',
+              description: 'Combinations such as fortepiano and other variants.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 Note(
@@ -152,7 +152,7 @@ class DynamicsExample extends StatelessWidget {
             ),
             _buildSection(
               title: 'Crescendo e Diminuendo',
-              description: 'Indicações de variação gradual de intensidade (hairpins).',
+              description: 'Gradual intensity-change markings (hairpins).',
               elements: [
                 Clef(clefType: ClefType.treble),
                 Note(
@@ -176,8 +176,8 @@ class DynamicsExample extends StatelessWidget {
               ],
             ),
             _buildSection(
-              title: 'Dinâmicas Extremas',
-              description: 'Indicações de dinâmica no extremo da paleta sonora.',
+              title: 'Dynamics Extremas',
+              description: 'Dynamic markings at the extreme end of the sound palette.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 Note(
@@ -198,8 +198,8 @@ class DynamicsExample extends StatelessWidget {
               ],
             ),
             _buildSection(
-              title: 'Dinâmicas Personalizadas',
-              description: 'Indicações customizadas de dinâmica.',
+              title: 'Dynamics Personalizadas',
+              description: 'Custom dynamic markings.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 Note(

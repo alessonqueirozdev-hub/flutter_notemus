@@ -30,7 +30,7 @@ class RestsShowcaseExample extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               _buildRestExample(
-                'Half Rest (Mínima)',
+                'Half Rest',
                 'Sits ON 3rd line (center) - staffPosition = 0',
                 _createHalfRestStaff(),
               ),

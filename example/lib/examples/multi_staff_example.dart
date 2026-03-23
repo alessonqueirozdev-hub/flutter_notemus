@@ -258,7 +258,7 @@ class MultiStaffExampleWidget extends StatelessWidget {
 /// Main widget for multi-story demo
 /// Renders two staves (treble clef + bass clef) with shared timeline.
 ///
-/// Esta implementação evita o desalinhamento de figuras e conecta visualmente as
+/// This implementation avoids note misalignment and visually connects the
 /// bars between the two staves, as in the grand piano staff.
 class GrandStaffScore extends StatefulWidget {
   final Staff trebleStaff;

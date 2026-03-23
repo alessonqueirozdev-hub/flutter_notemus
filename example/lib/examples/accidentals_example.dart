@@ -61,7 +61,7 @@ class AccidentalsExample extends StatelessWidget {
     );
   }
 
-  /// Constrói uma seção de teste.
+  /// Builds a test section.
   Widget _buildSection({
     required String title,
     required String description,

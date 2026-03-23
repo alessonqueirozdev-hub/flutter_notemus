@@ -42,7 +42,7 @@ class ClefsExample extends StatelessWidget {
               ],
             ),
             _buildClefSection(
-              title: 'Clef of C (Contralto)',
+            title: 'C Clef (Alto)',
               description:
                   'The center of the C clef (C-clef) on the third line defines this as the position of middle C (C4). It is commonly used for the viola.',
               elements: [

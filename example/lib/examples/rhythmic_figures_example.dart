@@ -18,25 +18,25 @@ class RhythmicFiguresExample extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Lista organizada das figuras que queremos exibir
+    // Organized list of figures to display
     const List<RhythmicFigure> figures = [
       RhythmicFigure('Semibreve (Whole Note)', DurationType.whole),
-      RhythmicFigure('Mínima (Half Note)', DurationType.half),
-      RhythmicFigure('Semínima (Quarter Note)', DurationType.quarter),
-      RhythmicFigure('Colcheia (Eighth Note)', DurationType.eighth),
-      RhythmicFigure('Semicolcheia (Sixteenth Note)', DurationType.sixteenth),
-      RhythmicFigure('Fusa (Thirty-second Note)', DurationType.thirtySecond),
-      RhythmicFigure('Semifusa (Sixty-fourth Note)', DurationType.sixtyFourth),
+      RhythmicFigure('Half Note', DurationType.half),
+      RhythmicFigure('Quarter Note', DurationType.quarter),
+      RhythmicFigure('Eighth Note', DurationType.eighth),
+      RhythmicFigure('Sixteenth Note', DurationType.sixteenth),
+      RhythmicFigure('Thirty-second Note', DurationType.thirtySecond),
+      RhythmicFigure('Sixty-fourth Note', DurationType.sixtyFourth),
     ];
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Família de Símbolos: Figuras Rítmicas'),
+        title: const Text('Symbol Family: Rhythmic Figures'),
         backgroundColor: Colors.red.shade700,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 12.0),
-        // Mapeia a lista de figuras para criar uma seção para cada uma
+        // Maps the figure list to create one section per item
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: figures.map((figure) {
@@ -86,7 +86,7 @@ class RhythmicFiguresExample extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Container(
-              height: 100, // Altura reduzida para uma única pauta
+              height: 100, // Reduced height for a single staff
               decoration: BoxDecoration(
                 color: Colors.white,
                 border: Border.all(color: Colors.grey.shade300),

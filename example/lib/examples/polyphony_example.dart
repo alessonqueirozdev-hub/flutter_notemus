@@ -306,7 +306,7 @@ class PolyphonyExampleWidget extends StatelessWidget {
                     Row(children: [
                       Icon(Icons.info_outline, color: Colors.purple.shade700),
                       const SizedBox(width: 8),
-                      Text('Sobre Polifonia', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.purple.shade800, fontSize: 16)),
+                      Text('About Polyphony', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.purple.shade800, fontSize: 16)),
                     ]),
                     const SizedBox(height: 8),
                     const Text('Polyphony is the technique of writing multiple independent voices on the same staff. Voice 1 has upward stems; voice 2, down.', style: TextStyle(fontSize: 13)),
@@ -316,18 +316,18 @@ class PolyphonyExampleWidget extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             _buildSection(
-              title: 'Duas Vozes — Melodia + Acompanhamento',
+              title: 'Two Voices — Melody + Accompaniment',
               description: 'Voice 1 (stems above): melody in eighth notes. Voice 2 (stems below): accompaniment in half notes.',
               staff: _buildTwoVoiceStaff(),
             ),
             _buildSection(
               title: 'Contraponto ao Estilo Bach',
-              description: 'Duas vozes independentes em movimento contrário.',
+              description: 'Two independent voices in contrary motion.',
               staff: _buildCounterpointStaff(),
             ),
             _buildSection(
               title: 'Guitarra Fingerstyle',
-              description: 'Melodia em colcheias (voz 1) + baixo em mínimas (voz 2).',
+              description: 'Melody in eighth notes (voice 1) + bass in half notes (voice 2).',
               staff: _buildGuitarStaff(),
             ),
           ],

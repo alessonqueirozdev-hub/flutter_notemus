@@ -29,7 +29,7 @@ class ProfessionalOrnamentsExample extends StatelessWidget {
             const SizedBox(height: 24),
 
             _buildExampleSection(
-              'Posicionamento Baseado em Haste',
+              'Stem-Based Positioning',
               'Ornaments positioned on the opposite side of the rod (professional standard)',
               _createStemBasedPositioningStaff(),
             ),
@@ -47,7 +47,7 @@ class ProfessionalOrnamentsExample extends StatelessWidget {
             ),
 
             _buildExampleSection(
-              'Arpejos - Posicionamento Lateral',
+              'Arpeggios - Lateral Positioning',
               'Left-positioned arpeggios with variable height',
               _createArpeggioStaff(),
             ),
@@ -104,7 +104,7 @@ class ProfessionalOrnamentsExample extends StatelessWidget {
     measure.add(Note(
       pitch: const Pitch(step: 'C', octave: 4), // Haste para cima, trill embaixo
       duration: const Duration(DurationType.quarter),
-      ornaments: [Ornament(type: OrnamentType.trill)], // Sem forçar posição
+      ornaments: [Ornament(type: OrnamentType.trill)], // Without forcing position
     ));
 
     measure.add(Note(
@@ -180,7 +180,7 @@ class ProfessionalOrnamentsExample extends StatelessWidget {
     ));
 
     measure.add(Note(
-      pitch: const Pitch(step: 'G', octave: 2), // Região baixa
+      pitch: const Pitch(step: 'G', octave: 2), // Low register
       duration: const Duration(DurationType.quarter),
       ornaments: [Ornament(type: OrnamentType.turn)],
     ));

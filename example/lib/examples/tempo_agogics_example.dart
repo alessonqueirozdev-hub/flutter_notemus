@@ -11,7 +11,7 @@ class TempoAgogicsExample extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Família de Símbolos: Tempo e Agógica'),
+        title: const Text('Symbol Family: Tempo and Agogics'),
         backgroundColor: Colors.orange.shade700,
       ),
       body: SingleChildScrollView(
@@ -20,8 +20,8 @@ class TempoAgogicsExample extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildSection(
-              title: 'Indicações de Tempo (BPM)',
-              description: 'Marcações metrônomo com indicação de velocidade.',
+              title: 'Tempo Markings (BPM)',
+              description: 'Metronome markings with speed indication.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 TempoMark(
@@ -49,7 +49,7 @@ class TempoAgogicsExample extends StatelessWidget {
             ),
             _buildSection(
               title: 'Different Beat Units',
-              description: 'Variações de unidade métrica para o metrônomo.',
+              description: 'Beat-unit variations for the metronome.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 TempoMark(
@@ -68,8 +68,8 @@ class TempoAgogicsExample extends StatelessWidget {
               ],
             ),
             _buildSection(
-              title: 'Indicações Textuais de Tempo',
-              description: 'Marcações de caráter sem indicação numérica.',
+              title: 'Textual Tempo Markings',
+              description: 'Character markings without numeric indication.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 MusicText(
@@ -84,8 +84,8 @@ class TempoAgogicsExample extends StatelessWidget {
               ],
             ),
             _buildSection(
-              title: 'Indicações de Expressão',
-              description: 'Marcações de caráter expressivo e interpretativo.',
+              title: 'Expression Markings',
+              description: 'Expressive and interpretive character markings.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 MusicText(
@@ -119,8 +119,8 @@ class TempoAgogicsExample extends StatelessWidget {
               ],
             ),
             _buildSection(
-              title: 'Mudanças de Tempo',
-              description: 'Indicações de variação de tempo durante a música.',
+              title: 'Tempo Changes',
+              description: 'Tempo-change indications during the piece.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 MusicText(
@@ -153,7 +153,7 @@ class TempoAgogicsExample extends StatelessWidget {
             ),
             _buildSection(
               title: 'Breaths and Pauses',
-              description: 'Indicações de respiração e interrupção.',
+              description: 'Breathing and pause indications.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 Note(
@@ -176,7 +176,7 @@ class TempoAgogicsExample extends StatelessWidget {
             ),
             _buildSection(
               title: 'Caesuras',
-              description: 'Diferentes tipos de caesuras e interrupções.',
+              description: 'Different types of caesuras and interruptions.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 Note(
@@ -198,8 +198,8 @@ class TempoAgogicsExample extends StatelessWidget {
               ],
             ),
             _buildSection(
-              title: 'Indicações de Metrônomo Complexas',
-              description: 'Equações e faixas de tempo.',
+              title: 'Complex Metronome Markings',
+              description: 'Equations and tempo ranges.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 TempoMark(
@@ -223,8 +223,8 @@ class TempoAgogicsExample extends StatelessWidget {
               ],
             ),
             _buildSection(
-              title: 'Instruções de Performance',
-              description: 'Textos específicos para interpretação.',
+              title: 'Performance Instructions',
+              description: 'Specific interpretation texts.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 MusicText(

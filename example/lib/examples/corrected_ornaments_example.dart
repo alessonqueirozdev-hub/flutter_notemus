@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 
 /// Example demonstrating correct placement of ornaments
-/// seguindo regras tipográficas profissionais de notação musical
+/// following professional typographic rules for music notation
 class CorrectedOrnamentsExample extends StatelessWidget {
   const CorrectedOrnamentsExample({Key? key}) : super(key: key);
 
@@ -20,7 +20,7 @@ class CorrectedOrnamentsExample extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Posicionamento Tipográfico Correto',
+              'Correct Typographic Positioning',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
@@ -37,8 +37,8 @@ class CorrectedOrnamentsExample extends StatelessWidget {
             ),
 
             _buildExampleSection(
-              'Vozes Duplas - Soprano e Contralto',
-              'Soprano: ornaments above (top exterior) | Contralto: ornaments below (lower outer)',
+              'Double Voices - Soprano and Alto',
+              'Soprano: ornaments above (top exterior) | Alto: ornaments below (lower exterior)',
               _createDoubleVoiceStaff(),
             ),
 
@@ -55,7 +55,7 @@ class CorrectedOrnamentsExample extends StatelessWidget {
             ),
 
             _buildExampleSection(
-              'Fermatas Especiais',
+              'Special Fermatas',
               'Fermatas above and below according to typographic specification',
               _createFermataStaff(),
             ),
@@ -157,18 +157,18 @@ class CorrectedOrnamentsExample extends StatelessWidget {
       ornaments: [Ornament(type: OrnamentType.mordent)],
     ));
 
-    // Voice 2 - Contralto (ornaments below)
+    // Voice 2 - Alto (ornaments below)
     measure.add(Note(
       pitch: const Pitch(step: 'E', octave: 4),
       duration: const Duration(DurationType.quarter),
-      voice: 2, // Contralto
+      voice: 2, // Alto
       ornaments: [Ornament(type: OrnamentType.turn)],
     ));
 
     measure.add(Note(
       pitch: const Pitch(step: 'F', octave: 4),
       duration: const Duration(DurationType.quarter),
-      voice: 2, // Contralto
+      voice: 2, // Alto
       ornaments: [Ornament(type: OrnamentType.invertedMordent)],
     ));
 
@@ -176,7 +176,7 @@ class CorrectedOrnamentsExample extends StatelessWidget {
     return staff;
   }
 
-  /// Notas na região alta
+  /// Notes in the high register
   Staff _createHighRegionStaff() {
     final staff = Staff();
     final measure = Measure();
@@ -192,7 +192,7 @@ class CorrectedOrnamentsExample extends StatelessWidget {
     ));
 
     measure.add(Note(
-      pitch: const Pitch(step: 'A', octave: 5), // Acima da pauta
+      pitch: const Pitch(step: 'A', octave: 5), // Above the staff
       duration: const Duration(DurationType.quarter),
       ornaments: [Ornament(type: OrnamentType.mordent)],
     ));
@@ -207,7 +207,7 @@ class CorrectedOrnamentsExample extends StatelessWidget {
     return staff;
   }
 
-  /// Notas na região baixa
+  /// Notes in the low register
   Staff _createLowRegionStaff() {
     final staff = Staff();
     final measure = Measure();
@@ -229,7 +229,7 @@ class CorrectedOrnamentsExample extends StatelessWidget {
     ));
 
     measure.add(Note(
-      pitch: const Pitch(step: 'G', octave: 2), // Região baixa
+      pitch: const Pitch(step: 'G', octave: 2), // Low register
       duration: const Duration(DurationType.quarter),
       ornaments: [Ornament(type: OrnamentType.turn)],
     ));
