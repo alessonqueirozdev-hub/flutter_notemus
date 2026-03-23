@@ -47,4 +47,15 @@ abstract class MidiNativeAudioBackend {
     required int numerator,
     required int denominator,
   });
+
+  /// Clears currently scheduled sequence events on native side.
+  Future<void> clearScheduledEvents();
+
+  /// Triggers tie processing in the native sequencer.
+  ///
+  /// Backends that do not support tie processing can implement as no-op.
+  Future<void> processTies();
+
+  /// Indicates whether native backend is initialized and ready.
+  Future<bool> isReady();
 }

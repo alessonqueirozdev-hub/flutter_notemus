@@ -17,13 +17,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Tuplet/polyphony/tie-aware event generation
 - Metronome track generation synchronized with the expanded timeline
 - Standard MIDI File writer (`MidiFileWriter`) without external package dependency
-- Native low-latency backend contract (`MidiNativeAudioBackend`) for C/C++ integration
-- Unit tests for MIDI mapping and file export
+- Native backend contract (`MidiNativeAudioBackend`) for low-latency C/C++ audio engines
+- MethodChannel native backend (`MethodChannelMidiNativeAudioBackend`) with default JNI-style method map
+- Native sequence bridge (`MidiNativeSequenceBridge`) to upload tempo/signature/notes/metronome and trigger tie processing
+- Unit tests for MIDI mapping, file export, and native integration bridge
 
 ### Changed
 
 - Public API now includes MIDI exports through `flutter_notemus.dart` and `midi.dart`
-- README updated with version status, post-`0.1.0` evolution summary, and MIDI documentation
+- README updated with version status, post-`0.1.0` evolution summary, and explicit 2.0.0 native MIDI integration notes
 
 ### Notes
 
