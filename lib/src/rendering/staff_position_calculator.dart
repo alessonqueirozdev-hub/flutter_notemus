@@ -48,7 +48,10 @@ class StaffPositionCalculator {
     final ClefReference ref = _getClefReference(clef.actualClefType);
 
     // Calcular distância diatônica da nota de referência
-    final octaveAdjust = pitch.octave + clef.octaveShift - ref.baseOctave;
+    // Claves com deslocamento de oitava (ex.: treble8vb) alteram a altura
+    // sonora, mas NAO alteram a escrita no pentagrama.
+    // Por isso, o calculo visual usa apenas a oitava escrita da nota.
+    final octaveAdjust = pitch.octave - ref.baseOctave;
     final diatonicDistance = (pitchStep - ref.baseStep) + (octaveAdjust * 7);
 
     // Converter distância diatônica para posição na pauta
@@ -82,13 +85,17 @@ class StaffPositionCalculator {
       // Linhas acima do pentagrama
       // Se a nota está em posição ímpar (espaço), desenhar linha abaixo e acima se necessário
       // Se a nota está em posição par (linha), desenhar essa linha
-      int startLine = staffPosition % 2 == 0 ? staffPosition : staffPosition - 1;
+      int startLine = staffPosition % 2 == 0
+          ? staffPosition
+          : staffPosition - 1;
       for (int line = 6; line <= startLine; line += 2) {
         lines.add(line);
       }
     } else if (staffPosition < -4) {
       // Linhas abaixo do pentagrama
-      int startLine = staffPosition % 2 == 0 ? staffPosition : staffPosition + 1;
+      int startLine = staffPosition % 2 == 0
+          ? staffPosition
+          : staffPosition + 1;
       for (int line = -6; line >= startLine; line -= 2) {
         lines.add(line);
       }
@@ -169,20 +176,12 @@ class StaffPositionCalculator {
       // CLAVE DE PERCUSSÃO
       case ClefType.percussion:
       case ClefType.percussion2:
-        return ClefReference(
-          baseStep: 0,
-          baseOctave: 4,
-          basePosition: 0,
-        );
+        return ClefReference(baseStep: 0, baseOctave: 4, basePosition: 0);
 
       // CLAVE DE TABLATURA
       case ClefType.tab6:
       case ClefType.tab4:
-        return ClefReference(
-          baseStep: 0,
-          baseOctave: 4,
-          basePosition: 0,
-        );
+        return ClefReference(baseStep: 0, baseOctave: 4, basePosition: 0);
 
       default:
         // Fallback: Clave de Sol
