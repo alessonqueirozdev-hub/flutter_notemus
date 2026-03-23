@@ -1,7 +1,7 @@
 // example/lib/examples/multi_staff_example.dart
 
 import 'package:flutter/material.dart';
-import 'package:flutter_notemus/core/core.dart';
+import 'package:flutter_notemus/flutter_notemus.dart';
 
 /// Example demonstrating multi-staff notation
 ///
@@ -253,72 +253,175 @@ class MultiStaffExampleWidget extends StatelessWidget {
   }
 }
 
-/// Demo app showing all multi-staff examples
+/// Widget principal para demonstração de multi-pauta
 class MultiStaffDemoApp extends StatelessWidget {
   const MultiStaffDemoApp({super.key});
 
+  Staff _buildTrebleStaff() {
+    final staff = Staff();
+    final measure = Measure();
+    measure.add(Clef(clefType: ClefType.treble));
+    measure.add(KeySignature(0));
+    measure.add(TimeSignature(numerator: 4, denominator: 4));
+    measure.add(Note(pitch: const Pitch(step: 'C', octave: 5), duration: const Duration(DurationType.quarter)));
+    measure.add(Note(pitch: const Pitch(step: 'D', octave: 5), duration: const Duration(DurationType.quarter)));
+    measure.add(Note(pitch: const Pitch(step: 'E', octave: 5), duration: const Duration(DurationType.quarter)));
+    measure.add(Note(pitch: const Pitch(step: 'F', octave: 5), duration: const Duration(DurationType.quarter)));
+
+    final measure2 = Measure();
+    measure2.add(Note(pitch: const Pitch(step: 'E', octave: 5), duration: const Duration(DurationType.quarter)));
+    measure2.add(Note(pitch: const Pitch(step: 'D', octave: 5), duration: const Duration(DurationType.quarter)));
+    measure2.add(Note(pitch: const Pitch(step: 'C', octave: 5), duration: const Duration(DurationType.half)));
+
+    staff.add(measure);
+    staff.add(measure2);
+    return staff;
+  }
+
+  Staff _buildBassStaff() {
+    final staff = Staff();
+    final measure = Measure();
+    measure.add(Clef(clefType: ClefType.bass));
+    measure.add(KeySignature(0));
+    measure.add(TimeSignature(numerator: 4, denominator: 4));
+    measure.add(Note(pitch: const Pitch(step: 'C', octave: 3), duration: const Duration(DurationType.whole)));
+
+    final measure2 = Measure();
+    measure2.add(Note(pitch: const Pitch(step: 'G', octave: 2), duration: const Duration(DurationType.half)));
+    measure2.add(Note(pitch: const Pitch(step: 'C', octave: 3), duration: const Duration(DurationType.half)));
+
+    staff.add(measure);
+    staff.add(measure2);
+    return staff;
+  }
+
+  Staff _buildSATBStaff(ClefType clef, String step, int octave, {bool isBottom = false}) {
+    final staff = Staff();
+    final measure = Measure();
+    measure.add(Clef(clefType: clef));
+    measure.add(KeySignature(0));
+    if (!isBottom) measure.add(TimeSignature(numerator: 4, denominator: 4));
+    measure.add(Note(pitch: Pitch(step: step, octave: octave), duration: const Duration(DurationType.quarter)));
+    measure.add(Note(pitch: Pitch(step: step == 'C' ? 'D' : 'B', octave: octave), duration: const Duration(DurationType.quarter)));
+    measure.add(Note(pitch: Pitch(step: step, octave: octave), duration: const Duration(DurationType.half)));
+    staff.add(measure);
+    return staff;
+  }
+
+  Widget _buildGrandStaffSection() {
+    return _buildSection(
+      title: '🎹 Grand Staff (Piano)',
+      description: 'Clave de sol (mão direita) + clave de fá (mão esquerda)',
+      children: [
+        Container(
+          height: 110,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border(
+              left: BorderSide(color: Colors.grey.shade400, width: 2),
+              top: BorderSide(color: Colors.grey.shade300),
+              right: BorderSide(color: Colors.grey.shade300),
+            ),
+          ),
+          child: MusicScore(staff: _buildTrebleStaff()),
+        ),
+        Container(
+          height: 110,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border(
+              left: BorderSide(color: Colors.grey.shade400, width: 2),
+              bottom: BorderSide(color: Colors.grey.shade300),
+              right: BorderSide(color: Colors.grey.shade300),
+            ),
+          ),
+          child: MusicScore(staff: _buildBassStaff()),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSATBSection() {
+    return _buildSection(
+      title: '🎤 Coral SATB',
+      description: 'Soprano, Contralto, Tenor e Baixo em pautas separadas',
+      children: [
+        _buildStaffRow('S', _buildSATBStaff(ClefType.treble, 'E', 5)),
+        _buildStaffRow('A', _buildSATBStaff(ClefType.treble, 'C', 5)),
+        _buildStaffRow('T', _buildSATBStaff(ClefType.treble, 'A', 4)),
+        _buildStaffRow('B', _buildSATBStaff(ClefType.bass, 'C', 3, isBottom: true)),
+      ],
+    );
+  }
+
+  Widget _buildStaffRow(String label, Staff staff) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 20,
+          child: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+        ),
+        Expanded(
+          child: Container(
+            height: 90,
+            color: Colors.white,
+            child: MusicScore(staff: staff),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSection({required String title, required String description, required List<Widget> children}) {
+    return Card(
+      elevation: 2,
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 4),
+            Text(description, style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
+            const SizedBox(height: 12),
+            ...children,
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Multi-Staff Examples',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        useMaterial3: true,
-      ),
-      home: Builder(
-        builder: (context) => Scaffold(
-          appBar: AppBar(
-            title: const Text('Multi-Staff Examples'),
-          ),
-          body: ListView(
-            children: [
-              ListTile(
-                leading: const Icon(Icons.piano),
-                title: const Text('Piano (Grand Staff)'),
-                subtitle: const Text('Treble + Bass with brace'),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => MultiStaffExampleWidget(
-                        score: MultiStaffExample.createPianoScore(),
-                      ),
-                    ),
-                  );
-                },
+    return Scaffold(
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Card(
+              color: Colors.indigo.shade50,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(children: [
+                      Icon(Icons.info_outline, color: Colors.indigo.shade700),
+                      const SizedBox(width: 8),
+                      Text('Sobre Multi-Pauta', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.indigo.shade800, fontSize: 16)),
+                    ]),
+                    const SizedBox(height: 8),
+                    const Text('Notação multi-pauta usa várias pautas simultâneas para diferentes instrumentos ou vozes. O grand staff do piano é o exemplo mais comum.', style: TextStyle(fontSize: 13)),
+                  ],
+                ),
               ),
-              ListTile(
-                leading: const Icon(Icons.groups),
-                title: const Text('Choir (SATB)'),
-                subtitle: const Text('Soprano, Alto, Tenor, Bass with bracket'),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => MultiStaffExampleWidget(
-                        score: MultiStaffExample.createChoirScore(),
-                      ),
-                    ),
-                  );
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.music_note),
-                title: const Text('Orchestral Score'),
-                subtitle: const Text('Multiple instrument groups'),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => MultiStaffExampleWidget(
-                        score: MultiStaffExample.createOrchestralScore(),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 16),
+            _buildGrandStaffSection(),
+            _buildSATBSection(),
+          ],
         ),
       ),
     );

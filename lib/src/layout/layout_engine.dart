@@ -864,6 +864,14 @@ class LayoutEngine {
       return 0.0; // TempoMark renderizado acima, sem largura
     }
 
+    if (element is VoltaBracket) {
+      return 0.0; // VoltaBracket renderizado acima, sem largura
+    }
+
+    if (element is OctaveMark) {
+      return 0.0; // OctaveMark renderizado acima, sem largura
+    }
+
     return staffSpace;
   }
 

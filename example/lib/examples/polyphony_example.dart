@@ -1,7 +1,7 @@
 // example/lib/examples/polyphony_example.dart
 
 import 'package:flutter/material.dart';
-import 'package:flutter_notemus/core/core.dart';
+import 'package:flutter_notemus/flutter_notemus.dart';
 
 /// Example demonstrating polyphonic notation (multiple voices)
 ///
@@ -192,158 +192,146 @@ class PolyphonyExample {
 class PolyphonyExampleWidget extends StatelessWidget {
   const PolyphonyExampleWidget({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Polyphony Examples'),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          const Text(
-            'Polyphonic Notation',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Multiple independent voices on one staff',
-            style: TextStyle(fontSize: 16, color: Colors.grey),
-          ),
-          const SizedBox(height: 24),
+  Staff _buildTwoVoiceStaff() {
+    final staff = Staff();
+    final measure = MultiVoiceMeasure();
 
-          // Example 1: Simple Two-Voice
-          _buildExampleCard(
-            context,
-            title: 'Simple Two-Voice',
-            description: 'Melody (voice 1) + accompaniment (voice 2)',
-            measure: PolyphonyExample.createSimpleTwoVoice(),
-          ),
+    final voice1 = Voice.voice1();
+    voice1.add(Clef(clefType: ClefType.treble));
+    voice1.add(TimeSignature(numerator: 4, denominator: 4));
+    voice1.add(Note(pitch: const Pitch(step: 'E', octave: 5), duration: const Duration(DurationType.quarter)));
+    voice1.add(Note(pitch: const Pitch(step: 'D', octave: 5), duration: const Duration(DurationType.quarter)));
+    voice1.add(Note(pitch: const Pitch(step: 'C', octave: 5), duration: const Duration(DurationType.quarter)));
+    voice1.add(Note(pitch: const Pitch(step: 'D', octave: 5), duration: const Duration(DurationType.quarter)));
 
-          // Example 2: Counterpoint
-          _buildExampleCard(
-            context,
-            title: 'Bach-Style Counterpoint',
-            description: 'Two equal independent voices',
-            measure: PolyphonyExample.createCounterpoint(),
-          ),
+    final voice2 = Voice.voice2();
+    voice2.add(Note(pitch: const Pitch(step: 'C', octave: 4), duration: const Duration(DurationType.half)));
+    voice2.add(Note(pitch: const Pitch(step: 'G', octave: 3), duration: const Duration(DurationType.half)));
 
-          // Example 3: Guitar Fingerstyle
-          _buildExampleCard(
-            context,
-            title: 'Guitar Fingerstyle',
-            description: 'Melody on high strings + bass notes',
-            measure: PolyphonyExample.createGuitarFingerstyle(),
-          ),
-
-          // Example 4: Piano Texture
-          _buildExampleCard(
-            context,
-            title: 'Piano Texture',
-            description: 'Melody + chord accompaniment',
-            measure: PolyphonyExample.createPianoTexture(),
-          ),
-
-          const SizedBox(height: 24),
-          const Divider(),
-          const SizedBox(height: 16),
-
-          // Voice conventions
-          const Text(
-            'Voice Conventions',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          _buildConventionItem('Voice 1', 'Stems up, no horizontal offset'),
-          _buildConventionItem(
-              'Voice 2', 'Stems down, offset 0.6 staff spaces right'),
-          _buildConventionItem('Voice 3+', 'Alternating or position-based'),
-        ],
-      ),
-    );
+    measure.addVoice(voice1);
+    measure.addVoice(voice2);
+    staff.add(measure);
+    return staff;
   }
 
-  Widget _buildExampleCard(
-    BuildContext context, {
-    required String title,
-    required String description,
-    required MultiVoiceMeasure measure,
-  }) {
+  Staff _buildCounterpointStaff() {
+    final staff = Staff();
+    final measure = MultiVoiceMeasure();
+
+    final voice1 = Voice.voice1();
+    voice1.add(Clef(clefType: ClefType.treble));
+    voice1.add(TimeSignature(numerator: 4, denominator: 4));
+    voice1.add(Note(pitch: const Pitch(step: 'G', octave: 4), duration: const Duration(DurationType.quarter)));
+    voice1.add(Note(pitch: const Pitch(step: 'A', octave: 4), duration: const Duration(DurationType.quarter)));
+    voice1.add(Note(pitch: const Pitch(step: 'B', octave: 4), duration: const Duration(DurationType.quarter)));
+    voice1.add(Note(pitch: const Pitch(step: 'C', octave: 5), duration: const Duration(DurationType.quarter)));
+
+    final voice2 = Voice.voice2();
+    voice2.add(Note(pitch: const Pitch(step: 'C', octave: 4), duration: const Duration(DurationType.quarter)));
+    voice2.add(Note(pitch: const Pitch(step: 'B', octave: 3), duration: const Duration(DurationType.quarter)));
+    voice2.add(Note(pitch: const Pitch(step: 'A', octave: 3), duration: const Duration(DurationType.quarter)));
+    voice2.add(Note(pitch: const Pitch(step: 'G', octave: 3), duration: const Duration(DurationType.quarter)));
+
+    measure.addVoice(voice1);
+    measure.addVoice(voice2);
+    staff.add(measure);
+    return staff;
+  }
+
+  Staff _buildGuitarStaff() {
+    final staff = Staff();
+    final measure = MultiVoiceMeasure();
+
+    final voice1 = Voice.voice1();
+    voice1.add(Clef(clefType: ClefType.treble));
+    voice1.add(TimeSignature(numerator: 4, denominator: 4));
+    voice1.add(Note(pitch: const Pitch(step: 'E', octave: 4), duration: const Duration(DurationType.eighth), beam: BeamType.start));
+    voice1.add(Note(pitch: const Pitch(step: 'G', octave: 4), duration: const Duration(DurationType.eighth), beam: BeamType.inner));
+    voice1.add(Note(pitch: const Pitch(step: 'A', octave: 4), duration: const Duration(DurationType.eighth), beam: BeamType.inner));
+    voice1.add(Note(pitch: const Pitch(step: 'G', octave: 4), duration: const Duration(DurationType.eighth), beam: BeamType.end));
+
+    final voice2 = Voice.voice2();
+    voice2.add(Note(pitch: const Pitch(step: 'C', octave: 3), duration: const Duration(DurationType.half)));
+    voice2.add(Note(pitch: const Pitch(step: 'G', octave: 2), duration: const Duration(DurationType.half)));
+
+    measure.addVoice(voice1);
+    measure.addVoice(voice2);
+    staff.add(measure);
+    return staff;
+  }
+
+  Widget _buildSection({required String title, required String description, required Staff staff}) {
     return Card(
+      elevation: 2,
       margin: const EdgeInsets.only(bottom: 16),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              title,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
+            Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
-            Text(
-              description,
-              style: const TextStyle(color: Colors.grey),
-            ),
+            Text(description, style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
             const SizedBox(height: 12),
-
-            // Voice information
-            ...measure.sortedVoices.map((voice) {
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Row(
-                  children: [
-                    Icon(
-                      voice.getStemDirection() == StemDirection.up
-                          ? Icons.arrow_upward
-                          : Icons.arrow_downward,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${voice.name ?? 'Voice ${voice.number}'}: ${voice.notes.length} notes',
-                      style: const TextStyle(fontSize: 14),
-                    ),
-                  ],
-                ),
-              );
-            }),
-
-            const SizedBox(height: 8),
-            Text(
-              'Polyphonic: ${measure.isPolyphonic ? 'Yes' : 'No'} (${measure.voiceCount} voices)',
-              style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+            Container(
+              height: 120,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border.all(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: MusicScore(staff: staff),
             ),
-
-            // TODO: Add actual music rendering when renderer is complete
           ],
         ),
       ),
     );
   }
 
-  Widget _buildConventionItem(String title, String description) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('•  ', style: TextStyle(fontSize: 16)),
-          Expanded(
-            child: RichText(
-              text: TextSpan(
-                style: const TextStyle(fontSize: 14, color: Colors.black87),
-                children: [
-                  TextSpan(
-                    text: '$title: ',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  TextSpan(text: description),
-                ],
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Card(
+              color: Colors.purple.shade50,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(children: [
+                      Icon(Icons.info_outline, color: Colors.purple.shade700),
+                      const SizedBox(width: 8),
+                      Text('Sobre Polifonia', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.purple.shade800, fontSize: 16)),
+                    ]),
+                    const SizedBox(height: 8),
+                    const Text('Polifonia é a técnica de escrever múltiplas vozes independentes numa mesma pauta. A voz 1 tem hastes para cima; a voz 2, para baixo.', style: TextStyle(fontSize: 13)),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+            const SizedBox(height: 16),
+            _buildSection(
+              title: 'Duas Vozes — Melodia + Acompanhamento',
+              description: 'Voz 1 (hastes acima): melodia em colcheias. Voz 2 (hastes abaixo): acompanhamento em mínimas.',
+              staff: _buildTwoVoiceStaff(),
+            ),
+            _buildSection(
+              title: 'Contraponto ao Estilo Bach',
+              description: 'Duas vozes independentes em movimento contrário.',
+              staff: _buildCounterpointStaff(),
+            ),
+            _buildSection(
+              title: 'Guitarra Fingerstyle',
+              description: 'Melodia em colcheias (voz 1) + baixo em mínimas (voz 2).',
+              staff: _buildGuitarStaff(),
+            ),
+          ],
+        ),
       ),
     );
   }
