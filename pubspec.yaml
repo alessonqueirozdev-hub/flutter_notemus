@@ -1,6 +1,6 @@
 name: flutter_notemus
 description: "Professional music notation rendering for Flutter. SMuFL-compliant with 2932 Bravura glyphs, beams, dynamics, articulations, and JSON import/export."
-version: 2.0.2
+version: 2.1.0
 homepage: https://github.com/alessonqueirozdev-hub
 repository: https://github.com/alessonqueirozdev-hub/flutter_notemus
 issue_tracker: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues

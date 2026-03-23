@@ -4,6 +4,14 @@ All notable changes to Flutter Notemus are documented in this file.
 
 The format is based on Keep a Changelog and this project follows Semantic Versioning.
 
+## [2.1.0] - 2026-03-23
+
+### Changed
+
+- Migrated README content to English across all sections.
+- Reorganized README with project links at the top.
+- Kept backlog references and project links aligned with GitHub and GitHub Pages.
+
 ## [2.0.2] - 2026-03-23
 
 ### Fixed
