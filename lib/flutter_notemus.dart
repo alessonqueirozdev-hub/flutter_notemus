@@ -31,6 +31,11 @@ library;
 import 'package:flutter/material.dart';
 import 'core/core.dart'; // 🆕 Usar tipos do core
 import 'src/layout/layout_engine.dart';
+import 'src/parsers/json_parser.dart';
+import 'src/parsers/mei_parser.dart';
+import 'src/parsers/musicxml_parser.dart';
+import 'src/parsers/notation_format.dart';
+import 'src/parsers/notation_parser.dart';
 import 'src/rendering/staff_renderer.dart';
 import 'src/rendering/staff_coordinate_system.dart';
 import 'src/smufl/smufl_metadata_loader.dart';
@@ -38,11 +43,16 @@ import 'src/theme/music_score_theme.dart';
 
 // 🆕 NOVA ARQUITETURA - Toda teoria musical em core/
 export 'core/core.dart';
+export 'midi.dart';
 
 // Public API exports
 export 'src/theme/music_score_theme.dart';
 export 'src/layout/layout_engine.dart';
 export 'src/parsers/json_parser.dart';
+export 'src/parsers/mei_parser.dart';
+export 'src/parsers/musicxml_parser.dart';
+export 'src/parsers/notation_format.dart';
+export 'src/parsers/notation_parser.dart';
 export 'src/smufl/glyph_categories.dart';
 export 'src/smufl/smufl_metadata_loader.dart';
 export 'src/rendering/staff_position_calculator.dart';
@@ -92,6 +102,73 @@ class MusicScore extends StatefulWidget {
     this.theme = const MusicScoreTheme(),
     this.staffSpace = 12.0,
   });
+
+  factory MusicScore.fromJson({
+    Key? key,
+    required String json,
+    int staffIndex = 0,
+    MusicScoreTheme theme = const MusicScoreTheme(),
+    double staffSpace = 12.0,
+  }) {
+    return MusicScore(
+      key: key,
+      staff: JsonMusicParser.parseStaff(json, staffIndex: staffIndex),
+      theme: theme,
+      staffSpace: staffSpace,
+    );
+  }
+
+  factory MusicScore.fromMusicXml({
+    Key? key,
+    required String musicXml,
+    int partIndex = 0,
+    MusicScoreTheme theme = const MusicScoreTheme(),
+    double staffSpace = 12.0,
+  }) {
+    return MusicScore(
+      key: key,
+      staff: MusicXMLParser.parseMusicXML(musicXml, partIndex: partIndex),
+      theme: theme,
+      staffSpace: staffSpace,
+    );
+  }
+
+  factory MusicScore.fromMei({
+    Key? key,
+    required String mei,
+    int staffIndex = 0,
+    MusicScoreTheme theme = const MusicScoreTheme(),
+    double staffSpace = 12.0,
+  }) {
+    return MusicScore(
+      key: key,
+      staff: MEIParser.parseMEI(mei, staffIndex: staffIndex),
+      theme: theme,
+      staffSpace: staffSpace,
+    );
+  }
+
+  factory MusicScore.fromSource({
+    Key? key,
+    required String source,
+    NotationFormat? format,
+    int partIndex = 0,
+    int staffIndex = 0,
+    MusicScoreTheme theme = const MusicScoreTheme(),
+    double staffSpace = 12.0,
+  }) {
+    return MusicScore(
+      key: key,
+      staff: NotationParser.parseStaff(
+        source,
+        format: format,
+        partIndex: partIndex,
+        staffIndex: staffIndex,
+      ),
+      theme: theme,
+      staffSpace: staffSpace,
+    );
+  }
 
   @override
   State<MusicScore> createState() => _MusicScoreState();
@@ -165,8 +242,12 @@ class _MusicScoreState extends State<MusicScore> {
                       staffSpace: widget.staffSpace,
                       layoutEngine: layoutEngine,
                       viewportSize: constraints.biggest,
-                      scrollOffsetX: _horizontalController.hasClients ? _horizontalController.offset : 0.0,
-                      scrollOffsetY: _verticalController.hasClients ? _verticalController.offset : 0.0,
+                      scrollOffsetX: _horizontalController.hasClients
+                          ? _horizontalController.offset
+                          : 0.0,
+                      scrollOffsetY: _verticalController.hasClients
+                          ? _verticalController.offset
+                          : 0.0,
                     ),
                   ),
                 ),
@@ -300,17 +381,17 @@ class MusicScorePainter extends CustomPainter {
       // Fallback: renderizar apenas sistema 0
       return {0};
     }
-    
+
     if (!viewportSize.height.isFinite || viewportSize.height <= 0) {
       // Fallback: renderizar apenas sistema 0
       return {0};
     }
-    
+
     if (!scrollOffsetY.isFinite) {
       // Fallback: renderizar apenas sistema 0
       return {0};
     }
-    
+
     // Viewport Y range (com margem)
     final margin = systemHeight; // 1 sistema de margem
     final viewportTop = scrollOffsetY - margin;
@@ -319,15 +400,15 @@ class MusicScorePainter extends CustomPainter {
     // Calcular sistemas visíveis com proteção contra Infinity
     final firstSystemRaw = (viewportTop / systemHeight).floor();
     final lastSystemRaw = (viewportBottom / systemHeight).ceil();
-    
+
     // Validar que os valores são finitos antes de fazer clamp
     if (!firstSystemRaw.isFinite || !lastSystemRaw.isFinite) {
       return {0};
     }
-    
+
     final firstSystem = firstSystemRaw.clamp(0, 999);
     final lastSystem = lastSystemRaw.clamp(0, 999);
-    
+
     // Validar range
     if (lastSystem < firstSystem) {
       return {0};

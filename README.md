@@ -16,6 +16,8 @@ Flutter Notemus é um pacote Flutter para exibir notação musical de alta quali
 
 - [Demonstração visual](#demonstração-visual)
 - [Funcionalidades](#funcionalidades)
+- [Status no pub.dev e evolução desde 0.1.0](#status-no-pubdev-e-evolução-desde-010)
+- [Novidades pós-first commit](#novidades-pós-first-commit)
 - [Instalação](#instalação)
 - [Início rápido](#início-rápido)
 - [Referência da API](#referência-da-api)
@@ -43,7 +45,8 @@ Flutter Notemus é um pacote Flutter para exibir notação musical de alta quali
   - [Repetições](#repetições)
   - [Técnicas instrumentais](#técnicas-instrumentais)
   - [Respiração e césura](#respiração-e-césura)
-  - [Importação via JSON](#importação-via-json)
+  - [Importação via JSON, MusicXML e MEI](#importação-via-json-musicxml-e-mei)
+  - [MIDI: mapeamento, repetições, metrônomo e export .mid](#midi-mapeamento-repetições-metrônomo-e-export-mid)
   - [Temas e personalização visual](#temas-e-personalização-visual)
 - [Formato JSON de referência](#formato-json-de-referência)
 - [Arquitetura](#arquitetura)
@@ -129,11 +132,49 @@ Trilo (com acidente) · Mordente · Mordente invertido · Grupeto · Acciaccatur
 ### Técnicas instrumentais
 Pizzicato · Snap pizzicato · Col legno · Sul tasto · Sul ponticello · Martellato · Harmônicos naturais e artificiais · Circular breathing · Flutter tongue · Multifônicos
 
-### Importação JSON
-Formato JSON estruturado com suporte a notas, pausas, acordes, dinâmicas, ornamentos, articulações, barras de compasso, ligaduras, quiálteras, marcas de tempo e respiração.
+### Importação de dados
+Suporte a JSON, MusicXML (`score-partwise` e `score-timewise`) e MEI, com normalização para a mesma árvore `Staff -> Measure -> MusicalElement` usada pelo renderer.
+
+### MIDI (novo)
+- Mapeamento completo de `Staff`/`Score` para eventos MIDI (nota, acorde, pausa, tempo, compasso e marcador)
+- Expansão de repetições (`repeatForward`, `repeatBackward`, `repeatBoth`) e finais (`VoltaBracket`) no playback order
+- Suporte a tuplets, polifonia (`MultiVoiceMeasure`) e tie-merge durante geração de eventos
+- Geração de trilha de metrônomo (canal de percussão) sincronizada com o timeline expandido
+- Exportação de arquivo Standard MIDI File (`.mid`) sem dependências externas via `MidiFileWriter`
+- Contrato de backend nativo (`MidiNativeAudioBackend`) para integração futura com engine C/C++
 
 ### Personalização visual
 Tema completo com controle individual de cor para cada elemento: pauta, cabeça de nota, haste, clave, barra de compasso, articulação, dinâmica, ligadura, beam, acidente, marcação de oitava, texto e muito mais.
+
+---
+
+## Status no pub.dev e evolução desde 0.1.0
+
+A versão publicada no pub.dev hoje é a **`0.1.0`**:
+- [flutter_notemus 0.1.0](https://pub.dev/packages/flutter_notemus)
+
+Este repositório já contém trabalho **além do pacote publicado**, incluindo correções e novas funcionalidades ainda não refletidas em uma release nova no pub.dev.
+
+### O que você ganha nesta branch em relação ao `0.1.0`
+- Camada MIDI nativa da biblioteca (`package:flutter_notemus/midi.dart`)
+- Mapeamento de notação para timeline MIDI com repetições e volta
+- Trilha de metrônomo derivada da partitura
+- Writer `.mid` embutido (`MidiFileWriter`)
+- Melhorias contínuas de parser/layout/renderização acumuladas após a publicação
+
+---
+
+## Novidades pós-first commit
+
+Considerando o **first commit** como baseline histórica, a biblioteca evoluiu com adições + correções + aperfeiçoamentos em várias frentes:
+
+- Parser unificado para JSON, MusicXML e MEI
+- Polifonia e multi-pauta com `Voice`, `MultiVoiceMeasure`, `Score` e `StaffGroup`
+- Suporte avançado de elementos (voltas, respirações, técnicas, marcas de oitava e estrutura expandida)
+- Melhorias de layout (beaming, spacing, validação de compasso, colisões)
+- Refinamentos de renderização (barlines, rests, chords, tuplets, símbolos e texto)
+- Cobertura de testes ampliada em core/layout/rendering/parsers
+- Atualizações de documentação, licença e qualidade geral da API
 
 ---
 
@@ -727,7 +768,7 @@ measure.add(Breath(type: BreathType.shortBreath)); // Respiração curta
 
 ---
 
-### Importação via JSON
+### Importação via JSON, MusicXML e MEI
 
 ```dart
 import 'package:flutter_notemus/flutter_notemus.dart';
@@ -750,11 +791,147 @@ final jsonString = '''
 }
 ''';
 
-final staff = JsonParser.parseStaff(jsonString);
+final musicXmlString = '''
+<score-partwise version="4.0">
+  <part-list>
+    <score-part id="P1"><part-name>Music</part-name></score-part>
+  </part-list>
+  <part id="P1">
+    <measure number="1">
+      <attributes>
+        <clef><sign>G</sign><line>2</line></clef>
+        <time><beats>4</beats><beat-type>4</beat-type></time>
+      </attributes>
+      <note>
+        <pitch><step>C</step><octave>5</octave></pitch>
+        <duration>1</duration>
+        <voice>1</voice>
+        <type>quarter</type>
+      </note>
+    </measure>
+  </part>
+</score-partwise>
+''';
 
-// Use normalmente:
-MusicScore(staff: staff)
+final meiString = '''
+<mei xmlns="http://www.music-encoding.org/ns/mei">
+  <music>
+    <body>
+      <mdiv>
+        <score>
+          <section>
+            <measure n="1">
+              <staff n="1">
+                <layer n="1">
+                  <note pname="c" oct="5" dur="4"/>
+                </layer>
+              </staff>
+            </measure>
+          </section>
+        </score>
+      </mdiv>
+    </body>
+  </music>
+</mei>
+''';
+
+final jsonStaff = JsonMusicParser.parseStaff(jsonString);
+final musicXmlStaff = MusicXMLParser.parseMusicXML(musicXmlString);
+final meiStaff = MEIParser.parseMEI(meiString);
+
+final autoDetectedStaff = NotationParser.parseStaff(musicXmlString);
+
+final scoreFromJson = MusicScore.fromJson(json: jsonString);
+final scoreFromMusicXml = MusicScore.fromMusicXml(musicXml: musicXmlString);
+final scoreFromMei = MusicScore.fromMei(mei: meiString);
+final scoreFromAnySource = MusicScore.fromSource(source: meiString);
 ```
+
+Convenções suportadas pelos importadores:
+
+- JSON: cobertura completa da API pública de elementos renderizáveis do pacote.
+- MusicXML: `score-partwise` e `score-timewise`, seleção por `partIndex`, importando claves, armaduras, fórmulas de compasso, notas, acordes, pausas, tuplets, dinâmicas, textos, respiração, césura, voltas, repetições e marcas de oitava.
+- MEI: seleção por `staffIndex`, importando `layer`, `repeatMark`, `barLine`, `measure@right/@left`, claves, armaduras, compassos, notas, acordes, pausas, tuplets, dinâmicas, textos, respiração, césura, voltas e marcas de oitava.
+
+Observações práticas:
+
+- Use `NotationParser.parseStaff()` ou `MusicScore.fromSource()` quando o banco puder armazenar mais de um formato.
+- Use `partIndex` para escolher uma parte específica em MusicXML multipart.
+- Use `staffIndex` para escolher uma pauta específica em MEI com múltiplos `<staff>`.
+- Os três importadores convertem os dados para a mesma estrutura interna, então o pipeline de layout e renderização é o mesmo após o parse.
+
+---
+
+### MIDI: mapeamento, repetições, metrônomo e export .mid
+
+O módulo MIDI é exposto separadamente para manter a API de renderização limpa:
+
+```dart
+import 'package:flutter_notemus/midi.dart';
+```
+
+#### 1) Gerar sequência MIDI a partir de uma pauta (`Staff`)
+
+```dart
+final sequence = MidiMapper.fromStaff(
+  staff,
+  options: const MidiGenerationOptions(
+    ticksPerQuarter: 960,
+    defaultBpm: 120,
+    includeMetronome: true,
+  ),
+);
+```
+
+Recursos cobertos pelo mapper:
+- Notas, acordes, pausas, tuplets e polifonia
+- `TempoMark` e `TimeSignature`
+- Repetições com barline (`repeatForward`, `repeatBackward`, `repeatBoth`)
+- Finais de repetição com `VoltaBracket`
+- Tie merge para notas ligadas
+
+#### 2) Gerar sequência MIDI a partir de uma partitura completa (`Score`)
+
+```dart
+final sequence = MidiMapper.fromScore(
+  score,
+  options: MidiGenerationOptions(
+    instrumentsByStaff: {
+      0: const MidiInstrumentAssignment(channel: 0, program: 0),   // Piano RH
+      1: const MidiInstrumentAssignment(channel: 1, program: 32),  // Piano LH/Bass
+    },
+    includeMetronome: true,
+  ),
+);
+```
+
+#### 3) Exportar `.mid` (Standard MIDI File)
+
+```dart
+final bytes = MidiFileWriter.write(sequence);
+// bytes prontos para salvar/enviar como arquivo .mid
+```
+
+#### 4) Contrato para backend nativo de baixa latência
+
+Para integração com engine própria em C/C++ (clock mestre, playback sample-accurate, SoundFont), a biblioteca já inclui o contrato:
+
+```dart
+abstract class MidiNativeAudioBackend { ... }
+```
+
+Esse contrato permite plugar backend nativo sem alterar o pipeline de notação -> MIDI.
+
+#### 5) Viabilidade C/C++ para áudio, clock mestre e metrônomo
+
+É viável implementar no próprio `flutter_notemus` um backend nativo C/C++ de alta performance, usando o pipeline:
+
+- Mapper Dart (`MidiMapper`) para gerar eventos PPQ determinísticos
+- Bridge nativa (FFI/platform channel) para enviar eventos ao engine
+- Sequencer nativo sample-accurate para clock mestre e tie processing
+- Synth SoundFont nativo para timbres e clique de metrônomo
+
+Esse desenho mantém a biblioteca independente no nível de API (sem dependências de pacote para o mapeamento/export MIDI) e permite evolução para playback de baixa latência por plataforma.
 
 ---
 
@@ -793,7 +970,7 @@ MusicScore(
 
 ## Formato JSON de referência
 
-O `JsonParser.parseStaff()` aceita o seguinte formato:
+`JsonMusicParser.parseStaff()` aceita o seguinte formato:
 
 ```json
 {
@@ -884,6 +1061,7 @@ O `JsonParser.parseStaff()` aceita o seguinte formato:
 flutter_notemus/
 ├── lib/
 │   ├── flutter_notemus.dart        # Ponto de entrada público
+│   ├── midi.dart                   # API pública do módulo MIDI
 │   ├── core/                       # Modelo de dados musical
 │   │   ├── note.dart               # Note, Pitch, ArticulationType
 │   │   ├── duration.dart           # Duration, DurationType
@@ -909,6 +1087,11 @@ flutter_notemus/
 │   │   ├── breath.dart             # Breath, BreathType
 │   │   └── score.dart              # Score, StaffGroup
 │   └── src/
+│       ├── midi/
+│       │   ├── midi_models.dart          # Eventos, tracks, sequência e opções
+│       │   ├── midi_mapper.dart          # Notação -> timeline MIDI
+│       │   ├── midi_file_writer.dart     # Escrita de arquivo .mid (SMF)
+│       │   └── native_audio_contract.dart # Contrato para backend nativo
 │       ├── layout/
 │       │   ├── layout_engine.dart          # Posicionamento de elementos
 │       │   └── collision_detector.dart     # Detecção de colisão (skyline)
@@ -930,7 +1113,10 @@ flutter_notemus/
 │       ├── smufl/
 │       │   └── smufl_metadata_loader.dart  # Carregamento de bravura_metadata.json
 │       ├── parsers/
-│       │   └── json_parser.dart            # Importação via JSON
+│       │   ├── notation_parser.dart        # Auto-detecção de formato
+│       │   ├── json_parser.dart            # Importação via JSON
+│       │   ├── musicxml_parser.dart        # Importação/exportação MusicXML
+│       │   └── mei_parser.dart             # Importação MEI
 │       └── theme/
 │           └── music_score_theme.dart      # Sistema de temas
 ├── assets/
