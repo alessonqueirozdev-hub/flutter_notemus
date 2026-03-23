@@ -42,6 +42,9 @@ abstract class MidiNativeAudioBackend {
   /// Sets current sequencer tempo.
   Future<void> setTempo(int bpm);
 
+  /// Sets ticks-per-quarter resolution used by scheduled PPQ events.
+  Future<void> setTicksPerQuarter(int ticksPerQuarter);
+
   /// Sets current sequencer time signature.
   Future<void> setTimeSignature({
     required int numerator,

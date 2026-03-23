@@ -142,6 +142,7 @@ Suporte a JSON, MusicXML (`score-partwise` e `score-timewise`) e MEI, com normal
 - Geração de trilha de metrônomo (canal de percussão) sincronizada com o timeline expandido
 - Exportação de arquivo Standard MIDI File (`.mid`) sem dependências externas via `MidiFileWriter`
 - Implementação nativa first-party via `MethodChannelMidiNativeAudioBackend` + `MidiNativeSequenceBridge` para envio de tempo/compasso/notas/ties/metrônomo ao backend de áudio
+- Configuração de plugin para Android, iOS, macOS, Linux e Windows com canal unificado `flutter_notemus/native_audio`
 
 ### Personalização visual
 Tema completo com controle individual de cor para cada elemento: pauta, cabeça de nota, haste, clave, barra de compasso, articulação, dinâmica, ligadura, beam, acidente, marcação de oitava, texto e muito mais.
@@ -161,6 +162,7 @@ Neste repositório, a versão alvo já está em **`2.0.0`**, com trabalho **alé
 - Trilha de metrônomo derivada da partitura
 - Writer `.mid` embutido (`MidiFileWriter`)
 - Integração nativa pronta para engine própria (MethodChannel + sequence bridge), mantendo o pipeline MIDI first-party da biblioteca
+- Configuração nativa em todas as plataformas (Android ativo; iOS/macOS/Linux/Windows com stubs de integração)
 - Melhorias contínuas de parser/layout/renderização acumuladas após a publicação
 
 ---
@@ -921,6 +923,7 @@ A biblioteca já inclui implementação first-party para ponte com engine nativa
 - `MethodChannelMidiNativeAudioBackend`: backend pronto para platform channel (`flutter_notemus/native_audio`)
 - `MidiNativeSequenceBridge`: upload da `MidiSequence` para o backend (tempo, compasso, notas, tie-processing e metrônomo)
 - `extractScheduledNotes`: conversão de pares note-on/note-off em notas agendadas com duração em ticks
+- `setTicksPerQuarter`: sincronização explícita de resolução PPQ entre mapper e sequencer nativo
 
 ```dart
 final backend = MethodChannelMidiNativeAudioBackend();
@@ -938,6 +941,10 @@ await bridge.uploadAndStart(
   countInBeats: 1,
 );
 ```
+
+Status atual por plataforma:
+- Android: engine nativo ativo (Kotlin + C++) com clock próprio, sequencer PPQ, metronome e síntese PCM first-party sem dependências externas.
+- iOS/macOS/Linux/Windows: plugin registrado com o mesmo canal (`flutter_notemus/native_audio`) e handlers stubs/no-op para manter API estável até a implementação completa do engine nativo em cada alvo.
 
 #### 5) Viabilidade C/C++ para áudio, clock mestre e metrônomo
 
@@ -1146,6 +1153,11 @@ flutter_notemus/
 │       ├── Bravura.otf             # Fonte SMuFL (SIL OFL 1.1)
 │       ├── bravura_metadata.json   # Âncoras, bounding boxes, codepoints
 │       └── glyphnames.json         # Mapeamento nome → codepoint Unicode
+├── android/                        # Plugin Android (Kotlin + C++ engine)
+├── ios/                            # Plugin iOS (Swift bridge)
+├── macos/                          # Plugin macOS (Swift bridge)
+├── linux/                          # Plugin Linux (C++ bridge)
+├── windows/                        # Plugin Windows (C++ bridge)
 └── example/                        # App de demonstração com 35 exemplos
 ```
 

@@ -37,6 +37,7 @@ void main() {
       );
       expect(initialized, isTrue);
 
+      await backend.setTicksPerQuarter(960);
       await backend.setTempo(132);
       await backend.setTimeSignature(numerator: 6, denominator: 8);
       await backend.clearScheduledEvents();
@@ -60,6 +61,7 @@ void main() {
 
       expect(calls.map((call) => call.method), [
         'nativeInitialize',
+        'nativeSequencerSetTicksPerQuarter',
         'nativeSequencerSetTempo',
         'nativeSequencerSetTimeSignature',
         'nativeSequencerClear',
@@ -124,6 +126,7 @@ void main() {
       );
 
       expect(backend.cleared, isTrue);
+      expect(backend.ticksPerQuarter, 960);
       expect(backend.tempo, 120);
       expect(backend.timeSignatureNumerator, 4);
       expect(backend.timeSignatureDenominator, 4);
@@ -179,6 +182,7 @@ class _FakeNativeBackend implements MidiNativeAudioBackend {
   bool disposed = false;
   bool cleared = false;
   bool processTiesCalled = false;
+  int? ticksPerQuarter;
   int? tempo;
   int? timeSignatureNumerator;
   int? timeSignatureDenominator;
@@ -250,6 +254,11 @@ class _FakeNativeBackend implements MidiNativeAudioBackend {
   @override
   Future<void> setTempo(int bpm) async {
     tempo = bpm;
+  }
+
+  @override
+  Future<void> setTicksPerQuarter(int ticksPerQuarter) async {
+    this.ticksPerQuarter = ticksPerQuarter;
   }
 
   @override

@@ -20,12 +20,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Native backend contract (`MidiNativeAudioBackend`) for low-latency C/C++ audio engines
 - MethodChannel native backend (`MethodChannelMidiNativeAudioBackend`) with default JNI-style method map
 - Native sequence bridge (`MidiNativeSequenceBridge`) to upload tempo/signature/notes/metronome and trigger tie processing
+- PPQ sync method (`setTicksPerQuarter`) for deterministic native timing alignment
+- Android native plugin implementation (Kotlin + C++) with dedicated sequencer clock and PCM synthesis pipeline
+- Plugin configuration for iOS, macOS, Linux, and Windows with unified `flutter_notemus/native_audio` channel
 - Unit tests for MIDI mapping, file export, and native integration bridge
 
 ### Changed
 
 - Public API now includes MIDI exports through `flutter_notemus.dart` and `midi.dart`
 - README updated with version status, post-`0.1.0` evolution summary, and explicit 2.0.0 native MIDI integration notes
+- Native backend state clarified per platform (Android active, remaining platforms configured with stubs)
 
 ### Notes
 

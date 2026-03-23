@@ -36,6 +36,7 @@ class MidiNativeSequenceBridge {
     bool includeMetronomeTrackNotes = false,
   }) async {
     await backend.clearScheduledEvents();
+    await backend.setTicksPerQuarter(sequence.ticksPerQuarter);
 
     final tempo = _extractInitialTempo(sequence) ?? fallbackTempoBpm;
     await backend.setTempo(tempo);

@@ -14,6 +14,7 @@ class MidiNativeMethodNames {
   final String scheduleNote;
   final String scheduleMetronome;
   final String setTempo;
+  final String setTicksPerQuarter;
   final String setTimeSignature;
   final String clearScheduledEvents;
   final String processTies;
@@ -27,6 +28,7 @@ class MidiNativeMethodNames {
     this.scheduleNote = 'nativeSequencerAddNote',
     this.scheduleMetronome = 'nativeSequencerAddMetronome',
     this.setTempo = 'nativeSequencerSetTempo',
+    this.setTicksPerQuarter = 'nativeSequencerSetTicksPerQuarter',
     this.setTimeSignature = 'nativeSequencerSetTimeSignature',
     this.clearScheduledEvents = 'nativeSequencerClear',
     this.processTies = 'nativeSequencerProcessTies',
@@ -110,6 +112,13 @@ class MethodChannelMidiNativeAudioBackend implements MidiNativeAudioBackend {
   @override
   Future<void> setTempo(int bpm) {
     return channel.invokeMethod<void>(methods.setTempo, {'bpm': bpm});
+  }
+
+  @override
+  Future<void> setTicksPerQuarter(int ticksPerQuarter) {
+    return channel.invokeMethod<void>(methods.setTicksPerQuarter, {
+      'ticksPerQuarter': ticksPerQuarter,
+    });
   }
 
   @override

@@ -41,6 +41,19 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.alessonqueiroz.flutternotemus
+        pluginClass: FlutterNotemusPlugin
+      ios:
+        pluginClass: FlutterNotemusPlugin
+      linux:
+        pluginClass: FlutterNotemusPlugin
+      macos:
+        pluginClass: FlutterNotemusPlugin
+      windows:
+        pluginClass: FlutterNotemusPluginCApi
   # Para que a aplicação que usar seu pacote possa acessar os assets
   assets:
     - assets/smufl/bravura_metadata.json # CORRIGIDO
