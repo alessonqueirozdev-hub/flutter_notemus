@@ -22,7 +22,7 @@ class ImprovementsDemoApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'SMuFL Renderer - Melhorias Completas',
+      title: 'Flutter Notemus - Melhorias Completas',
       theme: ThemeData(
         primarySwatch: Colors.blue,
         brightness: Brightness.light,
@@ -47,7 +47,7 @@ class _ImprovementsDemoPageState extends State<ImprovementsDemoPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('SMuFL Renderer - Melhorias v0.3.0'),
+        title: const Text('Flutter Notemus - Melhorias v0.3.0'),
         actions: [
           IconButton(
             icon: Icon(
