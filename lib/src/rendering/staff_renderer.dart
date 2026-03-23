@@ -455,20 +455,47 @@ class StaffRenderer {
     } else if (element is Caesura) {
       symbolAndTextRenderer.renderCaesura(canvas, element, basePosition);
     } else if (element is OctaveMark) {
-      symbolAndTextRenderer.renderOctaveMark(canvas, element, basePosition);
+      final desiredEndX =
+          basePosition.dx +
+          (element.length > 0 ? element.length : coordinates.staffSpace * 3);
+      final endAnchorX =
+          _findNextBarlineAnchorX(
+            allElements,
+            index,
+            positioned.system,
+            desiredEndX,
+            side: _BarlineAnchorSide.left,
+            minimumX: basePosition.dx,
+          ) ??
+          desiredEndX;
+
+      symbolAndTextRenderer.renderOctaveMark(
+        canvas,
+        element,
+        basePosition,
+        startX: basePosition.dx,
+        endX: endAnchorX > basePosition.dx ? endAnchorX : desiredEndX,
+      );
     } else if (element is VoltaBracket) {
       final startAnchorX =
-          _findPreviousBarlineX(allElements, index, positioned.system) ??
+          _findPreviousBarlineAnchorX(
+            allElements,
+            index,
+            positioned.system,
+            side: _BarlineAnchorSide.right,
+          ) ??
           basePosition.dx;
       final desiredRightX =
-          basePosition.dx +
+          startAnchorX +
           (element.length > 0 ? element.length : coordinates.staffSpace * 4);
       final endAnchorX =
-          _findVoltaRightAnchorX(
+          _findNextBarlineAnchorX(
             allElements,
             index,
             positioned.system,
             desiredRightX,
+            side: _BarlineAnchorSide.left,
+            minimumX: startAnchorX,
           ) ??
           desiredRightX;
 
@@ -482,33 +509,38 @@ class StaffRenderer {
     }
   }
 
-  double? _findPreviousBarlineX(
+  double? _findPreviousBarlineAnchorX(
     List<PositionedElement> elements,
     int fromIndex,
-    int system,
-  ) {
+    int system, {
+    required _BarlineAnchorSide side,
+  }) {
     for (int i = fromIndex - 1; i >= 0; i--) {
       final positioned = elements[i];
       if (positioned.system != system) continue;
       if (positioned.element is Barline) {
-        return positioned.position.dx;
+        return _barlineAnchorX(positioned, side: side);
       }
     }
     return null;
   }
 
-  double? _findVoltaRightAnchorX(
+  double? _findNextBarlineAnchorX(
     List<PositionedElement> elements,
     int fromIndex,
     int system,
-    double desiredRightX,
-  ) {
+    double desiredRightX, {
+    required _BarlineAnchorSide side,
+    double? minimumX,
+  }) {
     final candidates = <double>[];
     for (int i = fromIndex + 1; i < elements.length; i++) {
       final positioned = elements[i];
       if (positioned.system != system) continue;
       if (positioned.element is Barline) {
-        candidates.add(positioned.position.dx);
+        final anchorX = _barlineAnchorX(positioned, side: side);
+        if (minimumX != null && anchorX <= minimumX + 0.01) continue;
+        candidates.add(anchorX);
       }
     }
 
@@ -528,4 +560,128 @@ class StaffRenderer {
     }
     return best;
   }
+
+  double _barlineAnchorX(
+    PositionedElement positioned, {
+    required _BarlineAnchorSide side,
+  }) {
+    final element = positioned.element;
+    if (element is! Barline) return positioned.position.dx;
+
+    final x = positioned.position.dx;
+    final barline = element;
+    final thin =
+        metadata.getEngravingDefault('thinBarlineThickness') *
+        coordinates.staffSpace;
+    final thick =
+        metadata.getEngravingDefault('thickBarlineThickness') *
+        coordinates.staffSpace;
+    final glyphWidth = _barlineGlyphWidth(barline.type, thin, thick);
+
+    double leftCenter;
+    double rightCenter;
+
+    switch (barline.type) {
+      case BarlineType.double:
+      case BarlineType.lightLight:
+        leftCenter = x + (thin * 0.5);
+        rightCenter = x + glyphWidth - (thin * 0.5);
+        break;
+      case BarlineType.final_:
+      case BarlineType.lightHeavy:
+        leftCenter = x + (thin * 0.5);
+        rightCenter = x + glyphWidth - (thick * 0.5);
+        break;
+      case BarlineType.heavyLight:
+        leftCenter = x + (thick * 0.5);
+        rightCenter = x + glyphWidth - (thin * 0.5);
+        break;
+      case BarlineType.heavyHeavy:
+        leftCenter = x + (thick * 0.5);
+        rightCenter = x + glyphWidth - (thick * 0.5);
+        break;
+      case BarlineType.repeatForward:
+        leftCenter = x + (thin * 0.5);
+        rightCenter = leftCenter + (thin * 1.8);
+        break;
+      case BarlineType.repeatBackward:
+        rightCenter = x + glyphWidth - (thin * 0.5);
+        leftCenter = rightCenter - (thin * 1.8);
+        break;
+      case BarlineType.repeatBoth:
+        leftCenter = x + (thin * 0.5);
+        rightCenter = x + glyphWidth - (thin * 0.5);
+        break;
+      case BarlineType.single:
+      case BarlineType.dashed:
+      case BarlineType.heavy:
+      case BarlineType.tick:
+      case BarlineType.short_:
+      case BarlineType.none:
+        leftCenter = x + (glyphWidth * 0.5);
+        rightCenter = leftCenter;
+        break;
+    }
+
+    return side == _BarlineAnchorSide.left ? leftCenter : rightCenter;
+  }
+
+  double _barlineGlyphWidth(BarlineType type, double thin, double thick) {
+    final glyphName = _barlineGlyphName(type);
+    if (glyphName != null) {
+      final width = metadata.getGlyphWidth(glyphName) * coordinates.staffSpace;
+      if (width > 0) return width;
+    }
+
+    switch (type) {
+      case BarlineType.double:
+      case BarlineType.lightLight:
+        return (thin * 2) + (coordinates.staffSpace * 0.3);
+      case BarlineType.final_:
+      case BarlineType.lightHeavy:
+      case BarlineType.heavyLight:
+        return thin + thick + (coordinates.staffSpace * 0.3);
+      case BarlineType.heavyHeavy:
+        return (thick * 2) + (coordinates.staffSpace * 0.3);
+      case BarlineType.repeatForward:
+      case BarlineType.repeatBackward:
+      case BarlineType.repeatBoth:
+        return coordinates.staffSpace * 1.5;
+      default:
+        return thin;
+    }
+  }
+
+  String? _barlineGlyphName(BarlineType type) {
+    switch (type) {
+      case BarlineType.single:
+        return 'barlineSingle';
+      case BarlineType.double:
+      case BarlineType.lightLight:
+        return 'barlineDouble';
+      case BarlineType.final_:
+      case BarlineType.lightHeavy:
+        return 'barlineFinal';
+      case BarlineType.repeatForward:
+        return 'repeatLeft';
+      case BarlineType.repeatBackward:
+        return 'repeatRight';
+      case BarlineType.repeatBoth:
+        return 'repeatLeftRight';
+      case BarlineType.dashed:
+        return 'barlineDashed';
+      case BarlineType.heavy:
+      case BarlineType.heavyHeavy:
+      case BarlineType.heavyLight:
+        return 'barlineHeavy';
+      case BarlineType.tick:
+        return 'barlineTick';
+      case BarlineType.short_:
+        return 'barlineShort';
+      case BarlineType.none:
+        return null;
+    }
+  }
 }
+
+enum _BarlineAnchorSide { left, right }
