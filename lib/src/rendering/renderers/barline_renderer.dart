@@ -14,7 +14,7 @@ class BarlineRenderer {
   // 🎚️ CONSTANTES DE AJUSTE MANUAL
   // Ajuste o tamanho vertical das barlines (multiplicador de staff spaces)
   static const double barlineHeightMultiplier =
-      4.10; // Padrão: 4 SS (linha 1 a 5)
+      4.0; // Padrão: 4 SS exatos (linha 1 a 5)
 
   // Ajuste Y offset (em staff spaces) - positivo = para baixo, negativo = para cima
   // ⚠️ IMPORTANTE: -2.0 é o valor CORRETO!
@@ -23,7 +23,7 @@ class BarlineRenderer {
   // Sistema de coordenadas do pentagrama é centrado na linha 3
   // Offset -2.0 posiciona a baseline do glyph na linha 5 (Y:-2)
   // Fazendo o topo do glyph (baseline + 4.0) ficar na linha 1 (Y:+2)
-  static const double barlineYOffset = -2.05;
+  static const double barlineYOffset = -2.0;
 
   // Ajuste X offset (em staff spaces) - positivo = direita, negativo = esquerda
   static const double barlineXOffset = 0.0; // Padrão: sem offset

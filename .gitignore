@@ -31,3 +31,10 @@ migrate_working_dir/
 build/
 docs
 .claude
+.vercel
+# Local temp plugin sandboxes
+temp_notemus_multiplatform/
+temp_notemus_plugin/
+
+# Generated Flutter registrant (Android app)
+android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java

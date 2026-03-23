@@ -191,35 +191,35 @@ class ChordRenderer extends BaseGlyphRenderer {
     List<Note> allNotes,
     List<int> positions,
   ) {
-    // CORREÇÃO TIPOGRÁFICA: Implementar escalonamento de acidentes em acordes
-    // Acidentes de notas adjacentes (intervalo de 2ª) devem ser escalonados horizontalmente
-    double accidentalOffset = coordinates.staffSpace * 0.75;
+    final accidentalGlyph = note.pitch.accidentalGlyph!;
 
-    // Verificar se há notas adjacentes acima ou abaixo com acidentes
+    // Largura real do acidente vinda do metadata (em staff spaces)
+    final accidentalWidth = metadata.getGlyphWidth(accidentalGlyph);
+
+    // Behind Bars: clearance de ~0.16 SS entre borda direita do acidente e borda esquerda da nota
+    const clearance = 0.16;
+    final baseOffset = (accidentalWidth + clearance) * coordinates.staffSpace;
+
+    // Escalonamento horizontal para acidentes em notas adjacentes (intervalo de 2ª)
     int stackLevel = 0;
     for (int i = 0; i < noteIndex; i++) {
       if (allNotes[i].pitch.accidentalGlyph != null) {
-        final positionDiff = (positions[noteIndex] - positions[i]).abs();
-        if (positionDiff <= 1) {
-          // Notas adjacentes (intervalo de 2ª), escalonar acidente
+        if ((positions[noteIndex] - positions[i]).abs() <= 1) {
           stackLevel++;
         }
       }
     }
 
-    // Cada nível adicional move o acidente mais para a esquerda
-    final accidentalX =
-        notePos.dx -
-        accidentalOffset -
-        (stackLevel * coordinates.staffSpace * 0.6);
+    // Borda ESQUERDA do acidente posicionada com clearance correto
+    // (sem centerHorizontally: a posição é a borda esquerda do glifo)
+    final accidentalX = notePos.dx - baseOffset - (stackLevel * coordinates.staffSpace * 0.6);
 
-    // MELHORIA: Usar drawGlyphWithBBox herdado
     drawGlyphWithBBox(
       canvas,
-      glyphName: note.pitch.accidentalGlyph!,
+      glyphName: accidentalGlyph,
       position: Offset(accidentalX, notePos.dy),
       color: theme.accidentalColor ?? theme.noteheadColor,
-      options: GlyphDrawOptions.accidentalDefault,
+      options: const GlyphDrawOptions(trackBounds: true),
     );
   }
 

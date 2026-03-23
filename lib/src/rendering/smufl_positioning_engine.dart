@@ -163,32 +163,29 @@ class SMuFLPositioningEngine {
     required int beamCount,
     bool isBeamed = false,
   }) {
+    // Comprimento base: 3.5 staff spaces (Behind Bars, p.47)
     double length = standardStemLength;
 
-    // CORREÇÃO CRÍTICA: Hastes devem ter comprimento FIXO de 3.5 staff spaces
-    // Segundo Elaine Gould (Behind Bars) e Ted Ross,
-    // hastes NÃO devem se estender até a pauta em notas com linhas suplementares.
-    // A extensão deve ser MÍNIMA, apenas o suficiente para clareza visual.
-    
-    // Para notas MUITO distantes (mais de 2 linhas suplementares),
-    // adicionar PEQUENA extensão (máximo 0.5 staff space)
-    if (stemUp && staffPosition < -6) {
-      // Nota muito abaixo da pauta
-      final double extensionNeeded = ((-6 - staffPosition) / 4) * 0.25;
-      length = (standardStemLength + extensionNeeded).clamp(
-        standardStemLength,
-        4.0, // Máximo 4.0 staff spaces (não 5.5!)
-      );
-    } else if (!stemUp && staffPosition > 6) {
-      // Nota muito acima da pauta
-      final double extensionNeeded = ((staffPosition - 6) / 4) * 0.25;
-      length = (standardStemLength + extensionNeeded).clamp(
-        standardStemLength,
-        4.0, // Máximo 4.0 staff spaces (não 5.5!)
-      );
+    // Behind Bars (p.47): "The stem must reach the middle line of the staff."
+    // Se o comprimento padrão não for suficiente para alcançar a linha do meio,
+    // estender a haste até ela.
+    //
+    // staffPosition em meios de staff space; distância à linha 3 (staffPos=0):
+    //   distância (em SS) = |staffPosition| * 0.5
+    //
+    // Para haste para CIMA (stemUp): se a nota está ABAIXO da linha do meio (staffPos < 0),
+    // a haste deve alcançar a linha do meio.
+    // Para haste para BAIXO (!stemUp): se a nota está ACIMA da linha do meio (staffPos > 0),
+    // a haste deve alcançar a linha do meio.
+    if (stemUp && staffPosition < 0) {
+      final distanceToMiddle = (-staffPosition) * 0.5; // em SS
+      if (distanceToMiddle > length) length = distanceToMiddle;
+    } else if (!stemUp && staffPosition > 0) {
+      final distanceToMiddle = staffPosition * 0.5;
+      if (distanceToMiddle > length) length = distanceToMiddle;
     }
 
-    // Adicionar comprimento extra para múltiplos feixes
+    // Extensão adicional para múltiplos feixes (beams)
     if (!isBeamed && beamCount > 0) {
       length += (beamCount - 1) * stemExtensionPerBeam;
     }
