@@ -35,13 +35,13 @@ class StaffRenderer {
   // Fórmula: endX = bounds.endX + (staffSpace + systemEndMargin)
   //
   // Aplica-se a:
-  //   - BarlineType.single (barra simples) 
+  //   - BarlineType.single (barra simples)
   //   - BarlineType.double (barra dupla)
   //   - BarlineType.dashed (barra tracejada)
   //   - Todos os tipos EXCETO BarlineType.final_
   //
   // Valores sugeridos:
-  //   -12.0 = Linhas terminam exatamente na barra de compasso 
+  //   -12.0 = Linhas terminam exatamente na barra de compasso
   //    0.0 = Margem padrão de 1 staff space
   //   -3.0 = Linhas terminam um pouco antes da barra
   static const double systemEndMargin =
@@ -140,7 +140,8 @@ class StaffRenderer {
     beamRenderer = BeamRenderer(
       theme: theme,
       staffSpace: coordinates.staffSpace,
-      noteheadWidth: metadata.getGlyphWidth('noteheadBlack') * coordinates.staffSpace,
+      noteheadWidth:
+          metadata.getGlyphWidth('noteheadBlack') * coordinates.staffSpace,
       positioningEngine: positioningEngine,
     );
 
@@ -207,7 +208,7 @@ class StaffRenderer {
       restRenderer: restRenderer,
       positioningEngine: positioningEngine,
     );
-    
+
     // ✅ Inicializar SlurRenderer profissional
     slurRenderer = SlurRenderer(
       staffSpace: coordinates.staffSpace,
@@ -219,28 +220,28 @@ class StaffRenderer {
   final Set<Note> _notesInAdvancedBeams = {};
 
   void renderStaff(
-    Canvas canvas, 
-    List<PositionedElement> elements, 
-    Size size,
-    {LayoutEngine? layoutEngine}
-  ) {
+    Canvas canvas,
+    List<PositionedElement> elements,
+    Size size, {
+    LayoutEngine? layoutEngine,
+  }) {
     // Limpar set de notas beamed
     _notesInAdvancedBeams.clear();
-    
+
     // Coletar notas que estão em advanced beam groups
     if (layoutEngine != null) {
       for (final group in layoutEngine.advancedBeamGroups) {
         _notesInAdvancedBeams.addAll(group.notes);
       }
     }
-    
+
     // Desenhar linhas do pentagrama POR SISTEMA
     _drawStaffLinesBySystem(canvas, elements);
     currentClef = Clef(clefType: ClefType.treble); // Default clef
 
     // Primeira passagem: renderizar elementos individuais
-    for (final positioned in elements) {
-      _renderElement(canvas, positioned);
+    for (int i = 0; i < elements.length; i++) {
+      _renderElement(canvas, elements[i], elements, i);
     }
 
     // Segunda passagem: renderizar ADVANCED BEAMS (se disponível)
@@ -269,7 +270,10 @@ class StaffRenderer {
       final skylineCalc = SkyBottomLineCalculator();
       if (elements.isNotEmpty) {
         final maxX =
-            elements.fold(0.0, (m, e) => e.position.dx > m ? e.position.dx : m) +
+            elements.fold(
+              0.0,
+              (m, e) => e.position.dx > m ? e.position.dx : m,
+            ) +
             coordinates.staffSpace * 2;
         skylineCalc.initialize(maxX);
         for (final pe in elements) {
@@ -388,7 +392,12 @@ class StaffRenderer {
     }
   }
 
-  void _renderElement(Canvas canvas, PositionedElement positioned) {
+  void _renderElement(
+    Canvas canvas,
+    PositionedElement positioned,
+    List<PositionedElement> allElements,
+    int index,
+  ) {
     final element = positioned.element;
     final basePosition = positioned.position;
 
@@ -415,11 +424,22 @@ class StaffRenderer {
         voiceNumber: positioned.voiceNumber,
       );
     } else if (element is Rest) {
-      restRenderer.render(canvas, element, basePosition, voiceNumber: positioned.voiceNumber);
+      restRenderer.render(
+        canvas,
+        element,
+        basePosition,
+        voiceNumber: positioned.voiceNumber,
+      );
     } else if (element is Barline) {
       barlineRenderer.render(canvas, element, basePosition);
     } else if (element is Chord && currentClef != null) {
-      chordRenderer.render(canvas, element, basePosition, currentClef!, voiceNumber: positioned.voiceNumber);
+      chordRenderer.render(
+        canvas,
+        element,
+        basePosition,
+        currentClef!,
+        voiceNumber: positioned.voiceNumber,
+      );
     } else if (element is Tuplet && currentClef != null) {
       tupletRenderer.render(canvas, element, basePosition, currentClef!);
     } else if (element is RepeatMark) {
@@ -437,7 +457,75 @@ class StaffRenderer {
     } else if (element is OctaveMark) {
       symbolAndTextRenderer.renderOctaveMark(canvas, element, basePosition);
     } else if (element is VoltaBracket) {
-      symbolAndTextRenderer.renderVoltaBracket(canvas, element, basePosition);
+      final startAnchorX =
+          _findPreviousBarlineX(allElements, index, positioned.system) ??
+          basePosition.dx;
+      final desiredRightX =
+          basePosition.dx +
+          (element.length > 0 ? element.length : coordinates.staffSpace * 4);
+      final endAnchorX =
+          _findVoltaRightAnchorX(
+            allElements,
+            index,
+            positioned.system,
+            desiredRightX,
+          ) ??
+          desiredRightX;
+
+      symbolAndTextRenderer.renderVoltaBracket(
+        canvas,
+        element,
+        basePosition,
+        startX: startAnchorX,
+        endX: endAnchorX > startAnchorX ? endAnchorX : desiredRightX,
+      );
     }
+  }
+
+  double? _findPreviousBarlineX(
+    List<PositionedElement> elements,
+    int fromIndex,
+    int system,
+  ) {
+    for (int i = fromIndex - 1; i >= 0; i--) {
+      final positioned = elements[i];
+      if (positioned.system != system) continue;
+      if (positioned.element is Barline) {
+        return positioned.position.dx;
+      }
+    }
+    return null;
+  }
+
+  double? _findVoltaRightAnchorX(
+    List<PositionedElement> elements,
+    int fromIndex,
+    int system,
+    double desiredRightX,
+  ) {
+    final candidates = <double>[];
+    for (int i = fromIndex + 1; i < elements.length; i++) {
+      final positioned = elements[i];
+      if (positioned.system != system) continue;
+      if (positioned.element is Barline) {
+        candidates.add(positioned.position.dx);
+      }
+    }
+
+    if (candidates.isEmpty) {
+      return null;
+    }
+
+    var best = candidates.first;
+    var bestDistance = (best - desiredRightX).abs();
+    for (int i = 1; i < candidates.length; i++) {
+      final candidate = candidates[i];
+      final distance = (candidate - desiredRightX).abs();
+      if (distance < bestDistance) {
+        best = candidate;
+        bestDistance = distance;
+      }
+    }
+    return best;
   }
 }

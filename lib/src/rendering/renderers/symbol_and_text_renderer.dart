@@ -12,7 +12,8 @@ class SymbolAndTextRenderer {
   final SmuflMetadata metadata;
   final MusicScoreTheme theme;
   final double glyphSize;
-  final CollisionDetector? collisionDetector; // CORREÇÃO: Adicionar collision detector
+  final CollisionDetector?
+  collisionDetector; // CORREÇÃO: Adicionar collision detector
 
   SymbolAndTextRenderer({
     required this.coordinates,
@@ -60,9 +61,19 @@ class SymbolAndTextRenderer {
     return repeatGlyphs[type];
   }
 
-  void renderDynamic(Canvas canvas, Dynamic dynamic, Offset basePosition, {double verticalOffset = 0.0}) {
+  void renderDynamic(
+    Canvas canvas,
+    Dynamic dynamic,
+    Offset basePosition, {
+    double verticalOffset = 0.0,
+  }) {
     if (dynamic.isHairpin) {
-      _renderHairpin(canvas, dynamic, basePosition, verticalOffset: verticalOffset);
+      _renderHairpin(
+        canvas,
+        dynamic,
+        basePosition,
+        verticalOffset: verticalOffset,
+      );
       return;
     }
 
@@ -70,7 +81,9 @@ class SymbolAndTextRenderer {
     // CORREÇÃO TIPOGRÁFICA SMuFL: Dinâmicas devem ficar 2.5 staff spaces abaixo da última linha
     // CORREÇÃO LACERDA: Adicionar verticalOffset para evitar sobreposição
     final dynamicY =
-        coordinates.getStaffLineY(1) + (coordinates.staffSpace * 2.5) + verticalOffset;
+        coordinates.getStaffLineY(1) +
+        (coordinates.staffSpace * 2.5) +
+        verticalOffset;
 
     if (glyphName != null) {
       // CORREÇÃO SMuFL: Escala de dinâmicas não deveria ser hardcoded (0.9)
@@ -100,12 +113,19 @@ class SymbolAndTextRenderer {
     }
   }
 
-  void _renderHairpin(Canvas canvas, Dynamic dynamic, Offset basePosition, {double verticalOffset = 0.0}) {
+  void _renderHairpin(
+    Canvas canvas,
+    Dynamic dynamic,
+    Offset basePosition, {
+    double verticalOffset = 0.0,
+  }) {
     final length = dynamic.length ?? coordinates.staffSpace * 4;
     // CORREÇÃO: Usar mesma posição Y que dinâmicas
     // CORREÇÃO LACERDA: Adicionar verticalOffset para evitar sobreposição
     final hairpinY =
-        coordinates.getStaffLineY(1) + (coordinates.staffSpace * 2.5) + verticalOffset;
+        coordinates.getStaffLineY(1) +
+        (coordinates.staffSpace * 2.5) +
+        verticalOffset;
     // CORREÇÃO TIPOGRÁFICA SMuFL: Altura recomendada de 0.75-1.0 staff spaces
     final height = coordinates.staffSpace * 0.75;
 
@@ -253,7 +273,8 @@ class SymbolAndTextRenderer {
     OctaveMark octaveMark,
     Offset basePosition,
   ) {
-    final isAbove = octaveMark.type == OctaveType.va8 ||
+    final isAbove =
+        octaveMark.type == OctaveType.va8 ||
         octaveMark.type == OctaveType.va15 ||
         octaveMark.type == OctaveType.va22;
     final yPosition = isAbove
@@ -261,7 +282,8 @@ class SymbolAndTextRenderer {
         : coordinates.getStaffLineY(1) + (coordinates.staffSpace * 1.5);
 
     // 1. Draw the text label
-    final style = theme.octaveTextStyle ??
+    final style =
+        theme.octaveTextStyle ??
         const TextStyle(
           fontStyle: FontStyle.italic,
           fontWeight: FontWeight.bold,
@@ -311,13 +333,17 @@ class SymbolAndTextRenderer {
   void renderVoltaBracket(
     Canvas canvas,
     VoltaBracket bracket,
-    Offset basePosition,
-  ) {
+    Offset basePosition, {
+    double? startX,
+    double? endX,
+  }) {
     final yTop = coordinates.getStaffLineY(5) - (coordinates.staffSpace * 1.8);
-    final yBottom = coordinates.getStaffLineY(5) - (coordinates.staffSpace * 0.5);
-    final xLeft = basePosition.dx;
-    final xRight = basePosition.dx +
+    final yBottom = coordinates.getStaffLineY(5);
+    final xLeft = startX ?? basePosition.dx;
+    final fallbackRight =
+        basePosition.dx +
         (bracket.length > 0 ? bracket.length : coordinates.staffSpace * 4);
+    final xRight = endX ?? fallbackRight;
 
     final paint = Paint()
       ..color = theme.barlineColor
@@ -348,7 +374,10 @@ class SymbolAndTextRenderer {
     tp.layout();
     tp.paint(
       canvas,
-      Offset(xLeft + coordinates.staffSpace * 0.3, yTop + coordinates.staffSpace * 0.1),
+      Offset(
+        xLeft + coordinates.staffSpace * 0.3,
+        yTop + coordinates.staffSpace * 0.1,
+      ),
     );
   }
 
@@ -363,7 +392,11 @@ class SymbolAndTextRenderer {
     final gapLen = staffSpace * 0.3;
     double x = start.dx;
     while (x + dashLen < end.dx) {
-      canvas.drawLine(Offset(x, start.dy), Offset(x + dashLen, start.dy), paint);
+      canvas.drawLine(
+        Offset(x, start.dy),
+        Offset(x + dashLen, start.dy),
+        paint,
+      );
       x += dashLen + gapLen;
     }
   }
