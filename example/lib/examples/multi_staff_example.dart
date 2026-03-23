@@ -363,7 +363,7 @@ class _GrandStaffScoreState extends State<GrandStaffScore> {
                   bottomBaselineY: bottomBaselineY,
                   trebleElements: aligned.trebleElements,
                   bassElements: shiftedBass,
-                  barlineXs: aligned.sharedBarlineXs,
+                  barlines: aligned.sharedBarlines,
                   trebleLayout: trebleLayout,
                   bassLayout: bassLayout,
                 ),
@@ -379,180 +379,225 @@ class _GrandStaffScoreState extends State<GrandStaffScore> {
     required List<PositionedElement> trebleElements,
     required List<PositionedElement> bassElements,
   }) {
-    final trebleBoundaries = _extractMeasureBoundaries(trebleElements);
-    final bassBoundaries = _extractMeasureBoundaries(bassElements);
+    final trebleTimeline = _buildTimeline(trebleElements);
+    final bassTimeline = _buildTimeline(bassElements);
 
-    final segmentCount = math.max(
-        1, math.min(trebleBoundaries.length, bassBoundaries.length) - 1);
-    final trebleSourceBoundaries =
-        trebleBoundaries.take(segmentCount + 1).toList();
-    final bassSourceBoundaries = bassBoundaries.take(segmentCount + 1).toList();
-
-    final trebleStart = trebleSourceBoundaries.first;
-    final bassStart = bassSourceBoundaries.first;
-    final trebleEnd = trebleSourceBoundaries.last;
-    final bassEnd = bassSourceBoundaries.last;
-
-    final sharedStart = math.max(trebleStart, bassStart);
-    double sharedEnd = math.min(trebleEnd, bassEnd);
-    if (sharedEnd <= sharedStart) {
-      sharedEnd = math.max(trebleEnd, bassEnd);
-    }
-
-    final sharedBoundaries = <double>[sharedStart];
-    if (segmentCount > 1) {
-      for (int i = 1; i < segmentCount; i++) {
-        final trebleProgress = _safeProgress(
-          value: trebleSourceBoundaries[i],
-          start: trebleStart,
-          end: trebleEnd,
-        );
-        final bassProgress = _safeProgress(
-          value: bassSourceBoundaries[i],
-          start: bassStart,
-          end: bassEnd,
-        );
-        final targetProgress = math.max(trebleProgress, bassProgress);
-        var targetX =
-            sharedStart + ((sharedEnd - sharedStart) * targetProgress);
-
-        if (targetX <= sharedBoundaries.last) {
-          targetX = sharedBoundaries.last + 0.01;
+    final sharedAnchorsByKey = <String, _SharedTimelineAnchor>{};
+    void mergeAnchors(List<_TimedElementData> timeline) {
+      for (final item in timeline) {
+        final key = _timeKey(item.time);
+        final existing = sharedAnchorsByKey[key];
+        if (existing == null) {
+          sharedAnchorsByKey[key] = _SharedTimelineAnchor(
+            key: key,
+            time: item.time,
+            x: item.positioned.position.dx,
+            isBarline: item.isBarline,
+            barlineType: item.barlineType,
+          );
+          continue;
         }
-        sharedBoundaries.add(targetX);
+
+        final mergedX = math.max(existing.x, item.positioned.position.dx);
+        final mergedIsBarline = existing.isBarline || item.isBarline;
+        final mergedBarlineType = _preferBarlineType(
+          existing.barlineType,
+          item.barlineType,
+        );
+
+        sharedAnchorsByKey[key] = _SharedTimelineAnchor(
+          key: key,
+          time: existing.time,
+          x: mergedX,
+          isBarline: mergedIsBarline,
+          barlineType: mergedBarlineType,
+        );
       }
     }
-    sharedBoundaries.add(sharedEnd);
 
-    final alignedTreble = _remapElementsX(
+    mergeAnchors(trebleTimeline);
+    mergeAnchors(bassTimeline);
+
+    final sharedAnchors = sharedAnchorsByKey.values.toList()
+      ..sort((a, b) => a.time.compareTo(b.time));
+
+    if (sharedAnchors.isEmpty) {
+      return _GrandStaffAlignedData(
+        trebleElements: trebleElements,
+        bassElements: bassElements,
+        sharedBarlines: const [],
+      );
+    }
+
+    const minAnchorGap = 0.25;
+    for (int i = 1; i < sharedAnchors.length; i++) {
+      final previous = sharedAnchors[i - 1];
+      final current = sharedAnchors[i];
+      if (current.x <= previous.x + minAnchorGap) {
+        sharedAnchors[i] = current.copyWith(x: previous.x + minAnchorGap);
+      }
+    }
+
+    final maxAllowedX = math.min(
+      _maxElementX(trebleElements),
+      _maxElementX(bassElements),
+    );
+    final firstAnchorX = sharedAnchors.first.x;
+    final lastAnchorX = sharedAnchors.last.x;
+
+    if (lastAnchorX > maxAllowedX && lastAnchorX > firstAnchorX) {
+      final oldSpan = lastAnchorX - firstAnchorX;
+      final newSpan = math.max(1.0, maxAllowedX - firstAnchorX);
+      final scale = newSpan / oldSpan;
+      for (int i = 0; i < sharedAnchors.length; i++) {
+        final anchor = sharedAnchors[i];
+        sharedAnchors[i] = anchor.copyWith(
+          x: firstAnchorX + ((anchor.x - firstAnchorX) * scale),
+        );
+      }
+    }
+
+    final sharedXByKey = <String, double>{
+      for (final anchor in sharedAnchors) anchor.key: anchor.x,
+    };
+
+    final alignedTreble = _remapByTimeline(
       elements: trebleElements,
-      originalBoundaries: trebleSourceBoundaries,
-      targetBoundaries: sharedBoundaries,
+      timeline: trebleTimeline,
+      sharedXByKey: sharedXByKey,
     );
-    final alignedBass = _remapElementsX(
+    final alignedBass = _remapByTimeline(
       elements: bassElements,
-      originalBoundaries: bassSourceBoundaries,
-      targetBoundaries: sharedBoundaries,
+      timeline: bassTimeline,
+      sharedXByKey: sharedXByKey,
     );
+
+    final sharedBarlines = sharedAnchors
+        .where((anchor) => anchor.isBarline)
+        .map(
+          (anchor) => _AlignedBarline(
+            x: anchor.x,
+            type: anchor.barlineType ?? BarlineType.single,
+          ),
+        )
+        .toList();
 
     return _GrandStaffAlignedData(
       trebleElements: alignedTreble,
       bassElements: alignedBass,
-      sharedBarlineXs: sharedBoundaries.skip(1).toList(),
+      sharedBarlines: sharedBarlines,
     );
   }
 
-  List<double> _extractMeasureBoundaries(List<PositionedElement> elements) {
-    final firstMusicX = _firstMusicX(elements);
-    final barlineXs = elements
-        .where((element) => element.element is Barline)
-        .map((element) => element.position.dx)
-        .where((x) => x.isFinite)
-        .toList()
-      ..sort();
+  List<_TimedElementData> _buildTimeline(List<PositionedElement> elements) {
+    final timeline = <_TimedElementData>[];
+    double measureStartTime = 0.0;
+    double elapsedInMeasure = 0.0;
+    double currentMeasureDuration = 1.0;
 
-    final boundaries = <double>[firstMusicX];
-    for (final x in barlineXs) {
-      if ((x - boundaries.last).abs() > 0.01) {
-        boundaries.add(x);
-      }
-    }
+    for (int i = 0; i < elements.length; i++) {
+      final positioned = elements[i];
+      final element = positioned.element;
 
-    if (boundaries.length < 2) {
-      final fallbackEnd = elements.fold<double>(
-        firstMusicX,
-        (maxX, element) => math.max(maxX, element.position.dx),
-      );
-      boundaries.add(fallbackEnd);
-    }
-
-    return boundaries;
-  }
-
-  double _firstMusicX(List<PositionedElement> elements) {
-    final musicalElements = elements
-        .where(
-          (element) =>
-              !_isSystemElement(element.element) && element.element is! Barline,
-        )
-        .toList();
-
-    if (musicalElements.isNotEmpty) {
-      return musicalElements
-          .map((element) => element.position.dx)
-          .reduce(math.min);
-    }
-
-    return elements.map((element) => element.position.dx).reduce(math.min);
-  }
-
-  double _safeProgress({
-    required double value,
-    required double start,
-    required double end,
-  }) {
-    final span = end - start;
-    if (span.abs() < 0.0001) {
-      return 1.0;
-    }
-    return ((value - start) / span).clamp(0.0, 1.0).toDouble();
-  }
-
-  bool _isSystemElement(MusicalElement element) {
-    return element is Clef ||
-        element is KeySignature ||
-        element is TimeSignature;
-  }
-
-  List<PositionedElement> _remapElementsX({
-    required List<PositionedElement> elements,
-    required List<double> originalBoundaries,
-    required List<double> targetBoundaries,
-  }) {
-    if (originalBoundaries.length < 2 || targetBoundaries.length < 2) {
-      return elements;
-    }
-
-    final segmentCount = math.min(
-          originalBoundaries.length,
-          targetBoundaries.length,
-        ) -
-        1;
-    double mapX(double x) {
-      if (x <= originalBoundaries.first) {
-        return x;
+      if (element is TimeSignature) {
+        currentMeasureDuration = element.measureValue;
       }
 
-      for (int i = 0; i < segmentCount; i++) {
-        final sourceStart = originalBoundaries[i];
-        final sourceEnd = originalBoundaries[i + 1];
-        if (x <= sourceEnd || i == segmentCount - 1) {
-          final targetStart = targetBoundaries[i];
-          final targetEnd = targetBoundaries[i + 1];
-          final sourceSpan = sourceEnd - sourceStart;
-          if (sourceSpan.abs() < 0.0001) {
-            return targetStart;
-          }
-
-          final ratio = ((x - sourceStart) / sourceSpan).clamp(0.0, 1.0);
-          return targetStart + ((targetEnd - targetStart) * ratio);
-        }
-      }
-
-      final overflowAfterEnd = x - originalBoundaries.last;
-      return targetBoundaries.last + overflowAfterEnd;
-    }
-
-    return elements
-        .map(
-          (positioned) => PositionedElement(
-            positioned.element,
-            Offset(mapX(positioned.position.dx), positioned.position.dy),
-            system: positioned.system,
-            voiceNumber: positioned.voiceNumber,
+      final duration = _elementDuration(element);
+      if (duration > 0.0) {
+        final onsetTime = measureStartTime + elapsedInMeasure;
+        timeline.add(
+          _TimedElementData(
+            index: i,
+            positioned: positioned,
+            time: onsetTime,
+            isBarline: false,
           ),
-        )
-        .toList();
+        );
+        elapsedInMeasure += duration;
+      }
+
+      if (element is Barline) {
+        final boundaryTime = measureStartTime +
+            (elapsedInMeasure > 0.0
+                ? elapsedInMeasure
+                : currentMeasureDuration);
+        timeline.add(
+          _TimedElementData(
+            index: i,
+            positioned: positioned,
+            time: boundaryTime,
+            isBarline: true,
+            barlineType: element.type,
+          ),
+        );
+        measureStartTime = boundaryTime;
+        elapsedInMeasure = 0.0;
+      }
+    }
+
+    return timeline;
+  }
+
+  List<PositionedElement> _remapByTimeline({
+    required List<PositionedElement> elements,
+    required List<_TimedElementData> timeline,
+    required Map<String, double> sharedXByKey,
+  }) {
+    if (timeline.isEmpty) return elements;
+
+    final xByIndex = <int, double>{};
+    for (final item in timeline) {
+      final mappedX = sharedXByKey[_timeKey(item.time)];
+      if (mappedX != null) {
+        xByIndex[item.index] = mappedX;
+      }
+    }
+
+    if (xByIndex.isEmpty) return elements;
+
+    final remapped = <PositionedElement>[];
+    for (int i = 0; i < elements.length; i++) {
+      final positioned = elements[i];
+      final mappedX = xByIndex[i];
+      if (mappedX == null) {
+        remapped.add(positioned);
+        continue;
+      }
+
+      remapped.add(
+        PositionedElement(
+          positioned.element,
+          Offset(mappedX, positioned.position.dy),
+          system: positioned.system,
+          voiceNumber: positioned.voiceNumber,
+        ),
+      );
+    }
+
+    return remapped;
+  }
+
+  String _timeKey(double time) => time.toStringAsFixed(6);
+
+  double _maxElementX(List<PositionedElement> elements) {
+    return elements
+        .map((element) => element.position.dx)
+        .fold<double>(double.negativeInfinity, math.max);
+  }
+
+  double _elementDuration(MusicalElement element) {
+    if (element is Note) return element.duration.realValue;
+    if (element is Rest) return element.duration.realValue;
+    if (element is Chord) return element.duration.realValue;
+    return 0.0;
+  }
+
+  BarlineType? _preferBarlineType(BarlineType? a, BarlineType? b) {
+    if (a == BarlineType.final_ || b == BarlineType.final_) {
+      return BarlineType.final_;
+    }
+    return b ?? a;
   }
 
   List<PositionedElement> _offsetElementsY(
@@ -575,12 +620,12 @@ class _GrandStaffScoreState extends State<GrandStaffScore> {
 class _GrandStaffAlignedData {
   final List<PositionedElement> trebleElements;
   final List<PositionedElement> bassElements;
-  final List<double> sharedBarlineXs;
+  final List<_AlignedBarline> sharedBarlines;
 
   const _GrandStaffAlignedData({
     required this.trebleElements,
     required this.bassElements,
-    required this.sharedBarlineXs,
+    required this.sharedBarlines,
   });
 }
 
@@ -592,7 +637,7 @@ class _GrandStaffPainter extends CustomPainter {
   final double bottomBaselineY;
   final List<PositionedElement> trebleElements;
   final List<PositionedElement> bassElements;
-  final List<double> barlineXs;
+  final List<_AlignedBarline> barlines;
   final LayoutEngine trebleLayout;
   final LayoutEngine bassLayout;
 
@@ -604,7 +649,7 @@ class _GrandStaffPainter extends CustomPainter {
     required this.bottomBaselineY,
     required this.trebleElements,
     required this.bassElements,
-    required this.barlineXs,
+    required this.barlines,
     required this.trebleLayout,
     required this.bassLayout,
   });
@@ -653,22 +698,48 @@ class _GrandStaffPainter extends CustomPainter {
       layoutEngine: bassLayout,
     );
 
-    final barlineConnectorPaint = Paint()
-      ..color = theme.barlineColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth =
-          metadata.getEngravingDefault('thinBarlineThickness') * staffSpace;
-
+    final thinThickness =
+        metadata.getEngravingDefault('thinBarlineThickness') * staffSpace;
+    final thickThickness =
+        metadata.getEngravingDefault('thickBarlineThickness') * staffSpace;
+    final finalBarlineWidth =
+        metadata.getGlyphWidth('barlineFinal') * staffSpace;
+    final doubleBarlineWidth =
+        metadata.getGlyphWidth('barlineDouble') * staffSpace;
     final connectorTopY = topCoordinates.getStaffLineY(5);
     final connectorBottomY = bottomCoordinates.getStaffLineY(1);
 
-    for (final x in barlineXs) {
-      if (!x.isFinite) continue;
+    void drawConnector({
+      required double x,
+      required double thickness,
+    }) {
+      final paint = Paint()
+        ..color = theme.barlineColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = thickness;
       canvas.drawLine(
         Offset(x, connectorTopY),
         Offset(x, connectorBottomY),
-        barlineConnectorPaint,
+        paint,
       );
+    }
+
+    for (final barline in barlines) {
+      if (!barline.x.isFinite) continue;
+
+      final primaryCenterX = barline.x + (thinThickness * 0.5);
+      drawConnector(x: primaryCenterX, thickness: thinThickness);
+
+      if (barline.type == BarlineType.final_) {
+        final secondaryCenterX =
+            barline.x + finalBarlineWidth - (thickThickness * 0.5);
+        drawConnector(x: secondaryCenterX, thickness: thickThickness);
+      } else if (barline.type == BarlineType.double ||
+          barline.type == BarlineType.lightLight) {
+        final secondaryCenterX =
+            barline.x + doubleBarlineWidth - (thinThickness * 0.5);
+        drawConnector(x: secondaryCenterX, thickness: thinThickness);
+      }
     }
 
     canvas.restore();
@@ -678,10 +749,66 @@ class _GrandStaffPainter extends CustomPainter {
   bool shouldRepaint(covariant _GrandStaffPainter oldDelegate) {
     return oldDelegate.trebleElements.length != trebleElements.length ||
         oldDelegate.bassElements.length != bassElements.length ||
-        oldDelegate.barlineXs.length != barlineXs.length ||
+        oldDelegate.barlines.length != barlines.length ||
         oldDelegate.staffSpace != staffSpace ||
         oldDelegate.theme != theme;
   }
+}
+
+class _TimedElementData {
+  final int index;
+  final PositionedElement positioned;
+  final double time;
+  final bool isBarline;
+  final BarlineType? barlineType;
+
+  const _TimedElementData({
+    required this.index,
+    required this.positioned,
+    required this.time,
+    required this.isBarline,
+    this.barlineType,
+  });
+}
+
+class _SharedTimelineAnchor {
+  final String key;
+  final double time;
+  final double x;
+  final bool isBarline;
+  final BarlineType? barlineType;
+
+  const _SharedTimelineAnchor({
+    required this.key,
+    required this.time,
+    required this.x,
+    required this.isBarline,
+    this.barlineType,
+  });
+
+  _SharedTimelineAnchor copyWith({
+    double? x,
+    bool? isBarline,
+    BarlineType? barlineType,
+  }) {
+    return _SharedTimelineAnchor(
+      key: key,
+      time: time,
+      x: x ?? this.x,
+      isBarline: isBarline ?? this.isBarline,
+      barlineType: barlineType ?? this.barlineType,
+    );
+  }
+}
+
+class _AlignedBarline {
+  final double x;
+  final BarlineType type;
+
+  const _AlignedBarline({
+    required this.x,
+    required this.type,
+  });
 }
 
 class MultiStaffDemoApp extends StatelessWidget {
