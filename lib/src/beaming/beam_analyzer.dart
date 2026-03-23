@@ -413,6 +413,9 @@ class BeamAnalyzer {
   /// Retorna valor numérico da duração (para comparação)
   double _getDurationValue(Duration duration) {
     return switch (duration.type) {
+      DurationType.maxima => 8.0,
+      DurationType.long => 4.0,
+      DurationType.breve => 2.0,
       DurationType.whole => 1.0,
       DurationType.half => 0.5,
       DurationType.quarter => 0.25,
@@ -421,6 +424,10 @@ class BeamAnalyzer {
       DurationType.thirtySecond => 0.03125,
       DurationType.sixtyFourth => 0.015625,
       DurationType.oneHundredTwentyEighth => 0.0078125,
+      DurationType.twoHundredFiftySixth => 0.00390625,
+      DurationType.fiveHundredTwelfth => 0.001953125,
+      DurationType.thousandTwentyFourth => 0.0009765625,
+      DurationType.twoThousandFortyEighth => 0.00048828125,
     };
   }
 }

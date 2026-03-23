@@ -361,6 +361,9 @@ void _buildTempoXml(XmlBuilder builder, TempoMark tempo) {
 
 String _durationTypeToString(DurationType type) {
   return switch (type) {
+    DurationType.maxima => 'maxima',
+    DurationType.long => 'long',
+    DurationType.breve => 'breve',
     DurationType.whole => 'whole',
     DurationType.half => 'half',
     DurationType.quarter => 'quarter',
@@ -369,6 +372,10 @@ String _durationTypeToString(DurationType type) {
     DurationType.thirtySecond => '32nd',
     DurationType.sixtyFourth => '64th',
     DurationType.oneHundredTwentyEighth => '128th',
+    DurationType.twoHundredFiftySixth => '256th',
+    DurationType.fiveHundredTwelfth => '512th',
+    DurationType.thousandTwentyFourth => '1024th',
+    DurationType.twoThousandFortyEighth => '2048th',
   };
 }
 

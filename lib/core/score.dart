@@ -2,6 +2,8 @@
 
 import 'staff.dart';
 import 'staff_group.dart';
+import 'mei_header.dart';
+import 'score_def.dart';
 
 /// Represents a complete musical score with multiple staves
 ///
@@ -61,6 +63,14 @@ class Score {
   /// Page layout settings
   final PageLayout? pageLayout;
 
+  /// Cabeçalho MEI estruturado (`<meiHead>`). Opcional; quando fornecido,
+  /// permite serialização/importação fiel ao padrão MEI v5.
+  final MeiHeader? meiHeader;
+
+  /// Definição global de partitura (`<scoreDef>`). Centraliza clave,
+  /// armadura e fórmula de compasso para toda a partitura.
+  final ScoreDefinition? scoreDefinition;
+
   const Score({
     this.title,
     this.subtitle,
@@ -70,6 +80,8 @@ class Score {
     required this.staffGroups,
     this.metadata = const {},
     this.pageLayout,
+    this.meiHeader,
+    this.scoreDefinition,
   });
 
   /// Get all staves in the score (flattened from all groups)
@@ -104,6 +116,8 @@ class Score {
     List<StaffGroup>? staffGroups,
     Map<String, dynamic>? metadata,
     PageLayout? pageLayout,
+    MeiHeader? meiHeader,
+    ScoreDefinition? scoreDefinition,
   }) {
     return Score(
       title: title ?? this.title,
@@ -114,6 +128,8 @@ class Score {
       staffGroups: staffGroups ?? this.staffGroups,
       metadata: metadata ?? this.metadata,
       pageLayout: pageLayout ?? this.pageLayout,
+      meiHeader: meiHeader ?? this.meiHeader,
+      scoreDefinition: scoreDefinition ?? this.scoreDefinition,
     );
   }
 

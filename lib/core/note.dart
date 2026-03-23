@@ -63,6 +63,20 @@ class Note extends MusicalElement with BoundingBoxSupport {
   /// Altura alternativa para grace notes com uma altura específica
   final Pitch? alternatePitch;
 
+  // === Campos de Tablatura (MEI `@tab.fret` e `@tab.string`) ===
+
+  /// Casa (fret) na tablatura. null = nota não é de tablatura.
+  /// Corresponde ao atributo `@tab.fret` do MEI v5.
+  /// 0 = corda solta (open string), 1–24 = casas numeradas.
+  final int? tabFret;
+
+  /// Número da corda na tablatura (1-based, corda mais aguda = 1).
+  /// Corresponde ao atributo `@tab.string` do MEI v5.
+  final int? tabString;
+
+  /// Indica se esta nota é de tablatura (possui [tabFret] ou [tabString]).
+  bool get isTabNote => tabFret != null || tabString != null;
+
   Note({
     required this.pitch,
     required this.duration,
@@ -77,5 +91,7 @@ class Note extends MusicalElement with BoundingBoxSupport {
     this.tremoloStrokes = 0,
     this.isGraceNote = false,
     this.alternatePitch,
+    this.tabFret,
+    this.tabString,
   });
 }

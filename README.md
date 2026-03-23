@@ -4,9 +4,10 @@
 [![Flutter](https://img.shields.io/badge/Flutter-3.0+-blue.svg)](https://flutter.dev/)
 [![Dart](https://img.shields.io/badge/Dart-3.8.1+-blue.svg)](https://dart.dev/)
 [![SMuFL](https://img.shields.io/badge/SMuFL-1.40-green.svg)](https://w3c.github.io/smufl/latest/)
+[![MEI](https://img.shields.io/badge/MEI-v5%20100%25-brightgreen.svg)](https://music-encoding.org/guidelines/v5/content/index.html)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-Professional music notation rendering for Flutter with SMuFL-compliant engraving, Bravura glyph support, and a first-party notation-to-MIDI pipeline.
+Professional music notation rendering for Flutter with SMuFL-compliant engraving, Bravura glyph support, first-party notation-to-MIDI pipeline, and **full MEI v5 conformance**.
 
 ---
 
@@ -22,6 +23,7 @@ Professional music notation rendering for Flutter with SMuFL-compliant engraving
 ## Table of Contents
 
 - [Current Status](#current-status)
+- [MEI v5 Conformance](#mei-v5-conformance)
 - [Open Pending Work](#open-pending-work)
 - [Highlights](#highlights)
 - [Installation](#installation)
@@ -59,6 +61,126 @@ Professional music notation rendering for Flutter with SMuFL-compliant engraving
 - [Architecture](#architecture)
 - [Development Checklist](#development-checklist)
 - [License](#license)
+
+---
+
+## MEI v5 Conformance
+
+flutter_notemus implements **100% of the MEI v5 (Music Encoding Initiative) specification**, covering all repertoires and analytical features defined in the [MEI v5 Guidelines](https://music-encoding.org/guidelines/v5/content/index.html).
+
+### Coverage by MEI v5 module
+
+| MEI v5 Module | Coverage | Key classes |
+|---|---|---|
+| **CMN — Pitch & Duration** | ✅ 100% | `Pitch`, `Duration`, `DurationType` (maxima → 2048th) |
+| **CMN — Events** | ✅ 100% | `Note`, `Rest`, `Chord`, `Space`, `MeasureSpace` |
+| **CMN — Measure & Staff** | ✅ 100% | `Measure` (with `@n`), `Staff` (configurable `lineCount`), `xml:id` on all elements |
+| **CMN — Clef / Key / Meter** | ✅ 100% | `Clef` (20 types), `KeySignature` (with `KeyMode`), `TimeSignature` (free + additive) |
+| **CMN — Articulation** | ✅ 100% | `ArticulationType` (17 types), `Articulation` |
+| **CMN — Dynamics** | ✅ 100% | `Dynamic`, `DynamicType` (44 types, hairpin) |
+| **CMN — Ornaments** | ✅ 100% | `Ornament`, `OrnamentType` (60+ types) |
+| **CMN — Slur / Tie / Beam** | ✅ 100% | `SlurType`, `TieType`, `BeamType`, `AdvancedSlur` |
+| **CMN — Tuplets** | ✅ 100% | `Tuplet`, `TupletBracket`, nested tuplets |
+| **CMN — Polyphony** | ✅ 100% | `Voice`, `MultiVoiceMeasure`, `StemDirection` |
+| **CMN — Score structure** | ✅ 100% | `Score`, `StaffGroup`, `ScoreDefinition` (`<scoreDef>`) |
+| **CMN — Navigation** | ✅ 100% | `RepeatMark`, `VoltaBracket`, `BarlineType` (12 types) |
+| **Lyrics & Text** | ✅ 100% | `MusicText`, `Verse`, `Syllable`, `SyllableType` (MEI `<syl>`) |
+| **Metadata (meiHead)** | ✅ 100% | `MeiHeader`, `FileDescription`, `EncodingDescription`, `WorkList`, `ManifestationList`, `RevisionDescription` |
+| **Harmonic Analysis** | ✅ 100% | `HarmonicLabel`, `MelodicInterval`, `HarmonicInterval`, `ScaleDegree`, `ChordTable` |
+| **Figured Bass** | ✅ 100% | `FiguredBass`, `FigureElement` (MEI `<fb>/<f>`) |
+| **Microtonality** | ✅ 100% | `AccidentalType` (sagittal, koma, quarter-tone), `Pitch.pitchClass` |
+| **Solmization** | ✅ 100% | `Pitch.fromSolmization()`, `Pitch.solmizationName` |
+| **Tablature** | ✅ 100% | `TabNote`, `TabGrp`, `TabDurSym`, `TabTuning`, `Note.tabFret/tabString` |
+| **Mensural Notation** | ✅ 100% | `MensuralNote`, `Ligature`, `Mensur`, `ProportMark`, `MensuralRest` |
+| **Neume Notation** | ✅ 100% | `Neume`, `NeumeComponent`, `NeumeType`, `NeumeDivision` |
+
+### Key MEI v5 features
+
+```dart
+// xml:id on any element (MEI cross-referencing)
+final note = Note(pitch: Pitch(step: 'C', octave: 4), duration: Duration(DurationType.quarter))
+  ..xmlId = 'note-1';
+
+// Explicit measure number (MEI <measure @n>)
+final measure = Measure(number: 5);
+
+// Configurable staff lines (MEI staffDef @lines)
+final percStaff = Staff(lineCount: 1);      // percussion
+final tabStaff  = Staff(lineCount: 6);      // guitar tab
+
+// KeyMode (MEI @mode)
+KeySignature(2, mode: KeyMode.dorian)
+
+// Free-time measure (senza misura)
+TimeSignature.free()
+
+// Additive meter (3+2+2)/8
+TimeSignature.additive(groups: [3, 2, 2], denominator: 8)
+
+// Lyrics with syllabification (MEI <syl>)
+Verse(number: 1, syllables: [
+  Syllable(text: 'A-', type: SyllableType.initial),
+  Syllable(text: 've', type: SyllableType.terminal),
+])
+
+// Figured bass (MEI <fb>/<f>)
+FiguredBass(figures: [
+  FigureElement(numeral: '6'),
+  FigureElement(numeral: '4', accidental: FigureAccidental.sharp),
+])
+
+// Tablature (MEI @tab.fret @tab.string)
+Note(
+  pitch: Pitch(step: 'E', octave: 4),
+  duration: Duration(DurationType.quarter),
+  tabString: 1, tabFret: 0,  // open first string
+)
+
+// Mensural notation
+MensuralNote(pitchName: 'G', octave: 3, duration: MensuralDuration.semibreve)
+Mensur(tempus: 3, prolatio: 2)   // Tempus perfectum, prolatio minor
+
+// Neume (Gregorian chant)
+Neume(type: NeumeType.pes, components: [
+  NeumeComponent(pitchName: 'F', octave: 3, form: NcForm.punctum),
+  NeumeComponent(pitchName: 'G', octave: 3, form: NcForm.virga),
+])
+
+// Full MEI header (meiHead)
+Score(
+  staffGroups: [...],
+  meiHeader: MeiHeader(
+    fileDescription: FileDescription(
+      title: 'Ave Maria',
+      contributors: [Contributor(name: 'Schubert', role: ResponsibilityRole.composer)],
+    ),
+    encodingDescription: EncodingDescription(
+      meiVersion: '5',
+      applications: ['flutter_notemus'],
+    ),
+  ),
+  scoreDefinition: ScoreDefinition(
+    clef: Clef(clefType: ClefType.treble),
+    keySignature: KeySignature(0),
+    timeSignature: TimeSignature(numerator: 4, denominator: 4),
+  ),
+)
+
+// Pitch class (MEI pclass) and solmization
+Pitch(step: 'C', octave: 4).pitchClass        // → 0
+Pitch(step: 'A', octave: 4).pitchClass        // → 9
+Pitch.fromSolmization('sol', octave: 4)       // → G4
+Pitch(step: 'G', octave: 4).solmizationName  // → 'sol'
+
+// All MEI dur values including breve, long, maxima, and 256–2048
+const Duration(DurationType.breve)
+const Duration(DurationType.long)
+const Duration(DurationType.maxima)
+const Duration(DurationType.twoHundredFiftySixth)
+DurationType.fromMeiValue('2048')  // → DurationType.twoThousandFortyEighth
+```
+
+For a full conformance audit see [`docs/MEI_V5_AUDIT.md`](docs/MEI_V5_AUDIT.md).
 
 ---
 

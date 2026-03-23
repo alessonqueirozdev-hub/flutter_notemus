@@ -3,7 +3,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
-import 'package:flutter_notemus/src/parsers/json_parser.dart';
 
 class JsonOdeExample extends StatelessWidget {
   const JsonOdeExample({Key? key}) : super(key: key);
@@ -11,7 +10,7 @@ class JsonOdeExample extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // 🎵 Ode to Joy in FULL JSON (same as professional example)
-    final jsonString = '''
+    const jsonString = '''
     {
       "measures": [
         {
@@ -151,7 +150,7 @@ class JsonOdeExample extends StatelessWidget {
                       padding: const EdgeInsets.all(24),
                       child: MusicScore(
                         staff: staff,
-                        theme: MusicScoreTheme(
+                        theme: const MusicScoreTheme(
                           noteheadColor: Colors.black,
                           stemColor: Colors.black,
                           staffLineColor: Colors.black87,

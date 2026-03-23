@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
+// ignore: implementation_imports
 import 'package:flutter_notemus/src/parsers/simple_json_parser.dart';
 
 class SimpleJsonExample extends StatelessWidget {
@@ -10,7 +11,7 @@ class SimpleJsonExample extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // 🎵 SEU JSON COM LETRAS (LYRICS)!
-    final jsonString = '''
+    const jsonString = '''
     [
       {"note": "C4", "lyric": "Dó", "duration": "quarter"},
       {"note": "D4", "lyric": "Ré", "duration": "quarter"},
@@ -60,9 +61,9 @@ class SimpleJsonExample extends StatelessWidget {
                   'Compasses: ${staff.measures.length}',
                   style: const TextStyle(fontSize: 14),
                 ),
-                Text(
+                const Text(
                   'Ratings: 14',
-                  style: const TextStyle(fontSize: 14),
+                  style: TextStyle(fontSize: 14),
                 ),
                 Text(
                   'Formato: {"note": "C4", "lyric": "Dó", "duration": "quarter"}',
@@ -88,7 +89,7 @@ class SimpleJsonExample extends StatelessWidget {
                     borderRadius: BorderRadius.circular(8),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.grey.withOpacity(0.2),
+                        color: Colors.grey.withValues(alpha: 0.2),
                         spreadRadius: 2,
                         blurRadius: 5,
                         offset: const Offset(0, 3),
@@ -98,7 +99,7 @@ class SimpleJsonExample extends StatelessWidget {
                   padding: const EdgeInsets.all(24),
                   child: MusicScore(
                     staff: staff,
-                    theme: MusicScoreTheme(
+                    theme: const MusicScoreTheme(
                       noteheadColor: Colors.black,
                       stemColor: Colors.black,
                       staffLineColor: Colors.black87,

@@ -227,6 +227,49 @@ class Pitch {
     return semitoneDeviation * 100.0; // 100 cents = 1 semitom
   }
 
+  /// Retorna a classe de altura (pitch class) como inteiro 0–11, conforme
+  /// o atributo `pclass` do MEI v5. C=0, C#=1, D=2, ..., B=11.
+  int get pitchClass {
+    const stepToSemitone = {
+      'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11,
+    };
+    return ((stepToSemitone[step]! + alter.round()) % 12 + 12) % 12;
+  }
+
+  /// Retorna o nome de solmização desta nota em dó fixo (do, re, mi, fa, sol, la, si).
+  /// Equivalente ao sistema de solmização do MEI v5.
+  String get solmizationName {
+    final idx = _stepToSolmIndex[step] ?? 0;
+    return _solmizationNames[idx];
+  }
+
+  /// Constrói um [Pitch] a partir de nome de solmização em dó fixo.
+  /// [syllable] pode ser 'do', 're', 'mi', 'fa', 'sol', 'la', 'si' (ou 'ti').
+  /// [octave] é o número da oitava; [alter] é a alteração cromática.
+  factory Pitch.fromSolmization(
+    String syllable, {
+    required int octave,
+    double alter = 0.0,
+    AccidentalType? accidentalType,
+  }) {
+    const solmToStep = {
+      'do': 'C', 're': 'D', 'mi': 'E', 'fa': 'F',
+      'sol': 'G', 'la': 'A', 'si': 'B', 'ti': 'B',
+    };
+    final normalized = syllable.toLowerCase();
+    final step = solmToStep[normalized];
+    if (step == null) {
+      throw ArgumentError('Syllable de solmização inválida: $syllable. '
+          'Use: do, re, mi, fa, sol, la, si');
+    }
+    return Pitch(
+      step: step,
+      octave: octave,
+      alter: alter,
+      accidentalType: accidentalType,
+    );
+  }
+
   @override
   String toString() => '$step$octave${_alterToString()}';
 
@@ -256,6 +299,15 @@ class Pitch {
     return Object.hash(step, octave, alter, accidentalType);
   }
 }
+
+/// Mapeamento de nome de nota para índice de solmização (dó fixo)
+const Map<String, int> _stepToSolmIndex = {
+  'C': 0, 'D': 1, 'E': 2, 'F': 3, 'G': 4, 'A': 5, 'B': 6,
+};
+
+const List<String> _solmizationNames = [
+  'do', 're', 'mi', 'fa', 'sol', 'la', 'si',
+];
 
 /// Classe utilitária para operações com alturas
 class PitchUtils {

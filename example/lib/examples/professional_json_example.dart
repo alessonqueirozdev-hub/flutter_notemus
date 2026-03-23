@@ -3,7 +3,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
-import 'package:flutter_notemus/src/parsers/json_parser.dart';
 
 class ProfessionalJsonExample extends StatelessWidget {
   const ProfessionalJsonExample({Key? key}) : super(key: key);
@@ -86,9 +85,9 @@ class ProfessionalJsonExample extends StatelessWidget {
     ''';
 
     // 📊 PARSEAR JSON → STAFF
-    print('🎵 Parseando JSON profissional...');
+    debugPrint('🎵 Parseando JSON profissional...');
     final staff = JsonMusicParser.parseStaff(jsonString);
-    print('✅ Staff created with ${staff.measures.length} measures');
+    debugPrint('✅ Staff created with ${staff.measures.length} measures');
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
@@ -225,11 +224,11 @@ class ProfessionalJsonExample extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
+            const Row(
               children: [
-                const Icon(Icons.piano, color: Colors.deepPurple, size: 28),
-                const SizedBox(width: 12),
-                const Text(
+                Icon(Icons.piano, color: Colors.deepPurple, size: 28),
+                SizedBox(width: 12),
+                Text(
                   'Rendered score',
                   style: TextStyle(
                     fontSize: 22,
@@ -246,7 +245,7 @@ class ProfessionalJsonExample extends StatelessWidget {
                 border: Border.all(color: Colors.deepPurple[100]!, width: 2),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.deepPurple.withOpacity(0.1),
+                    color: Colors.deepPurple.withValues(alpha: 0.1),
                     spreadRadius: 2,
                     blurRadius: 8,
                     offset: const Offset(0, 4),
@@ -256,7 +255,7 @@ class ProfessionalJsonExample extends StatelessWidget {
               padding: const EdgeInsets.all(32),
               child: MusicScore(
                 staff: staff,
-                theme: MusicScoreTheme(
+                theme: const MusicScoreTheme(
                   noteheadColor: Colors.black,
                   stemColor: Colors.black,
                   staffLineColor: Colors.black87,
@@ -280,12 +279,12 @@ class ProfessionalJsonExample extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
+            const Row(
               children: [
-                const Icon(Icons.info_outline,
+                Icon(Icons.info_outline,
                     color: Colors.deepPurple, size: 28),
-                const SizedBox(width: 12),
-                const Text(
+                SizedBox(width: 12),
+                Text(
                   'About this Example',
                   style: TextStyle(
                     fontSize: 22,

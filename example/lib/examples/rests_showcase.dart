@@ -63,7 +63,7 @@ class RestsShowcaseExample extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Icons.info_outline, color: Colors.deepPurple),
+                const Icon(Icons.info_outline, color: Colors.deepPurple),
                 const SizedBox(width: 8),
                 Text(
                   'Behind Bars Specification',

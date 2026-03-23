@@ -40,6 +40,10 @@ class Measure {
   /// TimeSignature herdado de compasso anterior (usado para validação preventiva)
   TimeSignature? inheritedTimeSignature;
 
+  /// Número do compasso, correspondente ao atributo MEI `<measure @n>`.
+  /// null = numeração automática pelo motor de layout.
+  int? number;
+
   /// Creates a new [Measure].
   ///
   /// [autoBeaming] defaults to `true` so that eighth notes and smaller are
@@ -58,6 +62,7 @@ class Measure {
     this.beamingMode = BeamingMode.automatic,
     this.manualBeamGroups = const [],
     this.inheritedTimeSignature,
+    this.number,
   });
 
   /// Adiciona um elemento musical ao compasso.

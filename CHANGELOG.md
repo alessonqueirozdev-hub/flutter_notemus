@@ -4,6 +4,42 @@ All notable changes to Flutter Notemus are documented in this file.
 
 The format is based on Keep a Changelog and this project follows Semantic Versioning.
 
+## [2.5.0] - 2026-03-23
+
+### Added
+
+- **MEI v5 100% conformance**: full coverage of Music Encoding Initiative v5 specification.
+  - `Space` and `MeasureSpace` classes (MEI `<space>` and `<mSpace>`).
+  - `FiguredBass` and `FigureElement` classes (MEI `<fb>/<f>`).
+  - `HarmonicAnalysis`, `ChordTable`, `HarmonicLabel` classes (MEI `<harm>`, `intm`, `mfunc`, `deg`, `inth`, `pclass`).
+  - `MeiHeader` with full FRBR model (Work/Expression/Manifestation/Item levels).
+  - `ScoreDefinition` class (MEI `<scoreDef>`).
+  - `MensuralNote`, `MensuralRest`, `Ligature`, `Mensur`, `ProportMark` (MEI Mensural repertoire).
+  - `Neume`, `NeumeComponent`, `NeumeDivision` (MEI Neume notation).
+  - `TabNote`, `TabGrp`, `TabTuning` with standard guitar/bass/ukulele tunings (MEI Tablature).
+- `DurationType` extended with historical values (`maxima`, `long`, `breve`) and ultra-short values up to `twoThousandFortyEighth` (2048th note).
+- `DurationType.meiDurValue` getter and `DurationType.fromMeiValue()` for MEI serialization.
+- `Pitch.pitchClass` getter (0–11, MEI `pclass`) and `Pitch.solmizationName` / `Pitch.fromSolmization()`.
+- `KeyMode` enum (major, minor, dorian, phrygian, lydian, mixolydian, aeolian, locrian, none).
+- `TimeSignature.free()` and `TimeSignature.additive()` constructors for MEI `<meterSig>` variants.
+- `Syllable` and `Verse` classes for MEI `<syl>` / `<verse>` lyric encoding.
+- `Staff.lineCount` parameter for non-standard staves (MEI `<staffDef @lines>`).
+- `Measure.number` field (MEI `<measure @n>`).
+- `Note.tabFret` / `Note.tabString` fields for tablature notation.
+- `MusicalElement.xmlId` field for MEI `xml:id` cross-referencing.
+- MEI v5 badge and conformance section added to README.
+- Audit document `docs/MEI_V5_AUDIT.md` documenting 100% coverage across 30 categories.
+- GitHub issues #7, #8, #9 tracking remaining implementation work.
+
+### Fixed
+
+- All `avoid_print` warnings in example files replaced with `debugPrint`.
+- Deprecated `Tuplet.showBracket`/`showNumber` usages replaced with `bracketConfig`/`numberConfig` in examples.
+- `deprecated_member_use` (`withOpacity`) replaced with `withValues(alpha:)` in example files.
+- `implementation_imports` and `unnecessary_import` warnings resolved in JSON example files.
+- `prefer_const_constructors` warnings resolved across example files.
+- Non-exhaustive switch expressions in `BeamAnalyzer._getDurationValue()` and `MusicXMLParser._durationTypeToString()` fixed after `DurationType` enum expansion.
+
 ## [2.2.1] - 2026-03-23
 
 ### Fixed

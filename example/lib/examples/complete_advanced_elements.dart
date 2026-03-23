@@ -259,8 +259,8 @@ class CompleteAdvancedElementsExample extends StatelessWidget {
           duration: const Duration(DurationType.eighth),
         ),
       ],
-      showBracket: true,
-      showNumber: true,
+      bracketConfig: const TupletBracket(show: true),
+      numberConfig: const TupletNumber(),
     ));
 
     // Tercina de semicolcheias
@@ -281,8 +281,8 @@ class CompleteAdvancedElementsExample extends StatelessWidget {
           duration: const Duration(DurationType.sixteenth),
         ),
       ],
-      showBracket: true,
-      showNumber: true,
+      bracketConfig: const TupletBracket(show: true),
+      numberConfig: const TupletNumber(),
     ));
 
     measure1.add(Note(
@@ -318,8 +318,8 @@ class CompleteAdvancedElementsExample extends StatelessWidget {
           duration: const Duration(DurationType.sixteenth),
         ),
       ],
-      showBracket: true,
-      showNumber: true,
+      bracketConfig: const TupletBracket(show: true),
+      numberConfig: const TupletNumber(),
     ));
 
     measure2.add(Rest(duration: const Duration(DurationType.half)));
