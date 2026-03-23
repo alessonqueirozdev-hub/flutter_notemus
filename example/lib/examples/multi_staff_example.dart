@@ -397,7 +397,7 @@ class _GrandStaffScoreState extends State<GrandStaffScore> {
     final trebleEnd = trebleSourceBoundaries.last;
     final bassEnd = bassSourceBoundaries.last;
 
-    final sharedStart = math.max(trebleStart, bassStart);
+    final sharedStart = math.min(trebleStart, bassStart);
     double sharedEnd = math.min(trebleEnd, bassEnd);
     if (sharedEnd <= sharedStart) {
       sharedEnd = math.max(trebleEnd, bassEnd);
@@ -429,7 +429,7 @@ class _GrandStaffScoreState extends State<GrandStaffScore> {
 
     final treblePrefixStart = _minElementX(trebleElements);
     final bassPrefixStart = _minElementX(bassElements);
-    final sharedPrefixStart = math.max(treblePrefixStart, bassPrefixStart);
+    final sharedPrefixStart = math.min(treblePrefixStart, bassPrefixStart);
 
     final alignedTreble = _remapElementsX(
       elements: trebleElements,
@@ -492,16 +492,22 @@ class _GrandStaffScoreState extends State<GrandStaffScore> {
     final adjustedTreble = List<PositionedElement>.from(trebleElements);
     final adjustedBass = List<PositionedElement>.from(bassElements);
     final pairCount = math.min(trebleIndices.length, bassIndices.length);
-    final maxAllowedX = firstBoundaryX - (widget.staffSpace * 0.5);
+    final minAllowedX = _maxFirstXByType<Clef>([
+          adjustedTreble,
+          adjustedBass,
+        ]) +
+        (widget.staffSpace * 1.8);
+    final maxAllowedX = firstBoundaryX - (widget.staffSpace * 3.8);
 
     for (int i = 0; i < pairCount; i++) {
       final trebleIndex = trebleIndices[i];
       final bassIndex = bassIndices[i];
-      final desiredX = math.max(
-        adjustedTreble[trebleIndex].position.dx,
-        adjustedBass[bassIndex].position.dx,
-      );
-      final alignedX = math.min(desiredX, maxAllowedX);
+      final desiredX = (adjustedTreble[trebleIndex].position.dx +
+              adjustedBass[bassIndex].position.dx) /
+          2;
+      final alignedX = maxAllowedX > minAllowedX
+          ? desiredX.clamp(minAllowedX, maxAllowedX).toDouble()
+          : minAllowedX;
       adjustedTreble[trebleIndex] =
           _withX(adjustedTreble[trebleIndex], alignedX);
       adjustedBass[bassIndex] = _withX(adjustedBass[bassIndex], alignedX);
@@ -530,6 +536,21 @@ class _GrandStaffScoreState extends State<GrandStaffScore> {
       system: positioned.system,
       voiceNumber: positioned.voiceNumber,
     );
+  }
+
+  double _maxFirstXByType<T extends MusicalElement>(
+    List<List<PositionedElement>> staffs,
+  ) {
+    var maxX = double.negativeInfinity;
+    for (final elements in staffs) {
+      for (final positioned in elements) {
+        if (positioned.element is T) {
+          maxX = math.max(maxX, positioned.position.dx);
+          break;
+        }
+      }
+    }
+    return maxX.isFinite ? maxX : 0;
   }
 
   List<double> _extractMeasureBoundaries(List<PositionedElement> elements) {
@@ -853,6 +874,621 @@ class _AlignedBarline {
   });
 }
 
+class LabeledStaff {
+  final String label;
+  final Staff staff;
+
+  const LabeledStaff({
+    required this.label,
+    required this.staff,
+  });
+}
+
+class _MultiStaffAlignedData {
+  final List<List<PositionedElement>> elementsByStaff;
+  final List<_AlignedBarline> sharedBarlines;
+
+  const _MultiStaffAlignedData({
+    required this.elementsByStaff,
+    required this.sharedBarlines,
+  });
+}
+
+class ConnectedMultiStaffScore extends StatefulWidget {
+  final List<LabeledStaff> staves;
+  final MusicScoreTheme theme;
+  final double staffSpace;
+  final double interStaffSpacing;
+
+  const ConnectedMultiStaffScore({
+    super.key,
+    required this.staves,
+    this.theme = const MusicScoreTheme(),
+    this.staffSpace = 12.0,
+    this.interStaffSpacing = 7.0,
+  });
+
+  @override
+  State<ConnectedMultiStaffScore> createState() =>
+      _ConnectedMultiStaffScoreState();
+}
+
+class _ConnectedMultiStaffScoreState extends State<ConnectedMultiStaffScore> {
+  late final SmuflMetadata _metadata;
+  late final Future<void> _metadataFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _metadata = SmuflMetadata();
+    _metadataFuture = _metadata.load();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<void>(
+      future: _metadataFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+        }
+
+        if (snapshot.hasError) {
+          return Center(
+            child: Text(
+              'Erro ao carregar metadados: ${snapshot.error}',
+              style: const TextStyle(fontSize: 12),
+            ),
+          );
+        }
+
+        if (widget.staves.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final availableWidth = constraints.maxWidth.isFinite
+                ? constraints.maxWidth
+                : MediaQuery.of(context).size.width;
+
+            final layouts = widget.staves
+                .map(
+                  (entry) => LayoutEngine(
+                    entry.staff,
+                    availableWidth: availableWidth,
+                    staffSpace: widget.staffSpace,
+                    metadata: _metadata,
+                  ),
+                )
+                .toList();
+
+            final elementsByStaff =
+                layouts.map((layout) => layout.layout()).toList();
+            if (elementsByStaff.any((elements) => elements.isEmpty)) {
+              return const SizedBox.shrink();
+            }
+
+            final aligned = _alignByMeasureBoundaries(elementsByStaff);
+            final firstBaselineY = widget.staffSpace * 5;
+            final baselineStride = widget.interStaffSpacing * widget.staffSpace;
+            final baselineYs = List<double>.generate(
+              widget.staves.length,
+              (index) => firstBaselineY + (baselineStride * index),
+            );
+
+            final shifted = <List<PositionedElement>>[];
+            for (int i = 0; i < aligned.elementsByStaff.length; i++) {
+              final deltaY = baselineYs[i] - firstBaselineY;
+              shifted.add(_offsetElementsY(aligned.elementsByStaff[i], deltaY));
+            }
+
+            final canvasHeight = baselineYs.last + (widget.staffSpace * 5);
+            return ClipRect(
+              child: CustomPaint(
+                size: Size(availableWidth, canvasHeight),
+                painter: _ConnectedMultiStaffPainter(
+                  metadata: _metadata,
+                  theme: widget.theme,
+                  staffSpace: widget.staffSpace,
+                  labels: widget.staves.map((entry) => entry.label).toList(),
+                  baselineYs: baselineYs,
+                  elementsByStaff: shifted,
+                  barlines: aligned.sharedBarlines,
+                  layouts: layouts,
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  _MultiStaffAlignedData _alignByMeasureBoundaries(
+    List<List<PositionedElement>> staffs,
+  ) {
+    final boundariesByStaff = staffs.map(_extractMeasureBoundaries).toList();
+    final barlinesByStaff = staffs.map(_extractBarlines).toList();
+    final minBoundaryCount = boundariesByStaff
+        .map((boundaries) => boundaries.length)
+        .reduce(math.min);
+    if (minBoundaryCount < 2) {
+      return _MultiStaffAlignedData(
+        elementsByStaff: staffs,
+        sharedBarlines: const [],
+      );
+    }
+
+    final segmentCount = math.max(1, minBoundaryCount - 1);
+    final sourceBoundariesByStaff = boundariesByStaff
+        .map((boundaries) => boundaries.take(segmentCount + 1).toList())
+        .toList();
+
+    final starts =
+        sourceBoundariesByStaff.map((boundaries) => boundaries.first);
+    final ends = sourceBoundariesByStaff.map((boundaries) => boundaries.last);
+
+    final sharedStart = starts.reduce(math.min);
+    var sharedEnd = ends.reduce(math.min);
+    if (sharedEnd <= sharedStart) {
+      sharedEnd = ends.reduce(math.max);
+    }
+
+    final sharedBoundaries = <double>[sharedStart];
+    if (segmentCount > 1) {
+      for (int i = 1; i < segmentCount; i++) {
+        final targetProgress = sourceBoundariesByStaff
+            .map(
+              (boundaries) => _safeProgress(
+                value: boundaries[i],
+                start: boundaries.first,
+                end: boundaries.last,
+              ),
+            )
+            .reduce(math.max);
+        var targetX =
+            sharedStart + ((sharedEnd - sharedStart) * targetProgress);
+        if (targetX <= sharedBoundaries.last + 0.01) {
+          targetX = sharedBoundaries.last + 0.01;
+        }
+        sharedBoundaries.add(targetX);
+      }
+    }
+    sharedBoundaries.add(sharedEnd);
+
+    final prefixStarts = staffs.map(_minElementX).toList();
+    final sharedPrefixStart = prefixStarts.reduce(math.min);
+
+    final remapped = <List<PositionedElement>>[];
+    for (int i = 0; i < staffs.length; i++) {
+      remapped.add(
+        _remapElementsX(
+          elements: staffs[i],
+          prefixStart: prefixStarts[i],
+          targetPrefixStart: sharedPrefixStart,
+          originalBoundaries: sourceBoundariesByStaff[i],
+          targetBoundaries: sharedBoundaries,
+        ),
+      );
+    }
+
+    final alignedSystemElements =
+        _alignTimeSignaturesAcrossStaves(remapped, sharedBoundaries.first);
+
+    final sharedBarlines = <_AlignedBarline>[];
+    for (int i = 1; i < sharedBoundaries.length; i++) {
+      final barlineIndex = i - 1;
+      final barlineTypes = barlinesByStaff
+          .map(
+            (barlines) => barlineIndex < barlines.length
+                ? barlines[barlineIndex].type
+                : null,
+          )
+          .toList();
+      sharedBarlines.add(
+        _AlignedBarline(
+          x: sharedBoundaries[i],
+          type: _preferBarlineTypeList(barlineTypes),
+        ),
+      );
+    }
+
+    return _MultiStaffAlignedData(
+      elementsByStaff: alignedSystemElements,
+      sharedBarlines: sharedBarlines,
+    );
+  }
+
+  List<List<PositionedElement>> _alignTimeSignaturesAcrossStaves(
+    List<List<PositionedElement>> staffs,
+    double firstBoundaryX,
+  ) {
+    final indicesByStaff = staffs
+        .map(
+          (elements) => _matchingElementIndices(
+            elements,
+            (element) => element is TimeSignature,
+          ),
+        )
+        .toList();
+    final timeSigPairCount =
+        indicesByStaff.map((indices) => indices.length).reduce(math.min);
+    if (timeSigPairCount == 0) {
+      return staffs;
+    }
+
+    final adjusted = staffs
+        .map((elements) => List<PositionedElement>.from(elements))
+        .toList();
+    final minAllowedX =
+        _maxFirstXByType<Clef>(adjusted) + (widget.staffSpace * 1.8);
+    final maxAllowedX = firstBoundaryX - (widget.staffSpace * 3.8);
+
+    for (int pair = 0; pair < timeSigPairCount; pair++) {
+      var sum = 0.0;
+      for (int staffIndex = 0; staffIndex < adjusted.length; staffIndex++) {
+        final elementIndex = indicesByStaff[staffIndex][pair];
+        sum += adjusted[staffIndex][elementIndex].position.dx;
+      }
+      final desiredX = sum / adjusted.length;
+      final alignedX = maxAllowedX > minAllowedX
+          ? desiredX.clamp(minAllowedX, maxAllowedX).toDouble()
+          : minAllowedX;
+
+      for (int staffIndex = 0; staffIndex < adjusted.length; staffIndex++) {
+        final elementIndex = indicesByStaff[staffIndex][pair];
+        adjusted[staffIndex][elementIndex] =
+            _withX(adjusted[staffIndex][elementIndex], alignedX);
+      }
+    }
+
+    return adjusted;
+  }
+
+  List<int> _matchingElementIndices(
+    List<PositionedElement> elements,
+    bool Function(MusicalElement element) predicate,
+  ) {
+    final indices = <int>[];
+    for (int i = 0; i < elements.length; i++) {
+      if (predicate(elements[i].element)) {
+        indices.add(i);
+      }
+    }
+    return indices;
+  }
+
+  PositionedElement _withX(PositionedElement positioned, double x) {
+    return PositionedElement(
+      positioned.element,
+      Offset(x, positioned.position.dy),
+      system: positioned.system,
+      voiceNumber: positioned.voiceNumber,
+    );
+  }
+
+  List<double> _extractMeasureBoundaries(List<PositionedElement> elements) {
+    final firstMusicX = _firstMusicX(elements);
+    final barlineXs = _extractBarlines(elements).map((barline) => barline.x);
+    final boundaries = <double>[firstMusicX];
+
+    for (final x in barlineXs) {
+      if ((x - boundaries.last).abs() > 0.01) {
+        boundaries.add(x);
+      }
+    }
+
+    if (boundaries.length < 2) {
+      boundaries.add(_maxElementX(elements));
+    }
+
+    return boundaries;
+  }
+
+  List<_AlignedBarline> _extractBarlines(List<PositionedElement> elements) {
+    final barlines = elements
+        .where((positioned) => positioned.element is Barline)
+        .map(
+          (positioned) => _AlignedBarline(
+            x: positioned.position.dx,
+            type: (positioned.element as Barline).type,
+          ),
+        )
+        .where((barline) => barline.x.isFinite)
+        .toList()
+      ..sort((a, b) => a.x.compareTo(b.x));
+    return barlines;
+  }
+
+  double _firstMusicX(List<PositionedElement> elements) {
+    final musicalElements = elements
+        .where(
+          (positioned) =>
+              !_isSystemElement(positioned.element) &&
+              positioned.element is! Barline,
+        )
+        .toList();
+    if (musicalElements.isNotEmpty) {
+      return musicalElements
+          .map((positioned) => positioned.position.dx)
+          .reduce(math.min);
+    }
+    return _minElementX(elements);
+  }
+
+  double _safeProgress({
+    required double value,
+    required double start,
+    required double end,
+  }) {
+    final span = end - start;
+    if (span.abs() < 0.0001) {
+      return 1.0;
+    }
+    return ((value - start) / span).clamp(0.0, 1.0).toDouble();
+  }
+
+  bool _isSystemElement(MusicalElement element) {
+    return element is Clef ||
+        element is KeySignature ||
+        element is TimeSignature;
+  }
+
+  List<PositionedElement> _remapElementsX({
+    required List<PositionedElement> elements,
+    required double prefixStart,
+    required double targetPrefixStart,
+    required List<double> originalBoundaries,
+    required List<double> targetBoundaries,
+  }) {
+    if (elements.isEmpty ||
+        originalBoundaries.length < 2 ||
+        targetBoundaries.length < 2) {
+      return elements;
+    }
+
+    final segmentCount = math.min(
+          originalBoundaries.length,
+          targetBoundaries.length,
+        ) -
+        1;
+    final sourceStart = originalBoundaries.first;
+    final sourceEnd = originalBoundaries.last;
+
+    double mapX(double x) {
+      if (x <= sourceStart) {
+        final sourcePrefixSpan = sourceStart - prefixStart;
+        final targetPrefixSpan = targetBoundaries.first - targetPrefixStart;
+        if (sourcePrefixSpan.abs() < 0.0001) {
+          return targetBoundaries.first;
+        }
+        final ratio = ((x - prefixStart) / sourcePrefixSpan).clamp(0.0, 1.0);
+        return targetPrefixStart + (targetPrefixSpan * ratio);
+      }
+
+      for (int i = 0; i < segmentCount; i++) {
+        final sourceSegmentStart = originalBoundaries[i];
+        final sourceSegmentEnd = originalBoundaries[i + 1];
+        if (x <= sourceSegmentEnd || i == segmentCount - 1) {
+          final targetSegmentStart = targetBoundaries[i];
+          final targetSegmentEnd = targetBoundaries[i + 1];
+          final sourceSpan = sourceSegmentEnd - sourceSegmentStart;
+          if (sourceSpan.abs() < 0.0001) {
+            return targetSegmentStart;
+          }
+          final ratio = ((x - sourceSegmentStart) / sourceSpan).clamp(0.0, 1.0);
+          return targetSegmentStart +
+              ((targetSegmentEnd - targetSegmentStart) * ratio);
+        }
+      }
+
+      final overflowAfterEnd = x - sourceEnd;
+      return targetBoundaries.last + overflowAfterEnd;
+    }
+
+    return elements
+        .map(
+          (positioned) => PositionedElement(
+            positioned.element,
+            Offset(mapX(positioned.position.dx), positioned.position.dy),
+            system: positioned.system,
+            voiceNumber: positioned.voiceNumber,
+          ),
+        )
+        .toList();
+  }
+
+  double _minElementX(List<PositionedElement> elements) {
+    return elements
+        .map((element) => element.position.dx)
+        .fold<double>(double.infinity, math.min);
+  }
+
+  double _maxElementX(List<PositionedElement> elements) {
+    return elements
+        .map((element) => element.position.dx)
+        .fold<double>(double.negativeInfinity, math.max);
+  }
+
+  double _maxFirstXByType<T extends MusicalElement>(
+    List<List<PositionedElement>> staffs,
+  ) {
+    var maxX = double.negativeInfinity;
+    for (final elements in staffs) {
+      for (final positioned in elements) {
+        if (positioned.element is T) {
+          maxX = math.max(maxX, positioned.position.dx);
+          break;
+        }
+      }
+    }
+    return maxX.isFinite ? maxX : 0;
+  }
+
+  BarlineType _preferBarlineTypeList(List<BarlineType?> barlineTypes) {
+    if (barlineTypes.contains(BarlineType.final_)) {
+      return BarlineType.final_;
+    }
+    if (barlineTypes.contains(BarlineType.double)) {
+      return BarlineType.double;
+    }
+    if (barlineTypes.contains(BarlineType.lightLight)) {
+      return BarlineType.lightLight;
+    }
+    for (final type in barlineTypes) {
+      if (type != null) {
+        return type;
+      }
+    }
+    return BarlineType.single;
+  }
+
+  List<PositionedElement> _offsetElementsY(
+    List<PositionedElement> elements,
+    double deltaY,
+  ) {
+    return elements
+        .map(
+          (positioned) => PositionedElement(
+            positioned.element,
+            Offset(positioned.position.dx, positioned.position.dy + deltaY),
+            system: positioned.system,
+            voiceNumber: positioned.voiceNumber,
+          ),
+        )
+        .toList();
+  }
+}
+
+class _ConnectedMultiStaffPainter extends CustomPainter {
+  final SmuflMetadata metadata;
+  final MusicScoreTheme theme;
+  final double staffSpace;
+  final List<String> labels;
+  final List<double> baselineYs;
+  final List<List<PositionedElement>> elementsByStaff;
+  final List<_AlignedBarline> barlines;
+  final List<LayoutEngine> layouts;
+
+  const _ConnectedMultiStaffPainter({
+    required this.metadata,
+    required this.theme,
+    required this.staffSpace,
+    required this.labels,
+    required this.baselineYs,
+    required this.elementsByStaff,
+    required this.barlines,
+    required this.layouts,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (metadata.isNotLoaded ||
+        elementsByStaff.isEmpty ||
+        baselineYs.isEmpty ||
+        layouts.length != elementsByStaff.length) {
+      return;
+    }
+
+    canvas.save();
+    canvas.clipRect(Rect.fromLTWH(0, 0, size.width, size.height));
+
+    final coordinates = <StaffCoordinateSystem>[];
+    for (int i = 0; i < baselineYs.length; i++) {
+      final coordinate = StaffCoordinateSystem(
+        staffSpace: staffSpace,
+        staffBaseline: Offset(0, baselineYs[i]),
+      );
+      coordinates.add(coordinate);
+
+      final renderer = StaffRenderer(
+        coordinates: coordinate,
+        metadata: metadata,
+        theme: theme,
+      );
+      renderer.renderStaff(
+        canvas,
+        elementsByStaff[i],
+        size,
+        layoutEngine: layouts[i],
+      );
+
+      if (i < labels.length) {
+        final labelPainter = TextPainter(
+          text: TextSpan(
+            text: labels[i],
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              color: Colors.black87,
+            ),
+          ),
+          textDirection: TextDirection.ltr,
+        )..layout();
+        final labelY =
+            coordinate.getStaffLineY(3) - (labelPainter.height * 0.5);
+        labelPainter.paint(canvas, Offset(2, labelY));
+      }
+    }
+
+    final thinThickness =
+        metadata.getEngravingDefault('thinBarlineThickness') * staffSpace;
+    final thickThickness =
+        metadata.getEngravingDefault('thickBarlineThickness') * staffSpace;
+    final finalBarlineWidth =
+        metadata.getGlyphWidth('barlineFinal') * staffSpace;
+    final doubleBarlineWidth =
+        metadata.getGlyphWidth('barlineDouble') * staffSpace;
+    final connectorTopY = coordinates.first.getStaffLineY(5);
+    final connectorBottomY = coordinates.last.getStaffLineY(1);
+
+    void drawConnector({
+      required double x,
+      required double thickness,
+    }) {
+      final paint = Paint()
+        ..color = theme.barlineColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = thickness;
+      canvas.drawLine(
+        Offset(x, connectorTopY),
+        Offset(x, connectorBottomY),
+        paint,
+      );
+    }
+
+    for (final barline in barlines) {
+      if (!barline.x.isFinite) continue;
+
+      final primaryCenterX = barline.x + (thinThickness * 0.5);
+      drawConnector(x: primaryCenterX, thickness: thinThickness);
+
+      if (barline.type == BarlineType.final_) {
+        final secondaryCenterX =
+            barline.x + finalBarlineWidth - (thickThickness * 0.5);
+        drawConnector(x: secondaryCenterX, thickness: thickThickness);
+      } else if (barline.type == BarlineType.double ||
+          barline.type == BarlineType.lightLight) {
+        final secondaryCenterX =
+            barline.x + doubleBarlineWidth - (thinThickness * 0.5);
+        drawConnector(x: secondaryCenterX, thickness: thinThickness);
+      }
+    }
+
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _ConnectedMultiStaffPainter oldDelegate) {
+    return oldDelegate.staffSpace != staffSpace ||
+        oldDelegate.theme != theme ||
+        oldDelegate.barlines.length != barlines.length ||
+        oldDelegate.elementsByStaff.length != elementsByStaff.length ||
+        oldDelegate.labels.length != labels.length;
+  }
+}
+
 class MultiStaffDemoApp extends StatelessWidget {
   const MultiStaffDemoApp({super.key});
 
@@ -914,24 +1550,129 @@ class MultiStaffDemoApp extends StatelessWidget {
     return staff;
   }
 
-  Staff _buildSATBStaff(ClefType clef, String step, int octave,
-      {bool isBottom = false}) {
+  Staff _buildSATBStaff({
+    required ClefType clef,
+    required List<Pitch> measure1,
+    required List<Pitch> measure2,
+    required List<Pitch> measure3,
+  }) {
     final staff = Staff();
-    final measure = Measure();
-    measure.add(Clef(clefType: clef));
-    measure.add(KeySignature(0));
-    if (!isBottom) measure.add(TimeSignature(numerator: 4, denominator: 4));
-    measure.add(Note(
-        pitch: Pitch(step: step, octave: octave),
-        duration: const Duration(DurationType.quarter)));
-    measure.add(Note(
-        pitch: Pitch(step: step == 'C' ? 'D' : 'B', octave: octave),
-        duration: const Duration(DurationType.quarter)));
-    measure.add(Note(
-        pitch: Pitch(step: step, octave: octave),
-        duration: const Duration(DurationType.half)));
-    staff.add(measure);
+
+    final m1 = Measure();
+    m1.add(Clef(clefType: clef));
+    m1.add(KeySignature(0));
+    m1.add(TimeSignature(numerator: 4, denominator: 4));
+    m1.add(Note(
+        pitch: measure1[0], duration: const Duration(DurationType.quarter)));
+    m1.add(Note(
+        pitch: measure1[1], duration: const Duration(DurationType.quarter)));
+    m1.add(
+        Note(pitch: measure1[2], duration: const Duration(DurationType.half)));
+
+    final m2 = Measure();
+    m2.add(Note(
+        pitch: measure2[0], duration: const Duration(DurationType.quarter)));
+    m2.add(Note(
+        pitch: measure2[1], duration: const Duration(DurationType.quarter)));
+    m2.add(Note(
+        pitch: measure2[2], duration: const Duration(DurationType.quarter)));
+    m2.add(Note(
+        pitch: measure2[3], duration: const Duration(DurationType.quarter)));
+
+    final m3 = Measure();
+    m3.add(
+        Note(pitch: measure3[0], duration: const Duration(DurationType.half)));
+    m3.add(
+        Note(pitch: measure3[1], duration: const Duration(DurationType.half)));
+
+    staff.add(m1);
+    staff.add(m2);
+    staff.add(m3);
     return staff;
+  }
+
+  Staff _buildSopranoStaff() {
+    return _buildSATBStaff(
+      clef: ClefType.treble,
+      measure1: const [
+        Pitch(step: 'G', octave: 5),
+        Pitch(step: 'A', octave: 5),
+        Pitch(step: 'G', octave: 5),
+      ],
+      measure2: const [
+        Pitch(step: 'F', octave: 5),
+        Pitch(step: 'E', octave: 5),
+        Pitch(step: 'F', octave: 5),
+        Pitch(step: 'G', octave: 5),
+      ],
+      measure3: const [
+        Pitch(step: 'A', octave: 5),
+        Pitch(step: 'G', octave: 5),
+      ],
+    );
+  }
+
+  Staff _buildAltoStaff() {
+    return _buildSATBStaff(
+      clef: ClefType.treble,
+      measure1: const [
+        Pitch(step: 'E', octave: 5),
+        Pitch(step: 'F', octave: 5),
+        Pitch(step: 'E', octave: 5),
+      ],
+      measure2: const [
+        Pitch(step: 'D', octave: 5),
+        Pitch(step: 'C', octave: 5),
+        Pitch(step: 'D', octave: 5),
+        Pitch(step: 'E', octave: 5),
+      ],
+      measure3: const [
+        Pitch(step: 'F', octave: 5),
+        Pitch(step: 'E', octave: 5),
+      ],
+    );
+  }
+
+  Staff _buildTenorStaff() {
+    return _buildSATBStaff(
+      clef: ClefType.treble8vb,
+      measure1: const [
+        Pitch(step: 'C', octave: 4),
+        Pitch(step: 'D', octave: 4),
+        Pitch(step: 'C', octave: 4),
+      ],
+      measure2: const [
+        Pitch(step: 'B', octave: 3),
+        Pitch(step: 'A', octave: 3),
+        Pitch(step: 'B', octave: 3),
+        Pitch(step: 'C', octave: 4),
+      ],
+      measure3: const [
+        Pitch(step: 'D', octave: 4),
+        Pitch(step: 'C', octave: 4),
+      ],
+    );
+  }
+
+  Staff _buildBassSATBStaff() {
+    return _buildSATBStaff(
+      clef: ClefType.bass,
+      measure1: const [
+        Pitch(step: 'C', octave: 3),
+        Pitch(step: 'D', octave: 3),
+        Pitch(step: 'C', octave: 3),
+      ],
+      measure2: const [
+        Pitch(step: 'G', octave: 2),
+        Pitch(step: 'A', octave: 2),
+        Pitch(step: 'G', octave: 2),
+        Pitch(step: 'C', octave: 3),
+      ],
+      measure3: const [
+        Pitch(step: 'D', octave: 3),
+        Pitch(step: 'C', octave: 3),
+      ],
+    );
   }
 
   Widget _buildGrandStaffSection() {
@@ -960,33 +1701,32 @@ class MultiStaffDemoApp extends StatelessWidget {
   }
 
   Widget _buildSATBSection() {
-    return _buildSection(
-      title: '🎤 Coral SATB',
-      description: 'Soprano, Contralto, Tenor e Baixo em pautas separadas',
-      children: [
-        _buildStaffRow('S', _buildSATBStaff(ClefType.treble, 'E', 5)),
-        _buildStaffRow('A', _buildSATBStaff(ClefType.treble, 'C', 5)),
-        _buildStaffRow('T', _buildSATBStaff(ClefType.treble, 'A', 4)),
-        _buildStaffRow(
-            'B', _buildSATBStaff(ClefType.bass, 'C', 3, isBottom: true)),
-      ],
-    );
-  }
+    final satbStaves = [
+      LabeledStaff(label: 'S', staff: _buildSopranoStaff()),
+      LabeledStaff(label: 'A', staff: _buildAltoStaff()),
+      LabeledStaff(label: 'T', staff: _buildTenorStaff()),
+      LabeledStaff(label: 'B', staff: _buildBassSATBStaff()),
+    ];
 
-  Widget _buildStaffRow(String label, Staff staff) {
-    return Row(
+    return _buildSection(
+      title: 'Coral SATB',
+      description:
+          'Quatro pautas alinhadas, clave de tenor oitavada para baixo e barras conectadas',
       children: [
-        SizedBox(
-          width: 20,
-          child: Text(label,
-              style:
-                  const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-        ),
-        Expanded(
-          child: Container(
-            height: 90,
+        Container(
+          height: 360,
+          decoration: BoxDecoration(
             color: Colors.white,
-            child: MusicScore(staff: staff),
+            border: Border(
+              left: BorderSide(color: Colors.grey.shade400, width: 2),
+              top: BorderSide(color: Colors.grey.shade300),
+              bottom: BorderSide(color: Colors.grey.shade300),
+              right: BorderSide(color: Colors.grey.shade300),
+            ),
+          ),
+          child: ConnectedMultiStaffScore(
+            staves: satbStaves,
+            interStaffSpacing: 7.0,
           ),
         ),
       ],
