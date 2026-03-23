@@ -379,206 +379,295 @@ class _GrandStaffScoreState extends State<GrandStaffScore> {
     required List<PositionedElement> trebleElements,
     required List<PositionedElement> bassElements,
   }) {
-    final trebleTimeline = _buildTimeline(trebleElements);
-    final bassTimeline = _buildTimeline(bassElements);
+    final trebleBoundaries = _extractMeasureBoundaries(trebleElements);
+    final bassBoundaries = _extractMeasureBoundaries(bassElements);
+    final trebleBarlines = _extractBarlines(trebleElements);
+    final bassBarlines = _extractBarlines(bassElements);
 
-    final sharedAnchorsByKey = <String, _SharedTimelineAnchor>{};
-    void mergeAnchors(List<_TimedElementData> timeline) {
-      for (final item in timeline) {
-        final key = _timeKey(item.time);
-        final existing = sharedAnchorsByKey[key];
-        if (existing == null) {
-          sharedAnchorsByKey[key] = _SharedTimelineAnchor(
-            key: key,
-            time: item.time,
-            x: item.positioned.position.dx,
-            isBarline: item.isBarline,
-            barlineType: item.barlineType,
-          );
-          continue;
+    final segmentCount = math.max(
+      1,
+      math.min(trebleBoundaries.length, bassBoundaries.length) - 1,
+    );
+    final trebleSourceBoundaries =
+        trebleBoundaries.take(segmentCount + 1).toList();
+    final bassSourceBoundaries = bassBoundaries.take(segmentCount + 1).toList();
+
+    final trebleStart = trebleSourceBoundaries.first;
+    final bassStart = bassSourceBoundaries.first;
+    final trebleEnd = trebleSourceBoundaries.last;
+    final bassEnd = bassSourceBoundaries.last;
+
+    final sharedStart = math.max(trebleStart, bassStart);
+    double sharedEnd = math.min(trebleEnd, bassEnd);
+    if (sharedEnd <= sharedStart) {
+      sharedEnd = math.max(trebleEnd, bassEnd);
+    }
+
+    final sharedBoundaries = <double>[sharedStart];
+    if (segmentCount > 1) {
+      for (int i = 1; i < segmentCount; i++) {
+        final trebleProgress = _safeProgress(
+          value: trebleSourceBoundaries[i],
+          start: trebleStart,
+          end: trebleEnd,
+        );
+        final bassProgress = _safeProgress(
+          value: bassSourceBoundaries[i],
+          start: bassStart,
+          end: bassEnd,
+        );
+        final targetProgress = math.max(trebleProgress, bassProgress);
+        var targetX =
+            sharedStart + ((sharedEnd - sharedStart) * targetProgress);
+        if (targetX <= sharedBoundaries.last + 0.01) {
+          targetX = sharedBoundaries.last + 0.01;
         }
-
-        final mergedX = math.max(existing.x, item.positioned.position.dx);
-        final mergedIsBarline = existing.isBarline || item.isBarline;
-        final mergedBarlineType = _preferBarlineType(
-          existing.barlineType,
-          item.barlineType,
-        );
-
-        sharedAnchorsByKey[key] = _SharedTimelineAnchor(
-          key: key,
-          time: existing.time,
-          x: mergedX,
-          isBarline: mergedIsBarline,
-          barlineType: mergedBarlineType,
-        );
+        sharedBoundaries.add(targetX);
       }
     }
+    sharedBoundaries.add(sharedEnd);
 
-    mergeAnchors(trebleTimeline);
-    mergeAnchors(bassTimeline);
+    final treblePrefixStart = _minElementX(trebleElements);
+    final bassPrefixStart = _minElementX(bassElements);
+    final sharedPrefixStart = math.max(treblePrefixStart, bassPrefixStart);
 
-    final sharedAnchors = sharedAnchorsByKey.values.toList()
-      ..sort((a, b) => a.time.compareTo(b.time));
-
-    if (sharedAnchors.isEmpty) {
-      return _GrandStaffAlignedData(
-        trebleElements: trebleElements,
-        bassElements: bassElements,
-        sharedBarlines: const [],
-      );
-    }
-
-    const minAnchorGap = 0.25;
-    for (int i = 1; i < sharedAnchors.length; i++) {
-      final previous = sharedAnchors[i - 1];
-      final current = sharedAnchors[i];
-      if (current.x <= previous.x + minAnchorGap) {
-        sharedAnchors[i] = current.copyWith(x: previous.x + minAnchorGap);
-      }
-    }
-
-    final maxAllowedX = math.min(
-      _maxElementX(trebleElements),
-      _maxElementX(bassElements),
-    );
-    final firstAnchorX = sharedAnchors.first.x;
-    final lastAnchorX = sharedAnchors.last.x;
-
-    if (lastAnchorX > maxAllowedX && lastAnchorX > firstAnchorX) {
-      final oldSpan = lastAnchorX - firstAnchorX;
-      final newSpan = math.max(1.0, maxAllowedX - firstAnchorX);
-      final scale = newSpan / oldSpan;
-      for (int i = 0; i < sharedAnchors.length; i++) {
-        final anchor = sharedAnchors[i];
-        sharedAnchors[i] = anchor.copyWith(
-          x: firstAnchorX + ((anchor.x - firstAnchorX) * scale),
-        );
-      }
-    }
-
-    final sharedXByKey = <String, double>{
-      for (final anchor in sharedAnchors) anchor.key: anchor.x,
-    };
-
-    final alignedTreble = _remapByTimeline(
+    final alignedTreble = _remapElementsX(
       elements: trebleElements,
-      timeline: trebleTimeline,
-      sharedXByKey: sharedXByKey,
+      prefixStart: treblePrefixStart,
+      targetPrefixStart: sharedPrefixStart,
+      originalBoundaries: trebleSourceBoundaries,
+      targetBoundaries: sharedBoundaries,
     );
-    final alignedBass = _remapByTimeline(
+    final alignedBass = _remapElementsX(
       elements: bassElements,
-      timeline: bassTimeline,
-      sharedXByKey: sharedXByKey,
+      prefixStart: bassPrefixStart,
+      targetPrefixStart: sharedPrefixStart,
+      originalBoundaries: bassSourceBoundaries,
+      targetBoundaries: sharedBoundaries,
     );
-
-    final sharedBarlines = sharedAnchors
-        .where((anchor) => anchor.isBarline)
-        .map(
-          (anchor) => _AlignedBarline(
-            x: anchor.x,
-            type: anchor.barlineType ?? BarlineType.single,
-          ),
-        )
-        .toList();
-
-    return _GrandStaffAlignedData(
+    final alignedSystemElements = _alignTimeSignatures(
       trebleElements: alignedTreble,
       bassElements: alignedBass,
-      sharedBarlines: sharedBarlines,
+      firstBoundaryX: sharedBoundaries.first,
     );
-  }
 
-  List<_TimedElementData> _buildTimeline(List<PositionedElement> elements) {
-    final timeline = <_TimedElementData>[];
-    double measureStartTime = 0.0;
-    double elapsedInMeasure = 0.0;
-    double currentMeasureDuration = 1.0;
-
-    for (int i = 0; i < elements.length; i++) {
-      final positioned = elements[i];
-      final element = positioned.element;
-
-      if (element is TimeSignature) {
-        currentMeasureDuration = element.measureValue;
-      }
-
-      final duration = _elementDuration(element);
-      if (duration > 0.0) {
-        final onsetTime = measureStartTime + elapsedInMeasure;
-        timeline.add(
-          _TimedElementData(
-            index: i,
-            positioned: positioned,
-            time: onsetTime,
-            isBarline: false,
-          ),
-        );
-        elapsedInMeasure += duration;
-      }
-
-      if (element is Barline) {
-        final boundaryTime = measureStartTime +
-            (elapsedInMeasure > 0.0
-                ? elapsedInMeasure
-                : currentMeasureDuration);
-        timeline.add(
-          _TimedElementData(
-            index: i,
-            positioned: positioned,
-            time: boundaryTime,
-            isBarline: true,
-            barlineType: element.type,
-          ),
-        );
-        measureStartTime = boundaryTime;
-        elapsedInMeasure = 0.0;
-      }
-    }
-
-    return timeline;
-  }
-
-  List<PositionedElement> _remapByTimeline({
-    required List<PositionedElement> elements,
-    required List<_TimedElementData> timeline,
-    required Map<String, double> sharedXByKey,
-  }) {
-    if (timeline.isEmpty) return elements;
-
-    final xByIndex = <int, double>{};
-    for (final item in timeline) {
-      final mappedX = sharedXByKey[_timeKey(item.time)];
-      if (mappedX != null) {
-        xByIndex[item.index] = mappedX;
-      }
-    }
-
-    if (xByIndex.isEmpty) return elements;
-
-    final remapped = <PositionedElement>[];
-    for (int i = 0; i < elements.length; i++) {
-      final positioned = elements[i];
-      final mappedX = xByIndex[i];
-      if (mappedX == null) {
-        remapped.add(positioned);
-        continue;
-      }
-
-      remapped.add(
-        PositionedElement(
-          positioned.element,
-          Offset(mappedX, positioned.position.dy),
-          system: positioned.system,
-          voiceNumber: positioned.voiceNumber,
+    final sharedBarlines = <_AlignedBarline>[];
+    for (int i = 1; i < sharedBoundaries.length; i++) {
+      final barlineIndex = i - 1;
+      final trebleType = barlineIndex < trebleBarlines.length
+          ? trebleBarlines[barlineIndex].type
+          : null;
+      final bassType = barlineIndex < bassBarlines.length
+          ? bassBarlines[barlineIndex].type
+          : null;
+      sharedBarlines.add(
+        _AlignedBarline(
+          x: sharedBoundaries[i],
+          type: _preferBarlineType(trebleType, bassType),
         ),
       );
     }
 
-    return remapped;
+    return _GrandStaffAlignedData(
+      trebleElements: alignedSystemElements.treble,
+      bassElements: alignedSystemElements.bass,
+      sharedBarlines: sharedBarlines,
+    );
   }
 
-  String _timeKey(double time) => time.toStringAsFixed(6);
+  ({List<PositionedElement> treble, List<PositionedElement> bass})
+      _alignTimeSignatures({
+    required List<PositionedElement> trebleElements,
+    required List<PositionedElement> bassElements,
+    required double firstBoundaryX,
+  }) {
+    final trebleIndices = _matchingElementIndices(
+        trebleElements, (element) => element is TimeSignature);
+    final bassIndices = _matchingElementIndices(
+        bassElements, (element) => element is TimeSignature);
+    if (trebleIndices.isEmpty || bassIndices.isEmpty) {
+      return (treble: trebleElements, bass: bassElements);
+    }
+
+    final adjustedTreble = List<PositionedElement>.from(trebleElements);
+    final adjustedBass = List<PositionedElement>.from(bassElements);
+    final pairCount = math.min(trebleIndices.length, bassIndices.length);
+    final maxAllowedX = firstBoundaryX - (widget.staffSpace * 0.5);
+
+    for (int i = 0; i < pairCount; i++) {
+      final trebleIndex = trebleIndices[i];
+      final bassIndex = bassIndices[i];
+      final desiredX = math.max(
+        adjustedTreble[trebleIndex].position.dx,
+        adjustedBass[bassIndex].position.dx,
+      );
+      final alignedX = math.min(desiredX, maxAllowedX);
+      adjustedTreble[trebleIndex] =
+          _withX(adjustedTreble[trebleIndex], alignedX);
+      adjustedBass[bassIndex] = _withX(adjustedBass[bassIndex], alignedX);
+    }
+
+    return (treble: adjustedTreble, bass: adjustedBass);
+  }
+
+  List<int> _matchingElementIndices(
+    List<PositionedElement> elements,
+    bool Function(MusicalElement element) predicate,
+  ) {
+    final indices = <int>[];
+    for (int i = 0; i < elements.length; i++) {
+      if (predicate(elements[i].element)) {
+        indices.add(i);
+      }
+    }
+    return indices;
+  }
+
+  PositionedElement _withX(PositionedElement positioned, double x) {
+    return PositionedElement(
+      positioned.element,
+      Offset(x, positioned.position.dy),
+      system: positioned.system,
+      voiceNumber: positioned.voiceNumber,
+    );
+  }
+
+  List<double> _extractMeasureBoundaries(List<PositionedElement> elements) {
+    final firstMusicX = _firstMusicX(elements);
+    final barlineXs = _extractBarlines(elements).map((barline) => barline.x);
+
+    final boundaries = <double>[firstMusicX];
+    for (final x in barlineXs) {
+      if ((x - boundaries.last).abs() > 0.01) {
+        boundaries.add(x);
+      }
+    }
+
+    if (boundaries.length < 2) {
+      boundaries.add(_maxElementX(elements));
+    }
+
+    return boundaries;
+  }
+
+  List<_AlignedBarline> _extractBarlines(List<PositionedElement> elements) {
+    final barlines = elements
+        .where((positioned) => positioned.element is Barline)
+        .map(
+          (positioned) => _AlignedBarline(
+            x: positioned.position.dx,
+            type: (positioned.element as Barline).type,
+          ),
+        )
+        .where((barline) => barline.x.isFinite)
+        .toList()
+      ..sort((a, b) => a.x.compareTo(b.x));
+    return barlines;
+  }
+
+  double _firstMusicX(List<PositionedElement> elements) {
+    final musicalElements = elements
+        .where(
+          (positioned) =>
+              !_isSystemElement(positioned.element) &&
+              positioned.element is! Barline,
+        )
+        .toList();
+    if (musicalElements.isNotEmpty) {
+      return musicalElements
+          .map((positioned) => positioned.position.dx)
+          .reduce(math.min);
+    }
+    return _minElementX(elements);
+  }
+
+  double _safeProgress({
+    required double value,
+    required double start,
+    required double end,
+  }) {
+    final span = end - start;
+    if (span.abs() < 0.0001) {
+      return 1.0;
+    }
+    return ((value - start) / span).clamp(0.0, 1.0).toDouble();
+  }
+
+  bool _isSystemElement(MusicalElement element) {
+    return element is Clef ||
+        element is KeySignature ||
+        element is TimeSignature;
+  }
+
+  List<PositionedElement> _remapElementsX({
+    required List<PositionedElement> elements,
+    required double prefixStart,
+    required double targetPrefixStart,
+    required List<double> originalBoundaries,
+    required List<double> targetBoundaries,
+  }) {
+    if (elements.isEmpty ||
+        originalBoundaries.length < 2 ||
+        targetBoundaries.length < 2) {
+      return elements;
+    }
+
+    final segmentCount = math.min(
+          originalBoundaries.length,
+          targetBoundaries.length,
+        ) -
+        1;
+    final sourceStart = originalBoundaries.first;
+    final sourceEnd = originalBoundaries.last;
+
+    double mapX(double x) {
+      if (x <= sourceStart) {
+        final sourcePrefixSpan = sourceStart - prefixStart;
+        final targetPrefixSpan = targetBoundaries.first - targetPrefixStart;
+        if (sourcePrefixSpan.abs() < 0.0001) {
+          return targetBoundaries.first;
+        }
+        final ratio = ((x - prefixStart) / sourcePrefixSpan).clamp(0.0, 1.0);
+        return targetPrefixStart + (targetPrefixSpan * ratio);
+      }
+
+      for (int i = 0; i < segmentCount; i++) {
+        final sourceSegmentStart = originalBoundaries[i];
+        final sourceSegmentEnd = originalBoundaries[i + 1];
+        if (x <= sourceSegmentEnd || i == segmentCount - 1) {
+          final targetSegmentStart = targetBoundaries[i];
+          final targetSegmentEnd = targetBoundaries[i + 1];
+          final sourceSpan = sourceSegmentEnd - sourceSegmentStart;
+          if (sourceSpan.abs() < 0.0001) {
+            return targetSegmentStart;
+          }
+          final ratio = ((x - sourceSegmentStart) / sourceSpan).clamp(0.0, 1.0);
+          return targetSegmentStart +
+              ((targetSegmentEnd - targetSegmentStart) * ratio);
+        }
+      }
+
+      final overflowAfterEnd = x - sourceEnd;
+      return targetBoundaries.last + overflowAfterEnd;
+    }
+
+    return elements
+        .map(
+          (positioned) => PositionedElement(
+            positioned.element,
+            Offset(mapX(positioned.position.dx), positioned.position.dy),
+            system: positioned.system,
+            voiceNumber: positioned.voiceNumber,
+          ),
+        )
+        .toList();
+  }
+
+  double _minElementX(List<PositionedElement> elements) {
+    return elements
+        .map((element) => element.position.dx)
+        .fold<double>(double.infinity, math.min);
+  }
 
   double _maxElementX(List<PositionedElement> elements) {
     return elements
@@ -586,18 +675,17 @@ class _GrandStaffScoreState extends State<GrandStaffScore> {
         .fold<double>(double.negativeInfinity, math.max);
   }
 
-  double _elementDuration(MusicalElement element) {
-    if (element is Note) return element.duration.realValue;
-    if (element is Rest) return element.duration.realValue;
-    if (element is Chord) return element.duration.realValue;
-    return 0.0;
-  }
-
-  BarlineType? _preferBarlineType(BarlineType? a, BarlineType? b) {
+  BarlineType _preferBarlineType(BarlineType? a, BarlineType? b) {
     if (a == BarlineType.final_ || b == BarlineType.final_) {
       return BarlineType.final_;
     }
-    return b ?? a;
+    if (a == BarlineType.double || a == BarlineType.lightLight) {
+      return a!;
+    }
+    if (b == BarlineType.double || b == BarlineType.lightLight) {
+      return b!;
+    }
+    return b ?? a ?? BarlineType.single;
   }
 
   List<PositionedElement> _offsetElementsY(
@@ -752,52 +840,6 @@ class _GrandStaffPainter extends CustomPainter {
         oldDelegate.barlines.length != barlines.length ||
         oldDelegate.staffSpace != staffSpace ||
         oldDelegate.theme != theme;
-  }
-}
-
-class _TimedElementData {
-  final int index;
-  final PositionedElement positioned;
-  final double time;
-  final bool isBarline;
-  final BarlineType? barlineType;
-
-  const _TimedElementData({
-    required this.index,
-    required this.positioned,
-    required this.time,
-    required this.isBarline,
-    this.barlineType,
-  });
-}
-
-class _SharedTimelineAnchor {
-  final String key;
-  final double time;
-  final double x;
-  final bool isBarline;
-  final BarlineType? barlineType;
-
-  const _SharedTimelineAnchor({
-    required this.key,
-    required this.time,
-    required this.x,
-    required this.isBarline,
-    this.barlineType,
-  });
-
-  _SharedTimelineAnchor copyWith({
-    double? x,
-    bool? isBarline,
-    BarlineType? barlineType,
-  }) {
-    return _SharedTimelineAnchor(
-      key: key,
-      time: time,
-      x: x ?? this.x,
-      isBarline: isBarline ?? this.isBarline,
-      barlineType: barlineType ?? this.barlineType,
-    );
   }
 }
 
