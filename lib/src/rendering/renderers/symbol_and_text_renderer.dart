@@ -224,16 +224,17 @@ class SymbolAndTextRenderer {
     if (tempo.bpm != null) {
       text += ' (♩ = ${tempo.bpm})';
     }
-    _drawText(
-      canvas,
-      text: text,
-      position: Offset(
-        basePosition.dx,
-        coordinates.staffBaseline.dy - (coordinates.staffSpace * 3.5),
-      ),
-      style:
-          theme.tempoTextStyle ?? const TextStyle(fontWeight: FontWeight.bold),
-    );
+    final style =
+        theme.tempoTextStyle ?? const TextStyle(fontWeight: FontWeight.bold);
+    final tp = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textAlign: TextAlign.left,
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    final textTopY =
+        coordinates.getStaffLineY(5) - (coordinates.staffSpace * 2.8);
+    tp.paint(canvas, Offset(basePosition.dx, textTopY - tp.height));
   }
 
   void renderBreath(Canvas canvas, Breath breath, Offset basePosition) {
@@ -271,15 +272,18 @@ class SymbolAndTextRenderer {
   void renderOctaveMark(
     Canvas canvas,
     OctaveMark octaveMark,
-    Offset basePosition,
-  ) {
+    Offset basePosition, {
+    double? startX,
+    double? endX,
+  }) {
     final isAbove =
         octaveMark.type == OctaveType.va8 ||
         octaveMark.type == OctaveType.va15 ||
         octaveMark.type == OctaveType.va22;
     final yPosition = isAbove
-        ? coordinates.getStaffLineY(5) - (coordinates.staffSpace * 1.5)
-        : coordinates.getStaffLineY(1) + (coordinates.staffSpace * 1.5);
+        ? coordinates.getStaffLineY(5) - (coordinates.staffSpace * 1.8)
+        : coordinates.getStaffLineY(1) + (coordinates.staffSpace * 1.8);
+    final xStart = startX ?? basePosition.dx;
 
     // 1. Draw the text label
     final style =
@@ -294,14 +298,14 @@ class SymbolAndTextRenderer {
       textDirection: TextDirection.ltr,
     );
     tp.layout();
-    tp.paint(canvas, Offset(basePosition.dx, yPosition - tp.height / 2));
-    final textEndX = basePosition.dx + tp.width;
+    tp.paint(canvas, Offset(xStart, yPosition - tp.height / 2));
+    final textEndX = xStart + tp.width;
 
     // 2. Draw a dashed horizontal line after the text
     final lineLength = octaveMark.length > 0
         ? octaveMark.length
         : coordinates.staffSpace * 3;
-    final lineEndX = basePosition.dx + lineLength;
+    final targetEndX = endX ?? (xStart + lineLength);
     final lineY = yPosition;
 
     final linePaint = Paint()
@@ -309,9 +313,14 @@ class SymbolAndTextRenderer {
       ..strokeWidth = coordinates.staffSpace * 0.1
       ..style = PaintingStyle.stroke;
 
+    final lineStartX = textEndX + coordinates.staffSpace * 0.2;
+    final lineEndX = targetEndX > lineStartX
+        ? targetEndX
+        : lineStartX + coordinates.staffSpace * 0.5;
+
     _drawDashedLine(
       canvas,
-      Offset(textEndX + coordinates.staffSpace * 0.2, lineY),
+      Offset(lineStartX, lineY),
       Offset(lineEndX, lineY),
       linePaint,
       coordinates.staffSpace,
