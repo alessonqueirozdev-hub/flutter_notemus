@@ -28,6 +28,33 @@ class PositionedElement {
     this.system = 0,
     this.voiceNumber,
   });
+
+  /// Stable signature used to cheaply compare large positioned element lists.
+  ///
+  /// The signature intentionally includes element identity/equality semantics,
+  /// position, system and voice context so `shouldRepaint` can compare in O(1).
+  static int computeSignature(List<PositionedElement> elements) {
+    int hash = 17;
+    for (final item in elements) {
+      hash = Object.hash(
+        hash,
+        item.element,
+        item.position.dx,
+        item.position.dy,
+        item.system,
+        item.voiceNumber,
+      );
+    }
+    return Object.hash(hash, elements.length);
+  }
+}
+
+/// Layout output bundle with positioned elements and deterministic signature.
+class LayoutResult {
+  final List<PositionedElement> elements;
+  final int signature;
+
+  const LayoutResult({required this.elements, required this.signature});
 }
 
 class LayoutCursor {
@@ -292,6 +319,18 @@ class LayoutEngine {
   Map<Note, double> get noteYPositions => Map.unmodifiable(_noteYPositions);
 
   List<PositionedElement> layout() {
+    return _layoutInternal();
+  }
+
+  LayoutResult layoutWithSignature() {
+    final elements = _layoutInternal();
+    return LayoutResult(
+      elements: elements,
+      signature: PositionedElement.computeSignature(elements),
+    );
+  }
+
+  List<PositionedElement> _layoutInternal() {
     // Limpar mapas de posições
     _noteXPositions.clear();
     _noteStaffPositions.clear();

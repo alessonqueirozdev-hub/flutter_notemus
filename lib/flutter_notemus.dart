@@ -239,7 +239,8 @@ class _MusicScoreState extends State<MusicScore> {
               metadata: _metadata,
             );
 
-            final positionedElements = layoutEngine.layout();
+            final layoutResult = layoutEngine.layoutWithSignature();
+            final positionedElements = layoutResult.elements;
 
             if (positionedElements.isEmpty) {
               return const Center(child: Text('Partitura vazia'));
@@ -267,6 +268,7 @@ class _MusicScoreState extends State<MusicScore> {
                     size: Size(viewportWidth, totalHeight),
                     painter: MusicScorePainter(
                       positionedElements: positionedElements,
+                      positionedElementsSignature: layoutResult.signature,
                       metadata: SmuflMetadata(),
                       theme: widget.theme,
                       staffSpace: effectiveStaffSpace,
@@ -344,6 +346,9 @@ class MusicScorePainter extends CustomPainter {
   /// Pre-computed list of elements with absolute canvas positions.
   final List<PositionedElement> positionedElements;
 
+  /// Deterministic signature of [positionedElements] for cheap repaint checks.
+  final int positionedElementsSignature;
+
   /// SMuFL metadata providing glyph bounding boxes and advance widths.
   final SmuflMetadata metadata;
 
@@ -367,6 +372,7 @@ class MusicScorePainter extends CustomPainter {
 
   MusicScorePainter({
     required this.positionedElements,
+    int? positionedElementsSignature,
     required this.metadata,
     required this.theme,
     required this.staffSpace,
@@ -374,7 +380,10 @@ class MusicScorePainter extends CustomPainter {
     required this.viewportSize,
     required this.horizontalController,
     required this.verticalController,
-  }) : super(
+  }) : positionedElementsSignature =
+           positionedElementsSignature ??
+           PositionedElement.computeSignature(positionedElements),
+       super(
          repaint: Listenable.merge(<Listenable>[
            horizontalController,
            verticalController,
@@ -489,36 +498,14 @@ class MusicScorePainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) {
     if (oldDelegate is! MusicScorePainter) return true;
 
-    // Repaint when viewport, styles, or positioned content changes.
-    return !_samePositionedElements(
-          oldDelegate.positionedElements,
-          positionedElements,
-        ) ||
+    // Repaint when viewport, styles, or positioned content signature changes.
+    return oldDelegate.positionedElementsSignature !=
+            positionedElementsSignature ||
         oldDelegate.theme != theme ||
         oldDelegate.staffSpace != staffSpace ||
         oldDelegate.layoutEngine != layoutEngine ||
         oldDelegate.horizontalController != horizontalController ||
         oldDelegate.verticalController != verticalController ||
         oldDelegate.viewportSize != viewportSize;
-  }
-
-  bool _samePositionedElements(
-    List<PositionedElement> oldElements,
-    List<PositionedElement> newElements,
-  ) {
-    if (identical(oldElements, newElements)) return true;
-    if (oldElements.length != newElements.length) return false;
-
-    for (int i = 0; i < oldElements.length; i++) {
-      final oldItem = oldElements[i];
-      final newItem = newElements[i];
-      if (oldItem.element != newItem.element ||
-          oldItem.position != newItem.position ||
-          oldItem.system != newItem.system ||
-          oldItem.voiceNumber != newItem.voiceNumber) {
-        return false;
-      }
-    }
-    return true;
   }
 }
