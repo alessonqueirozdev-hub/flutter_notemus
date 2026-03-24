@@ -1,7 +1,7 @@
 // lib/flutter_notemus.dart
-// VERSÃƒO CORRIGIDA: Widget principal com todas as melhorias
+// VERSÃƒÆ’O CORRIGIDA: Widget principal com todas as melhorias
 
-/// Flutter Notemus â€” professional music notation rendering for Flutter.
+/// Flutter Notemus Ã¢â‚¬â€ professional music notation rendering for Flutter.
 ///
 /// This package provides a complete solution for rendering high-quality
 /// music notation in Flutter apps, built on the SMuFL (Standard Music
@@ -29,7 +29,7 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'core/core.dart'; // ðŸ†• Usar tipos do core
+import 'core/core.dart'; // Ã°Å¸â€ â€¢ Usar tipos do core
 import 'src/layout/layout_engine.dart';
 import 'src/parsers/json_parser.dart';
 import 'src/parsers/mei_parser.dart';
@@ -41,7 +41,7 @@ import 'src/rendering/staff_coordinate_system.dart';
 import 'src/smufl/smufl_metadata_loader.dart';
 import 'src/theme/music_score_theme.dart';
 
-// ðŸ†• NOVA ARQUITETURA - Toda teoria musical em core/
+// Ã°Å¸â€ â€¢ NOVA ARQUITETURA - Toda teoria musical em core/
 export 'core/core.dart';
 export 'midi.dart';
 
@@ -221,7 +221,7 @@ class _MusicScoreState extends State<MusicScore> {
 
         if (snapshot.hasError) {
           return Center(
-            child: Text('Erro ao carregar metadados: ${snapshot.error}'),
+            child: Text('Failed to load metadata: ${snapshot.error}'),
           );
         }
 
@@ -243,7 +243,7 @@ class _MusicScoreState extends State<MusicScore> {
             final positionedElements = layoutResult.elements;
 
             if (positionedElements.isEmpty) {
-              return const Center(child: Text('Partitura vazia'));
+              return const Center(child: Text('Empty score'));
             }
 
             final totalHeight = _calculateTotalHeight(
@@ -328,7 +328,8 @@ class _MusicScoreState extends State<MusicScore> {
     }
 
     final systemHeight = effectiveStaffSpace * 10;
-    final margins = effectiveStaffSpace * 6;
+    // Larger vertical margins prevent clipping of tempo marks and upper ornaments.
+    final margins = effectiveStaffSpace * 8.5;
 
     return margins + ((maxSystem + 1) * systemHeight);
   }
@@ -394,10 +395,10 @@ class MusicScorePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (metadata.isNotLoaded || positionedElements.isEmpty) return;
 
-    // OTIMIZAÃ‡ÃƒO 1: Clip canvas ao viewport
+    // OTIMIZAÃƒâ€¡ÃƒÆ’O 1: Clip canvas ao viewport
     canvas.clipRect(Rect.fromLTWH(0, 0, size.width, size.height));
 
-    // OTIMIZAÃ‡ÃƒO 2: Calcular sistemas visÃ­veis
+    // OTIMIZAÃƒâ€¡ÃƒÆ’O 2: Calcular sistemas visÃƒÂ­veis
     final systemHeight = staffSpace * 10;
     final visibleSystemRange = _calculateVisibleSystems(systemHeight);
 
@@ -408,7 +409,7 @@ class MusicScorePainter extends CustomPainter {
       systemGroups.putIfAbsent(element.system, () => []).add(element);
     }
 
-    // OTIMIZAÃ‡ÃƒO 3: Renderizar APENAS sistemas visÃ­veis
+    // OTIMIZAÃƒâ€¡ÃƒÆ’O 3: Renderizar APENAS sistemas visÃƒÂ­veis
     for (final entry in systemGroups.entries) {
       final systemIndex = entry.key;
 
@@ -418,7 +419,8 @@ class MusicScorePainter extends CustomPainter {
       }
 
       final elements = entry.value;
-      final systemY = (systemIndex * staffSpace * 10) + (staffSpace * 5);
+      // Move the baseline down to preserve headroom for text and ornaments above the staff.
+      final systemY = (systemIndex * staffSpace * 10) + (staffSpace * 6.5);
       final staffBaseline = Offset(0, systemY);
 
       final coordinates = StaffCoordinateSystem(
@@ -441,12 +443,12 @@ class MusicScorePainter extends CustomPainter {
     // debugPrint('Canvas Clipping: Renderizados=$rendered, Pulados=$skipped');
   }
 
-  /// Calcula quais sistemas estÃ£o visÃ­veis no viewport atual
+  /// Calcula quais sistemas estÃƒÂ£o visÃƒÂ­veis no viewport atual
   ///
-  /// Retorna um range (Set) de Ã­ndices de sistemas que intersectam o viewport.
+  /// Retorna um range (Set) de ÃƒÂ­ndices de sistemas que intersectam o viewport.
   /// Adiciona margem de 1 sistema acima e abaixo para suavidade no scroll.
   Set<int> _calculateVisibleSystems(double systemHeight) {
-    // VALIDAÃ‡ÃƒO: Prevenir divisÃ£o por zero e valores invÃ¡lidos
+    // VALIDAÃƒâ€¡ÃƒÆ’O: Prevenir divisÃƒÂ£o por zero e valores invÃƒÂ¡lidos
     if (systemHeight <= 0 || !systemHeight.isFinite) {
       // Fallback: renderizar apenas sistema 0
       return {0};
@@ -471,11 +473,11 @@ class MusicScorePainter extends CustomPainter {
     final viewportTop = scrollOffsetY - margin;
     final viewportBottom = scrollOffsetY + viewportSize.height + margin;
 
-    // Calcular sistemas visÃ­veis com proteÃ§Ã£o contra Infinity
+    // Calcular sistemas visÃƒÂ­veis com proteÃƒÂ§ÃƒÂ£o contra Infinity
     final firstSystemRaw = (viewportTop / systemHeight).floor();
     final lastSystemRaw = (viewportBottom / systemHeight).ceil();
 
-    // Validar que os valores sÃ£o finitos antes de fazer clamp
+    // Validar que os valores sÃƒÂ£o finitos antes de fazer clamp
     if (!firstSystemRaw.isFinite || !lastSystemRaw.isFinite) {
       return {0};
     }

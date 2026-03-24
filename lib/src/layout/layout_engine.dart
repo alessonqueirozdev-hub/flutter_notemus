@@ -1,17 +1,17 @@
 // lib/src/layout/layout_engine.dart
-// VERSÃO CORRIGIDA: Espaçamento melhorado e beaming corrigido
-// FASE 3: Suporte a BoundingBox hierárquico adicionado
-// FASE 2 REFATORAÇÃO: Usando tipos do core/
+// VERSÃƒO CORRIGIDA: EspaÃ§amento melhorado e beaming corrigido
+// FASE 3: Suporte a BoundingBox hierÃ¡rquico adicionado
+// FASE 2 REFATORAÃ‡ÃƒO: Usando tipos do core/
 
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/core/core.dart';
 import 'package:flutter_notemus/src/beaming/beam_analyzer.dart';
 import 'package:flutter_notemus/src/beaming/beam_group.dart';
 import 'package:flutter_notemus/src/layout/beam_grouper.dart';
-import 'package:flutter_notemus/src/layout/measure_validator.dart'; // ✅ ADICIONADO
+import 'package:flutter_notemus/src/layout/measure_validator.dart'; // âœ… ADICIONADO
 import 'package:flutter_notemus/src/rendering/staff_position_calculator.dart';
 import 'package:flutter_notemus/src/rendering/smufl_positioning_engine.dart';
-import 'package:flutter_notemus/src/smufl/smufl_metadata_loader.dart'; // ✅ ADICIONADO
+import 'package:flutter_notemus/src/smufl/smufl_metadata_loader.dart'; // âœ… ADICIONADO
 import 'spacing/spacing.dart' as spacing;
 
 class PositionedElement {
@@ -19,7 +19,7 @@ class PositionedElement {
   final Offset position;
   final int system;
 
-  /// Número da voz (1, 2, ...) em contextos polifônicos. Null = voz única.
+  /// NÃºmero da voz (1, 2, ...) em contextos polifÃ´nicos. Null = voz Ãºnica.
   final int? voiceNumber;
 
   PositionedElement(
@@ -63,16 +63,16 @@ class LayoutCursor {
   final double systemMargin;
   final double systemHeight;
 
-  // Mapas para capturar posições das notas (para beaming)
+  // Mapas para capturar posiÃ§Ãµes das notas (para beaming)
   final Map<Note, double>? noteXPositions;
   final Map<Note, int>? noteStaffPositions;
-  final Map<Note, double>? noteYPositions; // ✅ NOVO: Y absoluto em pixels
+  final Map<Note, double>? noteYPositions; // âœ… NOVO: Y absoluto em pixels
 
   double _currentX;
   double _currentY;
   int _currentSystem;
   bool _isFirstMeasureInSystem;
-  Clef? _currentClef; // ✅ NOVO: Rastrear clave atual
+  Clef? _currentClef; // âœ… NOVO: Rastrear clave atual
 
   LayoutCursor({
     required this.staffSpace,
@@ -81,11 +81,11 @@ class LayoutCursor {
     this.systemHeight = 10.0,
     this.noteXPositions,
     this.noteStaffPositions,
-    this.noteYPositions, // ✅ NOVO
+    this.noteYPositions, // âœ… NOVO
   }) : _currentX = systemMargin,
        _currentY =
            staffSpace *
-           5.0, // CORREÇÃO CRÍTICA: Baseline é staffSpace * 5, não * 4
+           5.0, // CORREÃ‡ÃƒO CRÃTICA: Baseline Ã© staffSpace * 5, nÃ£o * 4
        _currentSystem = 0,
        _isFirstMeasureInSystem = true;
 
@@ -127,7 +127,7 @@ class LayoutCursor {
     advance(LayoutEngine.barlineSeparation * staffSpace);
   }
 
-  /// Adiciona barra dupla final (fim da peça)
+  /// Adiciona barra dupla final (fim da peÃ§a)
   void addDoubleBarline(List<PositionedElement> elements) {
     elements.add(
       PositionedElement(
@@ -154,7 +154,7 @@ class LayoutCursor {
       _currentClef = element;
     }
 
-    // ✅ SUPORTE A ACORDES: Expandir notas do acorde em elementos separados
+    // âœ… SUPORTE A ACORDES: Expandir notas do acorde em elementos separados
     if (element is Chord && _currentClef != null) {
       for (final note in element.notes) {
         final staffPosition = StaffPositionCalculator.calculate(
@@ -214,22 +214,22 @@ class LayoutEngine {
   final Staff staff;
   final double availableWidth;
   final double staffSpace;
-  final SmuflMetadata? metadata; // ✅ Tipagem correta aplicada
+  final SmuflMetadata? metadata; // âœ… Tipagem correta aplicada
 
-  // Sistema de Espaçamento Inteligente
+  // Sistema de EspaÃ§amento Inteligente
   late final spacing.IntelligentSpacingEngine _spacingEngine;
 
-  // Sistema de Beaming Avançado
+  // Sistema de Beaming AvanÃ§ado
   late final BeamAnalyzer _beamAnalyzer;
   final Map<Note, double> _noteXPositions = {};
   final Map<Note, int> _noteStaffPositions = {};
-  final Map<Note, double> _noteYPositions = {}; // ✅ NOVO: Y absoluto em pixels
+  final Map<Note, double> _noteYPositions = {}; // âœ… NOVO: Y absoluto em pixels
   final List<AdvancedBeamGroup> _advancedBeamGroups = [];
 
-  // Configuração de validação (silenciosa por padrão)
+  // ConfiguraÃ§Ã£o de validaÃ§Ã£o (silenciosa por padrÃ£o)
   final bool verboseValidation;
 
-  // CORREÇÃO SMuFL: Larguras agora consultadas dinamicamente do metadata
+  // CORREÃ‡ÃƒO SMuFL: Larguras agora consultadas dinamicamente do metadata
   // Valores de fallback mantidos para compatibilidade
   static const double _gClefWidthFallback = 2.684;
   static const double _fClefWidthFallback = 2.756;
@@ -237,15 +237,15 @@ class LayoutEngine {
   static const double _noteheadBlackWidthFallback = 1.18;
   static const double _accidentalSharpWidthFallback = 1.116;
   static const double _accidentalFlatWidthFallback = 1.18;
-  static const double barlineSeparation = 2.5; // Espaço DEPOIS da barline
+  static const double barlineSeparation = 2.5; // EspaÃ§o DEPOIS da barline
   static const double legerLineExtension = 0.4;
 
-  // ESPAÇAMENTO INTELIGENTE: Valores balanceados
+  // ESPAÃ‡AMENTO INTELIGENTE: Valores balanceados
   static const double systemMargin = 2.5;
   static const double measureMinWidth = 5.0;
-  static const double noteMinSpacing = 3.5; // Base para espaçamento entre notas
+  static const double noteMinSpacing = 3.5; // Base para espaÃ§amento entre notas
   static const double measureEndPadding =
-      3.0; // Espaço adequado ANTES da barline (agora corrigido!)
+      3.0; // EspaÃ§o adequado ANTES da barline (agora corrigido!)
 
   // QUEBRA DE LINHA INTELIGENTE
   static const int measuresPerSystem = 4; // Compassos por linha
@@ -255,23 +255,23 @@ class LayoutEngine {
     required this.availableWidth,
     this.staffSpace = 12.0,
     this.metadata,
-    this.verboseValidation = false, // Silencioso por padrão
+    this.verboseValidation = false, // Silencioso por padrÃ£o
     spacing.SpacingPreferences? spacingPreferences,
   }) {
-    // Inicializar motor de espaçamento
+    // Inicializar motor de espaÃ§amento
     _spacingEngine = spacing.IntelligentSpacingEngine(
       preferences: spacingPreferences ?? spacing.SpacingPreferences.normal,
     );
     _spacingEngine.initializeOpticalCompensator(staffSpace);
 
     // Inicializar positioning engine para beaming
-    // VALIDAÇÃO: metadata pode ser null em alguns contextos
+    // VALIDAÃ‡ÃƒO: metadata pode ser null em alguns contextos
     if (metadata == null) {
-      throw ArgumentError('metadata é obrigatório para beaming avançado');
+      throw ArgumentError('metadata Ã© obrigatÃ³rio para beaming avanÃ§ado');
     }
     final positioningEngine = SMuFLPositioningEngine(metadataLoader: metadata!);
 
-    // Inicializar sistema de beaming avançado
+    // Inicializar sistema de beaming avanÃ§ado
     _beamAnalyzer = BeamAnalyzer(
       staffSpace: staffSpace,
       noteheadWidth: noteheadBlackWidth * staffSpace,
@@ -279,7 +279,7 @@ class LayoutEngine {
     );
   }
 
-  /// Obtém largura de glifo dinamicamente do metadata ou retorna fallback
+  /// ObtÃ©m largura de glifo dinamicamente do metadata ou retorna fallback
   double _getGlyphWidth(String glyphName, double fallback) {
     if (metadata != null && metadata!.hasGlyph(glyphName)) {
       return metadata!.getGlyphWidth(glyphName);
@@ -290,13 +290,13 @@ class LayoutEngine {
   /// Largura da clave de Sol (G clef)
   double get gClefWidth => _getGlyphWidth('gClef', _gClefWidthFallback);
 
-  /// Largura da clave de Fá (F clef)
+  /// Largura da clave de FÃ¡ (F clef)
   double get fClefWidth => _getGlyphWidth('fClef', _fClefWidthFallback);
 
-  /// Largura da clave de Dó (C clef)
+  /// Largura da clave de DÃ³ (C clef)
   double get cClefWidth => _getGlyphWidth('cClef', _cClefWidthFallback);
 
-  /// Largura da cabeça de nota preta
+  /// Largura da cabeÃ§a de nota preta
   double get noteheadBlackWidth =>
       _getGlyphWidth('noteheadBlack', _noteheadBlackWidthFallback);
 
@@ -308,14 +308,14 @@ class LayoutEngine {
   double get accidentalFlatWidth =>
       _getGlyphWidth('accidentalFlat', _accidentalFlatWidthFallback);
 
-  /// Retorna os Advanced Beam Groups calculados pelo último layout
+  /// Retorna os Advanced Beam Groups calculados pelo Ãºltimo layout
   List<AdvancedBeamGroup> get advancedBeamGroups =>
       List.unmodifiable(_advancedBeamGroups);
 
-  /// ✅ Expor posições X das notas para renderização precisa
+  /// âœ… Expor posiÃ§Ãµes X das notas para renderizaÃ§Ã£o precisa
   Map<Note, double> get noteXPositions => Map.unmodifiable(_noteXPositions);
 
-  /// ✅ Expor posições Y das notas para renderização de hastes
+  /// âœ… Expor posiÃ§Ãµes Y das notas para renderizaÃ§Ã£o de hastes
   Map<Note, double> get noteYPositions => Map.unmodifiable(_noteYPositions);
 
   List<PositionedElement> layout() {
@@ -331,10 +331,10 @@ class LayoutEngine {
   }
 
   List<PositionedElement> _layoutInternal() {
-    // Limpar mapas de posições
+    // Limpar mapas de posiÃ§Ãµes
     _noteXPositions.clear();
     _noteStaffPositions.clear();
-    _noteYPositions.clear(); // ✅ NOVO
+    _noteYPositions.clear(); // âœ… NOVO
     _advancedBeamGroups.clear();
 
     final cursor = LayoutCursor(
@@ -343,19 +343,19 @@ class LayoutEngine {
       systemMargin: systemMargin * staffSpace,
       noteXPositions: _noteXPositions,
       noteStaffPositions: _noteStaffPositions,
-      noteYPositions: _noteYPositions, // ✅ NOVO
+      noteYPositions: _noteYPositions, // âœ… NOVO
     );
 
     final List<PositionedElement> positionedElements = [];
 
-    // Armazenar compassos por sistema para justificação
+    // Armazenar compassos por sistema para justificaÃ§Ã£o
     final systemMeasures = <int, List<int>>{};
     final measureStartIndices = <int, int>{};
 
-    // Sistema de herança de TimeSignature
+    // Sistema de heranÃ§a de TimeSignature
     TimeSignature? currentTimeSignature;
 
-    // Contador de validação (apenas para estatísticas)
+    // Contador de validaÃ§Ã£o (apenas para estatÃ­sticas)
     int validMeasures = 0;
     int invalidMeasures = 0;
 
@@ -365,7 +365,7 @@ class LayoutEngine {
       final isLast = i == staff.measures.length - 1;
       final isLastInSystem = (i + 1) % measuresPerSystem == 0 && !isLast;
 
-      // HERANÇA DE TIME SIGNATURE: Procurar no compasso atual
+      // HERANÃ‡A DE TIME SIGNATURE: Procurar no compasso atual
       TimeSignature? measureTimeSignature;
       for (final element in measure.elements) {
         if (element is TimeSignature) {
@@ -375,15 +375,15 @@ class LayoutEngine {
         }
       }
 
-      // Se não encontrou, usar o TimeSignature herdado
+      // Se nÃ£o encontrou, usar o TimeSignature herdado
       final timeSignatureToUse = measureTimeSignature ?? currentTimeSignature;
 
-      // Definir TimeSignature herdado no Measure para validação preventiva
+      // Definir TimeSignature herdado no Measure para validaÃ§Ã£o preventiva
       if (timeSignatureToUse != null && measureTimeSignature == null) {
         measure.inheritedTimeSignature = timeSignatureToUse;
       }
 
-      // ✅ Validação de compasso (silenciosa - apenas estatísticas)
+      // âœ… ValidaÃ§Ã£o de compasso (silenciosa - apenas estatÃ­sticas)
       if (timeSignatureToUse != null) {
         final validation = MeasureValidator.validateWithTimeSignature(
           measure,
@@ -399,13 +399,13 @@ class LayoutEngine {
 
       final measureWidth = _calculateMeasureWidthCursor(measure, isFirst);
 
-      // QUEBRA INTELIGENTE: A cada N compassos OU se não couber
+      // QUEBRA INTELIGENTE: A cada N compassos OU se nÃ£o couber
       if (!isFirst &&
           (isLastInSystem || cursor.needsSystemBreak(measureWidth))) {
         cursor.startNewSystem();
       }
 
-      // Guardar índice inicial do compasso para justificação
+      // Guardar Ã­ndice inicial do compasso para justificaÃ§Ã£o
       final measureStartIndex = positionedElements.length;
       measureStartIndices[i] = measureStartIndex;
 
@@ -425,7 +425,7 @@ class LayoutEngine {
       final currentMeasureEndsWithBarline =
           measure.elements.isNotEmpty && measure.elements.last is Barline;
 
-      // Verificar se PRÓXIMO compasso começa com barline (ex: repeat)
+      // Verificar se PRÃ“XIMO compasso comeÃ§a com barline (ex: repeat)
       final nextMeasure = (i < staff.measures.length - 1)
           ? staff.measures[i + 1]
           : null;
@@ -435,8 +435,8 @@ class LayoutEngine {
           nextMeasure.elements.first is Barline;
 
       // Adicionar barline apropriada SOMENTE se:
-      // 1. Próximo compasso não começar com uma
-      // 2. Compasso atual não terminar com uma
+      // 1. PrÃ³ximo compasso nÃ£o comeÃ§ar com uma
+      // 2. Compasso atual nÃ£o terminar com uma
       if (!nextMeasureStartsWithBarline && !currentMeasureEndsWithBarline) {
         if (isLast) {
           // BARRA DUPLA FINAL
@@ -452,21 +452,21 @@ class LayoutEngine {
           cursor.addBarline(positionedElements);
         }
       } else {
-        // Compasso termina com barline OU próximo começa com barline - apenas adicionar padding
+        // Compasso termina com barline OU prÃ³ximo comeÃ§a com barline - apenas adicionar padding
         cursor.advance(measureEndPadding * staffSpace);
       }
 
       cursor.endMeasure();
     }
 
-    // Relatório resumido (apenas se verbose)
+    // RelatÃ³rio resumido (apenas se verbose)
     if (verboseValidation && (validMeasures + invalidMeasures) > 0) {}
 
-    // JUSTIFICAÇÃO HORIZONTAL: Esticar compassos para preencher largura
+    // JUSTIFICAÃ‡ÃƒO HORIZONTAL: Esticar compassos para preencher largura
     _justifyHorizontally(positionedElements, systemMeasures);
 
-    // Sincronizar _noteXPositions com as posições pós-justificação.
-    // _justifyHorizontally modifica positionedElements mas não _noteXPositions,
+    // Sincronizar _noteXPositions com as posiÃ§Ãµes pÃ³s-justificaÃ§Ã£o.
+    // _justifyHorizontally modifica positionedElements mas nÃ£o _noteXPositions,
     // causando desalinhamento entre beams (que usam _noteXPositions) e noteheads.
     for (final positioned in positionedElements) {
       if (positioned.element is Note) {
@@ -477,14 +477,14 @@ class LayoutEngine {
       }
     }
 
-    // ANÁLISE DE BEAMING AVANÇADO: Criar AdvancedBeamGroups
+    // ANÃLISE DE BEAMING AVANÃ‡ADO: Criar AdvancedBeamGroups
     _analyzeBeamGroups(currentTimeSignature, positionedElements);
 
     return positionedElements;
   }
 
-  /// Analisa beam groups e cria AdvancedBeamGroups para renderização
-  /// ✅ CORREÇÃO: Usar notas PROCESSADAS de positionedElements, não de measure.elements
+  /// Analisa beam groups e cria AdvancedBeamGroups para renderizaÃ§Ã£o
+  /// âœ… CORREÃ‡ÃƒO: Usar notas PROCESSADAS de positionedElements, nÃ£o de measure.elements
   void _analyzeBeamGroups(
     TimeSignature? timeSignature,
     List<PositionedElement> positionedElements,
@@ -493,8 +493,8 @@ class LayoutEngine {
       return;
     }
 
-    // ✅ CORREÇÃO: Extrair notas PROCESSADAS diretamente de positionedElements
-    // As notas processadas são aquelas que foram adicionadas aos mapas
+    // âœ… CORREÃ‡ÃƒO: Extrair notas PROCESSADAS diretamente de positionedElements
+    // As notas processadas sÃ£o aquelas que foram adicionadas aos mapas
     final processedNotes = positionedElements
         .where((p) => p.element is Note)
         .map((p) => p.element as Note)
@@ -504,8 +504,8 @@ class LayoutEngine {
       return;
     }
 
-    // Usar beam types já atribuídos por _processBeamsWithAnacrusis para identificar grupos.
-    // NÃO chamar BeamGrouper novamente, pois ele processa todas as notas em conjunto
+    // Usar beam types jÃ¡ atribuÃ­dos por _processBeamsWithAnacrusis para identificar grupos.
+    // NÃƒO chamar BeamGrouper novamente, pois ele processa todas as notas em conjunto
     // sem respeitar limites de compasso, causando agrupamentos incorretos entre compassos.
     List<Note>? currentGroup;
     for (final note in processedNotes) {
@@ -539,7 +539,7 @@ class LayoutEngine {
     }
   }
 
-  /// Justifica horizontalmente os compassos para preencher a largura disponível
+  /// Justifica horizontalmente os compassos para preencher a largura disponÃ­vel
   void _justifyHorizontally(
     List<PositionedElement> elements,
     Map<int, List<int>> systemMeasures,
@@ -552,7 +552,7 @@ class LayoutEngine {
 
       if (measures.isEmpty) continue;
 
-      // Encontrar X mínimo e máximo dos elementos neste sistema
+      // Encontrar X mÃ­nimo e mÃ¡ximo dos elementos neste sistema
       double minX = double.infinity;
       double maxX = 0;
 
@@ -566,19 +566,19 @@ class LayoutEngine {
       final usedWidth = maxX - minX;
       final extraSpace = usableWidth - usedWidth;
 
-      // Se há espaço extra, distribuir proporcionalmente
+      // Se hÃ¡ espaÃ§o extra, distribuir proporcionalmente
       if (extraSpace > 0 && measures.length > 1) {
-        // Ajustar posições dos elementos após cada compasso
+        // Ajustar posiÃ§Ãµes dos elementos apÃ³s cada compasso
         for (int i = 0; i < elements.length; i++) {
           final positioned = elements[i];
           if (positioned.system != system) continue;
 
-          // Calcular proporção de posição no sistema (simplificado)
+          // Calcular proporÃ§Ã£o de posiÃ§Ã£o no sistema (simplificado)
           final positionRatio = (maxX - minX) > 0
               ? (positioned.position.dx - minX) / (maxX - minX)
               : 0.0;
 
-          // Aplicar offset proporcional baseado na posição
+          // Aplicar offset proporcional baseado na posiÃ§Ã£o
           final offset = extraSpace * positionRatio;
           elements[i] = PositionedElement(
             positioned.element,
@@ -626,6 +626,8 @@ class LayoutEngine {
     // Tracks where musical elements (post clef/key/time) start in voice 1.
     // Voices 2+ must start at this X so notes align with voice 1.
     double firstMusicX = startX;
+    final leadTimelineAnchors = <({double time, double x})>[];
+    double leadTotalTime = 0.0;
 
     final sortedVoices = measure.sortedVoices;
 
@@ -655,11 +657,18 @@ class LayoutEngine {
 
       bool seenFirstMusicElement =
           !isLeadVoice; // voice 2+ already positioned past system elements
+      double voiceTime = 0.0;
 
       for (int i = 0; i < elementsToRender.length; i++) {
         final element = elementsToRender[i];
 
-        if (i > 0) {
+        if (i > 0 && isLeadVoice) {
+          final previousElement = elementsToRender[i - 1];
+          cursor.advance(_calculateRhythmicSpacing(element, previousElement));
+        } else if (i > 0 &&
+            !isLeadVoice &&
+            leadTimelineAnchors.isEmpty) {
+          // Fallback se nÃ£o houver Ã¢ncoras da voz principal.
           final previousElement = elementsToRender[i - 1];
           cursor.advance(_calculateRhythmicSpacing(element, previousElement));
         }
@@ -672,7 +681,22 @@ class LayoutEngine {
           firstMusicX = cursor.currentX;
         }
 
-        // Aplicar offset horizontal da voz à posição X
+        if (isLeadVoice && !_isSystemElement(element)) {
+          _addTimelineAnchor(leadTimelineAnchors, leadTotalTime, cursor.currentX);
+        }
+
+        if (!isLeadVoice &&
+            !_isSystemElement(element) &&
+            leadTimelineAnchors.isNotEmpty) {
+          final alignedX = _interpolateTimelineX(
+            leadTimelineAnchors,
+            voiceTime,
+            fallbackX: cursor.currentX,
+          );
+          cursor.setX(alignedX);
+        }
+
+        // Aplicar offset horizontal da voz Ã  posiÃ§Ã£o X
         final elementX = cursor.currentX + voiceOffset;
         final savedX = cursor.currentX;
         cursor.setX(elementX);
@@ -685,13 +709,81 @@ class LayoutEngine {
 
         cursor.advance(_getElementWidthSimple(element));
 
+        if (!_isSystemElement(element)) {
+          final rhythmicValue = _getRhythmicValue(element);
+          if (isLeadVoice) {
+            leadTotalTime += rhythmicValue;
+          } else {
+            voiceTime += rhythmicValue;
+          }
+        }
+
         if (cursor.currentX > maxAdvanceX) {
           maxAdvanceX = cursor.currentX;
         }
       }
+
+      if (isLeadVoice && leadTimelineAnchors.isNotEmpty) {
+        _addTimelineAnchor(leadTimelineAnchors, leadTotalTime, cursor.currentX);
+      }
     }
 
     cursor.setX(maxAdvanceX);
+  }
+
+  void _addTimelineAnchor(
+    List<({double time, double x})> anchors,
+    double time,
+    double x,
+  ) {
+    if (anchors.isEmpty) {
+      anchors.add((time: time, x: x));
+      return;
+    }
+
+    final last = anchors.last;
+    if ((last.time - time).abs() < 0.000001) {
+      anchors[anchors.length - 1] = (time: time, x: x);
+    } else {
+      anchors.add((time: time, x: x));
+    }
+  }
+
+  double _interpolateTimelineX(
+    List<({double time, double x})> anchors,
+    double time, {
+    required double fallbackX,
+  }) {
+    if (anchors.isEmpty) return fallbackX;
+
+    if (time <= anchors.first.time) {
+      return anchors.first.x;
+    }
+
+    if (time >= anchors.last.time) {
+      return anchors.last.x;
+    }
+
+    for (int i = 0; i < anchors.length - 1; i++) {
+      final left = anchors[i];
+      final right = anchors[i + 1];
+      if (time < left.time || time > right.time) continue;
+
+      final span = right.time - left.time;
+      if (span.abs() < 0.000001) return left.x;
+      final ratio = (time - left.time) / span;
+      return left.x + ((right.x - left.x) * ratio);
+    }
+
+    return fallbackX;
+  }
+
+  double _getRhythmicValue(MusicalElement element) {
+    if (element is Note) return element.duration.realValue;
+    if (element is Rest) return element.duration.realValue;
+    if (element is Chord) return element.duration.realValue;
+    if (element is Tuplet) return element.totalDuration;
+    return 0.0;
   }
 
   void _layoutMeasureCursor(
@@ -710,7 +802,7 @@ class LayoutEngine {
       );
       return;
     }
-    // CORREÇÃO #9: Processar beaming considerando anacrusis
+    // CORREÃ‡ÃƒO #9: Processar beaming considerando anacrusis
     final processedElements = _processBeamsWithAnacrusis(
       measure.elements,
       measure.timeSignature,
@@ -741,7 +833,7 @@ class LayoutEngine {
       cursor.advance(_getElementWidthSimple(element));
     }
 
-    // CORREÇÃO #3: Espaçamento inteligente melhorado
+    // CORREÃ‡ÃƒO #3: EspaÃ§amento inteligente melhorado
     if (systemElements.isNotEmpty) {
       final spacingAfterSystem = _calculateSpacingAfterSystemElementsCorrected(
         systemElements,
@@ -754,7 +846,7 @@ class LayoutEngine {
       final element = musicalElements[i];
 
       if (i > 0) {
-        // CORREÇÃO VISUAL #2: Usar espaçamento rítmico ao invés de constante
+        // CORREÃ‡ÃƒO VISUAL #2: Usar espaÃ§amento rÃ­tmico ao invÃ©s de constante
         final previousElement = musicalElements[i - 1];
         final rhythmicSpacing = _calculateRhythmicSpacing(
           element,
@@ -772,23 +864,23 @@ class LayoutEngine {
     return element is Clef ||
         element is KeySignature ||
         element is TimeSignature ||
-        element is TempoMark; // TempoMark não ocupa espaço horizontal
+        element is TempoMark; // TempoMark nÃ£o ocupa espaÃ§o horizontal
   }
 
-  // ESPAÇAMENTO APÓS ELEMENTOS DE SISTEMA: MÍNIMO necessário
+  // ESPAÃ‡AMENTO APÃ“S ELEMENTOS DE SISTEMA: MÃNIMO necessÃ¡rio
   double _calculateSpacingAfterSystemElementsCorrected(
     List<MusicalElement> systemElements,
     List<MusicalElement> musicalElements,
   ) {
-    // Espaço MÍNIMO após elementos de sistema
+    // EspaÃ§o MÃNIMO apÃ³s elementos de sistema
     double baseSpacing = staffSpace * 1.2; // MUITO REDUZIDO!
 
     bool hasClef = systemElements.any((e) => e is Clef);
     bool hasTimeSignature = systemElements.any((e) => e is TimeSignature);
 
     if (hasClef && hasTimeSignature) {
-      // Se tem clave E fórmula de compasso, reduzir ainda mais
-      baseSpacing = staffSpace * 1.0; // MÍNIMO!
+      // Se tem clave E fÃ³rmula de compasso, reduzir ainda mais
+      baseSpacing = staffSpace * 1.0; // MÃNIMO!
     } else if (hasClef) {
       baseSpacing = staffSpace * 1.2;
     }
@@ -800,13 +892,13 @@ class LayoutEngine {
       }
     }
 
-    // CORREÇÃO: Verificar se primeira nota tem acidente EXPLÍCITO
+    // CORREÃ‡ÃƒO: Verificar se primeira nota tem acidente EXPLÃCITO
     if (musicalElements.isNotEmpty) {
       final firstMusicalElement = musicalElements.first;
 
       if (firstMusicalElement is Note &&
           firstMusicalElement.pitch.accidentalGlyph != null) {
-        baseSpacing += staffSpace * 0.8; // Espaço para acidente explícito
+        baseSpacing += staffSpace * 0.8; // EspaÃ§o para acidente explÃ­cito
       } else if (firstMusicalElement is Chord) {
         bool hasAccidental = firstMusicalElement.notes.any(
           (note) => note.pitch.accidentalGlyph != null,
@@ -820,7 +912,7 @@ class LayoutEngine {
     return baseSpacing.clamp(
       staffSpace * 1.0,
       staffSpace * 3.0,
-    ); // Limites reduçidos
+    ); // Limites reduÃ§idos
   }
 
   double _getElementWidthSimple(MusicalElement element) {
@@ -863,7 +955,7 @@ class LayoutEngine {
     if (element is Note) {
       double width = noteheadBlackWidth * staffSpace;
       if (element.pitch.accidentalGlyph != null) {
-        // CORREÇÃO SMuFL: Detecção mais robusta e uso de valores corretos
+        // CORREÃ‡ÃƒO SMuFL: DetecÃ§Ã£o mais robusta e uso de valores corretos
         final glyphName = element.pitch.accidentalGlyph!;
         double accWidth = accidentalSharpWidth; // Default
 
@@ -872,14 +964,14 @@ class LayoutEngine {
           accWidth = accidentalFlatWidth;
         } else if (glyphName.contains('Natural') ||
             glyphName.contains('natural')) {
-          accWidth = 0.92; // Largura típica de natural
+          accWidth = 0.92; // Largura tÃ­pica de natural
         } else if (glyphName.contains('DoubleSharp')) {
           accWidth = 1.0; // Largura de dobrado sustenido
         } else if (glyphName.contains('DoubleFlat')) {
           accWidth = 1.5; // Largura de dobrado bemol
         }
 
-        // CORRIGIDO: Espaçamento recomendado SMuFL é 0.25-0.3 staff spaces
+        // CORRIGIDO: EspaÃ§amento recomendado SMuFL Ã© 0.25-0.3 staff spaces
         width += (accWidth + 0.3) * staffSpace;
       }
       return width;
@@ -895,7 +987,7 @@ class LayoutEngine {
 
       for (final note in element.notes) {
         if (note.pitch.accidentalGlyph != null) {
-          // CORREÇÃO: Usar mesma lógica robusta de detecção que Note
+          // CORREÃ‡ÃƒO: Usar mesma lÃ³gica robusta de detecÃ§Ã£o que Note
           final glyphName = note.pitch.accidentalGlyph!;
           double accWidth = accidentalSharpWidth;
 
@@ -921,11 +1013,24 @@ class LayoutEngine {
       return width;
     }
 
+    if (element is RepeatMark) {
+      switch (element.type) {
+        case RepeatType.repeat4Bars:
+          return 2.6 * staffSpace;
+        case RepeatType.repeat2Bars:
+        case RepeatType.simile:
+        case RepeatType.percentRepeat:
+          return 2.2 * staffSpace;
+        default:
+          return 1.8 * staffSpace;
+      }
+    }
+
     if (element is Dynamic) return 2.0 * staffSpace;
     if (element is Ornament) return 1.0 * staffSpace;
 
     if (element is Tuplet) {
-      // CRÍTICO: Calcular largura baseada nas notas INTERNAS do tuplet
+      // CRÃTICO: Calcular largura baseada nas notas INTERNAS do tuplet
       final numElements = element.elements.length;
       final elementSpacing = staffSpace * 2.5; // Mesma do TupletRenderer
       final totalWidth = numElements * elementSpacing;
@@ -947,34 +1052,34 @@ class LayoutEngine {
     return staffSpace;
   }
 
-  /// CORREÇÃO VISUAL #2: Calcula espaçamento rítmico baseado na duração
+  /// CORREÃ‡ÃƒO VISUAL #2: Calcula espaÃ§amento rÃ­tmico baseado na duraÃ§Ã£o
   ///
-  /// Implementa espaçamento proporcional à duração das notas conforme
-  /// práticas profissionais de tipografia musical (Behind Bars, Ted Ross)
+  /// Implementa espaÃ§amento proporcional Ã  duraÃ§Ã£o das notas conforme
+  /// prÃ¡ticas profissionais de tipografia musical (Behind Bars, Ted Ross)
   ///
   /// @param currentElement Elemento atual
   /// @param previousElement Elemento anterior (opcional)
-  /// @return Espaçamento em pixels
+  /// @return EspaÃ§amento em pixels
   double _calculateRhythmicSpacing(
     MusicalElement currentElement,
     MusicalElement? previousElement,
   ) {
-    // Base: espaçamento mínimo entre notas (semínima como referência)
+    // Base: espaÃ§amento mÃ­nimo entre notas (semÃ­nima como referÃªncia)
     const double baseSpacing = noteMinSpacing;
 
-    // Fatores de espaçamento PROPORCIONAIS (modelo √2 aproximado)
-    // Progressão geométrica suave para proporção visual correta
+    // Fatores de espaÃ§amento PROPORCIONAIS (modelo âˆš2 aproximado)
+    // ProgressÃ£o geomÃ©trica suave para proporÃ§Ã£o visual correta
     final durationFactors = {
       DurationType.whole: 2.0, // Semibreve: 2x
-      DurationType.half: 1.5, // Mínima: 1.5x (√2 ≈ 1.41)
-      DurationType.quarter: 1.0, // Semínima: 1x (base)
+      DurationType.half: 1.5, // MÃ­nima: 1.5x (âˆš2 â‰ˆ 1.41)
+      DurationType.quarter: 1.0, // SemÃ­nima: 1x (base)
       DurationType.eighth: 0.8, // Colcheia: 0.8x
       DurationType.sixteenth: 0.7, // Semicolcheia: 0.7x
       DurationType.thirtySecond: 0.6, // Fusa: 0.6x
       DurationType.sixtyFourth: 0.55, // Semifusa: 0.55x
     };
 
-    // Obter duração do elemento atual
+    // Obter duraÃ§Ã£o do elemento atual
     DurationType? currentDuration;
     if (currentElement is Note) {
       currentDuration = currentElement.duration.type;
@@ -984,21 +1089,21 @@ class LayoutEngine {
       currentDuration = currentElement.duration.type;
     }
 
-    // Se não for elemento musical rítmico, usar espaçamento base
+    // Se nÃ£o for elemento musical rÃ­tmico, usar espaÃ§amento base
     if (currentDuration == null) {
       return baseSpacing * staffSpace;
     }
 
-    // Aplicar fator de duração
+    // Aplicar fator de duraÃ§Ã£o
     final factor = durationFactors[currentDuration] ?? 1.0;
     double spacing = baseSpacing * factor * staffSpace;
 
-    // AJUSTE: Espaçamento adicional para pausas (80% conforme Gould)
+    // AJUSTE: EspaÃ§amento adicional para pausas (80% conforme Gould)
     if (currentElement is Rest) {
-      spacing *= 1.15; // Pausas têm pouco mais ar
+      spacing *= 1.15; // Pausas tÃªm pouco mais ar
     }
 
-    // AJUSTE: Espaçamento adicional se elemento anterior tem ponto de aumentação
+    // AJUSTE: EspaÃ§amento adicional se elemento anterior tem ponto de aumentaÃ§Ã£o
     if (previousElement is Note && previousElement.duration.dots > 0) {
       spacing +=
           staffSpace * 0.2 * previousElement.duration.dots; // REDUZIDO de 0.3
@@ -1007,7 +1112,7 @@ class LayoutEngine {
           staffSpace * 0.2 * previousElement.duration.dots; // REDUZIDO de 0.3
     }
 
-    // AJUSTE: Mais espaçamento se elemento anterior tem acidente
+    // AJUSTE: Mais espaÃ§amento se elemento anterior tem acidente
     if (previousElement is Note &&
         previousElement.pitch.accidentalGlyph != null) {
       spacing += staffSpace * 0.15; // REDUZIDO de 0.2
@@ -1023,7 +1128,7 @@ class LayoutEngine {
     return spacing;
   }
 
-  // CORREÇÃO #9: Processamento de beams considerando anacrusis
+  // CORREÃ‡ÃƒO #9: Processamento de beams considerando anacrusis
   List<MusicalElement> _processBeamsWithAnacrusis(
     List<MusicalElement> elements,
     TimeSignature? timeSignature, {
@@ -1036,7 +1141,7 @@ class LayoutEngine {
     final notes = elements.whereType<Note>().toList();
     if (notes.isEmpty) return elements;
 
-    // Calcular posição inicial no compasso (para detectar anacrusis)
+    // Calcular posiÃ§Ã£o inicial no compasso (para detectar anacrusis)
     for (final element in elements) {
       if (element is Note || element is Rest) {
         break;
