@@ -205,7 +205,7 @@ class TempoAgogicsExample extends StatelessWidget {
                 TempoMark(
                   bpm: 120,
                   beatUnit: DurationType.quarter,
-                  text: '♩ = ♪',
+                  text: 'â™© = â™ª',
                 ),
                 Note(
                   pitch: const Pitch(step: 'D', octave: 4),
@@ -214,7 +214,7 @@ class TempoAgogicsExample extends StatelessWidget {
                 TempoMark(
                   bpm: 126,
                   beatUnit: DurationType.quarter,
-                  text: '♩ = 120-132',
+                  text: 'â™© = 120-132',
                 ),
                 Note(
                   pitch: const Pitch(step: 'E', octave: 4),
@@ -295,7 +295,7 @@ class TempoAgogicsExample extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Container(
-              height: 120,
+              height: 190,
               decoration: BoxDecoration(
                 color: Colors.white,
                 border: Border.all(color: Colors.grey.shade300),
@@ -311,3 +311,4 @@ class TempoAgogicsExample extends StatelessWidget {
     );
   }
 }
+

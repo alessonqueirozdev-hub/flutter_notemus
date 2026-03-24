@@ -22,28 +22,28 @@ class OctaveMarksExample extends StatelessWidget {
             _buildInfo(),
             const SizedBox(height: 16),
             _buildSection(
-              title: '8va — An Octave Higher',
+              title: '8va â€” An Octave Higher',
               description:
                   'Indicates that notes should be played one octave higher'
                   'higher than written. Saves acute supplementary lines.',
               score: _build8va(),
             ),
             _buildSection(
-              title: '8vb — One Octave Below',
+              title: '8vb â€” One Octave Below',
               description:
                   'Indicates that notes should be played one octave higher'
                   'lower than written. Appears below the agenda.',
               score: _build8vb(),
             ),
             _buildSection(
-              title: '15ma — Two Octaves Up',
+              title: '15ma â€” Two Octaves Up',
               description:
                   'Indicates that notes should be played two octaves higher'
                   'higher than written.',
               score: _build15ma(),
             ),
             _buildSection(
-              title: '15mb — Two Octaves Below',
+              title: '15mb â€” Two Octaves Below',
               description:
                   'Indicates that notes should be played two octaves higher'
                   'lower than written.',
@@ -123,7 +123,7 @@ class OctaveMarksExample extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Container(
-              height: 120,
+              height: 190,
               decoration: BoxDecoration(
                 color: Colors.white,
                 border: Border.all(color: Colors.grey.shade300),
@@ -318,3 +318,4 @@ class OctaveMarksExample extends StatelessWidget {
     return MusicScore(staff: staff);
   }
 }
+

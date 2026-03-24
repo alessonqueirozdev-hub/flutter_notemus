@@ -49,7 +49,7 @@ class RepeatsExample extends StatelessWidget {
               ],
             ),
             _buildSection(
-              title: 'Segno e Coda',
+              title: 'Segno and Coda',
               description: 'Musical navigation symbols.',
               elements: [
                 Clef(clefType: ClefType.treble),
@@ -71,7 +71,7 @@ class RepeatsExample extends StatelessWidget {
               ],
             ),
             _buildSection(
-              title: 'Segno e Coda Quadrados',
+              title: 'Square Segno and Coda',
               description: 'Variations of navigation symbols.',
               elements: [
                 Clef(clefType: ClefType.treble),
@@ -173,7 +173,7 @@ class RepeatsExample extends StatelessWidget {
               ],
             ),
             _buildSection(
-              title: 'Simile e Porcentagem',
+              title: 'Simile and Percent Repeat',
               description: 'Pattern repeat symbols.',
               elements: [
                 Clef(clefType: ClefType.treble),
@@ -295,7 +295,7 @@ class RepeatsExample extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Container(
-              height: 120,
+              height: 190,
               decoration: BoxDecoration(
                 color: Colors.white,
                 border: Border.all(color: Colors.grey.shade300),
@@ -311,3 +311,4 @@ class RepeatsExample extends StatelessWidget {
     );
   }
 }
+

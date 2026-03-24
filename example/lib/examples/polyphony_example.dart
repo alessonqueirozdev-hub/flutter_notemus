@@ -121,6 +121,22 @@ class PolyphonyExample {
       duration: const Duration(DurationType.eighth),
     ));
     voice1.add(Note(
+      pitch: const Pitch(step: 'B', octave: 4),
+      duration: const Duration(DurationType.eighth),
+    ));
+    voice1.add(Note(
+      pitch: const Pitch(step: 'A', octave: 4),
+      duration: const Duration(DurationType.eighth),
+    ));
+    voice1.add(Note(
+      pitch: const Pitch(step: 'G', octave: 4),
+      duration: const Duration(DurationType.eighth),
+    ));
+    voice1.add(Note(
+      pitch: const Pitch(step: 'A', octave: 4),
+      duration: const Duration(DurationType.eighth),
+    ));
+    voice1.add(Note(
       pitch: const Pitch(step: 'G', octave: 4),
       duration: const Duration(DurationType.eighth),
     ));
@@ -249,6 +265,10 @@ class PolyphonyExampleWidget extends StatelessWidget {
     voice1.add(Note(pitch: const Pitch(step: 'G', octave: 4), duration: const Duration(DurationType.eighth), beam: BeamType.inner));
     voice1.add(Note(pitch: const Pitch(step: 'A', octave: 4), duration: const Duration(DurationType.eighth), beam: BeamType.inner));
     voice1.add(Note(pitch: const Pitch(step: 'G', octave: 4), duration: const Duration(DurationType.eighth), beam: BeamType.end));
+    voice1.add(Note(pitch: const Pitch(step: 'A', octave: 4), duration: const Duration(DurationType.eighth), beam: BeamType.start));
+    voice1.add(Note(pitch: const Pitch(step: 'B', octave: 4), duration: const Duration(DurationType.eighth), beam: BeamType.inner));
+    voice1.add(Note(pitch: const Pitch(step: 'A', octave: 4), duration: const Duration(DurationType.eighth), beam: BeamType.inner));
+    voice1.add(Note(pitch: const Pitch(step: 'G', octave: 4), duration: const Duration(DurationType.eighth), beam: BeamType.end));
 
     final voice2 = Voice.voice2();
     voice2.add(Note(pitch: const Pitch(step: 'C', octave: 3), duration: const Duration(DurationType.half)));
@@ -324,7 +344,7 @@ class PolyphonyExampleWidget extends StatelessWidget {
             const SizedBox(height: 16),
             _buildSection(
               title: 'Two Voices - Melody + Accompaniment',
-              description: 'Voice 1 (stems above): melody in eighth notes. Voice 2 (stems below): accompaniment in half notes.',
+              description: 'Voice 1 (stems up): melody in quarter notes. Voice 2 (stems down): accompaniment in half notes.',
               context: context,
               staff: _buildTwoVoiceStaff(),
             ),
@@ -336,7 +356,7 @@ class PolyphonyExampleWidget extends StatelessWidget {
             ),
             _buildSection(
               title: 'Fingerstyle Guitar',
-              description: 'Melody in eighth notes (voice 1) + bass in half notes (voice 2).',
+              description: 'Voice 1 uses 8 eighth notes (full 4/4) while voice 2 sustains two half-note bass tones.',
               context: context,
               staff: _buildGuitarStaff(),
             ),

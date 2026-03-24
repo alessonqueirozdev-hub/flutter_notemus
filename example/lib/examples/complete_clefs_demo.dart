@@ -29,7 +29,7 @@ class CompleteClefsDemoExample extends StatelessWidget {
             const SizedBox(height: 32),
             _buildSection(
               'Bass Clef (F Clef)',
-              'Low range – Cello, Double bass, Bassoon',
+              'Low range â€“ Cello, Double bass, Bassoon',
               _createBassClefExample(),
             ),
             const SizedBox(height: 32),
@@ -191,10 +191,10 @@ class CompleteClefsDemoExample extends StatelessWidget {
     // Measure 1: Bass Clef + Signature (3 flats) + Formula
     final measure1 = Measure();
     measure1.add(Clef(clefType: ClefType.bass));
-    measure1.add(KeySignature(-3)); // Mi♭ Maior
+    measure1.add(KeySignature(-3)); // Miâ™­ Maior
     measure1.add(TimeSignature(numerator: 3, denominator: 4));
 
-    // Escala de Mi♭ Maior
+    // Escala de Miâ™­ Maior
     measure1.add(Note(
       pitch: Pitch.withAccidental(step: 'E', octave: 2, accidentalType: AccidentalType.flat),
       duration: const Duration(DurationType.quarter),
@@ -312,7 +312,7 @@ class CompleteClefsDemoExample extends StatelessWidget {
     // Measure 1: C Clef (Tenor) + Key signature + Formula
     final measure1 = Measure();
     measure1.add(Clef(clefType: ClefType.tenor));
-    measure1.add(KeySignature(-2)); // Si♭ Maior
+    measure1.add(KeySignature(-2)); // Siâ™­ Maior
     measure1.add(TimeSignature(numerator: 6, denominator: 8));
 
     // Melodic pattern in 6/8
@@ -440,7 +440,7 @@ class CompleteClefsDemoExample extends StatelessWidget {
         ),
         Expanded(
           child: SizedBox(
-            height: 120,
+            height: 190,
             child: MusicScore(
               staff: staff,
               staffSpace: 10,
@@ -451,3 +451,4 @@ class CompleteClefsDemoExample extends StatelessWidget {
     );
   }
 }
+

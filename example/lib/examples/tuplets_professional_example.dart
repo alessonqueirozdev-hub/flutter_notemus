@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 
-/// 🎼 PROFESSIONAL EXAMPLE OF QUIALTERES
+/// ðŸŽ¼ PROFESSIONAL EXAMPLE OF QUIALTERES
 /// Baseado em Behind Bars (Elaine Gould)
 class TupletsProfessionalExample extends StatelessWidget {
   const TupletsProfessionalExample({super.key});
@@ -12,7 +12,7 @@ class TupletsProfessionalExample extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('🎵 Professional Tuplets'),
+        title: const Text('ðŸŽµ Professional Tuplets'),
         backgroundColor: Colors.deepPurple.shade700,
       ),
       body: ListView(
@@ -22,28 +22,28 @@ class TupletsProfessionalExample extends StatelessWidget {
           const SizedBox(height: 24),
           
           _categoryTitle('SIMPLE TIME (4/4)'),
-          _categoryDesc('Numerador > Denominador (contraentes)'),
+          _categoryDesc('Numerator > denominator (contracting tuplets)'),
           
           _example(1, 'Triplet (3:2)', '3 eighth notes in the space of 2', _triplet()),
-          _example(2, 'Quintina (5:4)', '5 sixteenth notes in the space of 4', _quintuplet()),
-          _example(3, 'Sextina (6:4)', '6 sixteenth notes in the space of 4', _sextuplet()),
-          _example(4, 'Septina (7:4)', '7 sixteenth notes in the space of 4', _septuplet()),
+          _example(2, 'Quintuplet (5:4)', '5 sixteenth notes in the space of 4', _quintuplet()),
+          _example(3, 'Sextuplet (6:4)', '6 sixteenth notes in the space of 4', _sextuplet()),
+          _example(4, 'Septuplet (7:4)', '7 sixteenth notes in the space of 4', _septuplet()),
           
           const SizedBox(height: 32),
           _categoryTitle('COMPOUND TIME (6/8)'),
           _categoryDesc('Duplet (2:3) - expansive tuplet'),
           
-          _example(5, 'Dupleto (2:3)', '2 eighth notes in the space of 3', _duplet()),
-          _example(6, 'Quadrupleto (4:6)', '4 in the space of 6', _quadruplet()),
+          _example(5, 'Duplet (2:3)', '2 eighth notes in the space of 3', _duplet()),
+          _example(6, 'Quadruplet (4:6)', '4 in the space of 6', _quadruplet()),
           
           const SizedBox(height: 32),
-          _categoryTitle('CASOS ESPECIAIS'),
+          _categoryTitle('SPECIAL CASES'),
           
           _example(7, 'Irrational (7:5)', 'ALWAYS show full ratio!', _irrational(), true),
           _example(8, 'No Bracket', 'When notes are beamed', _noBracket()),
           _example(9, 'With Pauses', 'Bracket required', _withRests()),
           _example(10, 'Quarter Notes', 'Longer durations', _quarters()),
-          _example(11, 'Nontupleto (9:8)', '9 thirty-second notes in the space of 8', _nonuplet()),
+          _example(11, 'Nonuplet (9:8)', '9 thirty-second notes in the space of 8', _nonuplet()),
           
           const SizedBox(height: 24),
           _footer(),
@@ -132,7 +132,7 @@ class TupletsProfessionalExample extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Container(
-              height: 120,
+              height: 190,
               decoration: BoxDecoration(
                 color: Colors.white,
                 border: Border.all(color: Colors.grey.shade300),
@@ -152,7 +152,7 @@ class TupletsProfessionalExample extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Text(
-          '📚 References: Behind Bars (Gould), SMuFL, Dorico, Flutter Notemus',
+          'ðŸ“š References: Behind Bars (Gould), SMuFL, Dorico, Flutter Notemus',
           style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
         ),
       ),
@@ -390,3 +390,4 @@ class TupletsProfessionalExample extends StatelessWidget {
     return staff;
   }
 }
+

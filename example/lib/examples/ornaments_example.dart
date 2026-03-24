@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 
 /// Widget that demonstrates the rendering of all musical ornaments,
-/// seguindo as regras tipográficas profissionais.
+/// seguindo as regras tipogrÃ¡ficas profissionais.
 /// This file is the single source of truth for ornament examples.
 class OrnamentsExample extends StatelessWidget {
   const OrnamentsExample({super.key});
@@ -40,24 +40,24 @@ class OrnamentsExample extends StatelessWidget {
               staff: _createDoubleVoiceStaff(),
             ),
             _buildSection(
-              title: 'Trilos (Trills)',
+              title: 'Trills',
               description:
                   'Simple trills and chromatic changes. The positioning is always above in a single voice.',
               staff: _createTrillsStaff(),
             ),
             _buildSection(
-              title: 'Mordentes (Mordents)',
+              title: 'Mordents',
               description:
                   'Upper and lower mordents. Positioning follows the same rule as trills.',
               staff: _createMordentsStaff(),
             ),
             _buildSection(
-              title: 'Grupetos (Turns)',
+              title: 'Turns',
               description: 'Simple, inverted, and cut turns.',
               staff: _createTurnsStaff(),
             ),
             _buildSection(
-              title: 'Grace Notes e Acciaccaturas (Grace Notes)',
+              title: 'Grace Notes and Acciaccaturas',
               description:
                   'Ornamental notes that precede the main note. The ligature for the main note is essential.',
               staff: _createGraceNotesStaff(),
@@ -137,7 +137,7 @@ class OrnamentsExample extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Container(
-              height: 120,
+              height: 190,
               decoration: BoxDecoration(
                 color: Colors.white,
                 border: Border.all(color: Colors.grey.shade300),
@@ -246,7 +246,7 @@ class OrnamentsExample extends StatelessWidget {
     return staff;
   }
 
-  /// Example focused on Jaws.
+  /// Example focused on mordents.
   Staff _createMordentsStaff() {
     final staff = Staff();
     final measure = Measure();
@@ -277,7 +277,7 @@ class OrnamentsExample extends StatelessWidget {
     return staff;
   }
 
-  /// Example focused on Groups.
+  /// Example focused on turns.
   Staff _createTurnsStaff() {
     final staff = Staff();
     final measure = Measure();
@@ -431,3 +431,4 @@ class OrnamentsExample extends StatelessWidget {
     return staff;
   }
 }
+

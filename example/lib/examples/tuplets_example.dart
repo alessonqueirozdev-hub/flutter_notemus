@@ -48,7 +48,7 @@ class TupletsExample extends StatelessWidget {
               ],
             ),
             _buildSection(
-              title: 'Quinta (5:4)',
+              title: 'Quintuplet (5:4)',
               description: 'Five sixteenth notes in the space of four.',
               elements: [
                 Clef(clefType: ClefType.treble),
@@ -84,7 +84,7 @@ class TupletsExample extends StatelessWidget {
               ],
             ),
             _buildSection(
-              title: 'Sextina (6:4)',
+              title: 'Sextuplet (6:4)',
               description: 'Six sixteenth notes in the space of four.',
               elements: [
                 Clef(clefType: ClefType.treble),
@@ -124,7 +124,7 @@ class TupletsExample extends StatelessWidget {
               ],
             ),
             _buildSection(
-              title: 'Septina (7:4)',
+              title: 'Septuplet (7:4)',
               description: 'Seven thirty-second notes in the space of four.',
               elements: [
                 Clef(clefType: ClefType.treble),
@@ -308,7 +308,7 @@ class TupletsExample extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Container(
-              height: 120,
+              height: 190,
               decoration: BoxDecoration(
                 color: Colors.white,
                 border: Border.all(color: Colors.grey.shade300),
@@ -324,3 +324,4 @@ class TupletsExample extends StatelessWidget {
     );
   }
 }
+

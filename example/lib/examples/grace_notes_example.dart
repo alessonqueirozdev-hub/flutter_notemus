@@ -24,7 +24,7 @@ class GraceNotesExample extends StatelessWidget {
               description: 'Grace notes with different durations.',
               elements: [
                 Clef(clefType: ClefType.treble),
-                // Apogiatura simples
+                // Simple appoggiatura
                 Note(
                   pitch: const Pitch(step: 'F', octave: 4),
                   duration: const Duration(DurationType.eighth), // Grace note
@@ -33,7 +33,7 @@ class GraceNotesExample extends StatelessWidget {
                   pitch: const Pitch(step: 'E', octave: 4),
                   duration: const Duration(DurationType.quarter),
                 ),
-                // Apogiatura longa
+                // Long appoggiatura
                 Note(
                   pitch: const Pitch(step: 'A', octave: 4),
                   duration: const Duration(DurationType.quarter), // Grace note
@@ -49,17 +49,17 @@ class GraceNotesExample extends StatelessWidget {
               description: 'Cut grace notes (acciaccaturas).',
               elements: [
                 Clef(clefType: ClefType.treble),
-                // Acciaccatura simples
+                // Simple acciaccatura
                 Note(
                   pitch: const Pitch(step: 'D', octave: 5),
-                  duration: const Duration(DurationType.sixteenth), // Grace note cortada
+                  duration: const Duration(DurationType.sixteenth), // Slashed grace note
                   ornaments: [Ornament(type: OrnamentType.acciaccatura)],
                 ),
                 Note(
                   pitch: const Pitch(step: 'C', octave: 5),
                   duration: const Duration(DurationType.quarter),
                 ),
-                // Acciaccatura dupla
+                // Double acciaccatura
                 Note(
                   pitch: const Pitch(step: 'B', octave: 4),
                   duration: const Duration(DurationType.sixteenth),
@@ -131,7 +131,7 @@ class GraceNotesExample extends StatelessWidget {
               description: 'Multiple grace notes in sequence.',
               elements: [
                 Clef(clefType: ClefType.treble),
-                // Grupo de 3 grace notes
+                // Group of 3 grace notes
                 Note(
                   pitch: const Pitch(step: 'F', octave: 4),
                   duration: const Duration(DurationType.sixteenth),
@@ -154,7 +154,7 @@ class GraceNotesExample extends StatelessWidget {
             ),
             _buildSection(
               title: 'Grace Notes with Accidentals',
-              description: 'Appliques with chromatic accidents.',
+              description: 'Grace notes with chromatic accidentals.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 Note(
@@ -231,13 +231,14 @@ class GraceNotesExample extends StatelessWidget {
               ],
             ),
             _buildSection(
-              title: 'Appujaturas with Ligatures',
+              title: 'Appoggiaturas with Slurs',
               description: 'Appoggiaturas connected to the main note by ligature.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 Note(
                   pitch: const Pitch(step: 'A', octave: 4),
                   duration: const Duration(DurationType.eighth),
+                  ornaments: [Ornament(type: OrnamentType.appoggiaturaUp)],
                   slur: SlurType.start,
                 ),
                 Note(
@@ -248,7 +249,7 @@ class GraceNotesExample extends StatelessWidget {
                 Note(
                   pitch: const Pitch(step: 'E', octave: 4),
                   duration: const Duration(DurationType.eighth),
-                  ornaments: [Ornament(type: OrnamentType.acciaccatura)],
+                  ornaments: [Ornament(type: OrnamentType.appoggiaturaDown)],
                   slur: SlurType.start,
                 ),
                 Note(
@@ -295,7 +296,7 @@ class GraceNotesExample extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Container(
-              height: 120,
+              height: 190,
               decoration: BoxDecoration(
                 color: Colors.white,
                 border: Border.all(color: Colors.grey.shade300),
@@ -311,3 +312,4 @@ class GraceNotesExample extends StatelessWidget {
     );
   }
 }
+

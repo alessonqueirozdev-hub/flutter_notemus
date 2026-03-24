@@ -303,7 +303,7 @@ class _GrandStaffScoreState extends State<GrandStaffScore> {
         if (snapshot.hasError) {
           return Center(
             child: Text(
-              'Erro ao carregar metadados: ${snapshot.error}',
+              'Failed to load metadata: ${snapshot.error}',
               style: const TextStyle(fontSize: 12),
             ),
           );
@@ -936,7 +936,7 @@ class _ConnectedMultiStaffScoreState extends State<ConnectedMultiStaffScore> {
         if (snapshot.hasError) {
           return Center(
             child: Text(
-              'Erro ao carregar metadados: ${snapshot.error}',
+              'Failed to load metadata: ${snapshot.error}',
               style: const TextStyle(fontSize: 12),
             ),
           );
@@ -1677,7 +1677,7 @@ class MultiStaffDemoApp extends StatelessWidget {
 
   Widget _buildGrandStaffSection() {
     return _buildSection(
-      title: '🎹 Grand Staff (Piano)',
+      title: 'ðŸŽ¹ Grand Staff (Piano)',
       description: 'Treble clef (right hand) + bass clef (left hand)',
       children: [
         Container(
@@ -1709,7 +1709,7 @@ class MultiStaffDemoApp extends StatelessWidget {
     ];
 
     return _buildSection(
-      title: 'Coral SATB',
+      title: 'SATB Choir',
       description:
           'Four staves aligned, tenor clef octave downwards and connected bars',
       children: [
@@ -1777,7 +1777,7 @@ class MultiStaffDemoApp extends StatelessWidget {
                     Row(children: [
                       Icon(Icons.info_outline, color: Colors.indigo.shade700),
                       const SizedBox(width: 8),
-                      Text('About Multi-Tariff',
+                      Text('About Multi-Staff',
                           style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: Colors.indigo.shade800,

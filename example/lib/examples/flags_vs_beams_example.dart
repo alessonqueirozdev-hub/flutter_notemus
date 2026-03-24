@@ -30,13 +30,13 @@ class FlagsVsBeamsExample extends StatelessWidget {
             ),
 
             _buildExampleSection(
-              'Flags Individuais',
+              'Individual Flags',
               'All notes use individual flags.',
               _createFlagsOnlyStaff(),
             ),
 
             _buildExampleSection(
-              'Beaming Conservador',
+              'Conservative Beaming',
               'Just obvious groups of 2 consecutive notes.',
               _createConservativeBeamingStaff(),
             ),
@@ -48,7 +48,7 @@ class FlagsVsBeamsExample extends StatelessWidget {
             ),
 
             _buildExampleSection(
-              'Beaming Manual',
+              'Manual Beaming',
               'Custom groups: [0,1,2] and [4,5] (note 3 with individual flag).',
               _createManualBeamingStaff(),
             ),
@@ -73,7 +73,7 @@ class FlagsVsBeamsExample extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         Container(
-          height: 150,
+          height: 180,
           width: double.infinity,
           decoration: BoxDecoration(
             border: Border.all(color: Colors.grey[300]!),
@@ -178,7 +178,7 @@ class FlagsVsBeamsExample extends StatelessWidget {
     measure.add(Clef(clefType: ClefType.treble));
     measure.add(TimeSignature(numerator: 4, denominator: 4));
 
-    // Todas as eighth notes em um único beam
+    // Todas as eighth notes em um Ãºnico beam
     measure.add(Note(pitch: const Pitch(step: 'C', octave: 4), duration: const Duration(DurationType.eighth)));
     measure.add(Note(pitch: const Pitch(step: 'D', octave: 4), duration: const Duration(DurationType.eighth)));
     measure.add(Note(pitch: const Pitch(step: 'E', octave: 4), duration: const Duration(DurationType.eighth)));

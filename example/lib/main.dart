@@ -20,10 +20,8 @@ import 'examples/repeats_example.dart';
 import 'examples/grace_notes_example.dart';
 import 'examples/slurs_ties_example.dart';
 import 'examples/tuplets_example.dart';
-import 'examples/tuplets_professional_example.dart';
 import 'examples/flags_vs_beams_example.dart';
 import 'examples/professional_ornaments_example.dart';
-import 'examples/corrected_ornaments_example.dart';
 import 'examples/test_pitch_accuracy.dart';
 import 'examples/test_augmentation_dots.dart';
 import 'examples/rests_showcase.dart';
@@ -103,10 +101,8 @@ class _MainScreenState extends State<MainScreen> {
     'Grace Notes',
     'Slurs and Ties',
     'Tuplets',
-    'Professional Tuplets',
     'Flags vs Beams',
     'Professional Ornaments',
-    'Fixed Ornaments',
     'Rests Showcase',
     'Polyphony (Multiple Voices)',
     'Multi-Staff (Grand Staff)',
@@ -141,10 +137,8 @@ class _MainScreenState extends State<MainScreen> {
     GraceNotesExample(),
     SlursTiesExample(),
     TupletsExample(),
-    TupletsProfessionalExample(),
     FlagsVsBeamsExample(),
     ProfessionalOrnamentsExample(),
-    CorrectedOrnamentsExample(),
     RestsShowcaseExample(),
     PolyphonyExampleWidget(),
     MultiStaffDemoApp(),

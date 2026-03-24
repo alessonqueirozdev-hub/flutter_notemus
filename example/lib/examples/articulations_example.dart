@@ -119,7 +119,7 @@ class ArticulationsExample extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Container(
-              height: 120,
+              height: 190,
               decoration: BoxDecoration(
                 color: Colors.white,
                 border: Border.all(color: Colors.grey.shade300),
@@ -135,3 +135,4 @@ class ArticulationsExample extends StatelessWidget {
     );
   }
 }
+

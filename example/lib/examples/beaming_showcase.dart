@@ -15,7 +15,7 @@ class BeamingShowcase extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: const Text('🎵 Advanced Beaming System'),
+        title: const Text('ðŸŽµ Advanced Beaming System'),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -31,7 +31,7 @@ class BeamingShowcase extends StatelessWidget {
             
             // Example 1: Primary Beams (Eighth Notes)
             _buildExampleSection(
-              title: '1️⃣ Primary Beams - Eighth Notes (8th notes)',
+              title: '1ï¸âƒ£ Primary Beams - Eighth Notes (8th notes)',
               description: '4 eighth notes connected by a primary beam',
               staff: _createPrimaryBeamsExample(),
             ),
@@ -40,7 +40,7 @@ class BeamingShowcase extends StatelessWidget {
             
             // Example 2: Secondary Beams (Sixteenth Notes)
             _buildExampleSection(
-              title: '2️⃣ Secondary Beams - Sixteenth Notes (16th notes)',
+              title: '2ï¸âƒ£ Secondary Beams - Sixteenth Notes (16th notes)',
               description: '4 sixteenth notes with primary and secondary beams',
               staff: _createSecondaryBeamsExample(),
             ),
@@ -49,7 +49,7 @@ class BeamingShowcase extends StatelessWidget {
             
             // Example 3: Broken Beams (Dotted rhythm)
             _buildExampleSection(
-              title: '3️⃣ Broken Beams - Ritmo Pontuado',
+              title: '3ï¸âƒ£ Broken Beams - Dotted Rhythm',
               description: 'Dotted eighth + sixteenth (broken beam)',
               staff: _createBrokenBeamsExample(),
             ),
@@ -58,7 +58,7 @@ class BeamingShowcase extends StatelessWidget {
             
             // Example 4: Tertiary Beams (Spindles)
             _buildExampleSection(
-              title: '4️⃣ Tertiary Beams - Thirty-second Notes (32nd notes)',
+              title: '4ï¸âƒ£ Tertiary Beams - Thirty-second Notes (32nd notes)',
               description: '8 thirty-second notes with three beam levels',
               staff: _createTertiaryBeamsExample(),
             ),
@@ -67,7 +67,7 @@ class BeamingShowcase extends StatelessWidget {
             
             // Example 5: Complex Beams
             _buildExampleSection(
-              title: '5️⃣ Complex Patterns',
+              title: '5ï¸âƒ£ Complex Patterns',
               description: 'Combination of different durations',
               staff: _createComplexBeamsExample(),
             ),
@@ -157,16 +157,16 @@ class BeamingShowcase extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            '✨ System Features',
+            'âœ¨ System Features',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
-          _buildFeature('✅ Beam thickness: 0.5 staff spaces (SMuFL)'),
-          _buildFeature('✅ Beam gap: 0.25 staff spaces (SMuFL)'),
-          _buildFeature('✅ Automatic slope based on intervals'),
-          _buildFeature('✅ Automatic breaking ("two levels up" rule)'),
-          _buildFeature('✅ Broken beams for dotted rhythms'),
-          _buildFeature('✅ Support for up to 5 beam levels (128th notes)'),
+          _buildFeature('âœ… Beam thickness: 0.5 staff spaces (SMuFL)'),
+          _buildFeature('âœ… Beam gap: 0.25 staff spaces (SMuFL)'),
+          _buildFeature('âœ… Automatic slope based on intervals'),
+          _buildFeature('âœ… Automatic breaking ("two levels up" rule)'),
+          _buildFeature('âœ… Broken beams for dotted rhythms'),
+          _buildFeature('âœ… Support for up to 5 beam levels (128th notes)'),
         ],
       ),
     );
@@ -181,14 +181,14 @@ class BeamingShowcase extends StatelessWidget {
 
   // EXAMPLE 1: Primary Beams (4 eighth notes)
   Staff _createPrimaryBeamsExample() {
-    debugPrint('\\n📊 CREATING EXAMPLE 1: Primary Beams');
+    debugPrint('\\nðŸ“Š CREATING EXAMPLE 1: Primary Beams');
     final staff = Staff();
     final measure = Measure(); // AUTO-BEAMING ativado
 
     measure.add(Clef(clefType: ClefType.treble));
     measure.add(TimeSignature(numerator: 4, denominator: 4));
-    debugPrint('   ✓ Added: Clef + TimeSignature 4/4');
-    debugPrint('   ✓ AUTO-BEAMING ativo (BeamGrouper corrigido!)');
+    debugPrint('   âœ“ Added: Clef + TimeSignature 4/4');
+    debugPrint('   âœ“ AUTO-BEAMING ativo (BeamGrouper corrigido!)');
 
     // 4 eighth notes ascendentes
     measure.add(Note(
@@ -207,27 +207,27 @@ class BeamingShowcase extends StatelessWidget {
       pitch: const Pitch(step: 'F', octave: 5),
       duration: const Duration(DurationType.eighth),
     ));
-    debugPrint('   ✓ Added: 4 eighth notes (eighth notes)');
+    debugPrint('   âœ“ Added: 4 eighth notes (eighth notes)');
 
     measure.add(Rest(duration: const Duration(DurationType.half)));
-    debugPrint('   ✓ Added: Rest (half note)');
+    debugPrint('   âœ“ Added: Rest (half note)');
 
     staff.add(measure);
-    debugPrint('✓ Staff created with ${staff.measures.length} measure(s)');
-    debugPrint('✓ Total elements in the measure: ${measure.elements.length}');
+    debugPrint('âœ“ Staff created with ${staff.measures.length} measure(s)');
+    debugPrint('âœ“ Total elements in the measure: ${measure.elements.length}');
     return staff;
   }
 
   // EXAMPLE 2: Secondary Beams (4 sixteenth notes)
   Staff _createSecondaryBeamsExample() {
-    debugPrint('\\n📊 CREATING EXAMPLE 2: Secondary Beams');
+    debugPrint('\\nðŸ“Š CREATING EXAMPLE 2: Secondary Beams');
     final staff = Staff();
     final measure = Measure(); // AUTO-BEAMING ativado
 
     measure.add(Clef(clefType: ClefType.treble));
     measure.add(TimeSignature(numerator: 4, denominator: 4));
-    debugPrint('   ✓ Added: Clef + TimeSignature 4/4');
-    debugPrint('   ✓ AUTO-BEAMING ativo (BeamGrouper corrigido!)');
+    debugPrint('   âœ“ Added: Clef + TimeSignature 4/4');
+    debugPrint('   âœ“ AUTO-BEAMING ativo (BeamGrouper corrigido!)');
 
     // 4 semieighth notes
     measure.add(Note(
@@ -246,63 +246,63 @@ class BeamingShowcase extends StatelessWidget {
       pitch: const Pitch(step: 'A', octave: 5),
       duration: const Duration(DurationType.sixteenth),
     ));
-    debugPrint('   ✓ Added: 4 semieighth notes (sixteenth notes)');
+    debugPrint('   âœ“ Added: 4 semieighth notes (sixteenth notes)');
 
     measure.add(Rest(duration: const Duration(DurationType.half)));
     measure.add(Rest(duration: const Duration(DurationType.quarter)));
-    debugPrint('   ✓ Added: Rests (half + quarter)');
+    debugPrint('   âœ“ Added: Rests (half + quarter)');
 
     staff.add(measure);
-    debugPrint('✓ Staff created with ${staff.measures.length} measure(s)');
-    debugPrint('✓ Total elements in the measure: ${measure.elements.length}');
+    debugPrint('âœ“ Staff created with ${staff.measures.length} measure(s)');
+    debugPrint('âœ“ Total elements in the measure: ${measure.elements.length}');
     return staff;
   }
 
   // EXAMPLE 3: Broken Beams (dotted rhythm)
   Staff _createBrokenBeamsExample() {
-    debugPrint('\\n📊 CREATING EXAMPLE 3: Broken Beams (PUNCTUATED RHYTHM)');
+    debugPrint('\\nðŸ“Š CREATING EXAMPLE 3: Broken Beams (PUNCTUATED RHYTHM)');
     final staff = Staff();
     final measure = Measure(); // AUTO-BEAMING ativado
 
     measure.add(Clef(clefType: ClefType.treble));
     measure.add(TimeSignature(numerator: 4, denominator: 4));
-    debugPrint('   ✓ Added: Clef + TimeSignature 4/4');
-    debugPrint('   ✓ AUTO-BEAMING ativo (BeamGrouper corrigido!)');
+    debugPrint('   âœ“ Added: Clef + TimeSignature 4/4');
+    debugPrint('   âœ“ AUTO-BEAMING ativo (BeamGrouper corrigido!)');
 
     // Eighth Note pontuada + semieighth note (broken beam)
     measure.add(Note(
       pitch: const Pitch(step: 'G', octave: 5),
       duration: const Duration(DurationType.eighth, dots: 1),
     ));
-    debugPrint('   ✓ Added: Eighth Note PONTUADA (eighth note with dot)');
+    debugPrint('   âœ“ Added: Eighth Note PONTUADA (eighth note with dot)');
 
     measure.add(Note(
       pitch: const Pitch(step: 'A', octave: 5),
       duration: const Duration(DurationType.sixteenth),
     ));
-    debugPrint('   ✓ Added: Sixteenth note (sixteenth note)');
-    debugPrint('⚠️ EXPECTED: Broken beam between these 2 notes!');
+    debugPrint('   âœ“ Added: Sixteenth note (sixteenth note)');
+    debugPrint('âš ï¸ EXPECTED: Broken beam between these 2 notes!');
 
     measure.add(Rest(duration: const Duration(DurationType.half)));
     measure.add(Rest(duration: const Duration(DurationType.eighth)));
-    debugPrint('   ✓ Added: Rests (half + eighth)');
+    debugPrint('   âœ“ Added: Rests (half + eighth)');
 
     staff.add(measure);
-    debugPrint('✓ Staff created with ${staff.measures.length} measure(s)');
-    debugPrint('✓ Total elements in the measure: ${measure.elements.length}');
+    debugPrint('âœ“ Staff created with ${staff.measures.length} measure(s)');
+    debugPrint('âœ“ Total elements in the measure: ${measure.elements.length}');
     return staff;
   }
 
   // EXAMPLE 4: Tertiary Beams (8 spindles)
   Staff _createTertiaryBeamsExample() {
-    debugPrint('\\n📊 CREATING EXAMPLE 4: Tertiary Beams');
+    debugPrint('\\nðŸ“Š CREATING EXAMPLE 4: Tertiary Beams');
     final staff = Staff();
     final measure = Measure(); // AUTO-BEAMING ativado
 
     measure.add(Clef(clefType: ClefType.treble));
     measure.add(TimeSignature(numerator: 4, denominator: 4));
-    debugPrint('   ✓ Added: Clef + TimeSignature 4/4');
-    debugPrint('   ✓ AUTO-BEAMING ativo (BeamGrouper corrigido!)');
+    debugPrint('   âœ“ Added: Clef + TimeSignature 4/4');
+    debugPrint('   âœ“ AUTO-BEAMING ativo (BeamGrouper corrigido!)');
 
     // 8 thirty-second notes (32nd notes)
     measure.add(Note(
@@ -339,24 +339,24 @@ class BeamingShowcase extends StatelessWidget {
     ));
     measure.add(Rest(duration: const Duration(DurationType.half)));
     measure.add(Rest(duration: const Duration(DurationType.quarter)));
-    debugPrint('   ✓ Added: 8 thirty-second notes (32nd notes)');
+    debugPrint('   âœ“ Added: 8 thirty-second notes (32nd notes)');
 
     staff.add(measure);
-    debugPrint('✓ Staff created with ${staff.measures.length} measure(s)');
-    debugPrint('✓ Total elements in the measure: ${measure.elements.length}');
+    debugPrint('âœ“ Staff created with ${staff.measures.length} measure(s)');
+    debugPrint('âœ“ Total elements in the measure: ${measure.elements.length}');
     return staff;
   }
 
   // EXAMPLE 5: Complex Patterns
   Staff _createComplexBeamsExample() {
-    debugPrint('\\n📊 CREATING EXAMPLE 5: Complex Patterns');
+    debugPrint('\\nðŸ“Š CREATING EXAMPLE 5: Complex Patterns');
     final staff = Staff();
     final measure = Measure(); // AUTO-BEAMING ativado
 
     measure.add(Clef(clefType: ClefType.treble));
     measure.add(TimeSignature(numerator: 4, denominator: 4));
-    debugPrint('   ✓ Added: Clef + TimeSignature 4/4');
-    debugPrint('   ✓ AUTO-BEAMING ativo (BeamGrouper corrigido!)');
+    debugPrint('   âœ“ Added: Clef + TimeSignature 4/4');
+    debugPrint('   âœ“ AUTO-BEAMING ativo (BeamGrouper corrigido!)');
 
     // 2 eighth notes
     measure.add(Note(
@@ -395,12 +395,13 @@ class BeamingShowcase extends StatelessWidget {
       pitch: const Pitch(step: 'B', octave: 4),
       duration: const Duration(DurationType.sixteenth),
     ));
-    debugPrint('   ✓ Added: Mixed durations (2 eighth + 4 sixteenth + dotted eighth + sixteenth)');
+    debugPrint('   âœ“ Added: Mixed durations (2 eighth + 4 sixteenth + dotted eighth + sixteenth)');
 
     staff.add(measure);
-    debugPrint('✓ Staff created with ${staff.measures.length} measure(s)');
-    debugPrint('✓ Total elements in the measure: ${measure.elements.length}');
+    debugPrint('âœ“ Staff created with ${staff.measures.length} measure(s)');
+    debugPrint('âœ“ Total elements in the measure: ${measure.elements.length}');
     debugPrint('\\n${'=' * 60}');
     return staff;
   }
 }
+
