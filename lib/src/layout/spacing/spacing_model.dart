@@ -1,67 +1,47 @@
-/// Modelos matemáticos de espaçamento duracional
+/// Mathematical spacing models for music notation.
 ///
-/// Baseado em pesquisa acadêmica e implementações profissionais:
-/// - Modelo de Raiz Quadrada (Dorico) - RECOMENDADO
-/// - Modelo Logarítmico (MuseScore antigo)
+/// Based on common engraving strategies:
+/// - Square-root model (recommended)
+/// - Logarithmic model
+/// - Linear model
+/// - Exponential model
 library;
-/// - Modelo Linear
-/// - Modelo Exponencial (Lime)
+
 import 'dart:math';
 
-/// Tipo de modelo de espaçamento a ser usado
+/// Spacing model type.
 enum SpacingModel {
-  /// Modelo de raiz quadrada (√2 entre durações consecutivas)
-  /// 
-  /// **RECOMENDADO** - Usado por Dorico
-  /// - Aproximação quase perfeita da tabela de Gould
-  /// - Transições suaves entre todas as durações
-  /// - Proporcionalidade perceptual ótima
-  /// 
-  /// Fórmula: s = 1 - 0.777 + 0.777 × √t
+  /// Square-root model.
+  ///
+  /// Formula: `s = sqrt(t)`
+  /// where `t = duration / shortestDuration`.
   squareRoot,
 
-  /// Modelo logarítmico (MuseScore 3.6 antigo)
-  /// 
-  /// Fórmula: s = 1 + 0.865617 × log(t)
-  /// - Vantagens: Impede explosão de espaço em notas longas
-  /// - Desvantagens: Diferenças excessivas entre notas curtas
+  /// Logarithmic model.
+  ///
+  /// Formula: `s = 1 + 0.865617 * ln(t)`
   logarithmic,
 
-  /// Modelo linear
-  /// 
-  /// Fórmula: s = 1 - 0.134 + 0.134 × t
-  /// - Vantagens: Proporcionalidade direta
-  /// - Desvantagens: Notas longas ocupam espaço excessivo
+  /// Linear model.
+  ///
+  /// Formula: `s = 1 - 0.134 + 0.134 * t`
   linear,
 
-  /// Modelo exponencial (Lime)
-  /// 
-  /// Fórmula: s = base^(1/duração)
-  /// - base → 1.0: duração tem menos impacto
-  /// - base → 0.0: duração tem impacto máximo
+  /// Exponential model.
+  ///
+  /// Formula: `s = base^(1/t)`
   exponential,
 }
 
-/// Calculadora de espaçamento baseada em durações
-/// 
-/// Implementa os modelos matemáticos de espaçamento profissional
-/// seguindo a tabela de Elaine Gould (Behind Bars) e algoritmos
-/// de MuseScore, Dorico e LilyPond.
+/// Duration-based spacing calculator.
 class SpacingCalculator {
-  /// Modelo de espaçamento a ser usado
+  /// Model used for spacing calculations.
   final SpacingModel model;
 
-  /// Fator de multiplicação global (1.0 = normal)
-  /// 
-  /// Valores típicos:
-  /// - 0.8 - 1.0: Música compacta
-  /// - 1.0 - 1.5: Música normal
-  /// - 1.5 - 2.0: Música espaçada
+  /// Global multiplier (1.0 = normal).
   final double spacingRatio;
 
-  /// Base para modelo exponencial (0.0 - 1.0)
-  /// 
-  /// Usado apenas quando model = SpacingModel.exponential
+  /// Base for exponential model (0.0 - 1.0).
   final double exponentialBase;
 
   const SpacingCalculator({
@@ -70,55 +50,26 @@ class SpacingCalculator {
     this.exponentialBase = 0.7,
   });
 
-  /// Calcula o espaço para uma duração relativa
-  /// 
-  /// **Parâmetros:**
-  /// - `duration`: Duração da nota/acorde atual
-  /// - `shortestDuration`: Menor duração no sistema (referência)
-  /// 
-  /// **Retorna:** Espaço em unidades relativas (multiplicar por staffSpace depois)
-  /// 
-  /// **Exemplo:**
-  /// ```dart
-  /// // Nota de 1/4 quando a menor nota é 1/16
-  /// double space = calculator.calculateSpace(0.25, 0.0625);
-  /// // t = 0.25 / 0.0625 = 4.0
-  /// // Com raiz quadrada: s = (1 - 0.777 + 0.777 × √4) × 1.5
-  /// //                      = (1 - 0.777 + 0.777 × 2.0) × 1.5
-  /// //                      = 1.777 × 1.5 = 2.666 unidades
-  /// ```
+  /// Returns spacing in relative units.
   double calculateSpace(double duration, double shortestDuration) {
     if (shortestDuration <= 0) {
-      return spacingRatio; // Fallback
+      return spacingRatio;
     }
 
-    // t = duração relativa (nota mais curta = 1)
     final double t = duration / shortestDuration;
-
     double baseSpace;
 
     switch (model) {
       case SpacingModel.squareRoot:
-        // Modelo de Dorico (RECOMENDADO)
-        // s = 1 - 0.777 + 0.777 × √t
-        baseSpace = 1.0 - 0.777 + (0.777 * sqrt(t));
+        baseSpace = sqrt(t);
         break;
-
       case SpacingModel.logarithmic:
-        // Modelo antigo do MuseScore
-        // s = 1 + 0.865617 × log(t)
         baseSpace = 1.0 + (0.865617 * log(t));
         break;
-
       case SpacingModel.linear:
-        // Modelo linear simples
-        // s = 1 - 0.134 + 0.134 × t
         baseSpace = 1.0 - 0.134 + (0.134 * t);
         break;
-
       case SpacingModel.exponential:
-        // Modelo Lime
-        // s = base^(1/t)
         if (t > 0) {
           baseSpace = pow(exponentialBase, 1.0 / t).toDouble();
         } else {
@@ -130,36 +81,30 @@ class SpacingCalculator {
     return baseSpace * spacingRatio;
   }
 
-  /// Tabela de referência de Elaine Gould (Behind Bars)
-  /// 
-  /// Valores relativos de espaçamento por tipo de nota:
-  /// - Fusa (1/32): 1.0 unidade
-  /// - Semicolcheia (1/16): 1.5 unidades
-  /// - Colcheia (1/8): 2.0 unidades
-  /// - Semínima (1/4): 3.0 unidades
-  /// - Mínima (1/2): 4.0 unidades
-  /// - Semibreve (1/1): 5.0 unidades
-  /// - Breve (2/1): ~9.0 unidades (extrapolado)
+  /// Reference table used for model validation.
+  ///
+  /// Values are normalized to the shortest duration (1/32).
   static final Map<double, double> gouldSpacingTable = {
-    1.0 / 32.0: 1.0, // Fusa
-    1.0 / 16.0: 1.5, // Semicolcheia
-    1.0 / 8.0: 2.0, // Colcheia
-    1.0 / 4.0: 3.0, // Semínima
-    1.0 / 2.0: 4.0, // Mínima
-    1.0: 5.0, // Semibreve
-    2.0: 9.0, // Breve (extrapolado)
+    1.0 / 32.0: 1.0,
+    1.0 / 16.0: 1.41,
+    1.0 / 8.0: 2.0,
+    1.0 / 4.0: 2.83,
+    1.0 / 2.0: 4.0,
+    1.0: 5.66,
+    2.0: 8.0,
   };
 
-  /// Verifica a precisão do modelo comparando com a tabela de Gould
-  /// 
-  /// **Retorna:** Mapa de duração → erro percentual
+  /// Compares the active model against [gouldSpacingTable].
+  ///
+  /// Returns: duration -> percent error.
   Map<double, double> validateAgainstGould() {
     final Map<double, double> errors = {};
-    final double referenceShort = 1.0 / 32.0; // Fusa como referência
+    const double referenceShort = 1.0 / 32.0;
 
     gouldSpacingTable.forEach((duration, expectedSpace) {
       final double calculatedSpace = calculateSpace(duration, referenceShort);
-      final double error = ((calculatedSpace - expectedSpace).abs() / expectedSpace) * 100;
+      final double error =
+          ((calculatedSpace - expectedSpace).abs() / expectedSpace) * 100;
       errors[duration] = error;
     });
 
