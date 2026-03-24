@@ -35,7 +35,6 @@ import 'examples/complete_clefs_demo.dart';
 import 'examples/complete_articulations_ornaments.dart';
 import 'examples/complete_advanced_elements.dart';
 import 'examples/complete_music_piece.dart';
-import 'examples/complete_improvements_demo.dart';
 
 // JSON Examples
 import 'examples/simple_json_example.dart';
@@ -112,7 +111,6 @@ class _MainScreenState extends State<MainScreen> {
     'DEMO: Complete Articulations',
     'DEMO: Advanced Elements',
     'DEMO: Complete Music Piece',
-    'DEMO: Complete Improvements',
     'JSON: Simple Example',
     'JSON: Ode to Joy',
     'JSON: Complete Professional',
@@ -149,7 +147,6 @@ class _MainScreenState extends State<MainScreen> {
     CompleteArticulationsOrnamentsExample(),
     CompleteAdvancedElementsExample(),
     CompleteMusicPieceExample(),
-    ImprovementsDemoPage(),
     // JSON Examples
     SimpleJsonExample(),
     JsonOdeExample(),
@@ -161,7 +158,8 @@ class _MainScreenState extends State<MainScreen> {
     return Scaffold(
       // App bar follows the selected example title
       appBar: AppBar(
-        title: Text(_titles[_selectedIndex]), // Title changes with current selection
+        title: Text(
+            _titles[_selectedIndex]), // Title changes with current selection
         backgroundColor: Colors.blue.shade800,
         foregroundColor: Colors.white,
       ),

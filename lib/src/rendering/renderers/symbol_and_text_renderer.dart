@@ -39,11 +39,9 @@ class SymbolAndTextRenderer {
           basePosition.dx,
           coordinates.getStaffLineY(5) - (coordinates.staffSpace * 2.2),
         ),
-        style: theme.textStyle ??
-            const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
+        style:
+            theme.textStyle ??
+            const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
       );
       return;
     }
@@ -357,21 +355,96 @@ class SymbolAndTextRenderer {
   }
 
   void renderTempoMark(Canvas canvas, TempoMark tempo, Offset basePosition) {
-    String text = tempo.text ?? '';
-    if (tempo.bpm != null) {
-      text += ' (â™© = ${tempo.bpm})';
-    }
     final style =
         theme.tempoTextStyle ?? const TextStyle(fontWeight: FontWeight.bold);
-    final tp = TextPainter(
-      text: TextSpan(text: text, style: style),
-      textAlign: TextAlign.left,
-      textDirection: TextDirection.ltr,
-    )..layout();
-
     final textTopY =
         coordinates.getStaffLineY(5) - (coordinates.staffSpace * 2.8);
-    tp.paint(canvas, Offset(basePosition.dx, textTopY - tp.height));
+    var cursorX = basePosition.dx;
+
+    final tempoText = tempo.text?.trim();
+    if (tempoText != null && tempoText.isNotEmpty) {
+      final tp = TextPainter(
+        text: TextSpan(text: tempoText, style: style),
+        textAlign: TextAlign.left,
+        textDirection: TextDirection.ltr,
+      )..layout();
+      tp.paint(canvas, Offset(cursorX, textTopY - tp.height));
+      cursorX += tp.width;
+    }
+
+    if (tempo.bpm == null || !tempo.showMetronome) {
+      return;
+    }
+
+    final spacing = TextPainter(
+      text: TextSpan(
+        text: tempoText == null || tempoText.isEmpty ? '(' : ' (',
+        style: style,
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    spacing.paint(canvas, Offset(cursorX, textTopY - spacing.height));
+    cursorX += spacing.width;
+
+    final glyphName = _getMetronomeGlyphName(tempo.beatUnit);
+    if (glyphName != null) {
+      final metronomeGlyphSize = glyphSize * 0.46;
+      final glyphY = textTopY - metronomeGlyphSize * 0.8;
+      _drawGlyph(
+        canvas,
+        glyphName: glyphName,
+        position: Offset(cursorX, glyphY),
+        size: metronomeGlyphSize,
+        color: style.color ?? theme.textColor ?? Colors.black87,
+      );
+      final glyphAdvance =
+          metadata.getGlyphWidth(glyphName) *
+          coordinates.staffSpace *
+          (metronomeGlyphSize / glyphSize);
+      cursorX += glyphAdvance + (coordinates.staffSpace * 0.12);
+    } else {
+      final fallback = TextPainter(
+        text: TextSpan(text: '\u2669', style: style),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      fallback.paint(canvas, Offset(cursorX, textTopY - fallback.height));
+      cursorX += fallback.width + (coordinates.staffSpace * 0.12);
+    }
+
+    final equalsAndBpm = TextPainter(
+      text: TextSpan(text: ' = ${tempo.bpm})', style: style),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    equalsAndBpm.paint(canvas, Offset(cursorX, textTopY - equalsAndBpm.height));
+  }
+
+  String? _getMetronomeGlyphName(DurationType durationType) {
+    switch (durationType) {
+      case DurationType.maxima:
+      case DurationType.long:
+      case DurationType.breve:
+        return 'metNoteDoubleWhole';
+      case DurationType.whole:
+        return 'metNoteWhole';
+      case DurationType.half:
+        return 'metNoteHalfUp';
+      case DurationType.quarter:
+        return 'metNoteQuarterUp';
+      case DurationType.eighth:
+        return 'metNote8thUp';
+      case DurationType.sixteenth:
+        return 'metNote16thUp';
+      case DurationType.thirtySecond:
+        return 'metNote32ndUp';
+      case DurationType.sixtyFourth:
+        return 'metNote64thUp';
+      case DurationType.oneHundredTwentyEighth:
+        return 'metNote128thUp';
+      case DurationType.twoHundredFiftySixth:
+        return 'metNote128thUp';
+      default:
+        return 'metNoteQuarterUp';
+    }
   }
 
   void renderBreath(Canvas canvas, Breath breath, Offset basePosition) {
