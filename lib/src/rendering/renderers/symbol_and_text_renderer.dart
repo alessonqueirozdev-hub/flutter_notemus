@@ -1,8 +1,8 @@
 // lib/src/rendering/renderers/symbol_and_text_renderer.dart
 
 import 'package:flutter/material.dart';
-import '../../../core/core.dart'; // 🆕 Tipos do core
-import '../../layout/collision_detector.dart'; // CORREÇÃO: Import collision detector
+import '../../../core/core.dart'; // ðŸ†• Tipos do core
+import '../../layout/collision_detector.dart'; // CORREÃ‡ÃƒO: Import collision detector
 import '../../smufl/smufl_metadata_loader.dart';
 import '../../theme/music_score_theme.dart';
 import '../staff_coordinate_system.dart';
@@ -13,14 +13,14 @@ class SymbolAndTextRenderer {
   final MusicScoreTheme theme;
   final double glyphSize;
   final CollisionDetector?
-  collisionDetector; // CORREÇÃO: Adicionar collision detector
+  collisionDetector; // CORREÃ‡ÃƒO: Adicionar collision detector
 
   SymbolAndTextRenderer({
     required this.coordinates,
     required this.metadata,
     required this.theme,
     required this.glyphSize,
-    this.collisionDetector, // CORREÇÃO: Parâmetro opcional
+    this.collisionDetector, // CORREÃ‡ÃƒO: ParÃ¢metro opcional
   });
 
   void renderRepeatMark(
@@ -29,13 +29,31 @@ class SymbolAndTextRenderer {
     Offset basePosition,
   ) {
     final glyphName = _getRepeatMarkGlyph(repeatMark.type);
-    if (glyphName == null) return;
+    if (glyphName == null) {
+      final fallbackText = _getRepeatMarkFallbackText(repeatMark.type);
+      if (fallbackText == null) return;
+      _drawText(
+        canvas,
+        text: fallbackText,
+        position: Offset(
+          basePosition.dx,
+          coordinates.getStaffLineY(5) - (coordinates.staffSpace * 2.2),
+        ),
+        style: theme.textStyle ??
+            const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+      );
+      return;
+    }
 
-    // CORREÇÃO SMuFL: Usar opticalCenter do metadata ao invés de valor hardcoded
-    // Posição tipográfica: acima da pauta (linha 5 + espaço adicional)
-    final signY = coordinates.getStaffLineY(5) - (coordinates.staffSpace * 1.5);
+    // PosiÃ§Ã£o depende da famÃ­lia do sÃ­mbolo:
+    // - navegaÃ§Ã£o (segno/coda): acima da pauta
+    // - repeats/simile/percent: centralizados na pauta
+    final signY = _getRepeatMarkY(repeatMark.type);
 
-    // CORREÇÃO SMuFL: Usar opticalCenter anchor se disponível
+    // CORREÃ‡ÃƒO SMuFL: Usar opticalCenter anchor se disponÃ­vel
     final glyphInfo = metadata.getGlyphInfo(glyphName);
     double verticalAdjust = 0;
     if (glyphInfo != null && glyphInfo.hasAnchors) {
@@ -49,7 +67,7 @@ class SymbolAndTextRenderer {
       canvas,
       glyphName: glyphName,
       position: Offset(basePosition.dx, signY - verticalAdjust),
-      size: glyphSize * 1.1,
+      size: glyphSize * _getRepeatMarkScale(repeatMark.type),
       color: theme.repeatColor ?? theme.noteheadColor,
       centerVertically: glyphInfo == null,
       centerHorizontally: true,
@@ -57,8 +75,127 @@ class SymbolAndTextRenderer {
   }
 
   String? _getRepeatMarkGlyph(RepeatType type) {
-    const repeatGlyphs = {RepeatType.segno: 'segno', RepeatType.coda: 'coda'};
-    return repeatGlyphs[type];
+    final candidates = _repeatGlyphCandidates(type);
+    if (candidates.isEmpty) return null;
+    for (final glyph in candidates) {
+      if (metadata.getCodepoint(glyph).isNotEmpty) return glyph;
+    }
+    return null;
+  }
+
+  List<String> _repeatGlyphCandidates(RepeatType type) {
+    switch (type) {
+      case RepeatType.segno:
+        return const ['segno'];
+      case RepeatType.coda:
+        return const ['coda'];
+      case RepeatType.segnoSquare:
+        return const ['segnoSerpent1', 'segno'];
+      case RepeatType.codaSquare:
+        return const ['codaSquare', 'coda'];
+      case RepeatType.repeat1Bar:
+        return const ['repeat1Bar'];
+      case RepeatType.repeat2Bars:
+        return const ['repeat2Bars'];
+      case RepeatType.repeat4Bars:
+        return const ['repeat4Bars'];
+      case RepeatType.simile:
+        return const ['simile', 'repeatBarSlash'];
+      case RepeatType.percentRepeat:
+        return const ['percent', 'repeatSlash'];
+      case RepeatType.repeatDots:
+        return const ['repeatDots'];
+      case RepeatType.repeatLeft:
+      case RepeatType.start:
+        return const ['repeatLeft'];
+      case RepeatType.repeatRight:
+      case RepeatType.end:
+        return const ['repeatRight'];
+      case RepeatType.repeatBoth:
+        return const ['repeatLeftRight'];
+      case RepeatType.dalSegno:
+      case RepeatType.dalSegnoAlCoda:
+      case RepeatType.dalSegnoAlFine:
+      case RepeatType.daCapo:
+      case RepeatType.daCapoAlCoda:
+      case RepeatType.daCapoAlFine:
+      case RepeatType.fine:
+      case RepeatType.toCoda:
+        return const [];
+    }
+  }
+
+  String? _getRepeatMarkFallbackText(RepeatType type) {
+    switch (type) {
+      case RepeatType.dalSegno:
+        return 'D.S.';
+      case RepeatType.dalSegnoAlCoda:
+        return 'D.S. al Coda';
+      case RepeatType.dalSegnoAlFine:
+        return 'D.S. al Fine';
+      case RepeatType.daCapo:
+        return 'D.C.';
+      case RepeatType.daCapoAlCoda:
+        return 'D.C. al Coda';
+      case RepeatType.daCapoAlFine:
+        return 'D.C. al Fine';
+      case RepeatType.fine:
+        return 'Fine';
+      case RepeatType.toCoda:
+        return 'To Coda';
+      default:
+        return null;
+    }
+  }
+
+  double _getRepeatMarkScale(RepeatType type) {
+    switch (type) {
+      case RepeatType.segno:
+      case RepeatType.coda:
+      case RepeatType.segnoSquare:
+      case RepeatType.codaSquare:
+        return 0.72; // proporcional ao pentagrama
+      case RepeatType.repeat1Bar:
+      case RepeatType.repeat2Bars:
+      case RepeatType.repeat4Bars:
+      case RepeatType.simile:
+      case RepeatType.percentRepeat:
+      case RepeatType.repeatDots:
+      case RepeatType.repeatLeft:
+      case RepeatType.repeatRight:
+      case RepeatType.repeatBoth:
+      case RepeatType.start:
+      case RepeatType.end:
+        return 0.95;
+      case RepeatType.dalSegno:
+      case RepeatType.dalSegnoAlCoda:
+      case RepeatType.dalSegnoAlFine:
+      case RepeatType.daCapo:
+      case RepeatType.daCapoAlCoda:
+      case RepeatType.daCapoAlFine:
+      case RepeatType.fine:
+      case RepeatType.toCoda:
+        return 0.9;
+    }
+  }
+
+  double _getRepeatMarkY(RepeatType type) {
+    switch (type) {
+      case RepeatType.repeat1Bar:
+      case RepeatType.repeat2Bars:
+      case RepeatType.repeat4Bars:
+      case RepeatType.simile:
+      case RepeatType.percentRepeat:
+      case RepeatType.repeatDots:
+      case RepeatType.repeatLeft:
+      case RepeatType.repeatRight:
+      case RepeatType.repeatBoth:
+      case RepeatType.start:
+      case RepeatType.end:
+        return coordinates.staffBaseline.dy;
+      default:
+        return coordinates.getStaffLineY(5) - (coordinates.staffSpace * 1.5);
+    }
   }
 
   void renderDynamic(
@@ -78,21 +215,21 @@ class SymbolAndTextRenderer {
     }
 
     final glyphName = _getDynamicGlyph(dynamic.type);
-    // CORREÇÃO TIPOGRÁFICA SMuFL: Dinâmicas devem ficar 2.5 staff spaces abaixo da última linha
-    // CORREÇÃO LACERDA: Adicionar verticalOffset para evitar sobreposição
+    // CORREÃ‡ÃƒO TIPOGRÃFICA SMuFL: DinÃ¢micas devem ficar 2.5 staff spaces abaixo da Ãºltima linha
+    // CORREÃ‡ÃƒO LACERDA: Adicionar verticalOffset para evitar sobreposiÃ§Ã£o
     final dynamicY =
         coordinates.getStaffLineY(1) +
         (coordinates.staffSpace * 2.5) +
         verticalOffset;
 
     if (glyphName != null) {
-      // CORREÇÃO SMuFL: Escala de dinâmicas não deveria ser hardcoded (0.9)
-      // Usar tamanho base e deixar a fonte SMuFL definir proporções
+      // CORREÃ‡ÃƒO SMuFL: Escala de dinÃ¢micas nÃ£o deveria ser hardcoded (0.9)
+      // Usar tamanho base e deixar a fonte SMuFL definir proporÃ§Ãµes
       _drawGlyph(
         canvas,
         glyphName: glyphName,
         position: Offset(basePosition.dx, dynamicY),
-        size: glyphSize, // Remover escala arbitrária de 0.9
+        size: glyphSize, // Remover escala arbitrÃ¡ria de 0.9
         color: theme.dynamicColor ?? theme.noteheadColor,
         centerVertically: true,
         centerHorizontally: true,
@@ -120,16 +257,16 @@ class SymbolAndTextRenderer {
     double verticalOffset = 0.0,
   }) {
     final length = dynamic.length ?? coordinates.staffSpace * 4;
-    // CORREÇÃO: Usar mesma posição Y que dinâmicas
-    // CORREÇÃO LACERDA: Adicionar verticalOffset para evitar sobreposição
+    // CORREÃ‡ÃƒO: Usar mesma posiÃ§Ã£o Y que dinÃ¢micas
+    // CORREÃ‡ÃƒO LACERDA: Adicionar verticalOffset para evitar sobreposiÃ§Ã£o
     final hairpinY =
         coordinates.getStaffLineY(1) +
         (coordinates.staffSpace * 2.5) +
         verticalOffset;
-    // CORREÇÃO TIPOGRÁFICA SMuFL: Altura recomendada de 0.75-1.0 staff spaces
+    // CORREÃ‡ÃƒO TIPOGRÃFICA SMuFL: Altura recomendada de 0.75-1.0 staff spaces
     final height = coordinates.staffSpace * 0.75;
 
-    // CORREÇÃO CRÍTICA SMuFL: Usar hairpinThickness ao invés de thinBarlineThickness
+    // CORREÃ‡ÃƒO CRÃTICA SMuFL: Usar hairpinThickness ao invÃ©s de thinBarlineThickness
     final hairpinThickness = metadata.getEngravingDefault('hairpinThickness');
     final paint = Paint()
       ..color = theme.dynamicColor ?? theme.noteheadColor
@@ -222,7 +359,7 @@ class SymbolAndTextRenderer {
   void renderTempoMark(Canvas canvas, TempoMark tempo, Offset basePosition) {
     String text = tempo.text ?? '';
     if (tempo.bpm != null) {
-      text += ' (♩ = ${tempo.bpm})';
+      text += ' (â™© = ${tempo.bpm})';
     }
     final style =
         theme.tempoTextStyle ?? const TextStyle(fontWeight: FontWeight.bold);
@@ -239,8 +376,8 @@ class SymbolAndTextRenderer {
 
   void renderBreath(Canvas canvas, Breath breath, Offset basePosition) {
     final glyphName = 'breathMarkComma';
-    // CORREÇÃO MUSICOLÓGICA: Respiração deve ficar ACIMA da pauta, não na 4ª linha
-    // Posição correta: acima da 5ª linha (linha superior)
+    // CORREÃ‡ÃƒO MUSICOLÃ“GICA: RespiraÃ§Ã£o deve ficar ACIMA da pauta, nÃ£o na 4Âª linha
+    // PosiÃ§Ã£o correta: acima da 5Âª linha (linha superior)
     _drawGlyph(
       canvas,
       glyphName: glyphName,
@@ -256,8 +393,8 @@ class SymbolAndTextRenderer {
   }
 
   void renderCaesura(Canvas canvas, Caesura caesura, Offset basePosition) {
-    // CORREÇÃO MUSICOLÓGICA: Cesura deve atravessar toda a pauta
-    // Usar linha central (3ª linha/baseline) como referência, não a 5ª linha
+    // CORREÃ‡ÃƒO MUSICOLÃ“GICA: Cesura deve atravessar toda a pauta
+    // Usar linha central (3Âª linha/baseline) como referÃªncia, nÃ£o a 5Âª linha
     _drawGlyph(
       canvas,
       glyphName: caesura.glyphName,

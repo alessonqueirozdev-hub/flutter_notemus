@@ -1,15 +1,15 @@
 // lib/src/rendering/renderers/chord_renderer.dart
-// VERSÃO REFATORADA: Usa StaffPositionCalculator e BaseGlyphRenderer
+// VERSÃƒO REFATORADA: Usa StaffPositionCalculator e BaseGlyphRenderer
 //
 // MELHORIAS IMPLEMENTADAS (Fase 2):
-// ✅ Usa StaffPositionCalculator unificado (elimina 42 linhas duplicadas)
-// ✅ Herda de BaseGlyphRenderer para renderização consistente
-// ✅ Usa drawGlyphWithBBox para 100% conformidade SMuFL
-// ✅ Cache automático de TextPainters para melhor performance
+// âœ… Usa StaffPositionCalculator unificado (elimina 42 linhas duplicadas)
+// âœ… Herda de BaseGlyphRenderer para renderizaÃ§Ã£o consistente
+// âœ… Usa drawGlyphWithBBox para 100% conformidade SMuFL
+// âœ… Cache automÃ¡tico de TextPainters para melhor performance
 
 import 'package:flutter/material.dart';
 
-import '../../../core/core.dart'; // 🆕 Tipos do core
+import '../../../core/core.dart'; // ðŸ†• Tipos do core
 import '../../smufl/smufl_metadata_loader.dart';
 import '../../theme/music_score_theme.dart';
 import '../staff_coordinate_system.dart';
@@ -61,20 +61,28 @@ class ChordRenderer extends BaseGlyphRenderer {
     // POLYPHONIC: Determine stem direction based on voice or position
     final stemUp = _getStemDirection(chord, positions, voiceNumber);
 
-    final Map<int, double> xOffsets = {};
-    // CORREÇÃO TIPOGRÁFICA: Usar largura real da cabeça de nota para offset
+    final Map<int, double> xOffsets = {
+      for (int i = 0; i < sortedNotes.length; i++) i: 0.0,
+    };
+
+    // CORREÃ‡ÃƒO TIPOGRÃFICA: colisÃµes de 2Âª/cluster exigem cabeÃ§as alternadas.
+    // Regra prÃ¡tica adotada:
+    // - haste para cima: nota SUPERIOR desloca para a direita;
+    // - haste para baixo: nota INFERIOR desloca para a esquerda.
     final noteheadInfo = metadata.getGlyphInfo('noteheadBlack');
     final noteWidth = noteheadInfo?.boundingBox?.width ?? 1.18;
+    final clusterOffset = noteWidth * coordinates.staffSpace;
 
-    for (int i = 0; i < sortedNotes.length; i++) {
-      xOffsets[i] = 0.0;
-      if (i > 0 && (positions[i - 1] - positions[i]).abs() <= 1) {
-        if (xOffsets[i - 1] == 0.0) {
-          // Offset baseado na largura real da nota do metadata SMuFL
-          xOffsets[i] = !stemUp
-              ? -(noteWidth * coordinates.staffSpace)
-              : (noteWidth * coordinates.staffSpace);
-        }
+    for (int i = 0; i < sortedNotes.length - 1; i++) {
+      final interval = (positions[i] - positions[i + 1]).abs();
+      if (interval > 1) continue;
+
+      if (stemUp) {
+        // Nota superior (dissonÃ¢ncia do cluster) vai para o lado direito.
+        xOffsets[i] = clusterOffset;
+      } else {
+        // Nota inferior vai para o lado esquerdo.
+        xOffsets[i + 1] = -clusterOffset;
       }
     }
 
@@ -95,7 +103,7 @@ class ChordRenderer extends BaseGlyphRenderer {
       _drawLedgerLines(canvas, basePosition.dx + xOffset, staffPos);
 
       if (note.pitch.accidentalGlyph != null) {
-        // CORREÇÃO: Passar informações adicionais para escalonamento de acidentes
+        // CORREÃ‡ÃƒO: Passar informaÃ§Ãµes adicionais para escalonamento de acidentes
         _renderAccidental(
           canvas,
           note,
@@ -117,12 +125,12 @@ class ChordRenderer extends BaseGlyphRenderer {
     }
 
     if (chord.duration.type != DurationType.whole) {
-      // CORREÇÃO CRÍTICA: sortedNotes está em ordem DECRESCENTE de staffPosition
+      // CORREÃ‡ÃƒO CRÃTICA: sortedNotes estÃ¡ em ordem DECRESCENTE de staffPosition
       // - sortedNotes.first = nota mais ALTA (maior staffPosition)
       // - sortedNotes.last = nota mais BAIXA (menor staffPosition)
       //
-      // Haste para CIMA: deve começar na nota mais BAIXA
-      // Haste para BAIXO: deve começar na nota mais ALTA
+      // Haste para CIMA: deve comeÃ§ar na nota mais BAIXA
+      // Haste para BAIXO: deve comeÃ§ar na nota mais ALTA
       final extremeNote = stemUp ? sortedNotes.last : sortedNotes.first;
 
       // MELHORIA: Usar StaffPositionCalculator
@@ -139,7 +147,7 @@ class ChordRenderer extends BaseGlyphRenderer {
       final extremeNoteIndex = sortedNotes.indexOf(extremeNote);
       final stemXOffset = xOffsets[extremeNoteIndex]!;
 
-      // 🎯 CORREÇÃO CRÍTICA: Usar calculateChordStemLength do positioning engine
+      // ðŸŽ¯ CORREÃ‡ÃƒO CRÃTICA: Usar calculateChordStemLength do positioning engine
       // A haste deve atravessar TODAS as notas do acorde!
       final noteheadGlyph = chord.duration.type.glyphName;
       final beamCount = _getBeamCount(chord.duration.type);
@@ -160,7 +168,7 @@ class ChordRenderer extends BaseGlyphRenderer {
         customStemLength,
       );
       
-      // Desenhar bandeirola se necessário
+      // Desenhar bandeirola se necessÃ¡rio
       if (chord.duration.type.value < 0.25) {
         noteRenderer.flagRenderer.render(
           canvas,
@@ -172,7 +180,7 @@ class ChordRenderer extends BaseGlyphRenderer {
     }
   }
 
-  /// Método auxiliar: calcular número de barras
+  /// MÃ©todo auxiliar: calcular nÃºmero de barras
   int _getBeamCount(DurationType duration) {
     return switch (duration) {
       DurationType.eighth => 1,
@@ -200,7 +208,7 @@ class ChordRenderer extends BaseGlyphRenderer {
     const clearance = 0.16;
     final baseOffset = (accidentalWidth + clearance) * coordinates.staffSpace;
 
-    // Escalonamento horizontal para acidentes em notas adjacentes (intervalo de 2ª)
+    // Escalonamento horizontal para acidentes em notas adjacentes (intervalo de 2Âª)
     int stackLevel = 0;
     for (int i = 0; i < noteIndex; i++) {
       if (allNotes[i].pitch.accidentalGlyph != null) {
@@ -211,7 +219,7 @@ class ChordRenderer extends BaseGlyphRenderer {
     }
 
     // Borda ESQUERDA do acidente posicionada com clearance correto
-    // (sem centerHorizontally: a posição é a borda esquerda do glifo)
+    // (sem centerHorizontally: a posiÃ§Ã£o Ã© a borda esquerda do glifo)
     final accidentalX = notePos.dx - baseOffset - (stackLevel * coordinates.staffSpace * 0.6);
 
     drawGlyphWithBBox(
@@ -233,12 +241,12 @@ class ChordRenderer extends BaseGlyphRenderer {
       ..color = theme.staffLineColor
       ..strokeWidth = staffLineThickness;
 
-    // CORREÇÃO CRÍTICA: Calcular centro horizontal CORRETO da nota
-    // x é a posição da borda ESQUERDA do glifo
+    // CORREÃ‡ÃƒO CRÃTICA: Calcular centro horizontal CORRETO da nota
+    // x Ã© a posiÃ§Ã£o da borda ESQUERDA do glifo
     final noteheadInfo = metadata.getGlyphInfo('noteheadBlack');
     final bbox = noteheadInfo?.boundingBox;
     
-    // Centro relativo ao início do glyph (em staff spaces)
+    // Centro relativo ao inÃ­cio do glyph (em staff spaces)
     final centerOffsetSS = bbox != null
         ? (bbox.bBoxSwX + bbox.bBoxNeX) / 2
         : 1.18 / 2;
@@ -250,7 +258,7 @@ class ChordRenderer extends BaseGlyphRenderer {
         bbox?.widthInPixels(coordinates.staffSpace) ??
         (coordinates.staffSpace * 1.18);
 
-    // CORREÇÃO SMuFL: Consistente com legerLineExtension (0.4) do metadata
+    // CORREÃ‡ÃƒO SMuFL: Consistente com legerLineExtension (0.4) do metadata
     final extension = coordinates.staffSpace * 0.4;
     final totalWidth = noteWidth + (2 * extension);
 
@@ -266,7 +274,7 @@ class ChordRenderer extends BaseGlyphRenderer {
         coordinates.staffBaseline.dy,
       );
 
-      // CORREÇÃO: Centralizar na posição REAL da nota
+      // CORREÃ‡ÃƒO: Centralizar na posiÃ§Ã£o REAL da nota
       final lineStartX = noteCenterX - (totalWidth / 2);
       final lineEndX = noteCenterX + (totalWidth / 2);
       
@@ -286,18 +294,18 @@ class ChordRenderer extends BaseGlyphRenderer {
     bool stemUp,
     double customLength,
   ) {
-    // Obter âncora SMuFL da cabeça de nota
+    // Obter Ã¢ncora SMuFL da cabeÃ§a de nota
     final stemAnchor = stemUp
         ? noteRenderer.positioningEngine.getStemUpAnchor(noteheadGlyph)
         : noteRenderer.positioningEngine.getStemDownAnchor(noteheadGlyph);
 
-    // Converter âncora de staff spaces para pixels
+    // Converter Ã¢ncora de staff spaces para pixels
     final stemAnchorPixels = Offset(
       stemAnchor.dx * coordinates.staffSpace,
       -stemAnchor.dy * coordinates.staffSpace, // INVERTER Y!
     );
 
-    // Posição inicial da haste
+    // PosiÃ§Ã£o inicial da haste
     final stemX = notePosition.dx + stemAnchorPixels.dx;
     final stemStartY = notePosition.dy + stemAnchorPixels.dy;
 
@@ -317,7 +325,7 @@ class ChordRenderer extends BaseGlyphRenderer {
       stemPaint,
     );
 
-    // Retornar posição do final da haste (para bandeirola)
+    // Retornar posiÃ§Ã£o do final da haste (para bandeirola)
     return Offset(stemX, stemEndY);
   }
 

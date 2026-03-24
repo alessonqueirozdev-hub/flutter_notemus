@@ -9,7 +9,7 @@ import '../staff_coordinate_system.dart';
 import 'note_renderer.dart';
 import 'rest_renderer.dart';
 
-/// Renderizador especializado para grupos de tercina e outras quiálteras
+/// Renderizador especializado para grupos de tercina e outras quiÃ¡lteras
 class TupletRenderer {
   final StaffCoordinateSystem coordinates;
   final SmuflMetadata metadata;
@@ -45,7 +45,7 @@ class TupletRenderer {
     final List<Note> notes = [];
     final clefString = _getClefString(currentClef);
 
-    // Aplicar beams automáticos se apropriado
+    // Aplicar beams automÃ¡ticos se apropriado
     final processedElements = _applyAutomaticBeams(tuplet.elements);
 
     // Renderizar elementos individuais do tuplet
@@ -82,20 +82,28 @@ class TupletRenderer {
       _drawSimpleBeams(canvas, noteOnlyPositions, notes);
     }
 
-    // Usar noteOnlyPositions para bracket e número (evita distorção das pausas)
-    final bracketPositions =
-        noteOnlyPositions.isNotEmpty ? noteOnlyPositions : allPositions;
-
-    if (tuplet.showBracket && bracketPositions.length >= 2) {
-      _drawTupletBracket(canvas, bracketPositions, tuplet.actualNotes);
+    // O alcance horizontal deve considerar todos os elementos (incluindo pausas),
+    // para manter o nÃºmero/bracket centralizados no agrupamento real.
+    if (tuplet.showBracket && allPositions.length >= 2) {
+      _drawTupletBracket(
+        canvas,
+        spanPositions: allPositions,
+        notePositions: noteOnlyPositions,
+        number: tuplet.actualNotes,
+      );
     }
 
-    if (tuplet.showNumber && bracketPositions.isNotEmpty) {
-      _drawTupletNumber(canvas, bracketPositions, tuplet.actualNotes);
+    if (tuplet.showNumber && allPositions.isNotEmpty) {
+      _drawTupletNumber(
+        canvas,
+        spanPositions: allPositions,
+        notePositions: noteOnlyPositions,
+        number: tuplet.actualNotes,
+      );
     }
   }
 
-  /// Determina se as hastes vão para cima baseado nas posições das NOTAS.
+  /// Determina se as hastes vÃ£o para cima baseado nas posiÃ§Ãµes das NOTAS.
   bool _stemUp(List<Offset> notePositions) {
     final staffCenterY = coordinates.staffBaseline.dy;
     final averageY =
@@ -104,7 +112,7 @@ class TupletRenderer {
     return averageY >= staffCenterY;
   }
 
-  /// Calcula a posição Y do colchete do tuplet, com clamping dentro dos limites do pentagrama.
+  /// Calcula a posiÃ§Ã£o Y do colchete do tuplet, com clamping dentro dos limites do pentagrama.
   double _calculateBracketY(List<Offset> notePositions) {
     final stemUp = _stemUp(notePositions);
 
@@ -140,21 +148,23 @@ class TupletRenderer {
   }
 
   void _drawTupletBracket(
-    Canvas canvas,
-    List<Offset> notePositions,
-    int number,
-  ) {
-    if (notePositions.length < 2) return;
+    Canvas canvas, {
+    required List<Offset> spanPositions,
+    required List<Offset> notePositions,
+    required int number,
+  }) {
+    if (spanPositions.length < 2) return;
 
-    final firstNotePos = notePositions.first;
-    final lastNotePos = notePositions.last;
+    final firstNotePos = spanPositions.first;
+    final lastNotePos = spanPositions.last;
 
-    // Adicionar largura da última nota para cobrir até o fim
+    // Adicionar largura da Ãºltima nota para cobrir atÃ© o fim
     final noteHeadWidth = coordinates.staffSpace * 1.2;
     final actualLastX = lastNotePos.dx + noteHeadWidth;
 
-    final stemUp = _stemUp(notePositions);
-    final bracketY = _calculateBracketY(notePositions);
+    final referenceNotes = notePositions.isNotEmpty ? notePositions : spanPositions;
+    final stemUp = _stemUp(referenceNotes);
+    final bracketY = _calculateBracketY(referenceNotes);
 
     final paint = Paint()
       ..color = theme.stemColor
@@ -162,7 +172,7 @@ class TupletRenderer {
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.square;
 
-    // Bracket proporcional — deixar espaço para o número no centro (30% livre)
+    // Bracket proporcional â€” deixar espaÃ§o para o nÃºmero no centro (30% livre)
     final totalWidth = actualLastX - firstNotePos.dx;
     final leftEnd = firstNotePos.dx + (totalWidth * 0.35);
     final rightStart = actualLastX - (totalWidth * 0.35);
@@ -182,7 +192,7 @@ class TupletRenderer {
       paint,
     );
 
-    // Behind Bars: hooks apontam na direção das notas
+    // Behind Bars: hooks apontam na direÃ§Ã£o das notas
     final hookDirection = stemUp ? hookLength : -hookLength;
 
     canvas.drawLine(
@@ -198,22 +208,24 @@ class TupletRenderer {
   }
 
   void _drawTupletNumber(
-    Canvas canvas,
-    List<Offset> notePositions,
-    int number,
-  ) {
-    if (notePositions.isEmpty) return;
+    Canvas canvas, {
+    required List<Offset> spanPositions,
+    required List<Offset> notePositions,
+    required int number,
+  }) {
+    if (spanPositions.isEmpty) return;
 
-    final firstNotePos = notePositions.first;
-    final lastNotePos = notePositions.last;
+    final firstNotePos = spanPositions.first;
+    final lastNotePos = spanPositions.last;
     final noteHeadWidth = coordinates.staffSpace * 1.2;
     final actualLastX = lastNotePos.dx + noteHeadWidth;
 
-    final stemUp = _stemUp(notePositions); // consistente com bracket
-    final bracketY = _calculateBracketY(notePositions);
+    final referenceNotes = notePositions.isNotEmpty ? notePositions : spanPositions;
+    final stemUp = _stemUp(referenceNotes); // consistente com bracket
+    final bracketY = _calculateBracketY(referenceNotes);
     final centerX = (firstNotePos.dx + actualLastX) / 2;
 
-    // Número acima do colchete para hastes para cima, abaixo para hastes para baixo
+    // NÃºmero acima do colchete para hastes para cima, abaixo para hastes para baixo
     final numberOffset = stemUp
         ? -coordinates.staffSpace * 0.7
         : coordinates.staffSpace * 0.7;
@@ -269,7 +281,7 @@ class TupletRenderer {
     );
   }
 
-  /// Converte Clef para string compatível com getNoteY
+  /// Converte Clef para string compatÃ­vel com getNoteY
   String _getClefString(Clef clef) {
     switch (clef.actualClefType) {
       case ClefType.treble:
@@ -305,7 +317,7 @@ class TupletRenderer {
     final stemHeight = coordinates.staffSpace * 3.5;
     final beamThickness = coordinates.staffSpace * 0.5; // SMuFL spec: 0.5 SS
     final beamGap = coordinates.staffSpace * 0.25;      // SMuFL spec: 0.25 SS
-    // Espaçamento center-to-center entre beams = espessura + gap
+    // EspaÃ§amento center-to-center entre beams = espessura + gap
     final beamSpacing = beamThickness + beamGap;
 
     final stemUp = _stemUp(notePositions);
@@ -314,7 +326,7 @@ class TupletRenderer {
       ..color = theme.stemColor
       ..style = PaintingStyle.fill;
 
-    // Calcular stemX de cada nota usando âncoras SMuFL (igual ao StemRenderer)
+    // Calcular stemX de cada nota usando Ã¢ncoras SMuFL (igual ao StemRenderer)
     final stemXs = List.generate(notePositions.length, (i) {
       final noteheadGlyph = notes[i].duration.type.glyphName;
       return _getStemX(notePositions[i].dx, noteheadGlyph, stemUp);
@@ -335,7 +347,7 @@ class TupletRenderer {
       return firstStemTop + (beamSlope * (x - firstStemX));
     }
 
-    // Número de beams baseado na duração
+    // NÃºmero de beams baseado na duraÃ§Ã£o
     int beamCount = 1;
     if (notes.first.duration.type == DurationType.sixteenth) {
       beamCount = 2;
@@ -345,10 +357,10 @@ class TupletRenderer {
       beamCount = 4;
     }
 
-    // Desenhar beams — cada beam deslocado por (beamThickness + beamGap) na direção certa
+    // Desenhar beams â€” cada beam deslocado por (beamThickness + beamGap) na direÃ§Ã£o certa
     for (int level = 0; level < beamCount; level++) {
-      // Para stemUp: beams adicionais crescem para baixo (em direção às notas)
-      // Para stemDown: beams adicionais crescem para cima (em direção às notas)
+      // Para stemUp: beams adicionais crescem para baixo (em direÃ§Ã£o Ã s notas)
+      // Para stemDown: beams adicionais crescem para cima (em direÃ§Ã£o Ã s notas)
       final yOffset = stemUp ? (level * beamSpacing) : -(level * beamSpacing);
       final startX = firstStemX;
       final endX = lastStemX;
@@ -381,7 +393,7 @@ class TupletRenderer {
     }
   }
 
-  /// Calcula o X da haste usando âncoras SMuFL (igual ao StemRenderer).
+  /// Calcula o X da haste usando Ã¢ncoras SMuFL (igual ao StemRenderer).
   double _getStemX(double noteX, String noteheadGlyph, bool stemUp) {
     const stemUpXOffset = 0.7;
     const stemDownXOffset = -0.8;
@@ -392,10 +404,10 @@ class TupletRenderer {
     return noteX + (stemAnchor.dx * coordinates.staffSpace - xOffset);
   }
 
-  /// Aplica beams automáticos às notas do tuplet se todas forem beamable e sem pausas
+  /// Aplica beams automÃ¡ticos Ã s notas do tuplet se todas forem beamable e sem pausas
   List<MusicalElement> _applyAutomaticBeams(List<MusicalElement> elements) {
     final notes = elements.whereType<Note>().toList();
-    // Só aplica beams se não há pausas e há pelo menos 2 notas
+    // SÃ³ aplica beams se nÃ£o hÃ¡ pausas e hÃ¡ pelo menos 2 notas
     if (notes.length != elements.length || notes.length < 2) {
       return elements;
     }

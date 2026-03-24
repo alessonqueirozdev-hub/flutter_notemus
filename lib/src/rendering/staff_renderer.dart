@@ -1,13 +1,13 @@
 // lib/src/rendering/staff_renderer.dart
-// VERSÃO CORRIGIDA COM TIPOGRAFIA PROFISSIONAL
-// FASE 2 REFATORAÇÃO: Usando tipos do core/
+// VERSÃƒO CORRIGIDA COM TIPOGRAFIA PROFISSIONAL
+// FASE 2 REFATORAÃ‡ÃƒO: Usando tipos do core/
 
 import 'package:flutter/material.dart';
-import '../../core/core.dart'; // 🆕 Tipos do core
+import '../../core/core.dart'; // ðŸ†• Tipos do core
 import '../layout/layout_engine.dart';
 import '../smufl/smufl_metadata_loader.dart';
 import '../theme/music_score_theme.dart';
-import '../beaming/beaming.dart'; // Sistema de beaming avançado
+import '../beaming/beaming.dart'; // Sistema de beaming avanÃ§ado
 import 'renderers/articulation_renderer.dart';
 import 'renderers/bar_element_renderer.dart';
 import 'renderers/barline_renderer.dart';
@@ -18,7 +18,7 @@ import 'renderers/group_renderer.dart';
 import 'renderers/note_renderer.dart';
 import 'renderers/ornament_renderer.dart';
 import 'renderers/rest_renderer.dart';
-import 'renderers/slur_renderer.dart'; // ✅ NOVO: Ligaduras profissionais
+import 'renderers/slur_renderer.dart'; // âœ… NOVO: Ligaduras profissionais
 import 'renderers/symbol_and_text_renderer.dart';
 import '../layout/skyline_calculator.dart';
 import 'renderers/tuplet_renderer.dart';
@@ -28,11 +28,11 @@ import 'staff_coordinate_system.dart';
 class StaffRenderer {
   // CONSTANTES DE AJUSTE MANUAL
 
-  // Margem após BARRAS DE COMPASSO NORMAIS (single, double, dashed, etc)
+  // Margem apÃ³s BARRAS DE COMPASSO NORMAIS (single, double, dashed, etc)
   // Controla onde as linhas do pentagrama terminam quando o sistema termina
-  // com uma barra de compasso normal (não uma barra final)
+  // com uma barra de compasso normal (nÃ£o uma barra final)
   //
-  // Fórmula: endX = bounds.endX + (staffSpace + systemEndMargin)
+  // FÃ³rmula: endX = bounds.endX + (staffSpace + systemEndMargin)
   //
   // Aplica-se a:
   //   - BarlineType.single (barra simples)
@@ -42,23 +42,23 @@ class StaffRenderer {
   //
   // Valores sugeridos:
   //   -12.0 = Linhas terminam exatamente na barra de compasso
-  //    0.0 = Margem padrão de 1 staff space
+  //    0.0 = Margem padrÃ£o de 1 staff space
   //   -3.0 = Linhas terminam um pouco antes da barra
   static const double systemEndMargin =
       -12.0; //  Termina exatamente na barra de compasso
 
-  // Margem após BARRA FINAL (BarlineType.final_)
+  // Margem apÃ³s BARRA FINAL (BarlineType.final_)
   // Controla onde as linhas do pentagrama terminam quando o sistema termina
   // com uma barra final (linha fina + linha grossa)
   //
   // Aplica-se APENAS a:
-  //   - BarlineType.final_ (barra final) ✅
+  //   - BarlineType.final_ (barra final) âœ…
   //
   // Valores sugeridos:
-  //   -1.5 = Linhas terminam exatamente na barra final ✅
-  //    0.0 = Margem padrão de 1 staff space
+  //   -1.5 = Linhas terminam exatamente na barra final âœ…
+  //    0.0 = Margem padrÃ£o de 1 staff space
   static const double finalBarlineMargin =
-      -1.5; // ✅ Termina exatamente na barra final
+      -1.5; // âœ… Termina exatamente na barra final
 
   final StaffCoordinateSystem coordinates;
   final SmuflMetadata metadata;
@@ -84,17 +84,17 @@ class StaffRenderer {
   late final RestRenderer restRenderer;
   late final SymbolAndTextRenderer symbolAndTextRenderer;
   late final TupletRenderer tupletRenderer;
-  late SlurRenderer slurRenderer; // ✅ NOVO: Renderizador profissional
+  late SlurRenderer slurRenderer; // âœ… NOVO: Renderizador profissional
 
   StaffRenderer({
     required this.coordinates,
     required this.metadata,
     required this.theme,
   }) {
-    // CORREÇÃO TIPOGRÁFICA: Tamanho correto do glifo baseado em SMuFL
+    // CORREÃ‡ÃƒO TIPOGRÃFICA: Tamanho correto do glifo baseado em SMuFL
     glyphSize = coordinates.staffSpace * 4.0;
 
-    // CORREÇÃO: Usar valores corretos do metadata Bravura
+    // CORREÃ‡ÃƒO: Usar valores corretos do metadata Bravura
     staffLineThickness =
         metadata.getEngravingDefault('staffLineThickness') *
         coordinates.staffSpace;
@@ -133,7 +133,6 @@ class StaffRenderer {
       coordinates: coordinates,
       metadata: metadata,
       theme: theme,
-      glyphRenderer: glyphRenderer,
       glyphSize: glyphSize,
     );
 
@@ -209,14 +208,14 @@ class StaffRenderer {
       positioningEngine: positioningEngine,
     );
 
-    // ✅ Inicializar SlurRenderer profissional
+    // âœ… Inicializar SlurRenderer profissional
     slurRenderer = SlurRenderer(
       staffSpace: coordinates.staffSpace,
       metadata: metadata,
     );
   }
 
-  // Set de notas que estão em advanced beam groups
+  // Set de notas que estÃ£o em advanced beam groups
   final Set<Note> _notesInAdvancedBeams = {};
 
   void renderStaff(
@@ -228,7 +227,7 @@ class StaffRenderer {
     // Limpar set de notas beamed
     _notesInAdvancedBeams.clear();
 
-    // Coletar notas que estão em advanced beam groups
+    // Coletar notas que estÃ£o em advanced beam groups
     if (layoutEngine != null) {
       for (final group in layoutEngine.advancedBeamGroups) {
         _notesInAdvancedBeams.addAll(group.notes);
@@ -244,7 +243,7 @@ class StaffRenderer {
       _renderElement(canvas, elements[i], elements, i);
     }
 
-    // Segunda passagem: renderizar ADVANCED BEAMS (se disponível)
+    // Segunda passagem: renderizar ADVANCED BEAMS (se disponÃ­vel)
     if (layoutEngine != null && layoutEngine.advancedBeamGroups.isNotEmpty) {
       final noteXPositions = layoutEngine.noteXPositions;
       final noteYPositions = layoutEngine.noteYPositions;
@@ -261,6 +260,8 @@ class StaffRenderer {
 
     // Terceira passagem: renderizar elementos de grupo (beams simples, ties, slurs)
     if (currentClef != null) {
+      _renderLineOrnaments(canvas, elements);
+
       // Pular beams simples se temos advanced beams
       if (layoutEngine == null || layoutEngine.advancedBeamGroups.isEmpty) {
         groupRenderer.renderBeams(canvas, elements, currentClef!);
@@ -300,7 +301,7 @@ class StaffRenderer {
         skylineCalculator: skylineCalc,
       );
 
-      // ✅ USAR SLURRENDERER PROFISSIONAL ao invés do GroupRenderer
+      // âœ… USAR SLURRENDERER PROFISSIONAL ao invÃ©s do GroupRenderer
       final tieGroups = groupRenderer.identifyTieGroups(elements);
       final slurGroups = groupRenderer.identifySlurGroups(elements);
 
@@ -322,8 +323,67 @@ class StaffRenderer {
     }
   }
 
+  void _renderLineOrnaments(Canvas canvas, List<PositionedElement> elements) {
+    final paint = Paint()
+      ..color = theme.ornamentColor ?? theme.noteheadColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = coordinates.staffSpace * 0.11
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    for (int i = 0; i < elements.length; i++) {
+      final current = elements[i];
+      if (current.element is! Note) continue;
+
+      final note = current.element as Note;
+      final hasLineOrnament = note.ornaments.any((ornament) {
+        return ornament.type == OrnamentType.glissando ||
+            ornament.type == OrnamentType.portamento ||
+            ornament.type == OrnamentType.slide;
+      });
+      if (!hasLineOrnament) continue;
+
+      final next = _findNextNote(elements, i, current.system);
+      if (next == null) continue;
+
+      final startX = current.position.dx + (coordinates.staffSpace * 0.85);
+      final endX = next.position.dx + (coordinates.staffSpace * 0.25);
+      if (endX <= startX) continue;
+
+      final startY = current.position.dy - (coordinates.staffSpace * 0.2);
+      final endY = next.position.dy - (coordinates.staffSpace * 0.2);
+      final path = Path()..moveTo(startX, startY);
+
+      final segments = (((endX - startX) / coordinates.staffSpace).round() * 2)
+          .clamp(4, 16);
+      final amplitude = coordinates.staffSpace * 0.16;
+      for (int s = 1; s <= segments; s++) {
+        final t = s / segments;
+        final x = startX + ((endX - startX) * t);
+        final yLinear = startY + ((endY - startY) * t);
+        final yWave = yLinear + ((s.isEven ? -1 : 1) * amplitude);
+        path.lineTo(x, yWave);
+      }
+
+      canvas.drawPath(path, paint);
+    }
+  }
+
+  PositionedElement? _findNextNote(
+    List<PositionedElement> elements,
+    int fromIndex,
+    int system,
+  ) {
+    for (int i = fromIndex + 1; i < elements.length; i++) {
+      final candidate = elements[i];
+      if (candidate.system != system) continue;
+      if (candidate.element is Note) return candidate;
+    }
+    return null;
+  }
+
   /// Desenha linhas do pentagrama POR SISTEMA
-  /// Cada sistema tem suas linhas terminando na última barline daquele sistema
+  /// Cada sistema tem suas linhas terminando na Ãºltima barline daquele sistema
   void _drawStaffLinesBySystem(
     Canvas canvas,
     List<PositionedElement> elements,
@@ -333,7 +393,7 @@ class StaffRenderer {
     // Agrupar elementos por sistema e calcular limites
     final systemBounds = <int, ({double startX, double endX, double y})>{};
     final lastBarlineType =
-        <int, BarlineType>{}; // Tipo da última barra de cada sistema
+        <int, BarlineType>{}; // Tipo da Ãºltima barra de cada sistema
 
     for (final positioned in elements) {
       final system = positioned.system;
@@ -351,7 +411,7 @@ class StaffRenderer {
         );
       }
 
-      // Guardar o tipo da última barline de cada sistema
+      // Guardar o tipo da Ãºltima barline de cada sistema
       if (positioned.element is Barline) {
         lastBarlineType[system] = (positioned.element as Barline).type;
       }
@@ -368,7 +428,7 @@ class StaffRenderer {
       final bounds = entry.value;
       final barlineType = lastBarlineType[systemNumber];
 
-      // Usar margem baseada no TIPO DE BARRA, não na posição do sistema
+      // Usar margem baseada no TIPO DE BARRA, nÃ£o na posiÃ§Ã£o do sistema
       // Barra final (BarlineType.final_) usa finalBarlineMargin
       // Outras barras usam systemEndMargin
       final isFinalBarline = (barlineType == BarlineType.final_);
@@ -376,10 +436,10 @@ class StaffRenderer {
       final endX = bounds.endX + (coordinates.staffSpace + margin);
 
       // Desenhar as 5 linhas do pentagrama para este sistema
-      // ✅ CORREÇÃO: Usar coordinates.getStaffLineY() diretamente, que já tem
-      // a posição Y correta para este sistema (baseada em staffBaseline.dy).
-      // NÃO usar bounds.y pois pode ser a posição Y de uma nota (pitch-based)
-      // e não o centro da pauta.
+      // âœ… CORREÃ‡ÃƒO: Usar coordinates.getStaffLineY() diretamente, que jÃ¡ tem
+      // a posiÃ§Ã£o Y correta para este sistema (baseada em staffBaseline.dy).
+      // NÃƒO usar bounds.y pois pode ser a posiÃ§Ã£o Y de uma nota (pitch-based)
+      // e nÃ£o o centro da pauta.
       for (int line = 1; line <= 5; line++) {
         final lineY = coordinates.getStaffLineY(line);
 

@@ -6,7 +6,7 @@ import 'package:flutter_notemus/core/duration.dart';
 import 'package:flutter_notemus/src/beaming/beam_group.dart';
 import 'package:flutter_notemus/src/beaming/beam_segment.dart';
 import 'package:flutter_notemus/src/beaming/beam_types.dart';
-import 'package:flutter_notemus/src/beaming/beat_position_calculator.dart'; // ✅ ADICIONADO
+import 'package:flutter_notemus/src/beaming/beat_position_calculator.dart'; // âœ… ADICIONADO
 import 'package:flutter_notemus/src/rendering/smufl_positioning_engine.dart';
 
 /// Analisa grupos de notas e determina geometria e estrutura de beams
@@ -27,7 +27,7 @@ class BeamAnalyzer {
     TimeSignature timeSignature, {
     Map<Note, double>? noteXPositions,
     Map<Note, int>? noteStaffPositions,
-    Map<Note, double>? noteYPositions, // ✅ NOVO: Y absoluto em pixels
+    Map<Note, double>? noteYPositions, // âœ… NOVO: Y absoluto em pixels
   }) {
     if (notes.isEmpty) {
       throw ArgumentError('Beam group cannot be empty');
@@ -35,32 +35,32 @@ class BeamAnalyzer {
 
     final group = AdvancedBeamGroup(notes: notes);
 
-    // Etapa 1: Determinar direção das hastes
+    // Etapa 1: Determinar direÃ§Ã£o das hastes
     group.stemDirection = _calculateStemDirection(notes, noteStaffPositions);
 
-    // Etapa 2: Calcular posições X
+    // Etapa 2: Calcular posiÃ§Ãµes X
     _calculateXPositions(group, noteXPositions);
 
     // Etapa 3: Calcular geometria do primary beam
     _calculatePrimaryBeamGeometry(group, noteStaffPositions, noteYPositions);
 
-    // Etapa 4: Analisar beams secundários
+    // Etapa 4: Analisar beams secundÃ¡rios
     _analyzeSecondaryBeams(group, timeSignature, noteStaffPositions);
 
     return group;
   }
 
-  /// Determina direção das hastes baseado na nota mais distante da linha central
-  /// ✅ CORREÇÃO P3: Linha central é sempre staffPosition = 0, independente da clave
+  /// Determina direÃ§Ã£o das hastes baseado na nota mais distante da linha central
+  /// âœ… CORREÃ‡ÃƒO P3: Linha central Ã© sempre staffPosition = 0, independente da clave
   StemDirection _calculateStemDirection(
     List<Note> notes,
     Map<Note, int>? noteStaffPositions,
   ) {
     if (noteStaffPositions == null || noteStaffPositions.isEmpty) {
-      return StemDirection.up; // Padrão
+      return StemDirection.up; // PadrÃ£o
     }
 
-    // ✅ CORREÇÃO P3: Linha central é sempre staffPosition = 0
+    // âœ… CORREÃ‡ÃƒO P3: Linha central Ã© sempre staffPosition = 0
     // (independente da clave - treble, bass, alto, etc.)
     const int centerLine = 0;
 
@@ -85,20 +85,20 @@ class BeamAnalyzer {
 
     final farthestPos = noteStaffPositions[farthest]!;
 
-    // ✅ staffPosition > 0: acima do centro → hastes para baixo
-    // ✅ staffPosition < 0: abaixo do centro → hastes para cima
-    // ✅ staffPosition = 0: exatamente no centro → hastes para baixo (convenção)
+    // âœ… staffPosition > 0: acima do centro â†’ hastes para baixo
+    // âœ… staffPosition < 0: abaixo do centro â†’ hastes para cima
+    // âœ… staffPosition = 0: exatamente no centro â†’ hastes para baixo (convenÃ§Ã£o)
     return farthestPos >= centerLine ? StemDirection.down : StemDirection.up;
   }
 
-  /// Calcula posições X do início e fim do beam
-  /// ✅ USAR POSIÇÕES DAS HASTES (com âncoras SMuFL), não das notas!
+  /// Calcula posiÃ§Ãµes X do inÃ­cio e fim do beam
+  /// âœ… USAR POSIÃ‡Ã•ES DAS HASTES (com Ã¢ncoras SMuFL), nÃ£o das notas!
   void _calculateXPositions(
     AdvancedBeamGroup group,
     Map<Note, double>? noteXPositions,
   ) {
     if (noteXPositions == null || noteXPositions.isEmpty) {
-      // Espaçamento padrão
+      // EspaÃ§amento padrÃ£o
       group.leftX = 0;
       group.rightX = (group.notes.length - 1) * staffSpace * 2;
       return;
@@ -107,12 +107,12 @@ class BeamAnalyzer {
     final firstNote = group.notes.first;
     final lastNote = group.notes.last;
 
-    // ✅ CRÍTICO: Calcular posição X DA HASTE, não da nota!
-    // Usar EXATAMENTE a mesma lógica do StemRenderer (linhas 59-72)
+    // âœ… CRÃTICO: Calcular posiÃ§Ã£o X DA HASTE, nÃ£o da nota!
+    // Usar EXATAMENTE a mesma lÃ³gica do StemRenderer (linhas 59-72)
     final firstNoteX = noteXPositions[firstNote] ?? 0;
     final lastNoteX = noteXPositions[lastNote] ?? 0;
     
-    // Obter âncoras SMuFL
+    // Obter Ã¢ncoras SMuFL
     final firstNoteheadGlyph = firstNote.duration.type.glyphName;
     final lastNoteheadGlyph = lastNote.duration.type.glyphName;
     
@@ -124,48 +124,48 @@ class BeamAnalyzer {
         ? positioningEngine.getStemUpAnchor(lastNoteheadGlyph)
         : positioningEngine.getStemDownAnchor(lastNoteheadGlyph);
     
-    // ✅ CRÍTICO: Aplicar ajustes visuais empíricos (IGUAL ao StemRenderer!)
+    // âœ… CRÃTICO: Aplicar ajustes visuais empÃ­ricos (IGUAL ao StemRenderer!)
     const stemUpXOffset = 0.7;
     const stemDownXOffset = -0.8;
     final xOffset = group.stemDirection == StemDirection.up 
         ? stemUpXOffset 
         : stemDownXOffset;
     
-    // Calcular posição X das hastes (IDÊNTICO ao StemRenderer linhas 66-72!)
+    // Calcular posiÃ§Ã£o X das hastes (IDÃŠNTICO ao StemRenderer linhas 66-72!)
     group.leftX = firstNoteX + (firstStemAnchor.dx * staffSpace - xOffset);
     group.rightX = lastNoteX + (lastStemAnchor.dx * staffSpace - xOffset);
   }
 
-  /// Calcula geometria do primary beam (ângulo e posições Y)
+  /// Calcula geometria do primary beam (Ã¢ngulo e posiÃ§Ãµes Y)
   void _calculatePrimaryBeamGeometry(
     AdvancedBeamGroup group,
     Map<Note, int>? noteStaffPositions,
-    Map<Note, double>? noteYPositions, // ✅ Y absoluto em pixels
+    Map<Note, double>? noteYPositions, // âœ… Y absoluto em pixels
   ) {
     final firstNote = group.notes.first;
     final lastNote = group.notes.last;
 
-    // ✅ SEMPRE usar Y absoluto (noteYPositions deve sempre estar disponível)
+    // âœ… SEMPRE usar Y absoluto (noteYPositions deve sempre estar disponÃ­vel)
     if (noteYPositions == null || noteYPositions.isEmpty) {
-      throw ArgumentError('noteYPositions é obrigatório para cálculo de beams');
+      throw ArgumentError('noteYPositions Ã© obrigatÃ³rio para cÃ¡lculo de beams');
     }
 
     final firstNoteY = noteYPositions[firstNote];
     final lastNoteY = noteYPositions[lastNote];
 
     if (firstNoteY == null || lastNoteY == null) {
-      throw ArgumentError('Posições Y das notas não encontradas');
+      throw ArgumentError('PosiÃ§Ãµes Y das notas nÃ£o encontradas');
     }
 
-    // ✅ USAR EXATAMENTE A MESMA LÓGICA DO GroupRenderer!
-    // Calcular máximo de beams no grupo
+    // âœ… USAR EXATAMENTE A MESMA LÃ“GICA DO GroupRenderer!
+    // Calcular mÃ¡ximo de beams no grupo
     int maxBeams = 0;
     for (final note in group.notes) {
       final beams = _getBeamCount(note.duration);
       if (beams > maxBeams) maxBeams = beams;
     }
 
-    // Filtrar apenas posições das notas deste grupo (não todas as notas da peça)
+    // Filtrar apenas posiÃ§Ãµes das notas deste grupo (nÃ£o todas as notas da peÃ§a)
     final groupStaffPositions = group.notes
         .map((n) => noteStaffPositions![n]!)
         .toList();
@@ -179,7 +179,7 @@ class BeamAnalyzer {
     );
     final beamHeightPixels = beamHeightSpaces * staffSpace;
 
-    // Calcular posição média das notas (IGUAL ao GroupRenderer!)
+    // Calcular posiÃ§Ã£o mÃ©dia das notas (IGUAL ao GroupRenderer!)
     final avgNoteY = (firstNoteY + lastNoteY) / 2;
 
     // Calcular Y base do beam (IGUAL ao GroupRenderer!)
@@ -187,24 +187,34 @@ class BeamAnalyzer {
         ? avgNoteY - beamHeightPixels
         : avgNoteY + beamHeightPixels;
 
-    // Calcular ângulo usando positioning engine (IGUAL ao GroupRenderer!)
+    // Calcular Ã¢ngulo usando positioning engine (IGUAL ao GroupRenderer!)
     final beamAngleSpaces = positioningEngine.calculateBeamAngle(
       noteStaffPositions: groupStaffPositions,
       stemUp: group.stemDirection == StemDirection.up,
     );
     final beamAnglePixels = beamAngleSpaces * staffSpace;
 
-    // Calcular distância X
+    // Calcular distÃ¢ncia X
     final xDistance = group.rightX - group.leftX;
-    final beamSlope = xDistance > 0 ? beamAnglePixels / xDistance : 0.0;
+    double beamSlope = xDistance > 0 ? beamAnglePixels / xDistance : 0.0;
 
-    // Definir leftY e rightY usando interpolação linear (IGUAL ao GroupRenderer!)
+    // CORREÃ‡ÃƒO VISUAL: inclinaÃ§Ã£o da beam acompanha a direÃ§Ã£o melÃ³dica global.
+    final melodicDelta =
+        noteStaffPositions[lastNote]! - noteStaffPositions[firstNote]!;
+    if (melodicDelta != 0 && beamSlope != 0.0) {
+      final expectedSign = melodicDelta > 0 ? -1.0 : 1.0;
+      if (beamSlope.sign != expectedSign) {
+        beamSlope = -beamSlope;
+      }
+    }
+
+    // Definir leftY e rightY usando interpolaÃ§Ã£o linear (IGUAL ao GroupRenderer!)
     group.leftY = beamBaseY;
     group.rightY = beamBaseY + (beamSlope * xDistance);
   }
 
 
-  /// Analisa beams secundários e cria BeamSegments
+  /// Analisa beams secundÃ¡rios e cria BeamSegments
   void _analyzeSecondaryBeams(
     AdvancedBeamGroup group,
     TimeSignature timeSignature,
@@ -218,7 +228,7 @@ class BeamAnalyzer {
       isFractional: false,
     ));
 
-    // Determinar número máximo de beams necessários
+    // Determinar nÃºmero mÃ¡ximo de beams necessÃ¡rios
     int maxLevel = 1;
     for (final note in group.notes) {
       final beamCount = _getBeamCount(note.duration);
@@ -227,13 +237,13 @@ class BeamAnalyzer {
       }
     }
 
-    // Analisar cada nível de beam secundário
+    // Analisar cada nÃ­vel de beam secundÃ¡rio
     for (int level = 2; level <= maxLevel; level++) {
       _analyzeBeamLevel(group, level, timeSignature);
     }
   }
 
-  /// Analisa um nível específico de beam
+  /// Analisa um nÃ­vel especÃ­fico de beam
   void _analyzeBeamLevel(
     AdvancedBeamGroup group,
     int level,
@@ -246,10 +256,10 @@ class BeamAnalyzer {
       final noteBeams = _getBeamCount(note.duration);
 
       if (noteBeams >= level) {
-        // Esta nota precisa deste nível de beam
+        // Esta nota precisa deste nÃ­vel de beam
         segmentStart ??= i;
 
-        // Verificar se deve quebrar beam secundário
+        // Verificar se deve quebrar beam secundÃ¡rio
         final shouldBreak = _shouldBreakSecondaryBeam(
           group,
           i,
@@ -268,7 +278,7 @@ class BeamAnalyzer {
           segmentStart = i;
         }
       } else {
-        // Esta nota não precisa deste nível
+        // Esta nota nÃ£o precisa deste nÃ­vel
         if (segmentStart != null) {
           if (segmentStart == i - 1) {
             // Apenas uma nota: fractional beam
@@ -292,10 +302,10 @@ class BeamAnalyzer {
       }
     }
 
-    // Finalizar último segmento
+    // Finalizar Ãºltimo segmento
     if (segmentStart != null) {
       if (segmentStart == group.notes.length - 1) {
-        // Última nota sozinha: fractional beam à esquerda
+        // Ãšltima nota sozinha: fractional beam Ã  esquerda
         group.beamSegments.add(_createFractionalBeam(
           group,
           segmentStart,
@@ -313,9 +323,9 @@ class BeamAnalyzer {
     }
   }
 
-  /// Determina se deve quebrar beam secundário nesta posição
+  /// Determina se deve quebrar beam secundÃ¡rio nesta posiÃ§Ã£o
   ///
-  /// ✅ IMPLEMENTADO: Lógica profissional baseada em beat positions (Behind Bars)
+  /// âœ… IMPLEMENTADO: LÃ³gica profissional baseada em beat positions (Behind Bars)
   bool _shouldBreakSecondaryBeam(
     AdvancedBeamGroup group,
     int noteIndex,
@@ -324,7 +334,7 @@ class BeamAnalyzer {
   ) {
     if (noteIndex == 0) return false;
 
-    // Implementar regra "dois níveis acima"
+    // Implementar regra "dois nÃ­veis acima"
     int smallestBeams = 1;
     for (final note in group.notes) {
       final beams = _getBeamCount(note.duration);
@@ -335,15 +345,15 @@ class BeamAnalyzer {
 
     final breakAtLevel = smallestBeams - 2;
 
-    // Não quebrar beams de nível muito baixo
+    // NÃ£o quebrar beams de nÃ­vel muito baixo
     if (beamLevel < breakAtLevel) {
       return false;
     }
 
-    // ✅ NOVA LÓGICA: Usar BeatPositionCalculator para decisões profissionais
+    // âœ… NOVA LÃ“GICA: Usar BeatPositionCalculator para decisÃµes profissionais
     final calculator = BeatPositionCalculator(timeSignature);
     
-    // Calcular posição acumulada da nota atual
+    // Calcular posiÃ§Ã£o acumulada da nota atual
     double accumulatedPosition = 0.0;
     for (int i = 0; i < noteIndex; i++) {
       accumulatedPosition += group.notes[i].duration.realValue;
@@ -369,7 +379,7 @@ class BeamAnalyzer {
     int nextNoteIndex,
     int level,
   ) {
-    // Determinar direção
+    // Determinar direÃ§Ã£o
     FractionalBeamSide side;
 
     if (noteIndex == 0) {
@@ -398,7 +408,7 @@ class BeamAnalyzer {
     );
   }
 
-  /// Retorna número de beams para uma duração
+  /// Retorna nÃºmero de beams para uma duraÃ§Ã£o
   int _getBeamCount(Duration duration) {
     return switch (duration.type) {
       DurationType.eighth => 1,
@@ -406,11 +416,11 @@ class BeamAnalyzer {
       DurationType.thirtySecond => 3,
       DurationType.sixtyFourth => 4,
       DurationType.oneHundredTwentyEighth => 5,
-      _ => 0, // Notas mais longas não têm beams
+      _ => 0, // Notas mais longas nÃ£o tÃªm beams
     };
   }
 
-  /// Retorna valor numérico da duração (para comparação)
+  /// Retorna valor numÃ©rico da duraÃ§Ã£o (para comparaÃ§Ã£o)
   double _getDurationValue(Duration duration) {
     return switch (duration.type) {
       DurationType.maxima => 8.0,

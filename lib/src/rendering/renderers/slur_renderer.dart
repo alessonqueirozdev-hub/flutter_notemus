@@ -12,16 +12,16 @@ import '../../smufl/smufl_metadata_loader.dart'; // SmuflMetadata
 
 /// Renderizador profissional de ligaduras (slurs e ties) conforme SMuFL e Behind Bars
 ///
-/// **ESPECIFICAÇÕES:**
-/// - Espessura variável: endpoint (0.1 SS) → midpoint (0.22 SS)
-/// - Curvas Bézier cúbicas suaves
-/// - Detecção automática de direção (acima/abaixo)
-/// - Evita colisões com notas, hastes, beams, acidentes
-/// - Suporte a slurs aninhados (múltiplos níveis)
+/// **ESPECIFICAÃ‡Ã•ES:**
+/// - Espessura variÃ¡vel: endpoint (0.1 SS) â†’ midpoint (0.22 SS)
+/// - Curvas BÃ©zier cÃºbicas suaves
+/// - DetecÃ§Ã£o automÃ¡tica de direÃ§Ã£o (acima/abaixo)
+/// - Evita colisÃµes com notas, hastes, beams, acidentes
+/// - Suporte a slurs aninhados (mÃºltiplos nÃ­veis)
 ///
-/// **REFERÊNCIAS:**
+/// **REFERÃŠNCIAS:**
 /// - SMuFL specification (slurEndpointThickness, slurMidpointThickness)
-/// - Behind Bars (Elaine Gould) - capítulo sobre ligaduras
+/// - Behind Bars (Elaine Gould) - capÃ­tulo sobre ligaduras
 /// - OpenSheetMusicDisplay (SlurCalculator.ts)
 class SlurRenderer {
   final EngravingRules rules;
@@ -36,11 +36,11 @@ class SlurRenderer {
     this.skylineCalculator,
   }) : rules = rules ?? EngravingRules();
   
-  /// Renderiza ligaduras de expressão (slurs)
+  /// Renderiza ligaduras de expressÃ£o (slurs)
   ///
   /// @param canvas Canvas do Flutter
   /// @param slurGroups Grupos de notas ligadas
-  /// @param positions Posições de todos os elementos
+  /// @param positions PosiÃ§Ãµes de todos os elementos
   /// @param currentClef Clave atual
   /// @param color Cor da ligadura
   void renderSlurs({
@@ -65,14 +65,14 @@ class SlurRenderer {
       final startNote = startElement.element as Note;
       final endNote = endElement.element as Note;
 
-      // Calcular direção automática
+      // Calcular direÃ§Ã£o automÃ¡tica
       final direction = _calculateSlurDirection(
         startNote,
         endNote,
         currentClef,
       );
 
-      // Calcular pontos de início e fim
+      // Calcular pontos de inÃ­cio e fim
       final startPoint = _calculateSlurEndpoint(
         startElement.position,
         startNote,
@@ -89,7 +89,7 @@ class SlurRenderer {
         above: direction == SlurDirection.up,
       );
 
-      // Calcular curva usando SlurCalculator avançado
+      // Calcular curva usando SlurCalculator avanÃ§ado
       final calculator = SlurCalculator(
         rules: rules,
         skylineCalculator: skylineCalculator,
@@ -102,7 +102,7 @@ class SlurRenderer {
         staffSpace: staffSpace,
       );
 
-      // Renderizar curva com espessura variável
+      // Renderizar curva com espessura variÃ¡vel
       _drawVariableThicknessCurve(
         canvas,
         curve,
@@ -114,7 +114,7 @@ class SlurRenderer {
   
   /// Renderiza ligaduras de prolongamento (ties)
   ///
-  /// Ties são mais rasas que slurs e sempre conectam notas da mesma altura
+  /// Ties sÃ£o mais rasas que slurs e sempre conectam notas da mesma altura
   void renderTies({
     required Canvas canvas,
     required Map<int, List<int>> tieGroups,
@@ -132,7 +132,7 @@ class SlurRenderer {
 
       final startNote = startElement.element as Note;
 
-      // Ties seguem direção OPOSTA às hastes
+      // Ties seguem direÃ§Ã£o OPOSTA Ã s hastes
       final staffPos = StaffPositionCalculator.calculate(
         startNote.pitch,
         currentClef,
@@ -140,15 +140,15 @@ class SlurRenderer {
       final stemUp = staffPos <= 0;
       final tieAbove = !stemUp;
 
-      // Calcular pontos de início e fim (mais afastados das cabeças)
+      // Calcular pontos de inÃ­cio e fim (mais afastados das cabeÃ§as)
       final noteWidth = staffSpace * 1.18;
 
-      // ✅ USAR position.dy que JÁ é a posição Y absoluta da nota!
+      // âœ… USAR position.dy que JÃ Ã© a posiÃ§Ã£o Y absoluta da nota!
       final startNoteY = startElement.position.dy;
       final endNoteY = endElement.position.dy;
 
-      // ✅ Clearance discreto para ties (Behind Bars: 0.3-0.4 SS)
-      // Ties devem ser próximos às cabeças, mas sem tocar
+      // âœ… Clearance discreto para ties (Behind Bars: 0.3-0.4 SS)
+      // Ties devem ser prÃ³ximos Ã s cabeÃ§as, mas sem tocar
       final clearance = staffSpace * 0.35; // Reduzido para ties mais discretos
 
       final startPoint = Offset(
@@ -174,7 +174,7 @@ class SlurRenderer {
         staffSpace: staffSpace,
       );
 
-      // Renderizar tie com espessura variável
+      // Renderizar tie com espessura variÃ¡vel
       _drawVariableThicknessCurve(
         canvas,
         curve,
@@ -184,12 +184,12 @@ class SlurRenderer {
     }
   }
   
-  /// Calcula direção automática do slur (acima ou abaixo)
+  /// Calcula direÃ§Ã£o automÃ¡tica do slur (acima ou abaixo)
   ///
   /// **REGRAS (Behind Bars):**
-  /// - Notas abaixo da linha central → slur acima
-  /// - Notas acima da linha central → slur abaixo
-  /// - Mistura de hastes → preferencialmente acima
+  /// - Notas abaixo da linha central â†’ slur acima
+  /// - Notas acima da linha central â†’ slur abaixo
+  /// - Mistura de hastes â†’ preferencialmente acima
   SlurDirection _calculateSlurDirection(
     Note startNote,
     Note endNote,
@@ -204,26 +204,26 @@ class SlurRenderer {
       clef,
     );
     
-    // Média das posições
+    // MÃ©dia das posiÃ§Ãµes
     final avgPos = (startStaffPos + endStaffPos) / 2;
     
     // Linha central = 0
-    // Acima (positivo) → slur abaixo
-    // Abaixo (negativo) → slur acima
+    // Acima (positivo) â†’ slur abaixo
+    // Abaixo (negativo) â†’ slur acima
     if (avgPos > 0) {
-      return SlurDirection.down; // Notas acima → slur abaixo
+      return SlurDirection.down; // Notas acima â†’ slur abaixo
     } else {
-      return SlurDirection.up; // Notas abaixo → slur acima
+      return SlurDirection.up; // Notas abaixo â†’ slur acima
     }
   }
   
-  /// Calcula ponto de início/fim do slur na cabeça da nota
+  /// Calcula ponto de inÃ­cio/fim do slur na cabeÃ§a da nota
   ///
-  /// @param notePos Posição da nota (JÁ ABSOLUTA do LayoutEngine!)
+  /// @param notePos PosiÃ§Ã£o da nota (JÃ ABSOLUTA do LayoutEngine!)
   /// @param note Nota
   /// @param clef Clave
-  /// @param isStart Se é ponto inicial ou final
-  /// @param above Se slur está acima ou abaixo
+  /// @param isStart Se Ã© ponto inicial ou final
+  /// @param above Se slur estÃ¡ acima ou abaixo
   Offset _calculateSlurEndpoint(
     Offset notePos,
     Note note,
@@ -233,34 +233,43 @@ class SlurRenderer {
   ) {
     final noteWidth = staffSpace * 1.18;
     
-    // ✅ USAR notePos.dy que JÁ é a posição Y absoluta da nota!
+    // âœ… USAR notePos.dy que JÃ Ã© a posiÃ§Ã£o Y absoluta da nota!
     final noteY = notePos.dy;
     
     // Calcular staffPos para determinar se tem stem
     final staffPos = StaffPositionCalculator.calculate(note.pitch, clef);
     final stemUp = staffPos <= 0;
     
-    // ✅ REGRAS BEHIND BARS: Slurs devem evitar hastes!
-    // - Slur na MESMA direção da haste → começa/termina na PONTA da haste (3.5 SS)
-    // - Slur na direção OPOSTA → começa/termina próximo à cabeça da nota
+    // âœ… REGRAS BEHIND BARS: Slurs devem evitar hastes!
+    // - Slur na MESMA direÃ§Ã£o da haste â†’ comeÃ§a/termina na PONTA da haste (3.5 SS)
+    // - Slur na direÃ§Ã£o OPOSTA â†’ comeÃ§a/termina prÃ³ximo Ã  cabeÃ§a da nota
     double yOffset;
 
-    const double stemHeight = 3.5; // Altura padrão da haste (SMuFL)
-    const double clearanceFromStem = 0.3; // Pequena margem após a haste
+    const double stemHeight = 3.2; // ligeiramente menor para curvas mais naturais
+    const double clearanceFromStem = 0.25;
 
     if (above && stemUp) {
-      // Slur ACIMA + stem UP: ir até a PONTA da haste + margem
+      // Slur ACIMA + stem UP: ir atÃ© a PONTA da haste + margem
       yOffset = -(stemHeight + clearanceFromStem) * staffSpace;
     } else if (!above && !stemUp) {
-      // Slur ABAIXO + stem DOWN: ir até a PONTA da haste + margem
+      // Slur ABAIXO + stem DOWN: ir atÃ© a PONTA da haste + margem
       yOffset = (stemHeight + clearanceFromStem) * staffSpace;
     } else {
-      // Slur na direção OPOSTA da haste: próximo à cabeça da nota
-      yOffset = staffSpace * 0.4 * (above ? -1 : 1);
+      // Slur na direÃ§Ã£o OPOSTA da haste: prÃ³ximo Ã  cabeÃ§a da nota
+      yOffset = staffSpace * 0.55 * (above ? -1 : 1);
     }
-    
-    // Offset X: início à esquerda (35%), fim à direita (85%)
-    // Fim mais à direita para não ultrapassar a nota
+
+    // Appoggiatura/acciaccatura com slur: o ponto inicial deve nascer da nota de graÃ§a.
+    if (isStart && _hasGraceOrnament(note)) {
+      final hasAccidental = note.pitch.accidentalType != null;
+      final graceLead = hasAccidental ? 2.8 : 1.5;
+      final graceX = notePos.dx - (staffSpace * graceLead) + (noteWidth * 0.2);
+      final graceY = noteY + (staffSpace * 0.35 * (above ? -1 : 1));
+      return Offset(graceX, graceY);
+    }
+
+    // Offset X: inÃ­cio Ã  esquerda (35%), fim Ã  direita (85%)
+    // Fim mais Ã  direita para nÃ£o ultrapassar a nota
     final xOffset = isStart ? noteWidth * 0.35 : noteWidth * 0.85;
     
     return Offset(
@@ -268,14 +277,23 @@ class SlurRenderer {
       noteY + yOffset,
     );
   }
+
+  bool _hasGraceOrnament(Note note) {
+    return note.ornaments.any((ornament) {
+      return ornament.type == OrnamentType.appoggiaturaUp ||
+          ornament.type == OrnamentType.appoggiaturaDown ||
+          ornament.type == OrnamentType.acciaccatura ||
+          ornament.type == OrnamentType.grace;
+    });
+  }
   
-  /// Desenha curva com espessura variável (SMuFL spec)
+  /// Desenha curva com espessura variÃ¡vel (SMuFL spec)
   ///
   /// **ESPESSURAS:**
   /// - Endpoint: 0.1 SS (slur) / 0.1 SS (tie)
   /// - Midpoint: 0.22 SS (slur) / 0.22 SS (tie)
   ///
-  /// Usa Path com múltiplas linhas paralelas para simular gradiente
+  /// Usa Path com mÃºltiplas linhas paralelas para simular gradiente
   void _drawVariableThicknessCurve(
     Canvas canvas,
     CubicBezierCurve curve,
@@ -307,8 +325,8 @@ class SlurRenderer {
       final point = curve.pointAt(t);
       points.add(point);
       
-      // Espessura interpolada: endpoint → midpoint → endpoint
-      // Função parabólica: thickness = endpoint + (midpoint - endpoint) * (1 - (2t - 1)²)
+      // Espessura interpolada: endpoint â†’ midpoint â†’ endpoint
+      // FunÃ§Ã£o parabÃ³lica: thickness = endpoint + (midpoint - endpoint) * (1 - (2t - 1)Â²)
       final tCentered = 2 * t - 1; // [-1, 1]
       final factor = 1 - tCentered * tCentered; // Parabola
       final thickness = endpointThicknessPx + 

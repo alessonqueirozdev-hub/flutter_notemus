@@ -1,14 +1,14 @@
 // lib/src/rendering/renderers/group_renderer.dart
-// VERSÃO REFATORADA: Usa StaffPositionCalculator
+// VERSÃƒO REFATORADA: Usa StaffPositionCalculator
 //
 // MELHORIAS IMPLEMENTADAS (Fase 2):
-// ✅ Usa StaffPositionCalculator unificado (elimina 41 linhas duplicadas)
-// ✅ Corrige possível bug de sinal invertido no cálculo de posição
-// ✅ 100% conformidade com sistema unificado de posicionamento
+// âœ… Usa StaffPositionCalculator unificado (elimina 41 linhas duplicadas)
+// âœ… Corrige possÃ­vel bug de sinal invertido no cÃ¡lculo de posiÃ§Ã£o
+// âœ… 100% conformidade com sistema unificado de posicionamento
 
 import 'package:flutter/material.dart';
-import '../../../core/core.dart'; // 🆕 Tipos do core
-import '../../layout/collision_detector.dart'; // CORREÇÃO: Import collision detector
+import '../../../core/core.dart'; // ðŸ†• Tipos do core
+import '../../layout/collision_detector.dart'; // CORREÃ‡ÃƒO: Import collision detector
 import '../../layout/layout_engine.dart';
 import '../../smufl/smufl_metadata_loader.dart';
 import '../../theme/music_score_theme.dart';
@@ -24,7 +24,7 @@ class GroupRenderer {
   final double staffLineThickness;
   final double stemThickness;
   final CollisionDetector?
-  collisionDetector; // CORREÇÃO: Adicionar collision detector
+  collisionDetector; // CORREÃ‡ÃƒO: Adicionar collision detector
   late final SMuFLPositioningEngine positioningEngine;
 
   GroupRenderer({
@@ -34,7 +34,7 @@ class GroupRenderer {
     required this.glyphSize,
     required this.staffLineThickness,
     required this.stemThickness,
-    this.collisionDetector, // CORREÇÃO: Parâmetro opcional
+    this.collisionDetector, // CORREÃ‡ÃƒO: ParÃ¢metro opcional
   }) {
     // Initialize with already loaded metadata
     positioningEngine = SMuFLPositioningEngine(metadataLoader: metadata);
@@ -137,17 +137,17 @@ class GroupRenderer {
       return beams;
     }).toList();
 
-    // CORREÇÃO VISUAL: Valores ajustados empiricamente
-    // Valores teóricos de Behind Bars (0.5 SS thickness, 0.25 SS spacing)
+    // CORREÃ‡ÃƒO VISUAL: Valores ajustados empiricamente
+    // Valores teÃ³ricos de Behind Bars (0.5 SS thickness, 0.25 SS spacing)
     // produziam beams muito grossas visualmente no Flutter
     //
-    // Valores calibrados para melhor aparência:
+    // Valores calibrados para melhor aparÃªncia:
     // - beamThickness: ~0.35-0.4 SS (mais fino)
-    // - beamSpacing: ~0.35-0.4 SS (mais espaçado)
+    // - beamSpacing: ~0.35-0.4 SS (mais espaÃ§ado)
     final beamThickness = coordinates.staffSpace * 0.4; // Mais fino
-    final beamSpacing = coordinates.staffSpace * 0.60; // Mais espaçado
+    final beamSpacing = coordinates.staffSpace * 0.60; // Mais espaÃ§ado
 
-    // CORREÇÃO SMuFL: Usar âncoras das cabeças de nota
+    // CORREÃ‡ÃƒO SMuFL: Usar Ã¢ncoras das cabeÃ§as de nota
     final stemEndpoints = <Offset>[];
     final staffPositions = <int>[];
 
@@ -162,7 +162,7 @@ class GroupRenderer {
 
       staffPositions.add(staffPos);
 
-      // Usar âncora SMuFL para posição da haste
+      // Usar Ã¢ncora SMuFL para posiÃ§Ã£o da haste
       final stemAnchor = stemUp
           ? positioningEngine.getStemUpAnchor(noteGlyph)
           : positioningEngine.getStemDownAnchor(noteGlyph);
@@ -172,7 +172,7 @@ class GroupRenderer {
       stemEndpoints.add(Offset(stemX, stemY));
     }
 
-    // CORREÇÃO SMuFL: Calcular ângulo do feixe usando positioning engine
+    // CORREÃ‡ÃƒO SMuFL: Calcular Ã¢ngulo do feixe usando positioning engine
     // Baseado em Ted Ross e Behind Bars
     final beamAngleSpaces = positioningEngine.calculateBeamAngle(
       noteStaffPositions: staffPositions,
@@ -180,16 +180,16 @@ class GroupRenderer {
     );
 
     // Calcular altura do feixe usando positioning engine
-    // CORREÇÃO: Passar maxBeams para garantir comprimento mínimo de haste
+    // CORREÃ‡ÃƒO: Passar maxBeams para garantir comprimento mÃ­nimo de haste
     final beamHeightSpaces = positioningEngine.calculateBeamHeight(
       staffPosition: staffPositions.first,
       stemUp: stemUp,
       allStaffPositions: staffPositions,
-      beamCount: maxBeams, // ← CRÍTICO: Garantir espaço para todas as beams!
+      beamCount: maxBeams, // â† CRÃTICO: Garantir espaÃ§o para todas as beams!
     );
     final beamHeightPixels = beamHeightSpaces * coordinates.staffSpace;
 
-    // Primeira e última posição do feixe
+    // Primeira e Ãºltima posiÃ§Ã£o do feixe
     final firstNoteY = positions.first.dy;
     final lastNoteY = positions.last.dy;
     final avgNoteY = (firstNoteY + lastNoteY) / 2;
@@ -198,10 +198,21 @@ class GroupRenderer {
         ? avgNoteY - beamHeightPixels
         : avgNoteY + beamHeightPixels;
 
-    // Converter ângulo de spaces para slope pixel
+    // Converter Ã¢ngulo de spaces para slope pixel
     final xDistance = stemEndpoints.last.dx - stemEndpoints.first.dx;
     final beamAnglePixels = (beamAngleSpaces * coordinates.staffSpace);
-    final beamSlope = xDistance > 0 ? beamAnglePixels / xDistance : 0.0;
+    double beamSlope = xDistance > 0 ? beamAnglePixels / xDistance : 0.0;
+
+    // CORREÃ‡ÃƒO VISUAL: a diagonal da beam deve acompanhar o desenho melÃ³dico.
+    // Melodia ascendente (staffPosition aumenta) -> slope negativo (sobe para a direita).
+    // Melodia descendente -> slope positivo.
+    final melodicDelta = staffPositions.last - staffPositions.first;
+    if (melodicDelta != 0 && beamSlope != 0.0) {
+      final expectedSign = melodicDelta > 0 ? -1.0 : 1.0;
+      if (beamSlope.sign != expectedSign) {
+        beamSlope = -beamSlope;
+      }
+    }
 
     final firstStem = Offset(stemEndpoints.first.dx, beamBaseY);
 
@@ -262,8 +273,8 @@ class GroupRenderer {
       }
     }
 
-    // CORREÇÃO: Desenhar cabeças de nota
-    // IMPORTANTE: Não usar stroke/outline para evitar retângulos
+    // CORREÃ‡ÃƒO: Desenhar cabeÃ§as de nota
+    // IMPORTANTE: NÃ£o usar stroke/outline para evitar retÃ¢ngulos
     for (int i = 0; i < positions.length; i++) {
       final noteGlyph = durations[i].glyphName;
       final notePosition = positions[i];
@@ -278,7 +289,7 @@ class GroupRenderer {
               fontSize: glyphSize,
               color: theme.noteheadColor,
               height: 1.0,
-              // CRÍTICO: Sem decoração, sem stroke!
+              // CRÃTICO: Sem decoraÃ§Ã£o, sem stroke!
             ),
           ),
           textDirection: TextDirection.ltr,
@@ -306,7 +317,7 @@ class GroupRenderer {
     }
   }
 
-  /// Identifica grupos de notas ligadas por ties (público para SlurRenderer)
+  /// Identifica grupos de notas ligadas por ties (pÃºblico para SlurRenderer)
   Map<int, List<int>> identifyTieGroups(List<PositionedElement> elements) {
     final groups = <int, List<int>>{};
     int groupId = 0;
@@ -351,12 +362,12 @@ class GroupRenderer {
         currentClef,
       );
 
-      // CORREÇÃO LACERDA: "Ligaduras ficam do lado OPOSTO das hastes"
+      // CORREÃ‡ÃƒO LACERDA: "Ligaduras ficam do lado OPOSTO das hastes"
       // Se haste para cima, ligadura embaixo; se haste para baixo, ligadura em cima
       final stemUp =
           startStaffPos <=
-          0; // Haste para cima quando nota está abaixo/na linha central
-      final tieAbove = !stemUp; // Ligadura oposta à haste
+          0; // Haste para cima quando nota estÃ¡ abaixo/na linha central
+      final tieAbove = !stemUp; // Ligadura oposta Ã  haste
 
       // MELHORIA: Usar StaffPositionCalculator.toPixelY
       final startNoteY = StaffPositionCalculator.toPixelY(
@@ -375,31 +386,31 @@ class GroupRenderer {
       );
       final noteWidth = coordinates.staffSpace * 1.18;
 
-      // CORREÇÃO SMuFL: Ligadura NÃO deve tocar as cabeças de nota
-      // Distância mínima: 0.25 staff spaces (Behind Bars, p. 180)
+      // CORREÃ‡ÃƒO SMuFL: Ligadura NÃƒO deve tocar as cabeÃ§as de nota
+      // DistÃ¢ncia mÃ­nima: 0.25 staff spaces (Behind Bars, p. 180)
       final clearance = coordinates.staffSpace * 0.25;
 
       final startPoint = Offset(
-        startElement.position.dx + noteWidth * 0.75, // Mais à direita
+        startElement.position.dx + noteWidth * 0.75, // Mais Ã  direita
         startNoteY +
             (tieAbove
                 ? -(clearance + coordinates.staffSpace * 0.15)
                 : (clearance + coordinates.staffSpace * 0.15)),
       );
       final endPoint = Offset(
-        endElement.position.dx + noteWidth * 0.25, // Mais à esquerda
+        endElement.position.dx + noteWidth * 0.25, // Mais Ã  esquerda
         endNoteY +
             (tieAbove
                 ? -(clearance + coordinates.staffSpace * 0.15)
                 : (clearance + coordinates.staffSpace * 0.15)),
       );
 
-      // CORREÇÃO SMuFL: Altura da ligadura baseada em interpolação linear (Behind Bars)
+      // CORREÃ‡ÃƒO SMuFL: Altura da ligadura baseada em interpolaÃ§Ã£o linear (Behind Bars)
       // height = k * width + d, limitado por min/max
       final distance = (endPoint.dx - startPoint.dx).abs();
       final distanceInSpaces = distance / coordinates.staffSpace;
 
-      // Fórmula de interpolação (EngravingRules)
+      // FÃ³rmula de interpolaÃ§Ã£o (EngravingRules)
       // k = 0.0288, d = 0.136
       final heightSpaces = (0.0288 * distanceInSpaces + 0.136).clamp(0.28, 1.2);
       final curvatureHeight = heightSpaces * coordinates.staffSpace;
@@ -410,9 +421,9 @@ class GroupRenderer {
             (curvatureHeight * (tieAbove ? -1 : 1)),
       );
 
-      // CORREÇÃO SMuFL: Espessura da ligadura mais fina
+      // CORREÃ‡ÃƒO SMuFL: Espessura da ligadura mais fina
       // EngravingRules: slurEndpointThickness = 0.1, slurMidpointThickness = 0.22
-      // Média para stroke: 0.16 staff spaces
+      // MÃ©dia para stroke: 0.16 staff spaces
       final tiePaint = Paint()
         ..color = theme.tieColor ?? theme.noteheadColor
         ..style = PaintingStyle.stroke
@@ -432,7 +443,7 @@ class GroupRenderer {
     }
   }
 
-  /// Identifica grupos de notas ligadas por slurs (público para SlurRenderer)
+  /// Identifica grupos de notas ligadas por slurs (pÃºblico para SlurRenderer)
   Map<int, List<int>> identifySlurGroups(List<PositionedElement> elements) {
     final groups = <int, List<int>>{};
     int groupId = 0;
@@ -481,8 +492,8 @@ class GroupRenderer {
         currentClef,
       );
 
-      // CORREÇÃO LACERDA: Ligadura de expressão segue mesma regra de tie
-      // Oposta à direção das hastes
+      // CORREÃ‡ÃƒO LACERDA: Ligadura de expressÃ£o segue mesma regra de tie
+      // Oposta Ã  direÃ§Ã£o das hastes
       final startStemUp = startStaffPos <= 0;
       final slurAbove = !startStemUp;
 
@@ -500,7 +511,7 @@ class GroupRenderer {
 
       final noteWidth = coordinates.staffSpace * 1.18;
 
-      // CORREÇÃO: Ligadura mais próxima das cabeças
+      // CORREÃ‡ÃƒO: Ligadura mais prÃ³xima das cabeÃ§as
       final startPoint = Offset(
         startElement.position.dx + noteWidth * 0.3,
         startNoteY + (coordinates.staffSpace * 0.4 * (slurAbove ? -1 : 1)),
@@ -510,12 +521,12 @@ class GroupRenderer {
         endNoteY + (coordinates.staffSpace * 0.4 * (slurAbove ? -1 : 1)),
       );
 
-      // CORREÇÃO LACERDA: Altura do arco proporcional à distância
+      // CORREÃ‡ÃƒO LACERDA: Altura do arco proporcional Ã  distÃ¢ncia
       // Quanto mais longa, mais alta a curva
       final distance = (endPoint.dx - startPoint.dx).abs();
       final arcHeight = coordinates.staffSpace * 1.2 + (distance * 0.04);
 
-      // Curva bezier cúbica para forma mais natural
+      // Curva bezier cÃºbica para forma mais natural
       final controlPoint1 = Offset(
         startPoint.dx + (endPoint.dx - startPoint.dx) * 0.3,
         startPoint.dy + (arcHeight * (slurAbove ? -1 : 1)),
@@ -525,7 +536,7 @@ class GroupRenderer {
         endPoint.dy + (arcHeight * (slurAbove ? -1 : 1)),
       );
 
-      // CORREÇÃO: Espessura padrão de ligadura de expressão
+      // CORREÃ‡ÃƒO: Espessura padrÃ£o de ligadura de expressÃ£o
       final slurPaint = Paint()
         ..color = theme.slurColor ?? theme.noteheadColor
         ..style = PaintingStyle.stroke

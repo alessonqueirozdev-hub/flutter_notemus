@@ -1,7 +1,7 @@
 // lib/src/rendering/renderers/ornament_renderer.dart
 
 import 'package:flutter/material.dart';
-import '../../../core/core.dart'; // 🆕 Tipos do core
+import '../../../core/core.dart'; // ðŸ†• Tipos do core
 import '../../theme/music_score_theme.dart';
 import 'base_glyph_renderer.dart';
 
@@ -15,7 +15,7 @@ class OrnamentRenderer extends BaseGlyphRenderer {
     required this.theme,
     required super.glyphSize,
     required this.staffLineThickness,
-    super.collisionDetector, // CORREÇÃO: Passar collision detector para BaseGlyphRenderer
+    super.collisionDetector, // CORREÃ‡ÃƒO: Passar collision detector para BaseGlyphRenderer
   });
 
   void renderForNote(
@@ -43,7 +43,10 @@ class OrnamentRenderer extends BaseGlyphRenderer {
       if (isGraceNote) {
         // Grace notes: positioned BEFORE the main note (left X offset)
         // and at the same vertical level as the main note (correct pitch reference)
-        final graceX = notePos.dx - (coordinates.staffSpace * 1.5);
+        final hasAccidental = note.pitch.accidentalType != null;
+        // Evita sobreposiÃ§Ã£o com acidentes da nota principal.
+        final graceLead = hasAccidental ? 2.8 : 1.5;
+        final graceX = notePos.dx - (coordinates.staffSpace * graceLead);
         final graceY = notePos.dy;
 
         drawGlyphAlignedToAnchor(
@@ -190,53 +193,33 @@ class OrnamentRenderer extends BaseGlyphRenderer {
     final stemHeight = coordinates.staffSpace * 3.5;
 
     if (ornamentAbove) {
-      // CORREÇÃO DINÂMICA: Ornamentos devem ter posicionamento inteligente
-      // 
-      // REGRA 1: Notas no pentagrama → ornamento acima do pentagrama (linha 5)
-      // REGRA 2: Notas muito altas (>6) → ornamento acima da nota com clearance mínimo
-      // REGRA 3: Se tem haste para cima, considerar ponta da haste
-      
-      final line5Y = coordinates.getStaffLineY(5);
-      
-      // Para notas muito altas (linhas suplementares superiores)
+      // Regra: altura padrÃ£o fixa acima da pauta (consistÃªncia visual).
+      // SÃ³ acompanha a cabeÃ§a da nota quando hÃ¡ muitas linhas suplementares.
+      final standardY = coordinates.getStaffLineY(5) - (coordinates.staffSpace * 1.8);
       if (staffPosition > 6) {
-        // Ornamento acima da nota, não acima do pentagrama
-        // Clearance mínimo: 0.75 staff spaces (ornamentToNoteDistance)
-        return noteY - (coordinates.staffSpace * 0.75);
+        return noteY - (coordinates.staffSpace * 1.2);
       }
-      
-      // Para notas dentro ou próximas do pentagrama
-      final minOrnamentY = line5Y - (coordinates.staffSpace * 1.2);
 
-      // Se tem haste para cima, verificar se precisa elevar mais
       if (stemUp) {
         final stemTipY = noteY - stemHeight;
-        // Clearance da haste: 0.6 staff spaces
-        final ornamentYFromStem = stemTipY - (coordinates.staffSpace * 0.6);
-        // Usar o mais alto (menor Y)
-        return ornamentYFromStem < minOrnamentY ? ornamentYFromStem : minOrnamentY;
+        final clearanceFromStem = stemTipY - (coordinates.staffSpace * 0.8);
+        return clearanceFromStem < standardY ? clearanceFromStem : standardY;
       }
-      
-      return minOrnamentY;
-    } else {
-      // CORREÇÃO DINÂMICA: Ornamentos abaixo com mesma lógica
-      final line1Y = coordinates.getStaffLineY(1);
-      
-      // Para notas muito baixas (linhas suplementares inferiores)
-      if (staffPosition < -6) {
-        return noteY + (coordinates.staffSpace * 0.75);
-      }
-      
-      final maxOrnamentY = line1Y + (coordinates.staffSpace * 1.2);
 
-      // Se tem haste para baixo
+      return standardY;
+    } else {
+      final standardY = coordinates.getStaffLineY(1) + (coordinates.staffSpace * 1.8);
+      if (staffPosition < -6) {
+        return noteY + (coordinates.staffSpace * 1.2);
+      }
+
       if (!stemUp) {
         final stemTipY = noteY + stemHeight;
-        final ornamentYFromStem = stemTipY + (coordinates.staffSpace * 0.6);
-        return ornamentYFromStem > maxOrnamentY ? ornamentYFromStem : maxOrnamentY;
+        final clearanceFromStem = stemTipY + (coordinates.staffSpace * 0.8);
+        return clearanceFromStem > standardY ? clearanceFromStem : standardY;
       }
-      
-      return maxOrnamentY;
+
+      return standardY;
     }
   }
 
@@ -264,9 +247,9 @@ class OrnamentRenderer extends BaseGlyphRenderer {
       OrnamentType.turnInverted: 'ornamentTurnInverted',
       OrnamentType.invertedTurn: 'ornamentTurnInverted',
       OrnamentType.turnSlash: 'ornamentTurnSlash',
-      OrnamentType.appoggiaturaUp: 'graceNoteAppoggiaturaStemUp',  // ✅ FIXED: no slash for appoggiatura
-      OrnamentType.appoggiaturaDown: 'graceNoteAppoggiaturaStemDown',  // ✅ FIXED: no slash for appoggiatura
-      OrnamentType.acciaccatura: 'graceNoteAcciaccaturaStemUp',  // ✓ Correct: with slash for acciaccatura
+      OrnamentType.appoggiaturaUp: 'graceNoteAppoggiaturaStemUp',  // âœ… FIXED: no slash for appoggiatura
+      OrnamentType.appoggiaturaDown: 'graceNoteAppoggiaturaStemDown',  // âœ… FIXED: no slash for appoggiatura
+      OrnamentType.acciaccatura: 'graceNoteAcciaccaturaStemUp',  // âœ“ Correct: with slash for acciaccatura
       OrnamentType.fermata: 'fermataAbove',
       OrnamentType.fermataBelow: 'fermataBelow',
       OrnamentType.fermataBelowInverted: 'fermataBelowInverted',
