@@ -102,7 +102,14 @@ class GroupRenderer {
         final avgPos =
             staffPositions.reduce((a, b) => a + b) / staffPositions.length;
         final stemUp = avgPos <= 0;
-        _renderBeamGroup(canvas, groupElements, positions, durations, stemUp);
+        _renderBeamGroup(
+          canvas,
+          groupElements,
+          positions,
+          durations,
+          stemUp,
+          currentClef,
+        );
       }
     }
   }
@@ -113,6 +120,7 @@ class GroupRenderer {
     List<Offset> positions,
     List<DurationType> durations,
     bool stemUp,
+    Clef currentClef,
   ) {
     if (positions.length < 2) return;
 
@@ -128,7 +136,6 @@ class GroupRenderer {
       if (beams > maxBeams) maxBeams = beams;
       return beams;
     }).toList();
-
 
     // CORREÇÃO VISUAL: Valores ajustados empiricamente
     // Valores teóricos de Behind Bars (0.5 SS thickness, 0.25 SS spacing)
@@ -150,7 +157,7 @@ class GroupRenderer {
       // MELHORIA: Usar StaffPositionCalculator
       final staffPos = StaffPositionCalculator.calculate(
         element.pitch,
-        Clef(clefType: ClefType.treble),
+        currentClef,
       );
 
       staffPositions.add(staffPos);
@@ -260,7 +267,7 @@ class GroupRenderer {
     for (int i = 0; i < positions.length; i++) {
       final noteGlyph = durations[i].glyphName;
       final notePosition = positions[i];
-      
+
       final character = metadata.getCodepoint(noteGlyph);
       if (character.isNotEmpty) {
         final textPainter = TextPainter(
@@ -277,7 +284,7 @@ class GroupRenderer {
           textDirection: TextDirection.ltr,
         );
         textPainter.layout();
-        
+
         // Aplicar baseline correction igual ao noteheadDefault
         final baselineCorrection = -textPainter.height * 0.5;
         textPainter.paint(
@@ -286,7 +293,7 @@ class GroupRenderer {
         );
       }
     }
-    
+
     // Draw stems
     for (int i = 0; i < positions.length; i++) {
       final stemX = stemEndpoints[i].dx;

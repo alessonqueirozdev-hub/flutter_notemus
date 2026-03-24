@@ -18,10 +18,16 @@ class PositionedElement {
   final MusicalElement element;
   final Offset position;
   final int system;
+
   /// Número da voz (1, 2, ...) em contextos polifônicos. Null = voz única.
   final int? voiceNumber;
 
-  PositionedElement(this.element, this.position, {this.system = 0, this.voiceNumber});
+  PositionedElement(
+    this.element,
+    this.position, {
+    this.system = 0,
+    this.voiceNumber,
+  });
 }
 
 class LayoutCursor {
@@ -111,7 +117,11 @@ class LayoutCursor {
     // Padding agora aplicado ANTES da barline no layout principal
   }
 
-  void addElement(MusicalElement element, List<PositionedElement> elements, {int? voiceNumber}) {
+  void addElement(
+    MusicalElement element,
+    List<PositionedElement> elements, {
+    int? voiceNumber,
+  }) {
     // Rastrear clave atual
     if (element is Clef) {
       _currentClef = element;
@@ -120,17 +130,26 @@ class LayoutCursor {
     // ✅ SUPORTE A ACORDES: Expandir notas do acorde em elementos separados
     if (element is Chord && _currentClef != null) {
       for (final note in element.notes) {
-        final staffPosition = StaffPositionCalculator.calculate(note.pitch, _currentClef!);
-        final noteY = StaffPositionCalculator.toPixelY(staffPosition, staffSpace, _currentY);
+        final staffPosition = StaffPositionCalculator.calculate(
+          note.pitch,
+          _currentClef!,
+        );
+        final noteY = StaffPositionCalculator.toPixelY(
+          staffPosition,
+          staffSpace,
+          _currentY,
+        );
         noteXPositions?[note] = _currentX;
         noteStaffPositions?[note] = staffPosition;
         noteYPositions?[note] = noteY;
-        elements.add(PositionedElement(
-          note,
-          Offset(_currentX, noteY),
-          system: _currentSystem,
-          voiceNumber: voiceNumber,
-        ));
+        elements.add(
+          PositionedElement(
+            note,
+            Offset(_currentX, noteY),
+            system: _currentSystem,
+            voiceNumber: voiceNumber,
+          ),
+        );
       }
       return;
     }
@@ -139,19 +158,28 @@ class LayoutCursor {
 
     if (element is Note && _currentClef != null) {
       noteXPositions?[element] = _currentX;
-      final staffPosition = StaffPositionCalculator.calculate(element.pitch, _currentClef!);
+      final staffPosition = StaffPositionCalculator.calculate(
+        element.pitch,
+        _currentClef!,
+      );
       noteStaffPositions?[element] = staffPosition;
-      final noteY = StaffPositionCalculator.toPixelY(staffPosition, staffSpace, _currentY);
+      final noteY = StaffPositionCalculator.toPixelY(
+        staffPosition,
+        staffSpace,
+        _currentY,
+      );
       noteYPositions?[element] = noteY;
       elementY = noteY;
     }
 
-    elements.add(PositionedElement(
-      element,
-      Offset(_currentX, elementY),
-      system: _currentSystem,
-      voiceNumber: voiceNumber,
-    ));
+    elements.add(
+      PositionedElement(
+        element,
+        Offset(_currentX, elementY),
+        system: _currentSystem,
+        voiceNumber: voiceNumber,
+      ),
+    );
   }
 }
 
@@ -517,6 +545,7 @@ class LayoutEngine {
             positioned.element,
             Offset(positioned.position.dx + offset, positioned.position.dy),
             system: positioned.system,
+            voiceNumber: positioned.voiceNumber,
           );
         }
       }
@@ -585,7 +614,8 @@ class LayoutEngine {
         return isFirstInSystem || !_isSystemElement(element);
       }).toList();
 
-      bool seenFirstMusicElement = !isLeadVoice; // voice 2+ already positioned past system elements
+      bool seenFirstMusicElement =
+          !isLeadVoice; // voice 2+ already positioned past system elements
 
       for (int i = 0; i < elementsToRender.length; i++) {
         final element = elementsToRender[i];
@@ -596,7 +626,9 @@ class LayoutEngine {
         }
 
         // Record where voice 1's first non-system element lands so other voices align
-        if (isLeadVoice && !seenFirstMusicElement && !_isSystemElement(element)) {
+        if (isLeadVoice &&
+            !seenFirstMusicElement &&
+            !_isSystemElement(element)) {
           seenFirstMusicElement = true;
           firstMusicX = cursor.currentX;
         }
@@ -605,7 +637,11 @@ class LayoutEngine {
         final elementX = cursor.currentX + voiceOffset;
         final savedX = cursor.currentX;
         cursor.setX(elementX);
-        cursor.addElement(element, positionedElements, voiceNumber: voice.number);
+        cursor.addElement(
+          element,
+          positionedElements,
+          voiceNumber: voice.number,
+        );
         cursor.setX(savedX);
 
         cursor.advance(_getElementWidthSimple(element));
@@ -627,7 +663,12 @@ class LayoutEngine {
   ) {
     // Handle MultiVoiceMeasure: layout each voice independently
     if (measure is MultiVoiceMeasure) {
-      _layoutMultiVoiceMeasure(measure, cursor, positionedElements, isFirstInSystem);
+      _layoutMultiVoiceMeasure(
+        measure,
+        cursor,
+        positionedElements,
+        isFirstInSystem,
+      );
       return;
     }
     // CORREÇÃO #9: Processar beaming considerando anacrusis
@@ -1009,7 +1050,13 @@ class LayoutEngine {
               dynamicElement: note.dynamicElement,
               techniques: note.techniques,
               voice: note.voice,
+              tremoloStrokes: note.tremoloStrokes,
+              isGraceNote: note.isGraceNote,
+              alternatePitch: note.alternatePitch,
+              tabFret: note.tabFret,
+              tabString: note.tabString,
             );
+            beamedNote.xmlId = note.xmlId;
 
             processedElements.add(beamedNote);
             processedNotes.add(note);
