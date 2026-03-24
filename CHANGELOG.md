@@ -4,6 +4,26 @@ All notable changes to Flutter Notemus are documented in this file.
 
 The format is based on Keep a Changelog and this project follows Semantic Versioning.
 
+## [2.5.1] - 2026-03-24
+
+### Changed
+
+- Improved repaint performance in large scores by comparing a deterministic layout signature in `MusicScorePainter.shouldRepaint` instead of a full element-by-element scan.
+- Added `LayoutResult` and `layoutWithSignature()` to `LayoutEngine`, while preserving existing `layout()` API compatibility.
+- Updated README release status and installation snippet to `^2.5.1`.
+- Updated MEI audit document version references to `v2.5.1`.
+
+### Fixed
+
+- Preserved `voiceNumber` context during horizontal justification so multi-voice rendering remains consistent after system expansion.
+- Preserved complete note metadata during beaming processing (`tremoloStrokes`, `isGraceNote`, `alternatePitch`, tablature fields, and `xmlId`) to avoid data loss in downstream renderers/parsers.
+- Stabilized spacing model behavior and adaptive expansion blend to reduce subtle density drift in existing scores.
+
+### Added
+
+- Regression tests for painter repaint behavior and layout signature stability.
+- Spacing regression profile guardrail test to lock expected density/position distribution for a mixed-symbol measure.
+
 ## [2.5.0] - 2026-03-23
 
 ### Added
@@ -28,7 +48,7 @@ The format is based on Keep a Changelog and this project follows Semantic Versio
 - `Note.tabFret` / `Note.tabString` fields for tablature notation.
 - `MusicalElement.xmlId` field for MEI `xml:id` cross-referencing.
 - MEI v5 badge and conformance section added to README.
-- Audit document `docs/MEI_V5_AUDIT.md` documenting 100% coverage across 30 categories.
+- Audit document `doc/MEI_V5_AUDIT.md` documenting 100% coverage across 30 categories.
 - GitHub issues #7, #8, #9 tracking remaining implementation work.
 
 ### Fixed
@@ -76,7 +96,7 @@ The format is based on Keep a Changelog and this project follows Semantic Versio
 
 ### Added
 
-- Public backlog tracking document: `docs/OPEN_ISSUES.md`
+- Public backlog tracking document: `doc/OPEN_ISSUES.md`
 - GitHub issue backlog for pending implementation gaps:
   - #1 Native audio backend for iOS/macOS/Linux/Windows
   - #2 Real notation engraving for PDF export

@@ -180,17 +180,25 @@ const Duration(DurationType.twoHundredFiftySixth)
 DurationType.fromMeiValue('2048')  // → DurationType.twoThousandFortyEighth
 ```
 
-For a full conformance audit see [`docs/MEI_V5_AUDIT.md`](docs/MEI_V5_AUDIT.md).
+For a full conformance audit see [`doc/MEI_V5_AUDIT.md`](doc/MEI_V5_AUDIT.md).
 
 ---
 
 ## Current Status
 
-- Current package release target: `2.2.1`
+- Current package release target: `2.5.1`
 - Previous pub.dev baseline before the new generation: `0.1.0`
 - Core notation rendering is production-ready.
 - MIDI mapping and `.mid` export are available in the package.
 - Android native audio backend is active; other native targets are configured and tracked as pending.
+
+### What's New in 2.5.1
+
+- Layout rendering now preserves voice context during horizontal justification.
+- Beaming processing preserves complete note metadata used by renderers and parsers.
+- Spacing model and expansion blend were stabilized to reduce unexpected density drift.
+- `MusicScorePainter.shouldRepaint` now uses a deterministic layout signature for lower repaint comparison cost on large scores.
+- Added regression guardrails with focused tests for spacing profile stability and painter repaint behavior.
 
 ---
 
@@ -268,7 +276,7 @@ Add dependency to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  flutter_notemus: ^2.2.1
+  flutter_notemus: ^2.5.1
 ```
 
 Install packages:

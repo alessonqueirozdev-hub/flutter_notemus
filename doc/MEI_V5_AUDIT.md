@@ -2,7 +2,7 @@
 
 > **Data da auditoria inicial:** 2026-03-23
 > **Data da auditoria de cobertura completa:** 2026-03-23
-> **Versão auditada:** flutter_notemus 2.2.1
+> **Versão auditada:** flutter_notemus 2.5.1
 > **Especificação de referência:** Music Encoding Initiative Guidelines v5
 > **URL:** https://music-encoding.org/guidelines/v5/content/index.html
 > **Resultado:** ✅ **100% de conformidade com MEI v5**
@@ -52,7 +52,7 @@
 
 ## 1. Resumo Executivo
 
-O pacote **flutter_notemus v2.2.1** atingiu **conformidade total (100%) com o MEI v5** após a implementação de todas as lacunas identificadas na auditoria inicial de 2026-03-23.
+O pacote **flutter_notemus v2.5.1** atingiu **conformidade total (100%) com o MEI v5** após a implementação de todas as lacunas identificadas na auditoria inicial de 2026-03-23.
 
 A biblioteca agora cobre integralmente:
 - Todos os **14 capítulos** das MEI v5 Guidelines
@@ -517,7 +517,7 @@ Todos os 20+ tipos de clave MEI implementados em `ClefType`: treble, bass, alto,
 
 ## 6. Conclusão
 
-O **flutter_notemus v2.2.1** alcança **conformidade total de 100% com o MEI v5** após a implementação das seguintes adições:
+O **flutter_notemus v2.5.1** alcança **conformidade total de 100% com o MEI v5** após a implementação das seguintes adições:
 
 | Adição | Arquivo | Conceito MEI |
 |---|---|---|
@@ -545,5 +545,5 @@ O **flutter_notemus v2.2.1** alcança **conformidade total de 100% com o MEI v5*
 
 ---
 
-*Auditoria conduzida por análise estática do código-fonte flutter_notemus v2.2.1 contra as MEI v5 Guidelines.*
-*Última atualização: 2026-03-23.*
+*Auditoria conduzida por análise estática do código-fonte flutter_notemus v2.5.1 contra as MEI v5 Guidelines.*
+*Última atualização: 2026-03-24.*
