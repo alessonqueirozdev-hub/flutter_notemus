@@ -1,5 +1,7 @@
 // lib/src/music_model/pitch.dart
 
+import 'dart:math';
+
 /// Tipos de acidentes disponíveis na SMuFL
 enum AccidentalType {
   natural,
@@ -108,6 +110,18 @@ class Pitch {
     this.customAccidentalGlyph,
   });
 
+  /// Alteraçāo efetiva usada para cálculo.
+  ///
+  /// Mantém compatibilidade retroativa: quando [accidentalType] é fornecido e
+  /// [alter] permanece no valor padrão (`0.0`), usa o valor implícito do
+  /// acidente para cálculo de MIDI/frequência.
+  double get effectiveAlter {
+    if (alter != 0.0 || accidentalType == null) {
+      return alter;
+    }
+    return accidentalToAlter[accidentalType] ?? alter;
+  }
+
   /// Construtor com tipo de acidente específico
   factory Pitch.withAccidental({
     required String step,
@@ -188,15 +202,16 @@ class Pitch {
       'B': 11,
     };
     final semitone = stepToSemitone[step]!;
-    return (octave + 1) * 12 + semitone + alter.round();
+    return (octave + 1) * 12 + semitone + effectiveAlter.round();
   }
 
   /// Calcula a frequência em Hz (A4 = 440Hz)
   double get frequency {
     const a4MidiNumber = 69; // A4
     const a4Frequency = 440.0;
-    final midiDifference = midiNumber - a4MidiNumber + (alter - alter.round());
-    return a4Frequency * (2.0 * (midiDifference / 12.0));
+    final midiDifference =
+        midiNumber - a4MidiNumber + (effectiveAlter - effectiveAlter.round());
+    return a4Frequency * pow(2.0, midiDifference / 12.0).toDouble();
   }
 
   /// Retorna o nome do glifo SMuFL para o acidente
@@ -205,25 +220,25 @@ class Pitch {
     if (accidentalType != null) return accidentalToGlyph[accidentalType];
 
     // Inferir acidente baseado no valor de alter
-    if (alter == 0.0) return null; // Sem acidente
-    if (alter == 1.0) return accidentalToGlyph[AccidentalType.sharp];
-    if (alter == -1.0) return accidentalToGlyph[AccidentalType.flat];
-    if (alter == 2.0) return accidentalToGlyph[AccidentalType.doubleSharp];
-    if (alter == -2.0) return accidentalToGlyph[AccidentalType.doubleFlat];
-    if (alter == 0.5) return accidentalToGlyph[AccidentalType.quarterToneSharp];
-    if (alter == -0.5) return accidentalToGlyph[AccidentalType.quarterToneFlat];
+    if (effectiveAlter == 0.0) return null; // Sem acidente
+    if (effectiveAlter == 1.0) return accidentalToGlyph[AccidentalType.sharp];
+    if (effectiveAlter == -1.0) return accidentalToGlyph[AccidentalType.flat];
+    if (effectiveAlter == 2.0) return accidentalToGlyph[AccidentalType.doubleSharp];
+    if (effectiveAlter == -2.0) return accidentalToGlyph[AccidentalType.doubleFlat];
+    if (effectiveAlter == 0.5) return accidentalToGlyph[AccidentalType.quarterToneSharp];
+    if (effectiveAlter == -0.5) return accidentalToGlyph[AccidentalType.quarterToneFlat];
 
     return null; // Para valores não mapeados
   }
 
   /// Verifica se a nota tem microtom
   bool get hasMicrotone {
-    return alter != alter.round().toDouble();
+    return effectiveAlter != effectiveAlter.round().toDouble();
   }
 
   /// Retorna o intervalo em cents da nota temperada mais próxima
   double get centsDeviation {
-    final semitoneDeviation = alter - alter.round();
+    final semitoneDeviation = effectiveAlter - effectiveAlter.round();
     return semitoneDeviation * 100.0; // 100 cents = 1 semitom
   }
 
@@ -233,7 +248,7 @@ class Pitch {
     const stepToSemitone = {
       'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11,
     };
-    return ((stepToSemitone[step]! + alter.round()) % 12 + 12) % 12;
+    return ((stepToSemitone[step]! + effectiveAlter.round()) % 12 + 12) % 12;
   }
 
   /// Retorna o nome de solmização desta nota em dó fixo (do, re, mi, fa, sol, la, si).
@@ -274,14 +289,15 @@ class Pitch {
   String toString() => '$step$octave${_alterToString()}';
 
   String _alterToString() {
-    if (alter == 0) return '';
-    if (alter == 1) return '#';
-    if (alter == -1) return 'b';
-    if (alter == 2) return '##';
-    if (alter == -2) return 'bb';
-    if (alter == 0.5) return '+';
-    if (alter == -0.5) return '-';
-    return alter > 0 ? '+$alter' : '$alter';
+    final value = effectiveAlter;
+    if (value == 0) return '';
+    if (value == 1) return '#';
+    if (value == -1) return 'b';
+    if (value == 2) return '##';
+    if (value == -2) return 'bb';
+    if (value == 0.5) return '+';
+    if (value == -0.5) return '-';
+    return value > 0 ? '+$value' : '$value';
   }
 
   @override

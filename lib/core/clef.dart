@@ -77,8 +77,23 @@ class Clef extends MusicalElement {
 
   ClefType _clefType = ClefType.treble;
 
-  /// Getter para o tipo de clave atual
-  ClefType get actualClefType => _clefType;
+  /// Getter para o tipo de clave "real" (sem transposição de oitava)
+  ClefType get actualClefType {
+    switch (_clefType) {
+      case ClefType.treble8va:
+      case ClefType.treble8vb:
+      case ClefType.treble15ma:
+      case ClefType.treble15mb:
+        return ClefType.treble;
+      case ClefType.bass8va:
+      case ClefType.bass8vb:
+      case ClefType.bass15ma:
+      case ClefType.bass15mb:
+        return ClefType.bass;
+      default:
+        return _clefType;
+    }
+  }
 
   /// Retorna o glifo SMuFL correspondente à clave
   String get glyphName {

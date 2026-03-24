@@ -81,21 +81,16 @@ class Voice {
   StemDirection getStemDirection() {
     if (forcedStemDirection != null) return forcedStemDirection!;
 
-    switch (number) {
-      case 1:
-        return StemDirection.up;
-      case 2:
-        return StemDirection.down;
-      default:
-        return StemDirection.up; // Default for voice 3+
-    }
+    return number.isEven ? StemDirection.down : StemDirection.up;
   }
 
   /// Get horizontal offset for this voice
   ///
   /// Voice 2 is typically offset to avoid collision with voice 1
   double getHorizontalOffset(double staffSpace) {
-    if (horizontalOffset != null) return horizontalOffset!;
+    if (horizontalOffset != null) {
+      return horizontalOffset! * staffSpace;
+    }
 
     switch (number) {
       case 1:
@@ -103,7 +98,7 @@ class Voice {
       case 2:
         return staffSpace * 0.6; // Offset right for voice 2
       default:
-        return staffSpace * 0.3 * (number - 1); // Incremental offset
+        return staffSpace * 0.6 * (number - 1); // Incremental offset
     }
   }
 
@@ -178,29 +173,34 @@ enum StemDirection {
 class MultiVoiceMeasure extends Measure {
   MultiVoiceMeasure();
 
+  /// Collection de vozes (ordenação não garantida).
+  ///
+  /// Mantém API amigável para iteração e verificações de coleção.
+  Iterable<Voice> get voices => _voicesByNumber.values;
+
   /// Map of voice number to Voice object
-  final Map<int, Voice> voices = {};
+  final Map<int, Voice> _voicesByNumber = {};
 
   /// Add a voice to this measure
   void addVoice(Voice voice) {
-    voices[voice.number] = voice;
+    _voicesByNumber[voice.number] = voice;
   }
 
   /// Get voice by number
-  Voice? getVoice(int number) => voices[number];
+  Voice? getVoice(int number) => _voicesByNumber[number];
 
   /// Get list of voice numbers (sorted)
-  List<int> get voiceNumbers => voices.keys.toList()..sort();
+  List<int> get voiceNumbers => _voicesByNumber.keys.toList()..sort();
 
   /// Get number of voices in this measure
-  int get voiceCount => voices.length;
+  int get voiceCount => _voicesByNumber.length;
 
   /// Check if measure has multiple voices (is polyphonic)
-  bool get isPolyphonic => voices.length > 1;
+  bool get isPolyphonic => _voicesByNumber.length > 1;
 
   /// Get all voices sorted by voice number
   List<Voice> get sortedVoices {
-    return voiceNumbers.map((n) => voices[n]!).toList();
+    return voiceNumbers.map((n) => _voicesByNumber[n]!).toList();
   }
 
   /// Get voice 1 (top voice)
@@ -237,4 +237,3 @@ class MultiVoiceMeasure extends Measure {
     return measure;
   }
 }
-
