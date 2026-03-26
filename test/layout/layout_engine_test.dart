@@ -1,75 +1,411 @@
-// test/layout/layout_engine_test.dart
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  late SmuflMetadata metadata;
+
+  setUpAll(() async {
+    metadata = SmuflMetadata();
+    await metadata.load();
+  });
+
   group('LayoutEngine', () {
-    late Staff singleNoteStaff;
+    test('keeps chords as chord elements while tracking note geometry', () {
+      final chord = Chord(
+        notes: [
+          Note(
+            pitch: const Pitch(step: 'C', octave: 4),
+            duration: const Duration(DurationType.half),
+          ),
+          Note(
+            pitch: const Pitch(step: 'D', octave: 4),
+            duration: const Duration(DurationType.half),
+          ),
+          Note(
+            pitch: const Pitch(step: 'G', octave: 4),
+            duration: const Duration(DurationType.half),
+          ),
+        ],
+        duration: const Duration(DurationType.half, dots: 1),
+        ornaments: [Ornament(type: OrnamentType.arpeggio)],
+        dynamic: Dynamic(type: DynamicType.f),
+      );
 
-    setUp(() {
       final measure = Measure()
-        ..add(TimeSignature(numerator: 4, denominator: 4))
-        ..add(Note(
-          pitch: const Pitch(step: 'C', octave: 4),
-          duration: const Duration(DurationType.quarter),
-        ));
-      singleNoteStaff = Staff(measures: [measure]);
-    });
-
-    test('layout produces PositionedElements', () {
-      // LayoutEngine requires metadata — this test verifies the Staff
-      // and Measure structure is correct without instantiating LayoutEngine.
-      expect(singleNoteStaff.measures.length, equals(1));
-      expect(singleNoteStaff.measures[0].elements.length, equals(2));
-    });
-
-    test('note X positions are in ascending order', () {
-      final measure = Measure()
-        ..add(Note(
-          pitch: const Pitch(step: 'C', octave: 4),
-          duration: const Duration(DurationType.quarter),
-        ))
-        ..add(Note(
-          pitch: const Pitch(step: 'D', octave: 4),
-          duration: const Duration(DurationType.quarter),
-        ));
+        ..add(Clef(clefType: ClefType.treble))
+        ..add(chord);
       final staff = Staff(measures: [measure]);
-      // This is a structural test; actual rendering needs metadata.
-      expect(staff.measures.length, equals(1));
-      expect(staff.measures[0].elements.length, equals(2));
+      final engine = LayoutEngine(
+        staff,
+        availableWidth: 640,
+        staffSpace: 12,
+        metadata: metadata,
+      );
+
+      final result = engine.layoutWithSignature();
+
+      expect(
+        result.elements.where((positioned) => positioned.element is Chord),
+        hasLength(1),
+      );
+      expect(
+        result.elements.where((positioned) => positioned.element is Note),
+        isEmpty,
+      );
+
+      for (final note in chord.notes) {
+        expect(engine.noteXPositions[note], isNotNull);
+        expect(engine.noteYPositions[note], isNotNull);
+      }
     });
 
-    test('Staff with multiple measures has correct measure count', () {
-      final measures = List.generate(
-        4,
-        (_) => Measure()
-          ..add(Note(
+    test('keeps legacy beam rendering for groups without time signature', () {
+      final measure = Measure()
+        ..add(Clef(clefType: ClefType.treble))
+        ..add(
+          Note(
             pitch: const Pitch(step: 'C', octave: 4),
-            duration: const Duration(DurationType.whole),
-          )),
+            duration: const Duration(DurationType.eighth),
+            beam: BeamType.start,
+          ),
+        )
+        ..add(
+          Note(
+            pitch: const Pitch(step: 'D', octave: 4),
+            duration: const Duration(DurationType.eighth),
+            beam: BeamType.inner,
+          ),
+        )
+        ..add(
+          Note(
+            pitch: const Pitch(step: 'E', octave: 4),
+            duration: const Duration(DurationType.eighth),
+            beam: BeamType.end,
+          ),
+        );
+      final staff = Staff(measures: [measure]);
+      final engine = LayoutEngine(
+        staff,
+        availableWidth: 640,
+        staffSpace: 12,
+        metadata: metadata,
       );
-      final staff = Staff(measures: measures);
-      expect(staff.measures.length, equals(4));
+
+      engine.layoutWithSignature();
+
+      expect(engine.advancedBeamGroups, isEmpty);
     });
 
-    test('MultiVoiceMeasure has two voices', () {
-      final measure = MultiVoiceMeasure.twoVoices(
-        voice1Elements: [
+    test('creates advanced beam groups when time signature is present', () {
+      final measure = Measure()
+        ..add(Clef(clefType: ClefType.treble))
+        ..add(TimeSignature(numerator: 4, denominator: 4))
+        ..add(
           Note(
-            pitch: const Pitch(step: 'E', octave: 5),
-            duration: const Duration(DurationType.quarter),
+            pitch: const Pitch(step: 'C', octave: 4),
+            duration: const Duration(DurationType.eighth),
           ),
-        ],
-        voice2Elements: [
+        )
+        ..add(
+          Note(
+            pitch: const Pitch(step: 'D', octave: 4),
+            duration: const Duration(DurationType.eighth),
+          ),
+        )
+        ..add(
+          Note(
+            pitch: const Pitch(step: 'E', octave: 4),
+            duration: const Duration(DurationType.eighth),
+          ),
+        )
+        ..add(
+          Note(
+            pitch: const Pitch(step: 'F', octave: 4),
+            duration: const Duration(DurationType.eighth),
+          ),
+        );
+      final staff = Staff(measures: [measure]);
+      final engine = LayoutEngine(
+        staff,
+        availableWidth: 640,
+        staffSpace: 12,
+        metadata: metadata,
+      );
+
+      engine.layoutWithSignature();
+
+      expect(engine.advancedBeamGroups, hasLength(1));
+      expect(engine.advancedBeamGroups.single.notes, hasLength(4));
+    });
+
+    test('does not stretch single-measure systems across the full width', () {
+      final measure = Measure()
+        ..add(Clef(clefType: ClefType.treble))
+        ..add(TimeSignature(numerator: 4, denominator: 4))
+        ..add(
           Note(
             pitch: const Pitch(step: 'C', octave: 4),
             duration: const Duration(DurationType.quarter),
           ),
-        ],
+        );
+      final staff = Staff(measures: [measure]);
+      final engine = LayoutEngine(
+        staff,
+        availableWidth: 640,
+        staffSpace: 12,
+        metadata: metadata,
       );
-      expect(measure.voiceCount, equals(2));
-      expect(measure.isPolyphonic, isTrue);
+
+      final result = engine.layoutWithSignature();
+      final clef = result.elements.firstWhere(
+        (positioned) => positioned.element is Clef,
+      );
+      final timeSignature = result.elements.firstWhere(
+        (positioned) => positioned.element is TimeSignature,
+      );
+      final note = result.elements.firstWhere(
+        (positioned) => positioned.element is Note,
+      );
+
+      expect(timeSignature.position.dx - clef.position.dx, lessThan(80));
+      expect(note.position.dx - timeSignature.position.dx, lessThan(90));
+    });
+
+    test(
+      'keeps simultaneous lower-voice attacks aligned with the upper voice',
+      () {
+        final voice1 = Voice.voice1()
+          ..add(Clef(clefType: ClefType.treble))
+          ..add(TimeSignature(numerator: 4, denominator: 4))
+          ..add(
+            Note(
+              pitch: const Pitch(step: 'E', octave: 5),
+              duration: const Duration(DurationType.quarter),
+            ),
+          )
+          ..add(
+            Note(
+              pitch: const Pitch(step: 'D', octave: 5),
+              duration: const Duration(DurationType.quarter),
+            ),
+          )
+          ..add(
+            Note(
+              pitch: const Pitch(step: 'C', octave: 5),
+              duration: const Duration(DurationType.quarter),
+            ),
+          )
+          ..add(
+            Note(
+              pitch: const Pitch(step: 'D', octave: 5),
+              duration: const Duration(DurationType.quarter),
+            ),
+          );
+
+        final voice2 = Voice.voice2()
+          ..add(
+            Note(
+              pitch: const Pitch(step: 'C', octave: 4),
+              duration: const Duration(DurationType.half),
+            ),
+          )
+          ..add(
+            Note(
+              pitch: const Pitch(step: 'G', octave: 3),
+              duration: const Duration(DurationType.half),
+            ),
+          );
+
+        final measure = MultiVoiceMeasure()
+          ..addVoice(voice1)
+          ..addVoice(voice2);
+        final staff = Staff(measures: [measure]);
+        final engine = LayoutEngine(
+          staff,
+          availableWidth: 640,
+          staffSpace: 12,
+          metadata: metadata,
+        );
+
+        final result = engine.layoutWithSignature();
+        final upperNotes = result.elements
+            .where(
+              (positioned) =>
+                  positioned.element is Note && positioned.voiceNumber == 1,
+            )
+            .toList();
+        final lowerNotes = result.elements
+            .where(
+              (positioned) =>
+                  positioned.element is Note && positioned.voiceNumber == 2,
+            )
+            .toList();
+
+        expect(upperNotes, hasLength(4));
+        expect(lowerNotes, hasLength(2));
+        expect(
+          lowerNotes[0].position.dx,
+          closeTo(upperNotes[0].position.dx, 0.001),
+        );
+        expect(
+          lowerNotes[1].position.dx,
+          closeTo(upperNotes[2].position.dx, 0.001),
+        );
+      },
+    );
+
+    test(
+      'assigns horizontal width to multiple tempo marks in the same measure',
+      () {
+        final measure = Measure()
+          ..add(Clef(clefType: ClefType.treble))
+          ..add(TimeSignature(numerator: 4, denominator: 4))
+          ..add(
+            TempoMark(
+              beatUnit: DurationType.quarter,
+              bpm: 120,
+              text: 'Allegro',
+            ),
+          )
+          ..add(
+            Note(
+              pitch: const Pitch(step: 'C', octave: 4),
+              duration: const Duration(DurationType.quarter),
+            ),
+          )
+          ..add(
+            TempoMark(
+              beatUnit: DurationType.eighth,
+              bpm: 144,
+              text: 'Piu mosso',
+            ),
+          )
+          ..add(
+            Note(
+              pitch: const Pitch(step: 'D', octave: 4),
+              duration: const Duration(DurationType.quarter),
+            ),
+          );
+        final staff = Staff(measures: [measure]);
+        final engine = LayoutEngine(
+          staff,
+          availableWidth: 640,
+          staffSpace: 12,
+          metadata: metadata,
+        );
+
+        final result = engine.layoutWithSignature();
+        final tempoMarks = result.elements
+            .where((positioned) => positioned.element is TempoMark)
+            .toList();
+        final notes = result.elements
+            .where((positioned) => positioned.element is Note)
+            .toList();
+
+        expect(tempoMarks, hasLength(2));
+        expect(notes, hasLength(2));
+        expect(
+          tempoMarks[1].position.dx,
+          greaterThan(tempoMarks[0].position.dx),
+        );
+        expect(notes[0].position.dx, greaterThan(tempoMarks[0].position.dx));
+        expect(tempoMarks[1].position.dx, greaterThan(notes[0].position.dx));
+        expect(notes[1].position.dx, greaterThan(tempoMarks[1].position.dx));
+      },
+    );
+
+    test('assigns horizontal width to instructional music text', () {
+      final measure = Measure()
+        ..add(Clef(clefType: ClefType.treble))
+        ..add(
+          MusicText(
+            text: 'con fuoco',
+            type: TextType.instruction,
+            placement: TextPlacement.above,
+          ),
+        )
+        ..add(
+          Note(
+            pitch: const Pitch(step: 'F', octave: 4),
+            duration: const Duration(DurationType.quarter),
+          ),
+        )
+        ..add(
+          MusicText(
+            text: 'legato',
+            type: TextType.instruction,
+            placement: TextPlacement.above,
+          ),
+        )
+        ..add(
+          Note(
+            pitch: const Pitch(step: 'G', octave: 4),
+            duration: const Duration(DurationType.quarter),
+          ),
+        );
+      final staff = Staff(measures: [measure]);
+      final engine = LayoutEngine(
+        staff,
+        availableWidth: 640,
+        staffSpace: 12,
+        metadata: metadata,
+      );
+
+      final result = engine.layoutWithSignature();
+      final texts = result.elements
+          .where((positioned) => positioned.element is MusicText)
+          .toList();
+      final notes = result.elements
+          .where((positioned) => positioned.element is Note)
+          .toList();
+
+      expect(texts, hasLength(2));
+      expect(notes, hasLength(2));
+      expect(notes[0].position.dx, greaterThan(texts[0].position.dx));
+      expect(texts[1].position.dx, greaterThan(notes[0].position.dx));
+      expect(notes[1].position.dx, greaterThan(texts[1].position.dx));
+    });
+
+    test('assigns horizontal width to textual repeat instructions', () {
+      final measure = Measure()
+        ..add(Clef(clefType: ClefType.treble))
+        ..add(RepeatMark(type: RepeatType.dalSegnoAlCoda))
+        ..add(
+          Note(
+            pitch: const Pitch(step: 'C', octave: 4),
+            duration: const Duration(DurationType.quarter),
+          ),
+        )
+        ..add(RepeatMark(type: RepeatType.fine))
+        ..add(
+          Note(
+            pitch: const Pitch(step: 'D', octave: 4),
+            duration: const Duration(DurationType.quarter),
+          ),
+        );
+      final staff = Staff(measures: [measure]);
+      final engine = LayoutEngine(
+        staff,
+        availableWidth: 640,
+        staffSpace: 12,
+        metadata: metadata,
+      );
+
+      final result = engine.layoutWithSignature();
+      final repeatMarks = result.elements
+          .where((positioned) => positioned.element is RepeatMark)
+          .toList();
+      final notes = result.elements
+          .where((positioned) => positioned.element is Note)
+          .toList();
+
+      expect(repeatMarks, hasLength(2));
+      expect(notes, hasLength(2));
+      expect(notes[0].position.dx, greaterThan(repeatMarks[0].position.dx));
+      expect(repeatMarks[1].position.dx, greaterThan(notes[0].position.dx));
+      expect(notes[1].position.dx, greaterThan(repeatMarks[1].position.dx));
     });
   });
 }

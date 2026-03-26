@@ -1,11 +1,27 @@
 // lib/src/rendering/renderers/symbol_and_text_renderer.dart
 
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import '../../../core/core.dart'; // ðŸ†• Tipos do core
 import '../../layout/collision_detector.dart'; // CORREÃ‡ÃƒO: Import collision detector
 import '../../smufl/smufl_metadata_loader.dart';
 import '../../theme/music_score_theme.dart';
 import '../staff_coordinate_system.dart';
+
+class HairpinGeometry {
+  final Offset upperStart;
+  final Offset upperEnd;
+  final Offset lowerStart;
+  final Offset lowerEnd;
+
+  const HairpinGeometry({
+    required this.upperStart,
+    required this.upperEnd,
+    required this.lowerStart,
+    required this.lowerEnd,
+  });
+}
 
 class SymbolAndTextRenderer {
   final StaffCoordinateSystem coordinates;
@@ -23,6 +39,18 @@ class SymbolAndTextRenderer {
     this.collisionDetector, // CORREÃ‡ÃƒO: ParÃ¢metro opcional
   });
 
+  static Offset calculateTextPaintOrigin(
+    Offset position,
+    Size textSize, {
+    bool centerHorizontally = true,
+    bool centerVertically = true,
+  }) {
+    return Offset(
+      position.dx - (centerHorizontally ? textSize.width * 0.5 : 0.0),
+      position.dy - (centerVertically ? textSize.height * 0.5 : 0.0),
+    );
+  }
+
   void renderRepeatMark(
     Canvas canvas,
     RepeatMark repeatMark,
@@ -37,11 +65,10 @@ class SymbolAndTextRenderer {
         text: fallbackText,
         position: Offset(
           basePosition.dx,
-          coordinates.getStaffLineY(5) - (coordinates.staffSpace * 2.2),
+          coordinates.getStaffLineY(5) - (coordinates.staffSpace * 1.9),
         ),
-        style:
-            theme.textStyle ??
-            const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        style: _repeatInstructionStyle(),
+        centerHorizontally: false,
       );
       return;
     }
@@ -52,24 +79,28 @@ class SymbolAndTextRenderer {
     final signY = _getRepeatMarkY(repeatMark.type);
 
     // CORREÃ‡ÃƒO SMuFL: Usar opticalCenter anchor se disponÃ­vel
-    final glyphInfo = metadata.getGlyphInfo(glyphName);
-    double verticalAdjust = 0;
-    if (glyphInfo != null && glyphInfo.hasAnchors) {
-      final opticalCenter = glyphInfo.anchors?.getAnchor('opticalCenter');
-      if (opticalCenter != null) {
-        verticalAdjust = opticalCenter.dy * coordinates.staffSpace;
-      }
-    }
-
     _drawGlyph(
       canvas,
       glyphName: glyphName,
-      position: Offset(basePosition.dx, signY - verticalAdjust),
+      position: Offset(basePosition.dx, signY),
       size: glyphSize * _getRepeatMarkScale(repeatMark.type),
       color: theme.repeatColor ?? theme.noteheadColor,
-      centerVertically: glyphInfo == null,
+      centerVertically: true,
       centerHorizontally: true,
     );
+
+    final countLabel = _getRepeatCountLabel(repeatMark);
+    if (countLabel != null) {
+      _drawText(
+        canvas,
+        text: countLabel,
+        position: Offset(
+          basePosition.dx,
+          signY - (coordinates.staffSpace * 1.7),
+        ),
+        style: _repeatCountStyle(),
+      );
+    }
   }
 
   String? _getRepeatMarkGlyph(RepeatType type) {
@@ -152,19 +183,21 @@ class SymbolAndTextRenderer {
       case RepeatType.coda:
       case RepeatType.segnoSquare:
       case RepeatType.codaSquare:
-        return 0.72; // proporcional ao pentagrama
+        return 0.64;
       case RepeatType.repeat1Bar:
-      case RepeatType.repeat2Bars:
-      case RepeatType.repeat4Bars:
       case RepeatType.simile:
       case RepeatType.percentRepeat:
+        return 0.92;
+      case RepeatType.repeat2Bars:
+      case RepeatType.repeat4Bars:
+        return 0.9;
       case RepeatType.repeatDots:
       case RepeatType.repeatLeft:
       case RepeatType.repeatRight:
       case RepeatType.repeatBoth:
       case RepeatType.start:
       case RepeatType.end:
-        return 0.95;
+        return 1.0;
       case RepeatType.dalSegno:
       case RepeatType.dalSegnoAlCoda:
       case RepeatType.dalSegnoAlFine:
@@ -190,10 +223,45 @@ class SymbolAndTextRenderer {
       case RepeatType.repeatBoth:
       case RepeatType.start:
       case RepeatType.end:
-        return coordinates.staffBaseline.dy;
+        return coordinates.staffBaseline.dy - (coordinates.staffSpace * 0.05);
       default:
-        return coordinates.getStaffLineY(5) - (coordinates.staffSpace * 1.5);
+        return coordinates.getStaffLineY(5) - (coordinates.staffSpace * 1.8);
     }
+  }
+
+  String? _getRepeatCountLabel(RepeatMark repeatMark) {
+    if (repeatMark.times != null) {
+      return repeatMark.times!.toString();
+    }
+
+    switch (repeatMark.type) {
+      case RepeatType.repeat2Bars:
+        return '2';
+      case RepeatType.repeat4Bars:
+        return '4';
+      default:
+        return null;
+    }
+  }
+
+  TextStyle _repeatInstructionStyle() {
+    final baseColor =
+        theme.repeatColor ?? theme.textColor ?? theme.noteheadColor;
+    return (theme.repeatTextStyle ??
+            theme.expressionTextStyle ??
+            const TextStyle(
+              fontSize: 15,
+              fontStyle: FontStyle.italic,
+              fontWeight: FontWeight.w600,
+            ))
+        .copyWith(color: baseColor);
+  }
+
+  TextStyle _repeatCountStyle() {
+    final baseColor = theme.repeatColor ?? theme.noteheadColor;
+    return (theme.repeatTextStyle ??
+            const TextStyle(fontSize: 16, fontWeight: FontWeight.w700))
+        .copyWith(color: baseColor);
   }
 
   void renderDynamic(
@@ -237,13 +305,7 @@ class SymbolAndTextRenderer {
         canvas,
         text: dynamic.customText!,
         position: Offset(basePosition.dx, dynamicY),
-        style:
-            theme.dynamicTextStyle ??
-            TextStyle(
-              fontSize: glyphSize * 0.4,
-              fontStyle: FontStyle.italic,
-              color: theme.dynamicColor ?? theme.noteheadColor,
-            ),
+        style: _dynamicTextStyle(),
       );
     }
   }
@@ -254,7 +316,7 @@ class SymbolAndTextRenderer {
     Offset basePosition, {
     double verticalOffset = 0.0,
   }) {
-    final length = dynamic.length ?? coordinates.staffSpace * 4;
+    final length = dynamic.length ?? coordinates.staffSpace * 6;
     // CORREÃ‡ÃƒO: Usar mesma posiÃ§Ã£o Y que dinÃ¢micas
     // CORREÃ‡ÃƒO LACERDA: Adicionar verticalOffset para evitar sobreposiÃ§Ã£o
     final hairpinY =
@@ -262,48 +324,32 @@ class SymbolAndTextRenderer {
         (coordinates.staffSpace * 2.5) +
         verticalOffset;
     // CORREÃ‡ÃƒO TIPOGRÃFICA SMuFL: Altura recomendada de 0.75-1.0 staff spaces
-    final height = coordinates.staffSpace * 0.75;
+    final height = coordinates.staffSpace * 0.9;
 
     // CORREÃ‡ÃƒO CRÃTICA SMuFL: Usar hairpinThickness ao invÃ©s de thinBarlineThickness
     final hairpinThickness = metadata.getEngravingDefault('hairpinThickness');
     final paint = Paint()
       ..color = theme.dynamicColor ?? theme.noteheadColor
-      ..strokeWidth = hairpinThickness * coordinates.staffSpace;
+      ..strokeWidth = hairpinThickness * coordinates.staffSpace
+      ..strokeCap = StrokeCap.butt;
 
-    if (dynamic.type == DynamicType.crescendo) {
-      canvas.drawLine(
-        Offset(basePosition.dx, hairpinY + height),
-        Offset(basePosition.dx + length, hairpinY),
-        paint,
-      );
-      canvas.drawLine(
-        Offset(basePosition.dx, hairpinY - height),
-        Offset(basePosition.dx + length, hairpinY),
-        paint,
-      );
-    } else if (dynamic.type == DynamicType.diminuendo) {
-      canvas.drawLine(
-        Offset(basePosition.dx, hairpinY),
-        Offset(basePosition.dx + length, hairpinY + height),
-        paint,
-      );
-      canvas.drawLine(
-        Offset(basePosition.dx, hairpinY),
-        Offset(basePosition.dx + length, hairpinY - height),
-        paint,
-      );
-    }
+    final geometry = calculateHairpinGeometry(
+      dynamic.type,
+      basePosition,
+      length,
+      hairpinY,
+      height,
+    );
+
+    canvas.drawLine(geometry.upperStart, geometry.upperEnd, paint);
+    canvas.drawLine(geometry.lowerStart, geometry.lowerEnd, paint);
 
     // Render custom text label centered over the hairpin
     if (dynamic.customText != null) {
       final tp = TextPainter(
         text: TextSpan(
           text: dynamic.customText!,
-          style: TextStyle(
-            fontSize: glyphSize * 0.32,
-            fontStyle: FontStyle.italic,
-            color: theme.dynamicColor ?? Colors.black87,
-          ),
+          style: _dynamicTextStyle(fontScale: 0.32),
         ),
         textDirection: TextDirection.ltr,
       );
@@ -312,10 +358,37 @@ class SymbolAndTextRenderer {
         canvas,
         Offset(
           basePosition.dx + length / 2 - tp.width / 2,
-          hairpinY - tp.height / 2,
+          hairpinY - coordinates.staffSpace * 1.25 - tp.height / 2,
         ),
       );
     }
+  }
+
+  static HairpinGeometry calculateHairpinGeometry(
+    DynamicType type,
+    Offset basePosition,
+    double length,
+    double centerY,
+    double halfHeight,
+  ) {
+    final leftX = basePosition.dx;
+    final rightX = basePosition.dx + length;
+
+    if (type == DynamicType.diminuendo) {
+      return HairpinGeometry(
+        upperStart: Offset(leftX, centerY - halfHeight),
+        upperEnd: Offset(rightX, centerY),
+        lowerStart: Offset(leftX, centerY + halfHeight),
+        lowerEnd: Offset(rightX, centerY),
+      );
+    }
+
+    return HairpinGeometry(
+      upperStart: Offset(leftX, centerY),
+      upperEnd: Offset(rightX, centerY - halfHeight),
+      lowerStart: Offset(leftX, centerY),
+      lowerEnd: Offset(rightX, centerY + halfHeight),
+    );
   }
 
   String? _getDynamicGlyph(DynamicType type) {
@@ -331,34 +404,113 @@ class SymbolAndTextRenderer {
     return dynamicGlyphs[type];
   }
 
-  void renderMusicText(Canvas canvas, MusicText text, Offset basePosition) {
-    double yOffset = 0;
-    switch (text.placement) {
-      case TextPlacement.above:
-        yOffset = -coordinates.staffSpace * 2.5;
+  TextStyle _dynamicTextStyle({double fontScale = 0.4}) {
+    final baseColor = theme.dynamicColor ?? theme.noteheadColor;
+    return (theme.dynamicTextStyle ??
+            theme.expressionTextStyle ??
+            TextStyle(
+              fontSize: glyphSize * fontScale,
+              fontStyle: FontStyle.italic,
+              fontWeight: FontWeight.w500,
+            ))
+        .copyWith(
+          color: baseColor,
+          fontSize:
+              (theme.dynamicTextStyle?.fontSize ??
+              theme.expressionTextStyle?.fontSize ??
+              (glyphSize * fontScale)),
+        );
+  }
+
+  TextStyle _resolveMusicTextStyle(MusicText text) {
+    final Color baseColor = theme.textColor ?? theme.noteheadColor;
+    TextStyle baseStyle;
+
+    switch (text.type) {
+      case TextType.tempo:
+        baseStyle = _tempoTextStyle();
         break;
-      case TextPlacement.below:
-        yOffset = coordinates.staffSpace * 2.5;
+      case TextType.expression:
+      case TextType.instruction:
+      case TextType.dynamics:
+        baseStyle =
+            theme.expressionTextStyle ??
+            theme.textStyle ??
+            TextStyle(
+              fontSize: coordinates.staffSpace * 1.1,
+              fontStyle: FontStyle.italic,
+              fontWeight: FontWeight.w500,
+            );
         break;
-      case TextPlacement.inside:
-        yOffset = 0;
+      default:
+        baseStyle =
+            theme.textStyle ??
+            TextStyle(
+              fontSize: coordinates.staffSpace,
+              fontWeight: FontWeight.w500,
+            );
         break;
     }
+
+    FontStyle? fontStyle = baseStyle.fontStyle;
+    if (text.italic == true) {
+      fontStyle = FontStyle.italic;
+    } else if (text.italic == false) {
+      fontStyle = FontStyle.normal;
+    }
+
+    FontWeight? fontWeight = baseStyle.fontWeight;
+    if (text.bold == true) {
+      fontWeight = FontWeight.w700;
+    }
+
+    return baseStyle.copyWith(
+      color: baseStyle.color ?? baseColor,
+      fontFamily: text.fontFamily ?? baseStyle.fontFamily,
+      fontSize: text.fontSize ?? baseStyle.fontSize,
+      fontStyle: fontStyle,
+      fontWeight: fontWeight,
+    );
+  }
+
+  double _resolveMusicTextY(MusicText text) {
+    switch (text.placement) {
+      case TextPlacement.above:
+        switch (text.type) {
+          case TextType.tempo:
+            return _tempoMarkCenterY();
+          case TextType.expression:
+          case TextType.instruction:
+          case TextType.dynamics:
+            return coordinates.getStaffLineY(5) -
+                (coordinates.staffSpace * 1.75);
+          default:
+            return coordinates.getStaffLineY(5) -
+                (coordinates.staffSpace * 1.55);
+        }
+      case TextPlacement.below:
+        return coordinates.getStaffLineY(1) + (coordinates.staffSpace * 2.0);
+      case TextPlacement.inside:
+        return coordinates.staffBaseline.dy;
+    }
+  }
+
+  void renderMusicText(Canvas canvas, MusicText text, Offset basePosition) {
+    final style = _resolveMusicTextStyle(text);
+    final yPosition = _resolveMusicTextY(text);
+
     _drawText(
       canvas,
       text: text.text,
-      position: Offset(basePosition.dx, coordinates.staffBaseline.dy + yOffset),
-      style: text.type == TextType.tempo
-          ? (theme.tempoTextStyle ?? const TextStyle())
-          : (theme.textStyle ?? const TextStyle()),
+      position: Offset(basePosition.dx, yPosition),
+      style: style,
+      centerHorizontally: false,
     );
   }
 
   void renderTempoMark(Canvas canvas, TempoMark tempo, Offset basePosition) {
-    final style =
-        theme.tempoTextStyle ?? const TextStyle(fontWeight: FontWeight.bold);
-    final textTopY =
-        coordinates.getStaffLineY(5) - (coordinates.staffSpace * 2.8);
+    final style = _tempoTextStyle();
+    final tempoCenterY = _tempoMarkCenterY();
     var cursorX = basePosition.dx;
 
     final tempoText = tempo.text?.trim();
@@ -368,8 +520,8 @@ class SymbolAndTextRenderer {
         textAlign: TextAlign.left,
         textDirection: TextDirection.ltr,
       )..layout();
-      tp.paint(canvas, Offset(cursorX, textTopY - tp.height));
-      cursorX += tp.width;
+      tp.paint(canvas, Offset(cursorX, tempoCenterY - tp.height / 2));
+      cursorX += tp.width + (coordinates.staffSpace * 0.12);
     }
 
     if (tempo.bpm == null || !tempo.showMetronome) {
@@ -383,39 +535,49 @@ class SymbolAndTextRenderer {
       ),
       textDirection: TextDirection.ltr,
     )..layout();
-    spacing.paint(canvas, Offset(cursorX, textTopY - spacing.height));
+    spacing.paint(canvas, Offset(cursorX, tempoCenterY - spacing.height / 2));
     cursorX += spacing.width;
 
     final glyphName = _getMetronomeGlyphName(tempo.beatUnit);
     if (glyphName != null) {
       final metronomeGlyphSize = glyphSize * 0.46;
-      final glyphY = textTopY - metronomeGlyphSize * 0.8;
       _drawGlyph(
         canvas,
         glyphName: glyphName,
-        position: Offset(cursorX, glyphY),
+        position: Offset(cursorX, tempoCenterY),
         size: metronomeGlyphSize,
-        color: style.color ?? theme.textColor ?? Colors.black87,
+        color:
+            theme.metronomeColor ??
+            style.color ??
+            theme.textColor ??
+            Colors.black87,
+        centerVertically: true,
       );
       final glyphAdvance =
           metadata.getGlyphWidth(glyphName) *
           coordinates.staffSpace *
           (metronomeGlyphSize / glyphSize);
-      cursorX += glyphAdvance + (coordinates.staffSpace * 0.12);
+      cursorX += glyphAdvance + (coordinates.staffSpace * 0.18);
     } else {
       final fallback = TextPainter(
         text: TextSpan(text: '\u2669', style: style),
         textDirection: TextDirection.ltr,
       )..layout();
-      fallback.paint(canvas, Offset(cursorX, textTopY - fallback.height));
-      cursorX += fallback.width + (coordinates.staffSpace * 0.12);
+      fallback.paint(
+        canvas,
+        Offset(cursorX, tempoCenterY - fallback.height / 2),
+      );
+      cursorX += fallback.width + (coordinates.staffSpace * 0.18);
     }
 
     final equalsAndBpm = TextPainter(
       text: TextSpan(text: ' = ${tempo.bpm})', style: style),
       textDirection: TextDirection.ltr,
     )..layout();
-    equalsAndBpm.paint(canvas, Offset(cursorX, textTopY - equalsAndBpm.height));
+    equalsAndBpm.paint(
+      canvas,
+      Offset(cursorX, tempoCenterY - equalsAndBpm.height / 2),
+    );
   }
 
   String? _getMetronomeGlyphName(DurationType durationType) {
@@ -445,6 +607,22 @@ class SymbolAndTextRenderer {
       default:
         return 'metNoteQuarterUp';
     }
+  }
+
+  TextStyle _tempoTextStyle() {
+    final baseColor = theme.textColor ?? theme.noteheadColor;
+    return (theme.tempoTextStyle ??
+            TextStyle(
+              fontSize: coordinates.staffSpace * 1.3,
+              fontWeight: FontWeight.w600,
+              fontStyle: FontStyle.italic,
+              letterSpacing: 0.15,
+            ))
+        .copyWith(color: theme.tempoTextStyle?.color ?? baseColor);
+  }
+
+  double _tempoMarkCenterY() {
+    return coordinates.getStaffLineY(5) - (coordinates.staffSpace * 1.95);
   }
 
   void renderBreath(Canvas canvas, Breath breath, Offset basePosition) {
@@ -485,14 +663,31 @@ class SymbolAndTextRenderer {
     Offset basePosition, {
     double? startX,
     double? endX,
+    double?
+    referenceNoteY, // Y da nota mais extrema no span (para evitar sobreposicao com linhas suplementares)
   }) {
     final isAbove =
         octaveMark.type == OctaveType.va8 ||
         octaveMark.type == OctaveType.va15 ||
         octaveMark.type == OctaveType.va22;
-    final yPosition = isAbove
+
+    final standardY = isAbove
         ? coordinates.getStaffLineY(5) - (coordinates.staffSpace * 1.8)
         : coordinates.getStaffLineY(1) + (coordinates.staffSpace * 1.8);
+
+    // Ajusta Y dinamicamente se notas em linhas suplementares conflitam com a marcacao
+    final double yPosition;
+    if (referenceNoteY != null) {
+      if (isAbove) {
+        final clearanceY = referenceNoteY - coordinates.staffSpace * 1.0;
+        yPosition = math.min(standardY, clearanceY);
+      } else {
+        final clearanceY = referenceNoteY + coordinates.staffSpace * 1.0;
+        yPosition = math.max(standardY, clearanceY);
+      }
+    } else {
+      yPosition = standardY;
+    }
     final xStart = startX ?? basePosition.dx;
 
     // 1. Draw the text label
@@ -625,20 +820,22 @@ class SymbolAndTextRenderer {
     required String text,
     required Offset position,
     required TextStyle style,
+    bool centerHorizontally = true,
+    bool centerVertically = true,
   }) {
     final textPainter = TextPainter(
       text: TextSpan(text: text, style: style),
-      textAlign: TextAlign.center,
+      textAlign: centerHorizontally ? TextAlign.center : TextAlign.left,
       textDirection: TextDirection.ltr,
     );
     textPainter.layout();
-    textPainter.paint(
-      canvas,
-      Offset(
-        position.dx - textPainter.width / 2,
-        position.dy - textPainter.height / 2,
-      ),
+    final origin = calculateTextPaintOrigin(
+      position,
+      Size(textPainter.width, textPainter.height),
+      centerHorizontally: centerHorizontally,
+      centerVertically: centerVertically,
     );
+    textPainter.paint(canvas, origin);
   }
 
   void _drawGlyph(
