@@ -1,28 +1,18 @@
 // lib/src/rendering/renderers/slur_renderer.dart
 
 import 'dart:math' as math;
-import 'package:flutter/material.dart';
-import '../../../core/core.dart';
-import '../../layout/slur_calculator.dart';
-import '../../layout/layout_engine.dart'; // PositionedElement
-import '../../layout/skyline_calculator.dart';
-import '../../engraving/engraving_rules.dart';
-import '../staff_position_calculator.dart';
-import '../../smufl/smufl_metadata_loader.dart'; // SmuflMetadata
 
-/// Renderizador profissional de ligaduras (slurs e ties) conforme SMuFL e Behind Bars
-///
-/// **ESPECIFICAÃ‡Ã•ES:**
-/// - Espessura variÃ¡vel: endpoint (0.1 SS) â†’ midpoint (0.22 SS)
-/// - Curvas BÃ©zier cÃºbicas suaves
-/// - DetecÃ§Ã£o automÃ¡tica de direÃ§Ã£o (acima/abaixo)
-/// - Evita colisÃµes com notas, hastes, beams, acidentes
-/// - Suporte a slurs aninhados (mÃºltiplos nÃ­veis)
-///
-/// **REFERÃŠNCIAS:**
-/// - SMuFL specification (slurEndpointThickness, slurMidpointThickness)
-/// - Behind Bars (Elaine Gould) - capÃ­tulo sobre ligaduras
-/// - OpenSheetMusicDisplay (SlurCalculator.ts)
+import 'package:flutter/material.dart';
+
+import '../../../core/core.dart';
+import '../../engraving/engraving_rules.dart';
+import '../../layout/layout_engine.dart';
+import '../../layout/skyline_calculator.dart';
+import '../../layout/slur_calculator.dart';
+import '../../smufl/smufl_metadata_loader.dart';
+import '../grace_note_geometry.dart';
+import '../staff_position_calculator.dart';
+
 class SlurRenderer {
   final EngravingRules rules;
   final SmuflMetadata metadata;
@@ -35,14 +25,50 @@ class SlurRenderer {
     EngravingRules? rules,
     this.skylineCalculator,
   }) : rules = rules ?? EngravingRules();
-  
-  /// Renderiza ligaduras de expressÃ£o (slurs)
-  ///
-  /// @param canvas Canvas do Flutter
-  /// @param slurGroups Grupos de notas ligadas
-  /// @param positions PosiÃ§Ãµes de todos os elementos
-  /// @param currentClef Clave atual
-  /// @param color Cor da ligadura
+
+  _NoteheadMetrics _resolveNoteheadMetrics(
+    Offset notePos,
+    Note note, {
+    double scaleFactor = 1.0,
+  }) {
+    final glyphName = note.duration.type.glyphName;
+    final glyphInfo = metadata.getGlyphInfo(glyphName);
+    final bbox = glyphInfo?.boundingBox;
+
+    final leftEdge =
+        notePos.dx + ((bbox?.bBoxSwX ?? 0.0) * staffSpace * scaleFactor);
+    final rightEdge =
+        notePos.dx +
+        (((bbox?.bBoxNeX ?? metadata.getGlyphWidth(glyphName)) * staffSpace) *
+            scaleFactor);
+    final width = math.max(
+      rightEdge - leftEdge,
+      staffSpace * 0.7 * scaleFactor,
+    );
+    final halfHeight = math.max(
+      (((bbox?.height ?? 0.88) * staffSpace * scaleFactor) * 0.5),
+      staffSpace * 0.22 * scaleFactor,
+    );
+
+    Offset? toAbsoluteAnchor(String anchorName) {
+      final anchor = metadata.getGlyphAnchor(glyphName, anchorName);
+      if (anchor == null) return null;
+      return Offset(
+        notePos.dx + (anchor.dx * staffSpace * scaleFactor),
+        notePos.dy - (anchor.dy * staffSpace * scaleFactor),
+      );
+    }
+
+    return _NoteheadMetrics(
+      leftEdge: leftEdge,
+      rightEdge: rightEdge,
+      width: width,
+      halfHeight: halfHeight,
+      stemUpAnchor: toAbsoluteAnchor('stemUpSE'),
+      stemDownAnchor: toAbsoluteAnchor('stemDownNW'),
+    );
+  }
+
   void renderSlurs({
     required Canvas canvas,
     required Map<int, List<int>> slurGroups,
@@ -58,27 +84,46 @@ class SlurRenderer {
       final startElement = positions[group.first];
       final endElement = positions[group.last];
 
-      if (startElement.element is! Note || endElement.element is! Note) {
+      final tempStart = _pickNoteFromElement(
+        startElement.element,
+        above: true,
+        clef: currentClef,
+      );
+      final tempEnd = _pickNoteFromElement(
+        endElement.element,
+        above: true,
+        clef: currentClef,
+      );
+      if (tempStart == null || tempEnd == null) {
         continue;
       }
 
-      final startNote = startElement.element as Note;
-      final endNote = endElement.element as Note;
-
-      // Calcular direÃ§Ã£o automÃ¡tica
       final direction = _calculateSlurDirection(
-        startNote,
-        endNote,
+        tempStart,
+        tempEnd,
         currentClef,
       );
+      final slurAbove = direction == SlurDirection.up;
 
-      // Calcular pontos de inÃ­cio e fim
+      final startNote = _pickNoteFromElement(
+        startElement.element,
+        above: slurAbove,
+        clef: currentClef,
+      )!;
+      final endNote = _pickNoteFromElement(
+        endElement.element,
+        above: slurAbove,
+        clef: currentClef,
+      )!;
+      final isGraceSlur = _hasGraceOrnamentOnElement(startElement.element);
+
       final startPoint = _calculateSlurEndpoint(
         startElement.position,
         startNote,
         currentClef,
         isStart: true,
-        above: direction == SlurDirection.up,
+        above: slurAbove,
+        isGraceSlur: isGraceSlur,
       );
 
       final endPoint = _calculateSlurEndpoint(
@@ -86,10 +131,10 @@ class SlurRenderer {
         endNote,
         currentClef,
         isStart: false,
-        above: direction == SlurDirection.up,
+        above: slurAbove,
+        isGraceSlur: isGraceSlur,
       );
 
-      // Calcular curva usando SlurCalculator avanÃ§ado
       final calculator = SlurCalculator(
         rules: rules,
         skylineCalculator: skylineCalculator,
@@ -98,23 +143,14 @@ class SlurRenderer {
       final curve = calculator.calculateSlur(
         startPoint: startPoint,
         endPoint: endPoint,
-        placement: direction == SlurDirection.up,
+        placement: slurAbove,
         staffSpace: staffSpace,
       );
 
-      // Renderizar curva com espessura variÃ¡vel
-      _drawVariableThicknessCurve(
-        canvas,
-        curve,
-        color,
-        isSlur: true,
-      );
+      _drawVariableThicknessCurve(canvas, curve, color, isSlur: true);
     }
   }
-  
-  /// Renderiza ligaduras de prolongamento (ties)
-  ///
-  /// Ties sÃ£o mais rasas que slurs e sempre conectam notas da mesma altura
+
   void renderTies({
     required Canvas canvas,
     required Map<int, List<int>> tieGroups,
@@ -131,41 +167,21 @@ class SlurRenderer {
       }
 
       final startNote = startElement.element as Note;
-
-      // Ties seguem direÃ§Ã£o OPOSTA Ã s hastes
       final staffPos = StaffPositionCalculator.calculate(
         startNote.pitch,
         currentClef,
       );
-      final stemUp = staffPos <= 0;
-      final tieAbove = !stemUp;
+      final tieAbove = staffPos > 0;
+      final endNote = endElement.element as Note;
 
-      // Calcular pontos de inÃ­cio e fim (mais afastados das cabeÃ§as)
-      final noteWidth = staffSpace * 1.18;
-
-      // âœ… USAR position.dy que JÃ Ã© a posiÃ§Ã£o Y absoluta da nota!
-      final startNoteY = startElement.position.dy;
-      final endNoteY = endElement.position.dy;
-
-      // âœ… Clearance discreto para ties (Behind Bars: 0.3-0.4 SS)
-      // Ties devem ser prÃ³ximos Ã s cabeÃ§as, mas sem tocar
-      final clearance = staffSpace * 0.35; // Reduzido para ties mais discretos
-
-      final startPoint = Offset(
-        startElement.position.dx + noteWidth * 0.75,
-        startNoteY + (tieAbove
-          ? -clearance  // Acima: subtrair clearance
-          : clearance), // Abaixo: somar clearance
+      final (startPoint, endPoint) = _calculateTieEndpoints(
+        startElement.position,
+        startNote,
+        endElement.position,
+        endNote,
+        tieAbove: tieAbove,
       );
 
-      final endPoint = Offset(
-        endElement.position.dx + noteWidth * 0.25,
-        endNoteY + (tieAbove
-          ? -clearance
-          : clearance),
-      );
-
-      // Calcular curva usando SlurCalculator
       final calculator = SlurCalculator(rules: rules);
       final curve = calculator.calculateTie(
         startPoint: startPoint,
@@ -174,22 +190,31 @@ class SlurRenderer {
         staffSpace: staffSpace,
       );
 
-      // Renderizar tie com espessura variÃ¡vel
-      _drawVariableThicknessCurve(
-        canvas,
-        curve,
-        color,
-        isSlur: false,
-      );
+      _drawVariableThicknessCurve(canvas, curve, color, isSlur: false);
     }
   }
-  
-  /// Calcula direÃ§Ã£o automÃ¡tica do slur (acima ou abaixo)
-  ///
-  /// **REGRAS (Behind Bars):**
-  /// - Notas abaixo da linha central â†’ slur acima
-  /// - Notas acima da linha central â†’ slur abaixo
-  /// - Mistura de hastes â†’ preferencialmente acima
+
+  Note? _pickNoteFromElement(
+    dynamic element, {
+    required bool above,
+    required Clef clef,
+  }) {
+    if (element is Note) {
+      return element;
+    }
+    if (element is Chord) {
+      final sorted = [...element.notes]
+        ..sort(
+          (a, b) => StaffPositionCalculator.calculate(
+            b.pitch,
+            clef,
+          ).compareTo(StaffPositionCalculator.calculate(a.pitch, clef)),
+        );
+      return above ? sorted.first : sorted.last;
+    }
+    return null;
+  }
+
   SlurDirection _calculateSlurDirection(
     Note startNote,
     Note endNote,
@@ -199,159 +224,197 @@ class SlurRenderer {
       startNote.pitch,
       clef,
     );
-    final endStaffPos = StaffPositionCalculator.calculate(
-      endNote.pitch,
-      clef,
-    );
-    
-    // MÃ©dia das posiÃ§Ãµes
+    final endStaffPos = StaffPositionCalculator.calculate(endNote.pitch, clef);
     final avgPos = (startStaffPos + endStaffPos) / 2;
-    
-    // Linha central = 0
-    // Acima (positivo) â†’ slur abaixo
-    // Abaixo (negativo) â†’ slur acima
-    if (avgPos > 0) {
-      return SlurDirection.down; // Notas acima â†’ slur abaixo
-    } else {
-      return SlurDirection.up; // Notas abaixo â†’ slur acima
-    }
+    return avgPos > 0 ? SlurDirection.down : SlurDirection.up;
   }
-  
-  /// Calcula ponto de inÃ­cio/fim do slur na cabeÃ§a da nota
-  ///
-  /// @param notePos PosiÃ§Ã£o da nota (JÃ ABSOLUTA do LayoutEngine!)
-  /// @param note Nota
-  /// @param clef Clave
-  /// @param isStart Se Ã© ponto inicial ou final
-  /// @param above Se slur estÃ¡ acima ou abaixo
+
   Offset _calculateSlurEndpoint(
     Offset notePos,
     Note note,
-    Clef clef,
-    {required bool isStart,
-    required bool above,}
-  ) {
-    final noteWidth = staffSpace * 1.18;
-    
-    // âœ… USAR notePos.dy que JÃ Ã© a posiÃ§Ã£o Y absoluta da nota!
+    Clef clef, {
+    required bool isStart,
+    required bool above,
+    bool isGraceSlur = false,
+  }) {
+    final metrics = _resolveNoteheadMetrics(notePos, note);
     final noteY = notePos.dy;
-    
-    // Calcular staffPos para determinar se tem stem
+    final effectiveGraceSlur = isGraceSlur || hasGraceOrnament(note);
+
+    if (isStart && effectiveGraceSlur) {
+      return graceSlurStartPointForNote(
+        note: note,
+        notePos: notePos,
+        above: above,
+        staffSpace: staffSpace,
+        glyphSize: staffSpace * 4.0,
+        metadata: metadata,
+      );
+    }
+
     final staffPos = StaffPositionCalculator.calculate(note.pitch, clef);
     final stemUp = staffPos <= 0;
-    
-    // âœ… REGRAS BEHIND BARS: Slurs devem evitar hastes!
-    // - Slur na MESMA direÃ§Ã£o da haste â†’ comeÃ§a/termina na PONTA da haste (3.5 SS)
-    // - Slur na direÃ§Ã£o OPOSTA â†’ comeÃ§a/termina prÃ³ximo Ã  cabeÃ§a da nota
-    double yOffset;
+    final noteClearance = math.max(
+      metrics.halfHeight * 0.28,
+      staffSpace * 0.14,
+    );
+    final stemLength =
+        (metadata.getEngravingDefaultValue('stemLength') ?? 3.5) * staffSpace;
+    final clearanceFromStem = staffSpace * 0.08;
 
-    const double stemHeight = 3.2; // ligeiramente menor para curvas mais naturais
-    const double clearanceFromStem = 0.25;
+    double yOffset;
+    if (effectiveGraceSlur && !isStart) {
+      yOffset = noteClearance * (above ? -1 : 1);
+    } else if (above && stemUp) {
+      yOffset = -(stemLength + clearanceFromStem);
+    } else if (!above && !stemUp) {
+      yOffset = stemLength + clearanceFromStem;
+    } else {
+      yOffset = noteClearance * (above ? -1 : 1);
+    }
 
     if (above && stemUp) {
-      // Slur ACIMA + stem UP: ir atÃ© a PONTA da haste + margem
-      yOffset = -(stemHeight + clearanceFromStem) * staffSpace;
-    } else if (!above && !stemUp) {
-      // Slur ABAIXO + stem DOWN: ir atÃ© a PONTA da haste + margem
-      yOffset = (stemHeight + clearanceFromStem) * staffSpace;
-    } else {
-      // Slur na direÃ§Ã£o OPOSTA da haste: prÃ³ximo Ã  cabeÃ§a da nota
-      yOffset = staffSpace * 0.55 * (above ? -1 : 1);
+      final stemAnchor =
+          metrics.stemUpAnchor ?? Offset(metrics.rightEdge, noteY);
+      return Offset(stemAnchor.dx + (staffSpace * 0.04), noteY + yOffset);
     }
 
-    // Appoggiatura/acciaccatura com slur: o ponto inicial deve nascer da nota de graÃ§a.
-    if (isStart && _hasGraceOrnament(note)) {
-      final hasAccidental = note.pitch.accidentalType != null;
-      final graceLead = hasAccidental ? 2.8 : 1.5;
-      final graceX = notePos.dx - (staffSpace * graceLead) + (noteWidth * 0.2);
-      final graceY = noteY + (staffSpace * 0.35 * (above ? -1 : 1));
-      return Offset(graceX, graceY);
+    if (!above && !stemUp) {
+      final stemAnchor =
+          metrics.stemDownAnchor ?? Offset(metrics.leftEdge, noteY);
+      return Offset(stemAnchor.dx - (staffSpace * 0.04), noteY + yOffset);
     }
 
-    // Offset X: inÃ­cio Ã  esquerda (35%), fim Ã  direita (85%)
-    // Fim mais Ã  direita para nÃ£o ultrapassar a nota
-    final xOffset = isStart ? noteWidth * 0.35 : noteWidth * 0.85;
-    
-    return Offset(
-      notePos.dx + xOffset,
-      noteY + yOffset,
+    final edgeInset = math.min(metrics.width * 0.16, staffSpace * 0.14);
+    final x = isStart
+        ? metrics.rightEdge - edgeInset
+        : metrics.leftEdge + edgeInset;
+
+    return Offset(x, noteY + yOffset);
+  }
+
+  (Offset, Offset) _calculateTieEndpoints(
+    Offset startPos,
+    Note startNote,
+    Offset endPos,
+    Note endNote, {
+    required bool tieAbove,
+  }) {
+    final startMetrics = _resolveNoteheadMetrics(startPos, startNote);
+    final endMetrics = _resolveNoteheadMetrics(endPos, endNote);
+    final clearance = math.max(
+      math.max(startMetrics.halfHeight, endMetrics.halfHeight) * 0.55,
+      staffSpace * 0.28,
+    );
+    final edgePadding = staffSpace * 0.08;
+
+    return (
+      Offset(
+        startMetrics.rightEdge - edgePadding,
+        startPos.dy + (tieAbove ? -clearance : clearance),
+      ),
+      Offset(
+        endMetrics.leftEdge + edgePadding,
+        endPos.dy + (tieAbove ? -clearance : clearance),
+      ),
     );
   }
 
-  bool _hasGraceOrnament(Note note) {
-    return note.ornaments.any((ornament) {
-      return ornament.type == OrnamentType.appoggiaturaUp ||
-          ornament.type == OrnamentType.appoggiaturaDown ||
-          ornament.type == OrnamentType.acciaccatura ||
-          ornament.type == OrnamentType.grace;
-    });
+  Offset calculateSlurEndpointForTesting(
+    Offset notePos,
+    Note note,
+    Clef clef, {
+    required bool isStart,
+    required bool above,
+    bool isGraceSlur = false,
+  }) {
+    return _calculateSlurEndpoint(
+      notePos,
+      note,
+      clef,
+      isStart: isStart,
+      above: above,
+      isGraceSlur: isGraceSlur,
+    );
   }
-  
-  /// Desenha curva com espessura variÃ¡vel (SMuFL spec)
-  ///
-  /// **ESPESSURAS:**
-  /// - Endpoint: 0.1 SS (slur) / 0.1 SS (tie)
-  /// - Midpoint: 0.22 SS (slur) / 0.22 SS (tie)
-  ///
-  /// Usa Path com mÃºltiplas linhas paralelas para simular gradiente
+
+  (Offset, Offset) calculateTieEndpointsForTesting(
+    Offset startPos,
+    Note startNote,
+    Offset endPos,
+    Note endNote, {
+    required bool tieAbove,
+  }) {
+    return _calculateTieEndpoints(
+      startPos,
+      startNote,
+      endPos,
+      endNote,
+      tieAbove: tieAbove,
+    );
+  }
+
+  bool _hasGraceOrnamentOnElement(dynamic element) {
+    if (element is Note) {
+      return hasGraceOrnament(element);
+    }
+    if (element is Chord) {
+      return hasGraceOrnamentInOrnaments(element.ornaments);
+    }
+    return false;
+  }
+
   void _drawVariableThicknessCurve(
     Canvas canvas,
     CubicBezierCurve curve,
-    Color color,
-    {required bool isSlur,}
-  ) {
-    final endpointThickness = isSlur 
-      ? metadata.getEngravingDefaultValue('slurEndpointThickness') ?? 0.1
-      : metadata.getEngravingDefaultValue('tieEndpointThickness') ?? 0.1;
-    
+    Color color, {
+    required bool isSlur,
+  }) {
+    final endpointThickness = isSlur
+        ? metadata.getEngravingDefaultValue('slurEndpointThickness') ?? 0.1
+        : metadata.getEngravingDefaultValue('tieEndpointThickness') ?? 0.1;
+
     final midpointThickness = isSlur
-      ? metadata.getEngravingDefaultValue('slurMidpointThickness') ?? 0.22
-      : metadata.getEngravingDefaultValue('tieMidpointThickness') ?? 0.22;
-    
+        ? metadata.getEngravingDefaultValue('slurMidpointThickness') ?? 0.22
+        : metadata.getEngravingDefaultValue('tieMidpointThickness') ?? 0.22;
+
     final endpointThicknessPx = endpointThickness * staffSpace;
     final midpointThicknessPx = midpointThickness * staffSpace;
-    
-    // Criar Path superior e inferior
+
     final pathTop = Path();
     final pathBottom = Path();
-    
-    // Amostrar curva em 50 pontos
+
     const numPoints = 50;
     final points = <Offset>[];
     final thicknesses = <double>[];
-    
+
     for (int i = 0; i <= numPoints; i++) {
       final t = i / numPoints;
       final point = curve.pointAt(t);
       points.add(point);
-      
-      // Espessura interpolada: endpoint â†’ midpoint â†’ endpoint
-      // FunÃ§Ã£o parabÃ³lica: thickness = endpoint + (midpoint - endpoint) * (1 - (2t - 1)Â²)
-      final tCentered = 2 * t - 1; // [-1, 1]
-      final factor = 1 - tCentered * tCentered; // Parabola
-      final thickness = endpointThicknessPx + 
-        (midpointThicknessPx - endpointThicknessPx) * factor;
+
+      final tCentered = 2 * t - 1;
+      final factor = 1 - tCentered * tCentered;
+      final thickness =
+          endpointThicknessPx +
+          (midpointThicknessPx - endpointThicknessPx) * factor;
       thicknesses.add(thickness);
     }
-    
-    // Calcular vetores perpendiculares para cada ponto
+
     for (int i = 0; i <= numPoints; i++) {
       final point = points[i];
       final thickness = thicknesses[i];
-      
-      // Calcular tangente (derivada)
       final t = i / numPoints;
       final tangent = curve.derivativeAt(t);
       final tangentAngle = math.atan2(tangent.dy, tangent.dx);
-      
-      // Vetor perpendicular
+
       final perpAngle = tangentAngle + math.pi / 2;
       final perpDx = math.cos(perpAngle) * thickness / 2;
       final perpDy = math.sin(perpAngle) * thickness / 2;
-      
+
       final topPoint = Offset(point.dx + perpDx, point.dy + perpDy);
       final bottomPoint = Offset(point.dx - perpDx, point.dy - perpDy);
-      
+
       if (i == 0) {
         pathTop.moveTo(topPoint.dx, topPoint.dy);
         pathBottom.moveTo(bottomPoint.dx, bottomPoint.dy);
@@ -360,12 +423,9 @@ class SlurRenderer {
         pathBottom.lineTo(bottomPoint.dx, bottomPoint.dy);
       }
     }
-    
-    // Conectar pathTop e pathBottom para criar forma fechada
-    final closedPath = Path()
-      ..addPath(pathTop, Offset.zero);
-    
-    // Adicionar pathBottom em ordem reversa
+
+    final closedPath = Path()..addPath(pathTop, Offset.zero);
+
     for (int i = numPoints; i >= 0; i--) {
       final t = i / numPoints;
       final point = curve.pointAt(t);
@@ -378,13 +438,31 @@ class SlurRenderer {
       final bottomPoint = Offset(point.dx - perpDx, point.dy - perpDy);
       closedPath.lineTo(bottomPoint.dx, bottomPoint.dy);
     }
-    
+
     closedPath.close();
-    
+
     final paint = Paint()
       ..color = color
       ..style = PaintingStyle.fill;
-    
+
     canvas.drawPath(closedPath, paint);
   }
+}
+
+class _NoteheadMetrics {
+  final double leftEdge;
+  final double rightEdge;
+  final double width;
+  final double halfHeight;
+  final Offset? stemUpAnchor;
+  final Offset? stemDownAnchor;
+
+  const _NoteheadMetrics({
+    required this.leftEdge,
+    required this.rightEdge,
+    required this.width,
+    required this.halfHeight,
+    required this.stemUpAnchor,
+    required this.stemDownAnchor,
+  });
 }
