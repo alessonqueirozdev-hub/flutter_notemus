@@ -35,5 +35,11 @@ build/
 temp_notemus_multiplatform/
 temp_notemus_plugin/
 
+# Auto-generated test automation artifacts
+.playwright-cli/
+
+# Flutter-generated CMake ephemeral files (not part of plugin source)
+linux/flutter/
+
 # Generated Flutter registrant (Android app)
 android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
