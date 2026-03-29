@@ -196,9 +196,13 @@ For a full conformance audit see [`doc/MEI_V5_AUDIT.md`](doc/MEI_V5_AUDIT.md).
 
 - Stem-safe slur and tie routing now keeps curves on the notehead side for regular notes, grace notes, and chord ties.
 - Arpeggio, tuplet, and octave-mark engraving were retuned for tighter alignment, clearer brackets, stronger contrast, and vertically centered score previews.
-- The example gallery was refreshed with a Cupertino shell, restored non-redundant public demos, dedicated scroll controllers, white score canvases, and new lyrics/text coverage.
-- Layout rendering still preserves voice context during horizontal justification, while beaming now retains the note metadata consumed by downstream renderers and parsers.
-- `MusicScorePainter.shouldRepaint` continues to use a deterministic layout signature, backed by expanded regression coverage for spacing, grouping, articulation helpers, and example smoke tests.
+- The example gallery was refreshed with a Cupertino shell, restored non-redundant public demos, dedicated scroll controllers, white score canvases, and new lyrics/text coverage (`LyricsTextExample`).
+- `ScorePreviewFrame` no longer forces a fixed bounded height on `MusicScore`; scores now render at their natural height, eliminating adaptive scale-down, clipped elements, and text overlap in example cards.
+- Layout rendering preserves voice context during horizontal justification, while beaming retains the note metadata consumed by downstream renderers and parsers.
+- `MusicScorePainter.shouldRepaint` uses a deterministic layout signature, backed by expanded regression coverage for spacing, grouping, articulation helpers, tuplets, SMuFL positioning, chord grouping, and example smoke tests.
+- CI pipeline (`.github/workflows/ci.yml`) added — runs `flutter analyze`, `flutter test`, and `flutter pub publish --dry-run` on every push and pull request.
+- All source comments and documentation strings migrated to English throughout the entire codebase (library, tests, and examples) — Issue #11 closed.
+- Duplicate stem X-offset constants in `BeamRenderer` extracted into a single `_stemXOffset()` helper.
 
 ---
 
@@ -208,7 +212,7 @@ All pending work is tracked as GitHub issues, with the local index mirrored in [
 
 - Audio, export, and playback roadmap: [#1](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/1), [#2](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/2), [#15](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/15), [#20](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/20)
 - Engraving and layout follow-up: [#3](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/3), [#4](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/4), [#5](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/5), [#8](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/8), [#9](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/9), [#14](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/14)
-- Content and text rendering follow-up: [#11](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/11), [#12](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/12), [#13](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/13)
+- Content and text rendering follow-up: [#12](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/12), [#13](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/13)
 - Editor and interactivity roadmap: [#16](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/16), [#17](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/17), [#18](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/18), [#19](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/19)
 - Remaining example/system integration work: [#7](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/7)
 
