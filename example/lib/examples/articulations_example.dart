@@ -1,138 +1,135 @@
-// example/lib/examples/articulations_example.dart
-
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 
-/// A page widget that demonstrates the rendering of articulation signals.
+import '../widgets/showcase_shell.dart';
+
 class ArticulationsExample extends StatelessWidget {
   const ArticulationsExample({super.key});
 
+  static const _accent = Color(0xFF0EA5E9);
+
   @override
   Widget build(BuildContext context) {
-    // Notes with stem UP (joint DOWN)
-    final List<MusicalElement> stemsUpElements = [
-      Clef(clefType: ClefType.treble),
-      Note(
-        pitch: const Pitch(step: 'A', octave: 4),
-        duration: const Duration(DurationType.quarter),
-        articulations: const [ArticulationType.staccato],
-      ),
-      Note(
-        pitch: const Pitch(step: 'G', octave: 4),
-        duration: const Duration(DurationType.quarter),
-        articulations: const [ArticulationType.accent],
-      ),
-      Note(
-        pitch: const Pitch(step: 'F', octave: 4),
-        duration: const Duration(DurationType.quarter),
-        articulations: const [ArticulationType.tenuto],
-      ),
-      Note(
-        pitch: const Pitch(step: 'E', octave: 4),
-        duration: const Duration(DurationType.quarter),
-        articulations: const [ArticulationType.marcato],
-      ),
-    ];
-
-    // Notes with stem DOWN (joint UP)
-    final List<MusicalElement> stemsDownElements = [
-      Clef(clefType: ClefType.treble),
-      Note(
-        pitch: const Pitch(step: 'C', octave: 5),
-        duration: const Duration(DurationType.quarter),
-        articulations: const [ArticulationType.staccato],
-      ),
-      Note(
-        pitch: const Pitch(step: 'D', octave: 5),
-        duration: const Duration(DurationType.quarter),
-        articulations: const [ArticulationType.accent],
-      ),
-      Note(
-        pitch: const Pitch(step: 'E', octave: 5),
-        duration: const Duration(DurationType.quarter),
-        articulations: const [ArticulationType.tenuto],
-      ),
-      Note(
-        pitch: const Pitch(step: 'F', octave: 5),
-        duration: const Duration(DurationType.quarter),
-        articulations: const [ArticulationType.marcato],
-      ),
-    ];
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Symbol Family: Articulations'),
-        backgroundColor: Colors.orange.shade700,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 12.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _buildSection(
-              title: 'Articulations (Stems Down)',
-              description:
-                  'Displays staccato, accent, tenuto and Marcato on notes with stem down. The articulation must appear ABOVE the note head.',
-              elements: stemsDownElements,
-            ),
-            _buildSection(
-              title: 'Articulations (Stems Up)',
-              description:
-                  'Displays the same articulations on stem-up notes. The articulation should appear BELOW the note head.',
-              elements: stemsUpElements,
-            ),
-          ],
+    return ExampleShowcasePage(
+      title: 'Articulations',
+      subtitle:
+          'A concise articulation gallery centered on stem-aware placement and readable contrast inside the public showcase.',
+      accentColor: _accent,
+      children: [
+        ExampleSectionCard(
+          title: 'Stem-Down Notes',
+          description:
+              'Staccato, accent, tenuto, and marcato remain above the notehead when the stems point downward.',
+          accentColor: _accent,
+          child: ScorePreviewFrame(
+            staff: _buildStaff([
+              Clef(clefType: ClefType.treble),
+              Note(
+                pitch: const Pitch(step: 'C', octave: 5),
+                duration: const Duration(DurationType.quarter),
+                articulations: const [ArticulationType.staccato],
+              ),
+              Note(
+                pitch: const Pitch(step: 'D', octave: 5),
+                duration: const Duration(DurationType.quarter),
+                articulations: const [ArticulationType.accent],
+              ),
+              Note(
+                pitch: const Pitch(step: 'E', octave: 5),
+                duration: const Duration(DurationType.quarter),
+                articulations: const [ArticulationType.tenuto],
+              ),
+              Note(
+                pitch: const Pitch(step: 'F', octave: 5),
+                duration: const Duration(DurationType.quarter),
+                articulations: const [ArticulationType.marcato],
+              ),
+            ]),
+            accentColor: _accent,
+            minHeight: 205,
+            staffSpace: 16.5,
+          ),
         ),
-      ),
+        ExampleSectionCard(
+          title: 'Stem-Up Notes',
+          description:
+              'The same articulation family flips below the notehead when the stem rises, keeping the note field clean.',
+          accentColor: _accent,
+          child: ScorePreviewFrame(
+            staff: _buildStaff([
+              Clef(clefType: ClefType.treble),
+              Note(
+                pitch: const Pitch(step: 'A', octave: 4),
+                duration: const Duration(DurationType.quarter),
+                articulations: const [ArticulationType.staccato],
+              ),
+              Note(
+                pitch: const Pitch(step: 'G', octave: 4),
+                duration: const Duration(DurationType.quarter),
+                articulations: const [ArticulationType.accent],
+              ),
+              Note(
+                pitch: const Pitch(step: 'F', octave: 4),
+                duration: const Duration(DurationType.quarter),
+                articulations: const [ArticulationType.tenuto],
+              ),
+              Note(
+                pitch: const Pitch(step: 'E', octave: 4),
+                duration: const Duration(DurationType.quarter),
+                articulations: const [ArticulationType.marcato],
+              ),
+            ]),
+            accentColor: _accent,
+            minHeight: 205,
+            staffSpace: 16.5,
+          ),
+        ),
+        ExampleSectionCard(
+          title: 'Mixed Accent Phrase',
+          description:
+              'A short phrase with varied accents makes it easier to compare spacing and articulation hierarchy in one glance.',
+          accentColor: _accent,
+          child: ScorePreviewFrame(
+            staff: _buildStaff([
+              Clef(clefType: ClefType.treble),
+              Note(
+                pitch: const Pitch(step: 'G', octave: 4),
+                duration: const Duration(DurationType.eighth),
+                articulations: const [ArticulationType.staccatissimo],
+              ),
+              Note(
+                pitch: const Pitch(step: 'A', octave: 4),
+                duration: const Duration(DurationType.eighth),
+                articulations: const [ArticulationType.accent],
+              ),
+              Note(
+                pitch: const Pitch(step: 'G', octave: 4),
+                duration: const Duration(DurationType.quarter),
+                articulations: const [ArticulationType.tenuto],
+              ),
+              Note(
+                pitch: const Pitch(step: 'C', octave: 5),
+                duration: const Duration(DurationType.quarter),
+                articulations: const [ArticulationType.marcato],
+              ),
+              Rest(duration: const Duration(DurationType.quarter)),
+            ]),
+            accentColor: _accent,
+            minHeight: 220,
+            staffSpace: 16.5,
+          ),
+        ),
+      ],
     );
   }
 
-  /// Builds a test section.
-  Widget _buildSection({
-    required String title,
-    required String description,
-    required List<MusicalElement> elements,
-  }) {
+  Staff _buildStaff(List<MusicalElement> elements) {
     final staff = Staff();
     final measure = Measure();
     for (final element in elements) {
       measure.add(element);
     }
     staff.add(measure);
-
-    return Card(
-      elevation: 2.0,
-      margin: const EdgeInsets.only(bottom: 24.0),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              description,
-              style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              height: 190,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(color: Colors.grey.shade300),
-                borderRadius: BorderRadius.circular(4.0),
-              ),
-              child: MusicScore(
-                staff: staff,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+    return staff;
   }
 }
-

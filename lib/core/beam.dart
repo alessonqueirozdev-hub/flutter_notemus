@@ -3,7 +3,7 @@
 import 'musical_element.dart';
 import 'note.dart';
 
-/// Representa uma viga (beam) que conecta notas
+/// Representa a viga (beam) that conecta notes
 class Beam extends MusicalElement {
   final List<Note> notes;
   final int beamCount;

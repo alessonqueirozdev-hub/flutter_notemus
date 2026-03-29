@@ -7,7 +7,7 @@ import 'ornament.dart';
 import 'dynamic.dart';
 import '../src/music_model/bounding_box_support.dart';
 
-/// Representa um acorde (conjunto de notas tocadas simultaneamente)
+/// Representa um chord (conjunto de notes tocadas simultaneamente)
 class Chord extends MusicalElement with BoundingBoxSupport {
   final List<Note> notes;
   final Duration duration;
@@ -18,8 +18,8 @@ class Chord extends MusicalElement with BoundingBoxSupport {
   final List<Ornament> ornaments;
   final Dynamic? dynamic;
 
-  /// Número da voz para notação polifônica (1 = soprano, 2 = contralto, etc.)
-  /// null = voz única (padrão)
+  /// Number of the voice for noteção polifônica (1 = soprano, 2 = contralto, etc.)
+  /// null = voice única (default)
   final int? voice;
 
   Chord({

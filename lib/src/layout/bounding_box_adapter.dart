@@ -6,31 +6,31 @@ import '../../core/core.dart'; // 🆕 Tipos do core
 import 'bounding_box.dart';
 import 'collision_detector.dart' as collision;
 
-/// Adapter para integração entre BoundingBox hierárquico e sistema de colisão
+/// Adapter for integração entre Hierarchical BoundingBox e system de colisão
 ///
-/// Este adapter permite:
-/// 1. Converter BoundingBox hierárquico para BoundingBox simples (CollisionDetector)
-/// 2. Registrar hierarquia no CollisionDetector
-/// 3. Manter compatibilidade com código existente
+/// This adapter permite:
+/// 1. Convertsr Hierarchical BoundingBox for BoundingBox simples (Collisiwheretector)
+/// 2. Registrar hierarquia no Collisiwheretector
+/// 3. Manter compatibilidade with código existente
 ///
-/// PADRÃO: Adapter Pattern
+/// Default: Adapter Pattern
 class BoundingBoxAdapter {
-  /// Converte BoundingBox hierárquico para BoundingBox simples do CollisionDetector
+  /// Converts Hierarchical BoundingBox for BoundingBox simples of the Collisiwheretector
   ///
-  /// @param hierarchical BoundingBox hierárquico
-  /// @param element Elemento musical associado
-  /// @param elementType Tipo do elemento para detecção de colisão
-  /// @return BoundingBox simples compatível com CollisionDetector
+  /// @param hierarchical Hierarchical BoundingBox
+  /// @param element Associated musical element
+  /// @param elementType Element type for collision detection
+  /// @return BoundingBox simples compatível with Collisiwheretector
   static collision.BoundingBox toCollisionBoundingBox(
     BoundingBox hierarchical,
     MusicalElement element,
     String elementType,
   ) {
-    // Garantir que posições estão atualizadas
+    // Garantir that positions estão currentizadas
     hierarchical.calculateAbsolutePosition();
     hierarchical.calculateBoundingBox();
 
-    // Criar Rect a partir das bordas calculadas
+    // Createsr Rect a partir das bordas Calculatestesdas
     final rect = Rect.fromLTRB(
       hierarchical.absolutePosition.x + hierarchical.borderLeft,
       hierarchical.absolutePosition.y + hierarchical.borderTop,
@@ -47,15 +47,15 @@ class BoundingBoxAdapter {
     );
   }
 
-  /// Registra BoundingBox hierárquico e todos seus filhos no CollisionDetector
+  /// Registra Hierarchical BoundingBox e all their filhos no Collisiwheretector
   ///
-  /// Percorre recursivamente a hierarquia e registra cada elemento
+  /// Percorre recursivamente a hierarquia e registra each elemento
   ///
-  /// @param hierarchical BoundingBox hierárquico raiz
-  /// @param element Elemento musical associado ao bbox raiz
-  /// @param elementType Tipo do elemento
-  /// @param detector CollisionDetector onde registrar
-  /// @param registerChildren Se true, registra filhos recursivamente
+  /// @param hierarchical Hierarchical BoundingBox raiz
+  /// @param element Associated musical element ao bbox raiz
+  /// @param elementType Type of the element
+  /// @param detector Collisiwheretector where registrar
+  /// @param registerChildren if true, registra filhos recursivamente
   static void registerInCollisionDetector(
     BoundingBox hierarchical,
     MusicalElement element,
@@ -63,7 +63,7 @@ class BoundingBoxAdapter {
     collision.CollisionDetector detector, {
     bool registerChildren = true,
   }) {
-    // Atualizar hierarquia antes de registrar
+    // Currentizar hierarquia antes de registrar
     hierarchical.calculateAbsolutePosition();
     hierarchical.calculateBoundingBox();
 
@@ -92,7 +92,7 @@ class BoundingBoxAdapter {
         final child = hierarchical.childElements[i];
         final childType = '$elementType.child$i';
 
-        // Recursão para registrar toda a subárvore
+        // Recursão for registrar toda a subárvore
         registerInCollisionDetector(
           child,
           element, // Mantém referência ao elemento musical principal
@@ -104,24 +104,24 @@ class BoundingBoxAdapter {
     }
   }
 
-  /// Cria BoundingBox hierárquico a partir de GlyphInfo SMuFL
+  /// Creates Hierarchical BoundingBox from GlyphInfo SMuFL
   ///
-  /// @param glyphBBox Bounding box do glifo (do metadata SMuFL)
-  /// @param staffSpace Tamanho do staff space para conversão
-  /// @return BoundingBox hierárquico configurado
+  /// @param glyphBBox Bounding box of the glifo (of the metadata SMuFL)
+  /// @param staffSpace Staff space size for conversão
+  /// @return Hierarchical BoundingBox Configuresdo
   static BoundingBox fromSmuflGlyphBBox(
     SmuflBoundingBox glyphBBox,
     double staffSpace,
   ) {
     final bbox = BoundingBox();
 
-    // Converter coordenadas SMuFL (staff spaces) para pixels
+    // Convertsr coordenadas SMuFL (staff spaces) for pixels
     bbox.borderLeft = glyphBBox.bBoxSwX * staffSpace;
     bbox.borderRight = glyphBBox.bBoxNeX * staffSpace;
     bbox.borderTop = glyphBBox.bBoxNeY * staffSpace; // SMuFL: Y negativo = acima
     bbox.borderBottom = glyphBBox.bBoxSwY * staffSpace;
 
-    // Calcular tamanho
+    // Calculatestesr size
     bbox.size = SizeF2D(
       bbox.borderRight - bbox.borderLeft,
       bbox.borderBottom - bbox.borderTop,
@@ -130,13 +130,13 @@ class BoundingBoxAdapter {
     return bbox;
   }
 
-  /// Cria BoundingBox hierárquico simples a partir de dimensões
+  /// Creates Hierarchical BoundingBox simples from dimensões
   ///
-  /// @param width Largura em pixels
-  /// @param height Altura em pixels
-  /// @param centerX Se true, centraliza horizontalmente (borderLeft negativo)
-  /// @param centerY Se true, centraliza verticalmente (borderTop negativo)
-  /// @return BoundingBox configurado
+  /// @param width Width in pixels
+  /// @param height Height in pixels
+  /// @param centerX if true, centraliza horizontalmente (borderLeft negativo)
+  /// @param centerY if true, centraliza verticalmente (borderTop negativo)
+  /// @return BoundingBox Configuresdo
   static BoundingBox fromDimensions(
     double width,
     double height, {
@@ -166,12 +166,12 @@ class BoundingBoxAdapter {
     return bbox;
   }
 
-  /// Mescla múltiplos BoundingBoxes em um único envelope
+  /// Mescla múltiplos BoundingBoxes in um único envelope
   ///
-  /// Útil para criar bounding box de grupos (acordes, tuplas, etc.)
+  /// Útil for Createsr bounding box de grupos (chords, tuplets, etc.)
   ///
-  /// @param boxes Lista de BoundingBoxes a mesclar
-  /// @return BoundingBox que engloba todos os boxes fornecidos
+  /// @param boxes List of BoundingBoxes a mesclar
+  /// @return BoundingBox that engloba all os boxes fornecidos
   static BoundingBox merge(List<BoundingBox> boxes) {
     if (boxes.isEmpty) {
       return BoundingBox();
@@ -183,22 +183,22 @@ class BoundingBoxAdapter {
 
     final merged = BoundingBox();
 
-    // Adicionar todos como filhos
+    // add all como filhos
     for (final box in boxes) {
       merged.addChild(box);
     }
 
-    // Calcular envelope
+    // Calculatestesr envelope
     merged.calculateBoundingBox();
 
     return merged;
   }
 
   // ====================
-  // MÉTODOS AUXILIARES PRIVADOS
+  // MethodS AUXILIARES PRIVADOS
   // ====================
 
-  /// Converte string de tipo para enum CollisionCategory
+  /// Converts string de type for enum CollisionCategory
   static collision.CollisionCategory _stringToCollisionCategory(String elementType) {
     if (elementType.contains('notehead') || elementType.contains('note')) {
       return collision.CollisionCategory.notehead;
@@ -231,7 +231,7 @@ class BoundingBoxAdapter {
     return collision.CollisionCategory.other;
   }
 
-  /// Converte int de prioridade para enum CollisionPriority
+  /// Converts int de prioridade for enum CollisionPriority
   static collision.CollisionPriority _stringToCollisionPriority(int priorityValue) {
     if (priorityValue <= 2) {
       return collision.CollisionPriority.veryHigh;
@@ -246,10 +246,10 @@ class BoundingBoxAdapter {
     }
   }
 
-  /// Mapeia tipo de elemento para prioridade de colisão
+  /// Maps type de elemento for prioridade de colisão
   static int _elementTypeToPriority(String elementType) {
-    // Prioridades baseadas em importância visual
-    // Valores menores = maior prioridade (não serão movidos)
+    // Prioridades baseadas in importância visual
+    // Valores smalleres = greater prioridade (not serão movidos)
 
     if (elementType.contains('notehead')) {
       return 1; // Cabeças de nota: maior prioridade
@@ -283,9 +283,9 @@ class BoundingBoxAdapter {
   }
 }
 
-/// Classe auxiliar para representar BoundingBox de glifo SMuFL
+/// Class auxiliar for representar BoundingBox de glifo SMuFL
 ///
-/// Apenas para facilitar conversão, não substitui GlyphBoundingBox real
+/// Apenas for facilitar conversão, not substitui GlyphBoundingBox real
 class SmuflBoundingBox {
   final double bBoxSwX; // Southwest X (canto inferior esquerdo)
   final double bBoxSwY; // Southwest Y

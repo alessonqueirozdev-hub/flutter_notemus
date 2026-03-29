@@ -1,7 +1,7 @@
-/// Motor principal de espaÃ§amento inteligente
+/// Motor principal de intelligent spacing
 ///
-/// Implementa o algoritmo dual (textual + duracional) com combinaÃ§Ã£o adaptativa
-/// seguindo os princÃ­pios de MuseScore MS21, Dorico e Lime/ACM.
+/// Implementa o algoritmo dual (textual + duracional) with combinação adaptativa
+/// following os princípios de MuseScore MS21, Dorico e Lime/ACM.
 library;
 
 import 'dart:math';
@@ -9,22 +9,22 @@ import 'spacing_model.dart';
 import 'spacing_preferences.dart';
 import 'optical_compensation.dart';
 
-/// Motor de espaÃ§amento inteligente
+/// Spacing engine inteligente
 ///
-/// Processa compassos em nÃ­vel de sistema (nÃ£o individual) para garantir
-/// consistÃªncia de espaÃ§amento conforme a Regra Dourada de Gould.
+/// Processes measures in nível de system (not individual) for garantir
+/// consistência de spacing according to a Regra Dourada de Gould.
 class IntelligentSpacingEngine {
-  /// PreferÃªncias de espaÃ§amento
+  /// Preferences de spacing
   final SpacingPreferences preferences;
 
-  /// Calculadora de espaÃ§amento duracional
+  /// Calculatora de durational spacing
   late final SpacingCalculator _calculator;
 
-  /// Compensador Ã³ptico
+  /// Compensador óptico
   OpticalCompensator? _compensator;
 
-  // CollisionDetector disponÃ­vel para uso futuro
-  // final CollisionDetector _collisionDetector;
+  // Collisiwheretector disponível for uso futuro
+  // final Collisiwheretector _collisiwheretector;
 
   IntelligentSpacingEngine({this.preferences = SpacingPreferences.normal}) {
     _calculator = SpacingCalculator(
@@ -33,7 +33,7 @@ class IntelligentSpacingEngine {
     );
   }
 
-  /// Inicializa o compensador Ã³ptico com staff space
+  /// Initialises o compensador óptico with staff space
   void initializeOpticalCompensator(double staffSpace) {
     _compensator = OpticalCompensator(
       staffSpace: staffSpace,
@@ -42,16 +42,16 @@ class IntelligentSpacingEngine {
     );
   }
 
-  /// Calcula espaÃ§amento textual (anti-colisÃ£o)
+  /// Calculatestes textual spacing (anti-colisão)
   ///
-  /// **Objetivo:** Evitar colisÃµes de sÃ­mbolos, ignorando duraÃ§Ã£o
+  /// **Objetivo:** Evitar colisões de símbolos, ignorando duração
   ///
   /// **Processo:**
-  /// 1. Calcular largura de cada sÃ­mbolo
-  /// 2. Adicionar padding mÃ­nimo entre elementos adjacentes
-  /// 3. Processar sÃ­mbolos simultÃ¢neos em mÃºltiplas pautas
+  /// 1. Calculatestesr width de each símbolo
+  /// 2. add padding mínimo entre elementos adjacentes
+  /// 3. Processesr símbolos simultâneos in múltiplas staves
   ///
-  /// **Retorna:** Lista de posiÃ§Ãµes com espaÃ§amento denso e uniforme
+  /// **Returns:** List of positions with spacing denso e uniforme
   List<SymbolSpacing> computeTextualSpacing({
     required List<MusicalSymbolInfo> symbols,
     required double minGap,
@@ -63,13 +63,13 @@ class IntelligentSpacingEngine {
     for (int i = 0; i < symbols.length; i++) {
       final symbol = symbols[i];
 
-      // Calcular largura do sÃ­mbolo
+      // Calculatestesr width of the símbolo
       double symbolWidth = _calculateSymbolWidth(symbol, staffSpace);
 
-      // Adicionar padding mÃ­nimo
+      // add padding mínimo
       double padding = minGap * staffSpace;
 
-      // Ajustar para acidentes
+      // Ajustar for accidentals
       if (symbol.hasAccidental) {
         padding += _calculateAccidentalSpace(symbol, staffSpace);
       }
@@ -89,16 +89,16 @@ class IntelligentSpacingEngine {
     return positions;
   }
 
-  /// Calcula espaÃ§amento duracional (proporcional ao tempo)
+  /// Calculatestes durational spacing (proporcional ao tempo)
   ///
-  /// **Objetivo:** Codificar relaÃ§Ãµes temporais
+  /// **Objetivo:** Codificar relações temporais
   ///
   /// **Processo:**
-  /// 1. Encontrar nota mais curta do sistema
-  /// 2. Para cada sÃ­mbolo: calcular espaÃ§o baseado na duraÃ§Ã£o atÃ© o prÃ³ximo
-  /// 3. Usar modelo matemÃ¡tico (raiz quadrada recomendado)
+  /// 1. Encontrar note mais curta of the system
+  /// 2. For each símbolo: Calculatestesr space based na duração até o next
+  /// 3. Usesr modelo matemático (raiz quadrada recomendado)
   ///
-  /// **Retorna:** Lista de posiÃ§Ãµes com espaÃ§amento proporcional
+  /// **Returns:** List of positions with spacing proporcional
   List<SymbolSpacing> computeDurationalSpacing({
     required List<MusicalSymbolInfo> symbols,
     required double shortestDuration,
@@ -110,7 +110,7 @@ class IntelligentSpacingEngine {
     for (int i = 0; i < symbols.length; i++) {
       final symbol = symbols[i];
 
-      // Calcular espaÃ§o baseado na duraÃ§Ã£o atÃ© o prÃ³ximo sÃ­mbolo
+      // Calculatestesr space based na duração até o next símbolo
       double durationForSpacing =
           symbol.duration ??
           (i < symbols.length - 1
@@ -120,14 +120,14 @@ class IntelligentSpacingEngine {
         durationForSpacing = shortestDuration;
       }
 
-      // Calcular espaÃ§o usando modelo matemÃ¡tico
+      // Calculatestesr space using modelo matemático
       double space = _calculator.calculateSpace(
         durationForSpacing,
         shortestDuration,
       );
       space *= staffSpace; // Converter para pixels
 
-      // Pausas tÃªm espaÃ§amento reduzido (80%)
+      // PaUsess têm spacing reduzido (80%)
       if (symbol.isRest) {
         space *= preferences.restSpacingRatio;
       }
@@ -147,13 +147,13 @@ class IntelligentSpacingEngine {
     return positions;
   }
 
-  /// Combina espaÃ§amentos textual e duracional adaptativamente
+  /// Combina spacings textual e duracional adaptativamente
   ///
   /// **Algoritmo:**
-  /// - Se textual < target: Expandir com guia duracional
+  /// - Se textual < target: Expandir with guia duracional
   /// - Se textual > target: Comprimir linearmente
   ///
-  /// **Retorna:** EspaÃ§amento final combinado
+  /// **Returns:** Spacing final combinado
   List<SymbolSpacing> combineSpacings({
     required List<SymbolSpacing> textual,
     required List<SymbolSpacing> durational,
@@ -164,15 +164,15 @@ class IntelligentSpacingEngine {
         : textual.last.xPosition + textual.last.width;
 
     if (textualWidth > targetWidth) {
-      // Caso A: CompressÃ£o linear
+      // Caso A: Compressão linear
       return _compressTextualSpacing(textual, targetWidth);
     } else {
-      // Caso B: ExpansÃ£o com guia duracional
+      // Caso B: Expansão with guia duracional
       return _expandWithDurationalGuidance(textual, durational, targetWidth);
     }
   }
 
-  /// Comprime espaÃ§amento textual linearmente
+  /// Comprime textual spacing linearmente
   List<SymbolSpacing> _compressTextualSpacing(
     List<SymbolSpacing> textual,
     double targetWidth,
@@ -202,7 +202,7 @@ class IntelligentSpacingEngine {
     return compressed;
   }
 
-  /// Expande espaÃ§amento usando guia duracional
+  /// Expande spacing using guia duracional
   List<SymbolSpacing> _expandWithDurationalGuidance(
     List<SymbolSpacing> textual,
     List<SymbolSpacing> durational,
@@ -292,7 +292,7 @@ class IntelligentSpacingEngine {
     return expanded;
   }
 
-  /// Aplica compensaÃ§Ãµes Ã³pticas
+  /// applies compensações ópticas
   void applyOpticalCompensation({
     required List<SymbolSpacing> spacing,
     required List<MusicalSymbolInfo> symbols,
@@ -307,40 +307,40 @@ class IntelligentSpacingEngine {
       final prevContext = _createOpticalContext(prevSymbol);
       final currContext = _createOpticalContext(currSymbol);
 
-      // Calcular densidade local
+      // Calculatestesr densidade local
       final double density = _calculateLocalDensity(i, spacing, symbols);
 
-      // Calcular compensaÃ§Ã£o
+      // Calculatestesr compensação
       final double compensation = _compensator!.calculateCompensation(
         prevContext,
         currContext,
         localDensity: density,
       );
 
-      // Aplicar ajuste a todos os sÃ­mbolos subsequentes
+      // Appliesr ajuste a all os símbolos subsequentes
       for (int j = i; j < spacing.length; j++) {
         spacing[j].xPosition += compensation;
       }
     }
   }
 
-  /// Calcula largura de um sÃ­mbolo
+  /// Calculatestes width de um símbolo
   double _calculateSymbolWidth(MusicalSymbolInfo symbol, double staffSpace) {
-    // Largura base do glyph (em staff spaces)
-    double baseWidth = symbol.glyphWidth ?? 1.18; // noteheadBlack padrÃ£o
+    // Width base of the glyph (in staff spaces)
+    double baseWidth = symbol.glyphWidth ?? 1.18; // noteheadBlack padrão
 
-    // Converter para pixels
+    // Convertsr for pixels
     return baseWidth * staffSpace;
   }
 
-  /// Calcula espaÃ§o adicional para acidente
+  /// Calculatestes space added for accidental
   double _calculateAccidentalSpace(
     MusicalSymbolInfo symbol,
     double staffSpace,
   ) {
     if (!symbol.hasAccidental) return 0.0;
 
-    // Interpolar entre espaÃ§amento normal (0.5 SS) e compacto (0.25 SS)
+    // Interpolar entre spacing normal (0.5 SS) e compacto (0.25 SS)
     final double density = preferences.densityPreference;
     return SpacingConstants.lerp(
           SpacingConstants.accidentalSpacingNormal,
@@ -350,7 +350,7 @@ class IntelligentSpacingEngine {
         staffSpace;
   }
 
-  /// Cria contexto Ã³ptico para um sÃ­mbolo
+  /// Creates contexto óptico for um símbolo
   OpticalContext _createOpticalContext(MusicalSymbolInfo symbol) {
     if (symbol.isRest) {
       return OpticalContext.rest(duration: symbol.duration ?? 0.25);
@@ -365,13 +365,13 @@ class IntelligentSpacingEngine {
     );
   }
 
-  /// Calcula densidade local ao redor de um Ã­ndice
+  /// Calculatestes densidade local ao redor de um index
   double _calculateLocalDensity(
     int index,
     List<SymbolSpacing> spacing,
     List<MusicalSymbolInfo> symbols,
   ) {
-    // Janela de 5 sÃ­mbolos centrada no Ã­ndice
+    // Janela de 5 símbolos centrada no index
     final int windowSize = 5;
     final int start = max(0, index - windowSize ~/ 2);
     final int end = min(spacing.length, index + windowSize ~/ 2 + 1);
@@ -385,11 +385,11 @@ class IntelligentSpacingEngine {
   }
 }
 
-/// InformaÃ§Ã£o de sÃ­mbolo musical para espaÃ§amento
+/// Informação de símbolo musical for spacing
 class MusicalSymbolInfo {
   final int index;
-  final double musicalTime; // Onset em fraÃ§Ãµes de semibreve
-  final double? duration; // DuraÃ§Ã£o em fraÃ§Ãµes de semibreve
+  final double musicalTime; // Onset em frações de semibreve
+  final double? duration; // Duração em frações de semibreve
   final bool isRest;
   final bool hasAccidental;
   final bool isDotted;
@@ -410,7 +410,7 @@ class MusicalSymbolInfo {
   });
 }
 
-/// Resultado de espaÃ§amento de um sÃ­mbolo
+/// Resultado de spacing de um símbolo
 class SymbolSpacing {
   final int symbolIndex;
   double xPosition;

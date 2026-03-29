@@ -56,7 +56,7 @@ abstract class MidiNativeAudioBackend {
 
   /// Triggers tie processing in the native sequencer.
   ///
-  /// Backends that do not support tie processing can implement as no-op.
+  /// Backends that of the not support tie processing can implement as no-op.
   Future<void> processTies();
 
   /// Indicates whether native backend is initialized and ready.

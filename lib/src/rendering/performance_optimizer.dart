@@ -1,5 +1,4 @@
 // lib/src/rendering/performance_optimizer.dart
-// VERSÃO CORRIGIDA: Gestão de cache melhorada
 
 import 'package:flutter/material.dart';
 import '../layout/layout_engine.dart';
@@ -9,20 +8,20 @@ class PerformanceOptimizer {
   static final Map<String, TextPainter> _textCache = {};
   static final Map<String, Offset> _positionCache = {};
 
-  // CORREÇÃO #8: Limite de tamanho de cache
+  // Cache size limit
   static const int maxCacheSize = 500;
 
   static List<PositionedElement> optimizeRenderOrder(
     List<PositionedElement> elements,
   ) {
-    // Ordena elementos para renderizar de baixo para cima
+    // Sort elements to render from bottom to top
     final sorted = List<PositionedElement>.from(elements);
     sorted.sort((a, b) {
-      // Primeiro por sistema
+      // First by system
       final systemComp = a.system.compareTo(b.system);
       if (systemComp != 0) return systemComp;
 
-      // Depois por posição Y
+      // Then by Y position
       return a.position.dy.compareTo(b.position.dy);
     });
     return sorted;
@@ -54,8 +53,8 @@ class PerformanceOptimizer {
   }
 
   static void returnPaint(Paint paint) {
-    // Método mantido para compatibilidade, mas não faz nada
-    // pois não estamos fazendo pooling de Paint objects
+    // Method kept for compatibility, but does nothing
+    // since we are not pooling Paint objects
   }
 
   static void drawOptimizedSmuflText({
@@ -92,7 +91,7 @@ class PerformanceOptimizer {
 
   static void _checkCacheSize() {
     if (_pathCache.length > maxCacheSize) {
-      // Remove 20% mais antigos
+      // Remove the oldest 20%
       final toRemove = (maxCacheSize * 0.2).round();
       final keys = _pathCache.keys.take(toRemove).toList();
       for (final key in keys) {

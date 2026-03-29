@@ -5,7 +5,7 @@ import '../../staff_coordinate_system.dart';
 import '../../../theme/music_score_theme.dart';
 import '../base_glyph_renderer.dart';
 
-/// Renderizador especializado para pontos de aumento.
+/// Rendersdor especializado for pontos de aumento.
 class DotRenderer extends BaseGlyphRenderer {
   DotRenderer({
     required super.metadata,
@@ -17,8 +17,8 @@ class DotRenderer extends BaseGlyphRenderer {
   final MusicScoreTheme theme;
 
   /// Regra tipográfica:
-  /// - notas em linha -> ponto no espaço acima
-  /// - notas em espaço -> ponto no mesmo espaço
+  /// - notes in linha -> ponto no space acima
+  /// - notes in space -> ponto no mesmo space
   static int resolveDotStaffPosition(int noteStaffPosition) {
     if (noteStaffPosition.isEven) {
       return noteStaffPosition + 1;

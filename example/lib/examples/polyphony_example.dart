@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 
-/// Example demonstrating polyphonic notation (multiple voices)
+/// Example demonstrating polyphonic notetion (multiple voices)
 ///
 /// Shows:
 /// 1. Two-voice texture (melody + accompaniment)
@@ -55,7 +55,7 @@ class PolyphonyExample {
 
   /// Create Bach-style counterpoint
   ///
-  /// Two independent melodic lines with equal importance
+  /// Two independent melodic lines with equal Importsnce
   static MultiVoiceMeasure createCounterpoint() {
     // Voice 1: Upper line
     final voice1 = Voice.voice1(name: 'Upper Voice');
@@ -215,14 +215,46 @@ class PolyphonyExampleWidget extends StatelessWidget {
     final voice1 = Voice.voice1();
     voice1.add(Clef(clefType: ClefType.treble));
     voice1.add(TimeSignature(numerator: 4, denominator: 4));
-    voice1.add(Note(pitch: const Pitch(step: 'E', octave: 5), duration: const Duration(DurationType.quarter)));
-    voice1.add(Note(pitch: const Pitch(step: 'D', octave: 5), duration: const Duration(DurationType.quarter)));
-    voice1.add(Note(pitch: const Pitch(step: 'C', octave: 5), duration: const Duration(DurationType.quarter)));
-    voice1.add(Note(pitch: const Pitch(step: 'D', octave: 5), duration: const Duration(DurationType.quarter)));
+    voice1.add(Note(
+        pitch: const Pitch(step: 'E', octave: 4),
+        duration: const Duration(DurationType.eighth),
+        beam: BeamType.start));
+    voice1.add(Note(
+        pitch: const Pitch(step: 'G', octave: 4),
+        duration: const Duration(DurationType.eighth),
+        beam: BeamType.inner));
+    voice1.add(Note(
+        pitch: const Pitch(step: 'A', octave: 4),
+        duration: const Duration(DurationType.eighth),
+        beam: BeamType.inner));
+    voice1.add(Note(
+        pitch: const Pitch(step: 'G', octave: 4),
+        duration: const Duration(DurationType.eighth),
+        beam: BeamType.end));
+    voice1.add(Note(
+        pitch: const Pitch(step: 'A', octave: 4),
+        duration: const Duration(DurationType.eighth),
+        beam: BeamType.start));
+    voice1.add(Note(
+        pitch: const Pitch(step: 'B', octave: 4),
+        duration: const Duration(DurationType.eighth),
+        beam: BeamType.inner));
+    voice1.add(Note(
+        pitch: const Pitch(step: 'A', octave: 4),
+        duration: const Duration(DurationType.eighth),
+        beam: BeamType.inner));
+    voice1.add(Note(
+        pitch: const Pitch(step: 'G', octave: 4),
+        duration: const Duration(DurationType.eighth),
+        beam: BeamType.end));
 
     final voice2 = Voice.voice2();
-    voice2.add(Note(pitch: const Pitch(step: 'C', octave: 4), duration: const Duration(DurationType.half)));
-    voice2.add(Note(pitch: const Pitch(step: 'G', octave: 3), duration: const Duration(DurationType.half)));
+    voice2.add(Note(
+        pitch: const Pitch(step: 'C', octave: 4),
+        duration: const Duration(DurationType.half)));
+    voice2.add(Note(
+        pitch: const Pitch(step: 'G', octave: 3),
+        duration: const Duration(DurationType.half)));
 
     measure.addVoice(voice1);
     measure.addVoice(voice2);
@@ -237,16 +269,52 @@ class PolyphonyExampleWidget extends StatelessWidget {
     final voice1 = Voice.voice1();
     voice1.add(Clef(clefType: ClefType.treble));
     voice1.add(TimeSignature(numerator: 4, denominator: 4));
-    voice1.add(Note(pitch: const Pitch(step: 'G', octave: 4), duration: const Duration(DurationType.quarter)));
-    voice1.add(Note(pitch: const Pitch(step: 'A', octave: 4), duration: const Duration(DurationType.quarter)));
-    voice1.add(Note(pitch: const Pitch(step: 'B', octave: 4), duration: const Duration(DurationType.quarter)));
-    voice1.add(Note(pitch: const Pitch(step: 'C', octave: 5), duration: const Duration(DurationType.quarter)));
+    voice1.add(Note(
+        pitch: const Pitch(step: 'E', octave: 4),
+        duration: const Duration(DurationType.eighth),
+        beam: BeamType.start));
+    voice1.add(Note(
+        pitch: const Pitch(step: 'G', octave: 4),
+        duration: const Duration(DurationType.eighth),
+        beam: BeamType.inner));
+    voice1.add(Note(
+        pitch: const Pitch(step: 'A', octave: 4),
+        duration: const Duration(DurationType.eighth),
+        beam: BeamType.inner));
+    voice1.add(Note(
+        pitch: const Pitch(step: 'G', octave: 4),
+        duration: const Duration(DurationType.eighth),
+        beam: BeamType.end));
+    voice1.add(Note(
+        pitch: const Pitch(step: 'A', octave: 4),
+        duration: const Duration(DurationType.eighth),
+        beam: BeamType.start));
+    voice1.add(Note(
+        pitch: const Pitch(step: 'B', octave: 4),
+        duration: const Duration(DurationType.eighth),
+        beam: BeamType.inner));
+    voice1.add(Note(
+        pitch: const Pitch(step: 'A', octave: 4),
+        duration: const Duration(DurationType.eighth),
+        beam: BeamType.inner));
+    voice1.add(Note(
+        pitch: const Pitch(step: 'G', octave: 4),
+        duration: const Duration(DurationType.eighth),
+        beam: BeamType.end));
 
     final voice2 = Voice.voice2();
-    voice2.add(Note(pitch: const Pitch(step: 'C', octave: 4), duration: const Duration(DurationType.quarter)));
-    voice2.add(Note(pitch: const Pitch(step: 'B', octave: 3), duration: const Duration(DurationType.quarter)));
-    voice2.add(Note(pitch: const Pitch(step: 'A', octave: 3), duration: const Duration(DurationType.quarter)));
-    voice2.add(Note(pitch: const Pitch(step: 'G', octave: 3), duration: const Duration(DurationType.quarter)));
+    voice2.add(Note(
+        pitch: const Pitch(step: 'C', octave: 4),
+        duration: const Duration(DurationType.quarter)));
+    voice2.add(Note(
+        pitch: const Pitch(step: 'B', octave: 3),
+        duration: const Duration(DurationType.quarter)));
+    voice2.add(Note(
+        pitch: const Pitch(step: 'A', octave: 3),
+        duration: const Duration(DurationType.quarter)));
+    voice2.add(Note(
+        pitch: const Pitch(step: 'G', octave: 3),
+        duration: const Duration(DurationType.quarter)));
 
     measure.addVoice(voice1);
     measure.addVoice(voice2);
@@ -261,18 +329,46 @@ class PolyphonyExampleWidget extends StatelessWidget {
     final voice1 = Voice.voice1();
     voice1.add(Clef(clefType: ClefType.treble));
     voice1.add(TimeSignature(numerator: 4, denominator: 4));
-    voice1.add(Note(pitch: const Pitch(step: 'E', octave: 4), duration: const Duration(DurationType.eighth), beam: BeamType.start));
-    voice1.add(Note(pitch: const Pitch(step: 'G', octave: 4), duration: const Duration(DurationType.eighth), beam: BeamType.inner));
-    voice1.add(Note(pitch: const Pitch(step: 'A', octave: 4), duration: const Duration(DurationType.eighth), beam: BeamType.inner));
-    voice1.add(Note(pitch: const Pitch(step: 'G', octave: 4), duration: const Duration(DurationType.eighth), beam: BeamType.end));
-    voice1.add(Note(pitch: const Pitch(step: 'A', octave: 4), duration: const Duration(DurationType.eighth), beam: BeamType.start));
-    voice1.add(Note(pitch: const Pitch(step: 'B', octave: 4), duration: const Duration(DurationType.eighth), beam: BeamType.inner));
-    voice1.add(Note(pitch: const Pitch(step: 'A', octave: 4), duration: const Duration(DurationType.eighth), beam: BeamType.inner));
-    voice1.add(Note(pitch: const Pitch(step: 'G', octave: 4), duration: const Duration(DurationType.eighth), beam: BeamType.end));
+    voice1.add(Note(
+        pitch: const Pitch(step: 'E', octave: 4),
+        duration: const Duration(DurationType.eighth),
+        beam: BeamType.start));
+    voice1.add(Note(
+        pitch: const Pitch(step: 'G', octave: 4),
+        duration: const Duration(DurationType.eighth),
+        beam: BeamType.inner));
+    voice1.add(Note(
+        pitch: const Pitch(step: 'A', octave: 4),
+        duration: const Duration(DurationType.eighth),
+        beam: BeamType.inner));
+    voice1.add(Note(
+        pitch: const Pitch(step: 'G', octave: 4),
+        duration: const Duration(DurationType.eighth),
+        beam: BeamType.end));
+    voice1.add(Note(
+        pitch: const Pitch(step: 'A', octave: 4),
+        duration: const Duration(DurationType.eighth),
+        beam: BeamType.start));
+    voice1.add(Note(
+        pitch: const Pitch(step: 'B', octave: 4),
+        duration: const Duration(DurationType.eighth),
+        beam: BeamType.inner));
+    voice1.add(Note(
+        pitch: const Pitch(step: 'A', octave: 4),
+        duration: const Duration(DurationType.eighth),
+        beam: BeamType.inner));
+    voice1.add(Note(
+        pitch: const Pitch(step: 'G', octave: 4),
+        duration: const Duration(DurationType.eighth),
+        beam: BeamType.end));
 
     final voice2 = Voice.voice2();
-    voice2.add(Note(pitch: const Pitch(step: 'C', octave: 3), duration: const Duration(DurationType.half)));
-    voice2.add(Note(pitch: const Pitch(step: 'G', octave: 2), duration: const Duration(DurationType.half)));
+    voice2.add(Note(
+        pitch: const Pitch(step: 'C', octave: 3),
+        duration: const Duration(DurationType.half)));
+    voice2.add(Note(
+        pitch: const Pitch(step: 'G', octave: 2),
+        duration: const Duration(DurationType.half)));
 
     measure.addVoice(voice1);
     measure.addVoice(voice2);
@@ -295,9 +391,12 @@ class PolyphonyExampleWidget extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(title,
+                style:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
-            Text(description, style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
+            Text(description,
+                style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.symmetric(vertical: 6),
@@ -333,10 +432,16 @@ class PolyphonyExampleWidget extends StatelessWidget {
                     Row(children: [
                       Icon(Icons.info_outline, color: Colors.purple.shade700),
                       const SizedBox(width: 8),
-                      Text('About Polyphony', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.purple.shade800, fontSize: 16)),
+                      Text('About Polyphony',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.purple.shade800,
+                              fontSize: 16)),
                     ]),
                     const SizedBox(height: 8),
-                    const Text('Polyphony is the technique of writing multiple independent voices on the same staff. Voice 1 has upward stems; voice 2, down.', style: TextStyle(fontSize: 13)),
+                    const Text(
+                        'Polyphony is the technique of writing multiple independent voices on the same staff. Voice 1 has upward stems; voice 2, down.',
+                        style: TextStyle(fontSize: 13)),
                   ],
                 ),
               ),
@@ -344,7 +449,8 @@ class PolyphonyExampleWidget extends StatelessWidget {
             const SizedBox(height: 16),
             _buildSection(
               title: 'Two Voices - Melody + Accompaniment',
-              description: 'Voice 1 (stems up): melody in quarter notes. Voice 2 (stems down): accompaniment in half notes.',
+              description:
+                  'Voice 1 (stems up): melody in quarter notes. Voice 2 (stems down): accompaniment in half notes.',
               context: context,
               staff: _buildTwoVoiceStaff(),
             ),
@@ -356,7 +462,8 @@ class PolyphonyExampleWidget extends StatelessWidget {
             ),
             _buildSection(
               title: 'Fingerstyle Guitar',
-              description: 'Voice 1 uses 8 eighth notes (full 4/4) while voice 2 sustains two half-note bass tones.',
+              description:
+                  'Voice 1 uses 8 eighth notes (full 4/4) while voice 2 sustains two half-note bass tones.',
               context: context,
               staff: _buildGuitarStaff(),
             ),

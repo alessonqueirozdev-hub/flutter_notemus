@@ -5,10 +5,10 @@ import '../../../theme/music_score_theme.dart';
 import '../../staff_position_calculator.dart';
 import '../base_glyph_renderer.dart';
 
-/// Renderizador especializado APENAS para linhas suplementares (ledger lines).
+/// Rendersdor especializado APENAS for linhas suplementares (ledger lines).
 ///
-/// Responsabilidade única: desenhar linhas suplementares para notas
-/// fora do pentagrama.
+/// Responsabilidade única: desenhar linhas suplementares for notes
+/// fora of the staff.
 class LedgerLineRenderer extends BaseGlyphRenderer {
   final MusicScoreTheme theme;
   final double staffLineThickness;
@@ -21,12 +21,12 @@ class LedgerLineRenderer extends BaseGlyphRenderer {
     required this.staffLineThickness,
   });
 
-  /// Renderiza linhas suplementares para uma nota.
+  /// Renders linhas suplementares for a note.
   ///
-  /// [canvas] - Canvas onde desenhar
-  /// [notePosition] - Posição X da nota (borda ESQUERDA do glifo)
-  /// [staffPosition] - Posição da nota na pauta
-  /// [noteheadGlyph] - Glifo da cabeça da nota (para calcular largura)
+  /// [canvas] - Canvas where desenhar
+  /// [notePosition] - X position of the note (borda ESQUERDA of the glifo)
+  /// [staffPosition] - Position of the note na staff
+  /// [noteheadGlyph] - Glifo of the cabeça of the note (for Calculatestesr width)
   void render(
     Canvas canvas,
     double notePosition,
@@ -35,45 +35,45 @@ class LedgerLineRenderer extends BaseGlyphRenderer {
   ) {
     if (!theme.showLedgerLines) return;
 
-    // Verificar se a nota precisa de linhas suplementares
+    // Checksr se a note precisa de linhas suplementares
     if (!StaffPositionCalculator.needsLedgerLines(staffPosition)) return;
 
     final paint = Paint()
       ..color = theme.staffLineColor
       ..strokeWidth = staffLineThickness;
 
-    // CORREÇÃO CRÍTICA: Calcular centro horizontal CORRETO da nota
-    // notePosition é a borda ESQUERDA do glifo (conforme drawGlyphWithBBox)
-    // Precisamos adicionar a distância até o centro
+    // Fix: CRÍTICA: Calculate centro horizontal CORRETO of the note
+    // notePosition é a borda ESQUERDA of the glifo (according to drawGlyphWithBBox)
+    // Precisamos add a distância até o centro
     final noteheadInfo = metadata.getGlyphInfo(noteheadGlyph);
     final bbox = noteheadInfo?.boundingBox;
 
-    // Centro relativo ao início do glyph (em staff spaces)
+    // Centro relativo ao início of the glyph (in staff spaces)
     final centerOffsetSS = bbox != null
         ? (bbox.bBoxSwX + bbox.bBoxNeX) / 2
         : 1.18 / 2; // Fallback: noteheadBlack tem largura ~1.18
     
-    // CORREÇÃO: Converter para pixels CORRETAMENTE
+    // Fix: Convert for pixels CORRETAMENTE
     final centerOffsetPixels = centerOffsetSS * coordinates.staffSpace;
     
-    // Posição X do centro da nota
+    // X position of the centro of the note
     final noteCenterX = notePosition + centerOffsetPixels;
 
-    // Calcular largura da linha baseada no glifo real + extensão SMuFL
+    // Calculatestesr width of the linha baseada no glifo real + extensão SMuFL
     final noteWidth =
         bbox?.widthInPixels(coordinates.staffSpace) ??
         (coordinates.staffSpace * 1.18);
 
-    // CORREÇÃO SMuFL: Usar legerLineExtension do metadata (0.4 staff spaces)
+    // Fix: SMuFL: Use legerLineExtension of the metadata (0.4 staff spaces)
     final extension = coordinates.staffSpace * 0.4;
     final totalWidth = noteWidth + (2 * extension);
 
-    // Obter posições das linhas suplementares
+    // Get positions das linhas suplementares
     final ledgerPositions = StaffPositionCalculator.getLedgerLinePositions(
       staffPosition,
     );
 
-    // Desenhar cada linha suplementar CENTRALIZADA na cabeça de nota
+    // Desenhar each linha suplementar CENTRALIZADA na notehead
     for (final pos in ledgerPositions) {
       final y = StaffPositionCalculator.toPixelY(
         pos,
@@ -81,7 +81,7 @@ class LedgerLineRenderer extends BaseGlyphRenderer {
         coordinates.staffBaseline.dy,
       );
 
-      // CORREÇÃO: Usar noteCenterX como referência para centralização
+      // Fix: Use noteCenterX como reference for centralização
       final lineStartX = noteCenterX - (totalWidth / 2);
       final lineEndX = noteCenterX + (totalWidth / 2);
 

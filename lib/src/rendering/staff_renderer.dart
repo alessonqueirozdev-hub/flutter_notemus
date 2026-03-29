@@ -1,13 +1,14 @@
 // lib/src/rendering/staff_renderer.dart
-// VERSÃƒO CORRIGIDA COM TIPOGRAFIA PROFISSIONAL
-// FASE 2 REFATORAÃ‡ÃƒO: Usando tipos do core/
+// Professional music engraving — corrected implementation
+// Refactoring pass: Using tipos of the core/
 
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import '../../core/core.dart'; // ðŸ†• Tipos do core
+import '../../core/core.dart'; // 🆕 Tipos do core
 import '../layout/layout_engine.dart';
 import '../smufl/smufl_metadata_loader.dart';
 import '../theme/music_score_theme.dart';
-import '../beaming/beaming.dart'; // Sistema de beaming avanÃ§ado
+import '../beaming/beaming.dart'; // Sistema de beaming avançado
 import 'renderers/articulation_renderer.dart';
 import 'renderers/bar_element_renderer.dart';
 import 'renderers/barline_renderer.dart';
@@ -18,47 +19,48 @@ import 'renderers/group_renderer.dart';
 import 'renderers/note_renderer.dart';
 import 'renderers/ornament_renderer.dart';
 import 'renderers/rest_renderer.dart';
-import 'renderers/slur_renderer.dart'; // âœ… NOVO: Ligaduras profissionais
+import 'renderers/slur_renderer.dart'; // ✅ NOVO: Ligaduras profissionais
 import 'renderers/symbol_and_text_renderer.dart';
 import '../layout/skyline_calculator.dart';
 import 'renderers/tuplet_renderer.dart';
 import 'smufl_positioning_engine.dart';
 import 'staff_coordinate_system.dart';
+import 'staff_position_calculator.dart';
 
 class StaffRenderer {
   // CONSTANTES DE AJUSTE MANUAL
 
-  // Margem apÃ³s BARRAS DE COMPASSO NORMAIS (single, double, dashed, etc)
-  // Controla onde as linhas do pentagrama terminam quando o sistema termina
-  // com uma barra de compasso normal (nÃ£o uma barra final)
+  // Margem após Barlines NORMAIS (single, double, dashed, etc)
+  // Controla where as linhas of the staff terminam when o system termina
+  // with a barline normal (not a final barline)
   //
-  // FÃ³rmula: endX = bounds.endX + (staffSpace + systemEndMargin)
+  // Fórmula: endX = bounds.endX + (staffSpace + systemEndMargin)
   //
-  // Aplica-se a:
+  // applies-se a:
   //   - BarlineType.single (barra simples)
-  //   - BarlineType.double (barra dupla)
+  //   - BarlineType.double (double barline)
   //   - BarlineType.dashed (barra tracejada)
-  //   - Todos os tipos EXCETO BarlineType.final_
+  //   - All os tipos EXCETO BarlineType.final_
   //
   // Valores sugeridos:
-  //   -12.0 = Linhas terminam exatamente na barra de compasso
-  //    0.0 = Margem padrÃ£o de 1 staff space
-  //   -3.0 = Linhas terminam um pouco antes da barra
+  //   -12.0 = Linhas terminam exatamente na barline
+  //    0.0 = Margem default de 1 staff space
+  //   -3.0 = Linhas terminam um pouco antes of the barra
   static const double systemEndMargin =
       -12.0; //  Termina exatamente na barra de compasso
 
-  // Margem apÃ³s BARRA FINAL (BarlineType.final_)
-  // Controla onde as linhas do pentagrama terminam quando o sistema termina
-  // com uma barra final (linha fina + linha grossa)
+  // Margem após Final barline (BarlineType.final_)
+  // Controla where as linhas of the staff terminam when o system termina
+  // with a final barline (linha fina + linha grossa)
   //
-  // Aplica-se APENAS a:
-  //   - BarlineType.final_ (barra final) âœ…
+  // applies-se APENAS a:
+  //   - BarlineType.final_ (final barline) ✅
   //
   // Valores sugeridos:
-  //   -1.5 = Linhas terminam exatamente na barra final âœ…
-  //    0.0 = Margem padrÃ£o de 1 staff space
+  //   -1.5 = Linhas terminam exatamente na final barline ✅
+  //    0.0 = Margem default de 1 staff space
   static const double finalBarlineMargin =
-      -1.5; // âœ… Termina exatamente na barra final
+      -1.5; // ✅ Termina exatamente na barra final
 
   final StaffCoordinateSystem coordinates;
   final SmuflMetadata metadata;
@@ -84,17 +86,17 @@ class StaffRenderer {
   late final RestRenderer restRenderer;
   late final SymbolAndTextRenderer symbolAndTextRenderer;
   late final TupletRenderer tupletRenderer;
-  late SlurRenderer slurRenderer; // âœ… NOVO: Renderizador profissional
+  late SlurRenderer slurRenderer; // ✅ NOVO: Renderizador profissional
 
   StaffRenderer({
     required this.coordinates,
     required this.metadata,
     required this.theme,
   }) {
-    // CORREÃ‡ÃƒO TIPOGRÃFICA: Tamanho correto do glifo baseado em SMuFL
+    // CORREÃ‡ÃƒO TIPOGRÃFICA: Size correto of the glifo based on SMuFL
     glyphSize = coordinates.staffSpace * 4.0;
 
-    // CORREÃ‡ÃƒO: Usar valores corretos do metadata Bravura
+    // Fix: Use valores corretos of the metadata Bravura
     staffLineThickness =
         metadata.getEngravingDefault('staffLineThickness') *
         coordinates.staffSpace;
@@ -133,6 +135,7 @@ class StaffRenderer {
       coordinates: coordinates,
       metadata: metadata,
       theme: theme,
+      glyphRenderer: glyphRenderer,
       glyphSize: glyphSize,
     );
 
@@ -208,42 +211,52 @@ class StaffRenderer {
       positioningEngine: positioningEngine,
     );
 
-    // âœ… Inicializar SlurRenderer profissional
+    // ✅ Initialise SlurRenderer profissional
     slurRenderer = SlurRenderer(
       staffSpace: coordinates.staffSpace,
+      staffBaselineY: coordinates.staffBaseline.dy,
       metadata: metadata,
     );
   }
 
-  // Set de notas que estÃ£o em advanced beam groups
+  // Set de notes that estão in advanced beam groups
   final Set<Note> _notesInAdvancedBeams = {};
+  final Map<Note, Clef> _noteClefs = {};
 
   void renderStaff(
     Canvas canvas,
     List<PositionedElement> elements,
     Size size, {
     LayoutEngine? layoutEngine,
+    bool renderBarlines = true,
   }) {
-    // Limpar set de notas beamed
+    // Limpar set de notes beamed
     _notesInAdvancedBeams.clear();
+    _noteClefs.clear();
 
-    // Coletar notas que estÃ£o em advanced beam groups
+    // Coletar notes that estão in advanced beam groups
     if (layoutEngine != null) {
       for (final group in layoutEngine.advancedBeamGroups) {
         _notesInAdvancedBeams.addAll(group.notes);
       }
     }
 
-    // Desenhar linhas do pentagrama POR SISTEMA
+    // Desenhar linhas of the staff POR System
     _drawStaffLinesBySystem(canvas, elements);
     currentClef = Clef(clefType: ClefType.treble); // Default clef
 
-    // Primeira passagem: renderizar elementos individuais
+    // Primeira passagem: Rendersr elementos individuais
     for (int i = 0; i < elements.length; i++) {
-      _renderElement(canvas, elements[i], elements, i);
+      _renderElement(
+        canvas,
+        elements[i],
+        elements,
+        i,
+        renderBarlines: renderBarlines,
+      );
     }
 
-    // Segunda passagem: renderizar ADVANCED BEAMS (se disponÃ­vel)
+    // Segunda passagem: Rendersr ADVANCED BEAMS (se disponível)
     if (layoutEngine != null && layoutEngine.advancedBeamGroups.isNotEmpty) {
       final noteXPositions = layoutEngine.noteXPositions;
       final noteYPositions = layoutEngine.noteYPositions;
@@ -258,7 +271,7 @@ class StaffRenderer {
       }
     }
 
-    // Terceira passagem: renderizar elementos de grupo (beams simples, ties, slurs)
+    // Terceira passagem: Rendersr elementos de grupo (beams simples, ties, slurs)
     if (currentClef != null) {
       _renderLineOrnaments(canvas, elements);
 
@@ -294,14 +307,15 @@ class StaffRenderer {
         }
       }
 
-      // Rebuild slurRenderer with the new skyline calculator
+      // Rebuild slurRenderer with the new skyline calculateTestor
       slurRenderer = SlurRenderer(
         staffSpace: coordinates.staffSpace,
+        staffBaselineY: coordinates.staffBaseline.dy,
         metadata: metadata,
         skylineCalculator: skylineCalc,
       );
 
-      // âœ… USAR SLURRENDERER PROFISSIONAL ao invÃ©s do GroupRenderer
+      // ✅ UsesR SLURRENDERER PROFISSIONAL ao invés of the GroupRenderer
       final tieGroups = groupRenderer.identifyTieGroups(elements);
       final slurGroups = groupRenderer.identifySlurGroups(elements);
 
@@ -324,49 +338,170 @@ class StaffRenderer {
   }
 
   void _renderLineOrnaments(Canvas canvas, List<PositionedElement> elements) {
-    final paint = Paint()
+    final linePaint = Paint()
       ..color = theme.ornamentColor ?? theme.noteheadColor
       ..style = PaintingStyle.stroke
-      ..strokeWidth = coordinates.staffSpace * 0.11
+      ..strokeWidth = coordinates.staffSpace * 0.12
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
+    final noteheadInfo = metadata.getGlyphInfo('noteheadBlack');
+    final bbox = noteheadInfo?.boundingBox;
+    final noteheadHalfWidth =
+        ((bbox?.width ?? 1.18) * coordinates.staffSpace) * 0.5;
+    final noteheadHalfHeight =
+        ((bbox?.height ?? 1.0) * coordinates.staffSpace) * 0.5;
+    final noteheadCenterX =
+        ((bbox?.centerX ?? ((bbox?.width ?? 1.18) * 0.5)) *
+        coordinates.staffSpace);
+    final noteheadCenterY = (bbox?.centerY ?? 0.0) * coordinates.staffSpace;
 
     for (int i = 0; i < elements.length; i++) {
       final current = elements[i];
       if (current.element is! Note) continue;
 
       final note = current.element as Note;
-      final hasLineOrnament = note.ornaments.any((ornament) {
+      final lineOrnament = note.ornaments.where((ornament) {
         return ornament.type == OrnamentType.glissando ||
             ornament.type == OrnamentType.portamento ||
             ornament.type == OrnamentType.slide;
-      });
-      if (!hasLineOrnament) continue;
+      }).firstOrNull;
+      if (lineOrnament == null) continue;
 
       final next = _findNextNote(elements, i, current.system);
       if (next == null) continue;
 
-      final startX = current.position.dx + (coordinates.staffSpace * 0.85);
-      final endX = next.position.dx + (coordinates.staffSpace * 0.25);
+      final currentCenter = _resolveRenderedNoteCenter(
+        current,
+        noteheadCenterX,
+        noteheadCenterY,
+      );
+      final nextCenter = _resolveRenderedNoteCenter(
+        next,
+        noteheadCenterX,
+        noteheadCenterY,
+      );
+      final start = _ellipseBoundaryToward(
+        currentCenter,
+        nextCenter,
+        noteheadHalfWidth,
+        noteheadHalfHeight,
+      );
+      final end = _ellipseBoundaryToward(
+        nextCenter,
+        currentCenter,
+        noteheadHalfWidth,
+        noteheadHalfHeight,
+      );
+      final startX = start.dx;
+      final endX = end.dx;
       if (endX <= startX) continue;
+      final startY = start.dy;
+      final endY = end.dy;
 
-      final startY = current.position.dy - (coordinates.staffSpace * 0.2);
-      final endY = next.position.dy - (coordinates.staffSpace * 0.2);
-      final path = Path()..moveTo(startX, startY);
-
-      final segments = (((endX - startX) / coordinates.staffSpace).round() * 2)
-          .clamp(4, 16);
-      final amplitude = coordinates.staffSpace * 0.16;
-      for (int s = 1; s <= segments; s++) {
-        final t = s / segments;
-        final x = startX + ((endX - startX) * t);
-        final yLinear = startY + ((endY - startY) * t);
-        final yWave = yLinear + ((s.isEven ? -1 : 1) * amplitude);
-        path.lineTo(x, yWave);
+      if (lineOrnament.type == OrnamentType.glissando) {
+        final path = Path()
+          ..moveTo(startX, startY)
+          ..lineTo(endX, endY);
+        canvas.drawPath(path, linePaint);
+      } else {
+        final path = Path()..moveTo(startX, startY);
+        final segments =
+            (((endX - startX) / coordinates.staffSpace).round() * 3).clamp(
+              8,
+              36,
+            );
+        final amplitude = coordinates.staffSpace * 0.18;
+        for (int s = 1; s <= segments; s++) {
+          final t = s / segments;
+          final x = startX + ((endX - startX) * t);
+          final yLinear = startY + ((endY - startY) * t);
+          final yWave = yLinear + ((s.isEven ? -1 : 1) * amplitude);
+          path.lineTo(x, yWave);
+        }
+        canvas.drawPath(path, linePaint);
       }
 
-      canvas.drawPath(path, paint);
+      if (lineOrnament.type == OrnamentType.glissando) {
+        final labelStyle =
+            theme.textStyle?.copyWith(
+              fontSize: coordinates.staffSpace * 0.62,
+              fontStyle: FontStyle.italic,
+              color: theme.ornamentColor ?? theme.noteheadColor,
+            ) ??
+            TextStyle(
+              fontSize: coordinates.staffSpace * 0.62,
+              fontStyle: FontStyle.italic,
+              color: theme.ornamentColor ?? theme.noteheadColor,
+            );
+        final label = TextPainter(
+          text: TextSpan(text: 'gliss.', style: labelStyle),
+          textDirection: TextDirection.ltr,
+        )..layout();
+
+        final midX = (startX + endX) / 2;
+        final midY = (startY + endY) / 2;
+        final angle = math.atan2(endY - startY, endX - startX);
+        canvas.save();
+        canvas.translate(midX, midY - (coordinates.staffSpace * 0.28));
+        canvas.rotate(angle);
+        label.paint(canvas, Offset(-(label.width * 0.5), -label.height));
+        canvas.restore();
+      }
     }
+  }
+
+  Offset _resolveRenderedNoteCenter(
+    PositionedElement positioned,
+    double noteheadCenterX,
+    double noteheadCenterY,
+  ) {
+    final element = positioned.element;
+    if (element is! Note) {
+      return positioned.position;
+    }
+
+    final clef = _noteClefs[element] ?? currentClef;
+    if (clef == null) {
+      return Offset(
+        positioned.position.dx + noteheadCenterX,
+        positioned.position.dy + noteheadCenterY,
+      );
+    }
+
+    final staffPosition = StaffPositionCalculator.calculate(
+      element.pitch,
+      clef,
+    );
+    final renderedY = StaffPositionCalculator.toPixelY(
+      staffPosition,
+      coordinates.staffSpace,
+      coordinates.staffBaseline.dy,
+    );
+
+    return Offset(
+      positioned.position.dx + noteheadCenterX,
+      renderedY + noteheadCenterY,
+    );
+  }
+
+  Offset _ellipseBoundaryToward(
+    Offset center,
+    Offset target,
+    double halfWidth,
+    double halfHeight,
+  ) {
+    final dx = target.dx - center.dx;
+    final dy = target.dy - center.dy;
+    if (dx.abs() < 0.0001 && dy.abs() < 0.0001) {
+      return center;
+    }
+
+    final divisor = math.sqrt(
+      ((dx * dx) / (halfWidth * halfWidth)) +
+          ((dy * dy) / (halfHeight * halfHeight)),
+    );
+    final scale = divisor == 0 ? 0.0 : 1 / divisor;
+    return Offset(center.dx + (dx * scale), center.dy + (dy * scale));
   }
 
   PositionedElement? _findNextNote(
@@ -382,18 +517,20 @@ class StaffRenderer {
     return null;
   }
 
-  /// Desenha linhas do pentagrama POR SISTEMA
-  /// Cada sistema tem suas linhas terminando na Ãºltima barline daquele sistema
+  /// Desenha linhas of the staff POR System
+  /// Each system tem their linhas terminando na última barline daquele system
   void _drawStaffLinesBySystem(
     Canvas canvas,
     List<PositionedElement> elements,
   ) {
     if (elements.isEmpty) return;
 
-    // Agrupar elementos por sistema e calcular limites
+    // Agrupar elementos por system e Calculatestesr limites
     final systemBounds = <int, ({double startX, double endX, double y})>{};
     final lastBarlineType =
-        <int, BarlineType>{}; // Tipo da Ãºltima barra de cada sistema
+        <int, BarlineType>{}; // Tipo da última barra de cada sistema
+
+    final lastBarlineX = <int, double>{};
 
     for (final positioned in elements) {
       final system = positioned.system;
@@ -411,9 +548,10 @@ class StaffRenderer {
         );
       }
 
-      // Guardar o tipo da Ãºltima barline de cada sistema
+      // Guardar o type of the última barline de each system
       if (positioned.element is Barline) {
         lastBarlineType[system] = (positioned.element as Barline).type;
+        lastBarlineX[system] = positioned.position.dx;
       }
     }
 
@@ -421,25 +559,39 @@ class StaffRenderer {
       ..color = theme.staffLineColor
       ..strokeWidth = staffLineThickness
       ..style = PaintingStyle.stroke;
+    final thinBarlineThickness =
+        metadata.getEngravingDefault('thinBarlineThickness') *
+        coordinates.staffSpace;
+    final thickBarlineThickness =
+        metadata.getEngravingDefault('thickBarlineThickness') *
+        coordinates.staffSpace;
 
-    // Desenhar linhas para cada sistema separadamente
+    // Desenhar linhas for each system separadamente
     for (final entry in systemBounds.entries) {
       final systemNumber = entry.key;
       final bounds = entry.value;
       final barlineType = lastBarlineType[systemNumber];
 
-      // Usar margem baseada no TIPO DE BARRA, nÃ£o na posiÃ§Ã£o do sistema
-      // Barra final (BarlineType.final_) usa finalBarlineMargin
-      // Outras barras usam systemEndMargin
-      final isFinalBarline = (barlineType == BarlineType.final_);
-      final margin = isFinalBarline ? finalBarlineMargin : systemEndMargin;
-      final endX = bounds.endX + (coordinates.staffSpace + margin);
+      // Usesr margem baseada no Type DE BARRA, not na position of the system
+      // Final barline (BarlineType.final_) Uses finalBarlineMargin
+      // Outras barras use systemEndMargin
+      final barlineX = lastBarlineX[systemNumber];
+      final contentEndX = bounds.endX + (coordinates.staffSpace * 0.8);
+      final barlineEndX = (barlineType != null && barlineX != null)
+          ? barlineX +
+                _barlineGlyphWidth(
+                  barlineType,
+                  thinBarlineThickness,
+                  thickBarlineThickness,
+                )
+          : contentEndX;
+      final endX = math.max(contentEndX, barlineEndX);
 
-      // Desenhar as 5 linhas do pentagrama para este sistema
-      // âœ… CORREÃ‡ÃƒO: Usar coordinates.getStaffLineY() diretamente, que jÃ¡ tem
-      // a posiÃ§Ã£o Y correta para este sistema (baseada em staffBaseline.dy).
-      // NÃƒO usar bounds.y pois pode ser a posiÃ§Ã£o Y de uma nota (pitch-based)
-      // e nÃ£o o centro da pauta.
+      // Desenhar as 5 linhas of the staff for this system
+      // ✅ CORREÇÃO: Usesr coordinates.getStaffLineY() diretamente, that já tem
+      // a Y position correta for this system (baseada in staffBaseline.dy).
+      // Not Usesr bounds.y pois pode ser a Y position de a note (pitch-based)
+      // e not o centro of the staff.
       for (int line = 1; line <= 5; line++) {
         final lineY = coordinates.getStaffLineY(line);
 
@@ -456,8 +608,9 @@ class StaffRenderer {
     Canvas canvas,
     PositionedElement positioned,
     List<PositionedElement> allElements,
-    int index,
-  ) {
+    int index, {
+    required bool renderBarlines,
+  }) {
     final element = positioned.element;
     final basePosition = positioned.position;
 
@@ -474,6 +627,7 @@ class StaffRenderer {
     } else if (element is TimeSignature) {
       barElementRenderer.renderTimeSignature(canvas, element, basePosition);
     } else if (element is Note && currentClef != null) {
+      _noteClefs[element] = currentClef!;
       final onlyNotehead = _notesInAdvancedBeams.contains(element);
       noteRenderer.render(
         canvas,
@@ -491,7 +645,9 @@ class StaffRenderer {
         voiceNumber: positioned.voiceNumber,
       );
     } else if (element is Barline) {
-      barlineRenderer.render(canvas, element, basePosition);
+      if (renderBarlines) {
+        barlineRenderer.render(canvas, element, basePosition);
+      }
     } else if (element is Chord && currentClef != null) {
       chordRenderer.render(
         canvas,
@@ -528,13 +684,37 @@ class StaffRenderer {
             minimumX: basePosition.dx,
           ) ??
           desiredEndX;
+      final markEndX = endAnchorX > basePosition.dx ? endAnchorX : desiredEndX;
+
+      // Encontrar Y mais extremo das notes no span for evitar sobreposicao with linhas suplementares
+      final isAboveOctave =
+          element.type == OctaveType.va8 ||
+          element.type == OctaveType.va15 ||
+          element.type == OctaveType.va22;
+      double? referenceNoteY;
+      for (final pe in allElements) {
+        if (pe.element is Note &&
+            pe.position.dx >= basePosition.dx &&
+            pe.position.dx <= markEndX) {
+          if (isAboveOctave) {
+            if (referenceNoteY == null || pe.position.dy < referenceNoteY) {
+              referenceNoteY = pe.position.dy;
+            }
+          } else {
+            if (referenceNoteY == null || pe.position.dy > referenceNoteY) {
+              referenceNoteY = pe.position.dy;
+            }
+          }
+        }
+      }
 
       symbolAndTextRenderer.renderOctaveMark(
         canvas,
         element,
         basePosition,
         startX: basePosition.dx,
-        endX: endAnchorX > basePosition.dx ? endAnchorX : desiredEndX,
+        endX: markEndX,
+        referenceNoteY: referenceNoteY,
       );
     } else if (element is VoltaBracket) {
       final startAnchorX =

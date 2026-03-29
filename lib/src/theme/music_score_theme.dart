@@ -13,7 +13,7 @@ class MusicScoreTheme {
   final Color restColor;
   final Color articulationColor;
 
-  // Cores para elementos avançados
+  // Cores for elementos avançados
   final Color? ornamentColor;
   final Color? dynamicColor;
   final Color? tupletColor;
@@ -25,7 +25,7 @@ class MusicScoreTheme {
   final Color? harmonicColor;
   final Color? textColor;
 
-  // Cores para novos elementos
+  // Cores for news elementos
   final Color? repeatColor;
   final Color? octaveColor;
   final Color? clusterColor;
@@ -42,12 +42,12 @@ class MusicScoreTheme {
   final TextStyle? chordTextStyle;
   final TextStyle? rehearsalTextStyle;
 
-  // Novos estilos de texto
+  // News estilos de texto
   final TextStyle? repeatTextStyle;
   final TextStyle? octaveTextStyle;
   final TextStyle? metronomeTextStyle;
 
-  // Configurações de renderização
+  // Configuresções de Rendersção
   final double? defaultStaffSpace;
   final double? defaultFontSize;
   final bool showLedgerLines;
@@ -66,7 +66,7 @@ class MusicScoreTheme {
     this.restColor = Colors.black,
     this.articulationColor = Colors.black,
 
-    // Cores avançadas (null = usar cor padrão)
+    // Cores avançadas (null = Usesr cor default)
     this.ornamentColor,
     this.dynamicColor,
     this.tupletColor,
@@ -78,7 +78,7 @@ class MusicScoreTheme {
     this.harmonicColor,
     this.textColor,
 
-    // Cores para novos elementos
+    // Cores for news elementos
     this.repeatColor,
     this.octaveColor,
     this.clusterColor,
@@ -95,12 +95,12 @@ class MusicScoreTheme {
     this.chordTextStyle,
     this.rehearsalTextStyle,
 
-    // Novos estilos de texto
+    // News estilos de texto
     this.repeatTextStyle,
     this.octaveTextStyle,
     this.metronomeTextStyle,
 
-    // Configurações
+    // Configuresções
     this.defaultStaffSpace,
     this.defaultFontSize,
     this.showLedgerLines = true,
@@ -108,12 +108,12 @@ class MusicScoreTheme {
     this.strokeWidth = 1.0,
   });
 
-  /// Cria um tema padrão
+  /// Creates um tema default
   factory MusicScoreTheme.standard() {
     return const MusicScoreTheme();
   }
 
-  /// Cria um tema escuro
+  /// Creates um tema escuro
   factory MusicScoreTheme.dark() {
     const darkColor = Color(0xFFE0E0E0);
     return MusicScoreTheme(
@@ -155,7 +155,7 @@ class MusicScoreTheme {
     );
   }
 
-  /// Cria um tema colorido
+  /// Creates um tema colorido
   factory MusicScoreTheme.colorful() {
     return const MusicScoreTheme(
       staffLineColor: Colors.black,
@@ -179,7 +179,7 @@ class MusicScoreTheme {
     );
   }
 
-  /// Cria uma cópia do tema com valores alterados
+  /// Creates a cópia of the tema with valores alterados
   MusicScoreTheme copyWith({
     Color? staffLineColor,
     Color? noteheadColor,

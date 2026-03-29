@@ -1,17 +1,17 @@
-// test/staff_position_calculator_test.dart
-// TESTES DE VALIDAÃ‡ÃƒO: Sistema de Coordenadas SMuFL
+// test/staff_position_calculateTestor_test.dart
+// VALIDATION TESTS: SMuFL Coordinate System
 //
-// Estes testes validam a correÃ§Ã£o crÃ­tica do sistema de coordenadas
-// documentada em CORRECOES_CRITICAS_APLICADAS.md
+// These tests validate the critical coordinate system fix
+// documented in CORRECOES_CRITICAS_AppliesDAS.md
 
 import 'package:test/test.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 
 void main() {
-  group('StaffPositionCalculator - Clave de Sol (Treble Clef)', () {
+  group('StaffPositionCalculator - Treble Clef', () {
     final trebleClef = Clef(clefType: ClefType.treble);
 
-    test('G4 deve estar na 2Âª linha (staffPosition = -2)', () {
+    test('G4 should be on the 2nd line (staffPosition = -2)', () {
       final pitch = Pitch(step: 'G', octave: 4);
       final position = StaffPositionCalculator.calculate(pitch, trebleClef);
 
@@ -19,12 +19,12 @@ void main() {
         position,
         equals(-2),
         reason:
-            'G4 Ã© a nota de referÃªncia da clave de Sol, deve estar na 2Âª linha',
+            'G4 is the reference note of the treble clef and must be on the 2nd line',
       );
     });
 
     test(
-      'C5 deve estar dentro da pauta em clave de Sol (staffPosition = 1)',
+      'C5 should be within the staff in treble clef (staffPosition = 1)',
       () {
         final pitch = Pitch(step: 'C', octave: 5);
         final position = StaffPositionCalculator.calculate(pitch, trebleClef);
@@ -32,35 +32,35 @@ void main() {
         expect(
           position,
           equals(1),
-          reason: 'C5 fica no terceiro espaço em clave de Sol',
+          reason: 'C5 is in the third space in treble clef',
         );
       },
     );
 
-    test('E4 deve estar na 1Âª linha (staffPosition = -4)', () {
+    test('E4 should be on the 1st line (staffPosition = -4)', () {
       final pitch = Pitch(step: 'E', octave: 4);
       final position = StaffPositionCalculator.calculate(pitch, trebleClef);
 
       expect(
         position,
         equals(-4),
-        reason: 'E4 Ã© a nota mais grave dentro do pentagrama em clave de Sol',
+        reason: 'E4 is the lowest note within the staff in treble clef',
       );
     });
 
-    test('F5 deve estar na 5Âª linha (staffPosition = 4)', () {
+    test('F5 should be on the 5th line (staffPosition = 4)', () {
       final pitch = Pitch(step: 'F', octave: 5);
       final position = StaffPositionCalculator.calculate(pitch, trebleClef);
 
       expect(
         position,
         equals(4),
-        reason: 'F5 Ã© a nota mais aguda dentro do pentagrama em clave de Sol',
+        reason: 'F5 is the highest note within the staff in treble clef',
       );
     });
 
     test(
-      'Escala ascendente C4-C5 deve ter posiÃ§Ãµes monotonicamente crescentes',
+      'Ascending scale C4-C5 should have monotonically increasing positions',
       () {
         final scale = [
           Pitch(step: 'C', octave: 4),
@@ -82,7 +82,7 @@ void main() {
             positions[i],
             greaterThan(positions[i - 1]),
             reason:
-                'Nota ${scale[i].step}${scale[i].octave} deve estar acima de '
+                'Note ${scale[i].step}${scale[i].octave} must be above '
                 '${scale[i - 1].step}${scale[i - 1].octave}',
           );
         }
@@ -90,40 +90,40 @@ void main() {
     );
 
     test(
-      'Notas em linhas suplementares inferiores devem ter staffPosition < -4',
+      'Notes on lower ledger lines should have staffPosition < -4',
       () {
-        final pitch = Pitch(step: 'C', octave: 4); // DÃ³ abaixo da pauta
+        final pitch = Pitch(step: 'C', octave: 4); // C below the staff
         final position = StaffPositionCalculator.calculate(pitch, trebleClef);
 
         expect(
           position,
           lessThan(-4),
           reason:
-              'C4 estÃ¡ abaixo do pentagrama e precisa de linhas suplementares',
+              'C4 is below the staff and requires ledger lines',
         );
       },
     );
 
     test(
-      'Notas em linhas suplementares superiores devem ter staffPosition > 4',
+      'Notes on upper ledger lines should have staffPosition > 4',
       () {
-        final pitch = Pitch(step: 'A', octave: 5); // LÃ¡ acima da pauta
+        final pitch = Pitch(step: 'A', octave: 5); // A above the staff
         final position = StaffPositionCalculator.calculate(pitch, trebleClef);
 
         expect(
           position,
           greaterThan(4),
           reason:
-              'A5 estÃ¡ acima do pentagrama e precisa de linhas suplementares',
+              'A5 is above the staff and requires ledger lines',
         );
       },
     );
   });
 
-  group('StaffPositionCalculator - Clave de FÃ¡ (Bass Clef)', () {
+  group('StaffPositionCalculator - Bass Clef', () {
     final bassClef = Clef(clefType: ClefType.bass);
 
-    test('F3 deve estar na 4Âª linha (staffPosition = 2)', () {
+    test('F3 should be on the 4th line (staffPosition = 2)', () {
       final pitch = Pitch(step: 'F', octave: 3);
       final position = StaffPositionCalculator.calculate(pitch, bassClef);
 
@@ -131,33 +131,33 @@ void main() {
         position,
         equals(2),
         reason:
-            'F3 Ã© a nota de referÃªncia da clave de FÃ¡, deve estar na 4Âª linha',
+            'F3 is the reference note of the bass clef and must be on the 4th line',
       );
     });
 
-    test('G2 deve estar na 1Âª linha (staffPosition = -4)', () {
+    test('G2 should be on the 1st line (staffPosition = -4)', () {
       final pitch = Pitch(step: 'G', octave: 2);
       final position = StaffPositionCalculator.calculate(pitch, bassClef);
 
       expect(
         position,
         equals(-4),
-        reason: 'G2 Ã© a nota mais grave dentro do pentagrama em clave de FÃ¡',
+        reason: 'G2 is the lowest note within the staff in bass clef',
       );
     });
 
-    test('A3 deve estar na 5Âª linha (staffPosition = 4)', () {
+    test('A3 should be on the 5th line (staffPosition = 4)', () {
       final pitch = Pitch(step: 'A', octave: 3);
       final position = StaffPositionCalculator.calculate(pitch, bassClef);
 
       expect(
         position,
         equals(4),
-        reason: 'A3 Ã© a nota mais aguda dentro do pentagrama em clave de FÃ¡',
+        reason: 'A3 is the highest note within the staff in bass clef',
       );
     });
 
-    test('Escala ascendente G2-G3 deve ter posiÃ§Ãµes crescentes', () {
+    test('Ascending scale G2-G3 should have increasing positions', () {
       final scale = [
         Pitch(step: 'G', octave: 2),
         Pitch(step: 'A', octave: 2),
@@ -179,8 +179,8 @@ void main() {
     });
   });
 
-  group('StaffPositionCalculator - Clave de DÃ³ (C Clefs)', () {
-    test('C4 em clave de Alto deve estar no centro (staffPosition = 0)', () {
+  group('StaffPositionCalculator - C Clefs', () {
+    test('C4 on alto clef should be at center (staffPosition = 0)', () {
       final altoClef = Clef(clefType: ClefType.alto);
       final pitch = Pitch(step: 'C', octave: 4);
       final position = StaffPositionCalculator.calculate(pitch, altoClef);
@@ -189,12 +189,12 @@ void main() {
         position,
         equals(0),
         reason:
-            'C4 Ã© a nota de referÃªncia da clave de Alto, na linha central',
+            'C4 is the reference note of the alto clef, on the center line',
       );
     });
 
     test(
-      'C4 em clave de Tenor deve estar na 4Âª linha (staffPosition = 2)',
+      'C4 on tenor clef should be on the 4th line (staffPosition = 2)',
       () {
         final tenorClef = Clef(clefType: ClefType.tenor);
         final pitch = Pitch(step: 'C', octave: 4);
@@ -203,15 +203,15 @@ void main() {
         expect(
           position,
           equals(2),
-          reason: 'C4 Ã© a nota de referÃªncia da clave de Tenor, na 4Âª linha',
+          reason: 'C4 is the reference note of the tenor clef, on the 4th line',
         );
       },
     );
   });
 
-  group('StaffPositionCalculator - Linhas Suplementares', () {
+  group('StaffPositionCalculator - Ledger Lines', () {
     test(
-      'needsLedgerLines deve retornar false para notas dentro do pentagrama',
+      'needsLedgerLines should return false for notes within the staff',
       () {
         expect(StaffPositionCalculator.needsLedgerLines(0), isFalse);
         expect(StaffPositionCalculator.needsLedgerLines(2), isFalse);
@@ -222,7 +222,7 @@ void main() {
     );
 
     test(
-      'needsLedgerLines deve retornar true para notas fora do pentagrama',
+      'needsLedgerLines should return true for notes outside the staff',
       () {
         expect(StaffPositionCalculator.needsLedgerLines(5), isTrue);
         expect(StaffPositionCalculator.needsLedgerLines(6), isTrue);
@@ -231,18 +231,18 @@ void main() {
       },
     );
 
-    test('getLedgerLinePositions deve calcular linhas corretamente acima', () {
+    test('getLedgerLinePositions should correctly calculate lines above', () {
       final lines = StaffPositionCalculator.getLedgerLinePositions(8);
       expect(lines, equals([6, 8]));
     });
 
-    test('getLedgerLinePositions deve calcular linhas corretamente abaixo', () {
+    test('getLedgerLinePositions should correctly calculate lines below', () {
       final lines = StaffPositionCalculator.getLedgerLinePositions(-8);
       expect(lines, equals([-6, -8]));
     });
 
     test(
-      'getLedgerLinePositions deve incluir linha da prÃ³pria nota se par',
+      'getLedgerLinePositions should include the note line if even',
       () {
         final lines = StaffPositionCalculator.getLedgerLinePositions(6);
         expect(lines.contains(6), isTrue);
@@ -250,7 +250,7 @@ void main() {
     );
 
     test(
-      'getLedgerLinePositions deve retornar vazio para notas no pentagrama',
+      'getLedgerLinePositions should return empty for notes within the staff',
       () {
         final lines = StaffPositionCalculator.getLedgerLinePositions(2);
         expect(lines, isEmpty);
@@ -258,36 +258,36 @@ void main() {
     );
   });
 
-  group('StaffPositionCalculator - ConversÃ£o para Pixels', () {
-    test('toPixelY deve calcular Y correto para staffPosition positivo', () {
+  group('StaffPositionCalculator - Pixel Conversion', () {
+    test('toPixelY should calculate correct Y for positive staffPosition', () {
       final staffSpace = 10.0;
       final staffBaseline = 100.0;
 
-      // staffPosition = 2 (1 staff space acima do centro)
+      // staffPosition = 2 (1 staff space above center)
       final y = StaffPositionCalculator.toPixelY(2, staffSpace, staffBaseline);
 
       expect(
         y,
         equals(90.0),
-        reason: 'staffPosition positivo deve resultar em Y menor (acima)',
+        reason: 'Positive staffPosition should result in smaller Y (above)',
       );
     });
 
-    test('toPixelY deve calcular Y correto para staffPosition negativo', () {
+    test('toPixelY should calculate correct Y for negative staffPosition', () {
       final staffSpace = 10.0;
       final staffBaseline = 100.0;
 
-      // staffPosition = -2 (1 staff space abaixo do centro)
+      // staffPosition = -2 (1 staff space below center)
       final y = StaffPositionCalculator.toPixelY(-2, staffSpace, staffBaseline);
 
       expect(
         y,
         equals(110.0),
-        reason: 'staffPosition negativo deve resultar em Y maior (abaixo)',
+        reason: 'Negative staffPosition should result in larger Y (below)',
       );
     });
 
-    test('toPixelY deve retornar baseline para staffPosition = 0', () {
+    test('toPixelY should return baseline for staffPosition = 0', () {
       final staffSpace = 10.0;
       final staffBaseline = 100.0;
 
@@ -296,13 +296,13 @@ void main() {
       expect(
         y,
         equals(100.0),
-        reason: 'staffPosition zero deve estar exatamente no baseline',
+        reason: 'staffPosition zero should be exactly at the baseline',
       );
     });
   });
 
-  group('StaffPositionCalculator - ExtensÃ£o Pitch', () {
-    test('ExtensÃ£o staffPosition deve funcionar', () {
+  group('StaffPositionCalculator - Pitch Extension', () {
+    test('staffPosition extension should work', () {
       final trebleClef = Clef(clefType: ClefType.treble);
       final pitch = Pitch(step: 'G', octave: 4);
 
@@ -311,7 +311,7 @@ void main() {
       expect(position, equals(-2));
     });
 
-    test('ExtensÃ£o needsLedgerLines deve funcionar', () {
+    test('needsLedgerLines extension should work', () {
       final trebleClef = Clef(clefType: ClefType.treble);
       final pitch = Pitch(step: 'C', octave: 5);
 
@@ -320,7 +320,7 @@ void main() {
       expect(needs, isFalse);
     });
 
-    test('ExtensÃ£o getLedgerLinePositions deve funcionar', () {
+    test('getLedgerLinePositions extension should work', () {
       final trebleClef = Clef(clefType: ClefType.treble);
       final pitch = Pitch(step: 'C', octave: 5);
 
@@ -330,17 +330,17 @@ void main() {
     });
   });
 
-  group('StaffPositionCalculator - ValidaÃ§Ã£o da CorreÃ§Ã£o de Outubro', () {
-    // TESTE CRÃTICO: Valida que a "correÃ§Ã£o emergencial" de 01/10/2025
-    // (documentada em CORRECOES_CRITICAS_APLICADAS.md) estÃ¡ correta
+  group('StaffPositionCalculator - October Fix Validation', () {
+    // CRITICAL TEST: Validates that the emergency fix of 01/10/2025
+    // (documented in CORRECOES_CRITICAS_AppliesDAS.md) is correct
 
     test(
-      'VALIDAÃ‡ÃƒO: FÃ³rmula nÃ£o deve inverter posiÃ§Ãµes (soma, nÃ£o subtraÃ§Ã£o)',
+      'VALIDATION: Formula must not invert positions (addition, not subtraction)',
       () {
         final trebleClef = Clef(clefType: ClefType.treble);
 
-        // Se a fÃ³rmula estivesse usando subtraÃ§Ã£o (bug original),
-        // notas mais agudas teriam staffPosition MENOR
+        // If the formula were using subtraction (original bug),
+        // higher notes would have SMALLER staffPosition
         final c4 = Pitch(step: 'C', octave: 4).staffPosition(trebleClef);
         final c5 = Pitch(step: 'C', octave: 5).staffPosition(trebleClef);
 
@@ -348,33 +348,33 @@ void main() {
           c5,
           greaterThan(c4),
           reason:
-              'CRÃTICO: C5 DEVE estar acima de C4. '
-              'Se este teste falhar, o sistema de coordenadas estÃ¡ invertido!',
+              'CRITICAL: C5 MUST be above C4. '
+              'If this test fails, the coordinate system is inverted!',
         );
       },
     );
 
     test(
-      'VALIDAÃ‡ÃƒO: DireÃ§Ã£o das hastes deve ser consistente com staffPosition',
+      'VALIDATION: Stem direction must be consistent with staffPosition',
       () {
         final trebleClef = Clef(clefType: ClefType.treble);
 
-        // Em clave de Sol, notas abaixo do centro tÃªm haste para cima
-        // staffPosition negativo = abaixo do centro = haste up
+        // In treble clef, notes below center have stem up
+        // negative staffPosition = below center = stem up
         final e4Pos = Pitch(step: 'E', octave: 4).staffPosition(trebleClef);
         expect(
           e4Pos,
           lessThan(0),
           reason:
-              'E4 deve estar abaixo do centro (staffPosition < 0) = haste up',
+              'E4 must be below center (staffPosition < 0) = stem up',
         );
 
-        // B4 ocupa a linha central em clave de Sol
+        // B4 occupies the center line in treble clef
         final b4Pos = Pitch(step: 'B', octave: 4).staffPosition(trebleClef);
         expect(
           b4Pos,
           equals(0),
-          reason: 'B4 deve estar na linha central (staffPosition = 0)',
+          reason: 'B4 must be on the center line (staffPosition = 0)',
         );
       },
     );

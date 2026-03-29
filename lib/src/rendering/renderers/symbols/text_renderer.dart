@@ -5,7 +5,7 @@ import '../../../../core/core.dart';
 import '../../../theme/music_score_theme.dart';
 import '../base_glyph_renderer.dart';
 
-/// Renderizador especializado APENAS para textos musicais.
+/// Rendersdor especializado APENAS for textos musicais.
 class TextRenderer extends BaseGlyphRenderer {
   final MusicScoreTheme theme;
 

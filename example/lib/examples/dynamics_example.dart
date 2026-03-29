@@ -97,8 +97,9 @@ class DynamicsExample extends StatelessWidget {
               ],
             ),
             _buildSection(
-              title: 'Dynamics Especiais',
-              description: 'Sforzando, rinforzando, and other special markings.',
+              title: 'Special Dynamics',
+              description:
+                  'Sforzando, rinforzando, and other special markings.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 Note(
@@ -124,8 +125,9 @@ class DynamicsExample extends StatelessWidget {
               ],
             ),
             _buildSection(
-              title: 'Dynamics Combinadas',
-              description: 'Combinations such as fortepiano and other variants.',
+              title: 'Combined Dynamics',
+              description:
+                  'Combinations such as fortepiano and other variants.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 Note(
@@ -136,7 +138,8 @@ class DynamicsExample extends StatelessWidget {
                 Note(
                   pitch: const Pitch(step: 'B', octave: 4),
                   duration: const Duration(DurationType.quarter),
-                  dynamicElement: Dynamic(type: DynamicType.sforzandoPianissimo),
+                  dynamicElement:
+                      Dynamic(type: DynamicType.sforzandoPianissimo),
                 ),
                 Note(
                   pitch: const Pitch(step: 'C', octave: 5),
@@ -150,34 +153,15 @@ class DynamicsExample extends StatelessWidget {
                 ),
               ],
             ),
-            _buildSection(
-              title: 'Crescendo e Diminuendo',
+            _buildStaffSection(
+              title: 'Crescendo and Diminuendo',
               description: 'Gradual intensity-change markings (hairpins).',
-              elements: [
-                Clef(clefType: ClefType.treble),
-                Note(
-                  pitch: const Pitch(step: 'F', octave: 4),
-                  duration: const Duration(DurationType.half),
-                  dynamicElement: Dynamic(
-                    type: DynamicType.crescendo,
-                    isHairpin: true,
-                    length: 80.0,
-                  ),
-                ),
-                Note(
-                  pitch: const Pitch(step: 'A', octave: 4),
-                  duration: const Duration(DurationType.half),
-                  dynamicElement: Dynamic(
-                    type: DynamicType.diminuendo,
-                    isHairpin: true,
-                    length: 80.0,
-                  ),
-                ),
-              ],
+              staff: _buildHairpinsStaff(),
             ),
             _buildSection(
-              title: 'Dynamics Extremas',
-              description: 'Dynamic markings at the extreme end of the sound palette.',
+              title: 'Extreme Dynamics',
+              description:
+                  'Dynamic markings at the extreme end of the sound palette.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 Note(
@@ -198,35 +182,26 @@ class DynamicsExample extends StatelessWidget {
               ],
             ),
             _buildSection(
-              title: 'Dynamics Personalizadas',
-              description: 'Custom dynamic markings.',
+              title: 'Custom Dynamics Text',
+              description: 'Expressive custom labels rendered below the staff.',
               elements: [
                 Clef(clefType: ClefType.treble),
                 Note(
                   pitch: const Pitch(step: 'E', octave: 4),
-                  duration: const Duration(DurationType.quarter),
+                  duration: const Duration(DurationType.half),
                   dynamicElement: Dynamic(
                     type: DynamicType.custom,
                     customText: 'dolce',
                   ),
                 ),
                 Note(
-                  pitch: const Pitch(step: 'F', octave: 4),
-                  duration: const Duration(DurationType.quarter),
-                  dynamicElement: Dynamic(
-                    type: DynamicType.custom,
-                    customText: 'espressivo',
-                  ),
-                ),
-                Note(
                   pitch: const Pitch(step: 'G', octave: 4),
-                  duration: const Duration(DurationType.quarter),
+                  duration: const Duration(DurationType.half),
                   dynamicElement: Dynamic(
                     type: DynamicType.custom,
                     customText: 'sotto voce',
                   ),
                 ),
-                Rest(duration: const Duration(DurationType.quarter)),
               ],
             ),
           ],
@@ -240,13 +215,19 @@ class DynamicsExample extends StatelessWidget {
     required String description,
     required List<MusicalElement> elements,
   }) {
-    final staff = Staff();
-    final measure = Measure();
-    for (final element in elements) {
-      measure.add(element);
-    }
-    staff.add(measure);
+    final staff = _buildStaffWithAutomaticMeasureBreaks(elements);
+    return _buildStaffSection(
+      title: title,
+      description: description,
+      staff: staff,
+    );
+  }
 
+  Widget _buildStaffSection({
+    required String title,
+    required String description,
+    required Staff staff,
+  }) {
     return Card(
       elevation: 2.0,
       margin: const EdgeInsets.only(bottom: 24.0),
@@ -266,7 +247,6 @@ class DynamicsExample extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Container(
-              height: 190,
               decoration: BoxDecoration(
                 color: Colors.white,
                 border: Border.all(color: Colors.grey.shade300),
@@ -274,6 +254,7 @@ class DynamicsExample extends StatelessWidget {
               ),
               child: MusicScore(
                 staff: staff,
+                staffSpace: 14,
               ),
             ),
           ],
@@ -281,5 +262,102 @@ class DynamicsExample extends StatelessWidget {
       ),
     );
   }
-}
 
+  Staff _buildHairpinsStaff() {
+    final staff = Staff();
+
+    final measure1 = Measure()
+      ..add(Clef(clefType: ClefType.treble))
+      ..add(TimeSignature(numerator: 4, denominator: 4))
+      ..add(
+        Note(
+          pitch: const Pitch(step: 'C', octave: 4),
+          duration: const Duration(DurationType.whole),
+          dynamicElement: Dynamic(
+            type: DynamicType.crescendo,
+            isHairpin: true,
+            length: 90.0,
+          ),
+        ),
+      );
+
+    final measure2 = Measure()
+      ..add(
+        Note(
+          pitch: const Pitch(step: 'E', octave: 4),
+          duration: const Duration(DurationType.whole),
+          dynamicElement: Dynamic(
+            type: DynamicType.diminuendo,
+            isHairpin: true,
+            length: 90.0,
+          ),
+        ),
+      );
+
+    final measure3 = Measure()
+      ..add(
+        Note(
+          pitch: const Pitch(step: 'G', octave: 4),
+          duration: const Duration(DurationType.whole),
+          dynamicElement: Dynamic(
+            type: DynamicType.crescendo,
+            customText: 'cresc.',
+          ),
+        ),
+      );
+
+    final measure4 = Measure()
+      ..add(
+        Note(
+          pitch: const Pitch(step: 'B', octave: 4),
+          duration: const Duration(DurationType.whole),
+          dynamicElement: Dynamic(
+            type: DynamicType.diminuendo,
+            customText: 'dim.',
+          ),
+        ),
+      );
+
+    staff
+      ..add(measure1)
+      ..add(measure2)
+      ..add(measure3)
+      ..add(measure4);
+
+    return staff;
+  }
+
+  Staff _buildStaffWithAutomaticMeasureBreaks(List<MusicalElement> elements) {
+    final staff = Staff();
+    TimeSignature? activeTimeSignature;
+
+    Measure createMeasure() =>
+        Measure(inheritedTimeSignature: activeTimeSignature);
+
+    var currentMeasure = createMeasure();
+
+    for (final element in elements) {
+      if (element is TimeSignature) {
+        activeTimeSignature = element;
+      }
+
+      try {
+        currentMeasure.add(element);
+      } on MeasureCapacityException {
+        if (currentMeasure.elements.isEmpty) {
+          rethrow;
+        }
+
+        staff.add(currentMeasure);
+        currentMeasure = createMeasure();
+        currentMeasure.add(element);
+      }
+    }
+
+    if (currentMeasure.elements.isNotEmpty) {
+      staff.add(currentMeasure);
+    }
+
+    return staff;
+  }
+}

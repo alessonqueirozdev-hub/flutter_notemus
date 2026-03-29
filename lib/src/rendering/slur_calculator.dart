@@ -1,19 +1,9 @@
-// Substitua o conteúdo inteiro em: lib/src/rendering/slur_calculator.dart
-
 import 'dart:ui';
 import 'dart:math' as math;
-import '../../core/core.dart'; // 🆕 Tipos do core
+import '../../core/core.dart';
 import '../layout/layout_engine.dart';
 
-// ################### INÍCIO DA CORREÇÃO ###################
-//
-// Esta versão do SlurCalculator implementa uma detecção de obstáculos
-// muito mais robusta, baseada em Bounding Boxes, para evitar colisões
-// com notas, hastes, acidentes e outros elementos.
-//
-// ##########################################################
-
-/// Representa a caixa delimitadora de um elemento musical para detecção de colisão.
+/// Represents the bounding box of a musical element for collision detection.
 class ElementBoundingBox {
   final Rect rect;
   final MusicalElement element;
@@ -21,7 +11,7 @@ class ElementBoundingBox {
   ElementBoundingBox(this.rect, this.element);
 }
 
-/// Calcula curvas de slurs com detecção de obstáculos aprimorada.
+/// calculateTestes slur curves with enhanced obstacle detection.
 class SlurCalculator {
   final double staffSpace;
   final List<PositionedElement> allElements;
@@ -31,7 +21,7 @@ class SlurCalculator {
     _buildObstaclesCache();
   }
 
-  /// Pré-calcula as caixas delimitadoras de todos os elementos.
+  /// Pre-computes the bounding boxes of all elements.
   void _buildObstaclesCache() {
     for (final positionedElement in allElements) {
       final box = _createElementBoundingBox(positionedElement);
@@ -41,7 +31,7 @@ class SlurCalculator {
     }
   }
 
-  /// Calcula a curva de um slur considerando obstáculos.
+  /// calculateTestes the curve of a slur considering obstacles.
   SlurCurve calculateSlurCurve({
     required Offset startPoint,
     required Offset endPoint,
@@ -86,7 +76,7 @@ class SlurCalculator {
     return calculatedHeight.clamp(minHeight, maxHeight);
   }
 
-  /// Encontra obstáculos entre os pontos de início e fim do slur.
+  /// Finds obstacles between the slur's start and end points.
   List<ElementBoundingBox> _findObstacles(
     Offset start,
     Offset end,
@@ -99,10 +89,10 @@ class SlurCalculator {
     final slurElements = noteIndices.map((i) => allElements[i].element).toSet();
 
     for (final obstacleBox in _obstaclesCache) {
-      // Ignora as notas que fazem parte do próprio slur.
+      // Ignore notes that are part of the slur itself.
       if (slurElements.contains(obstacleBox.element)) continue;
 
-      // Verifica se o obstáculo está na faixa horizontal do slur.
+      // Check if the obstacle is within the horizontal range of the slur.
       if (obstacleBox.rect.left < maxX && obstacleBox.rect.right > minX) {
         relevantObstacles.add(obstacleBox);
       }
@@ -110,7 +100,7 @@ class SlurCalculator {
     return relevantObstacles;
   }
 
-  /// Ajusta a altura do slur para desviar dos obstáculos.
+  /// Adjusts the slur height to avoid obstacles.
   double _adjustHeightForObstacles(
     Offset start,
     Offset end,
@@ -121,21 +111,21 @@ class SlurCalculator {
     if (obstacles.isEmpty) return baseHeight;
 
     double requiredHeight = baseHeight;
-    final clearance = staffSpace * 0.3; // Espaço extra de segurança.
+    final clearance = staffSpace * 0.3; // Extra safety margin.
     final midX = (start.dx + end.dx) / 2;
     final midY = (start.dy + end.dy) / 2;
 
     for (final obstacle in obstacles) {
-      // Considera apenas obstáculos próximos ao centro vertical do slur.
+      // Consider only obstacles close to the vertical center of the slur.
       if ((obstacle.rect.center.dx - midX).abs() < (end.dx - start.dx) * 0.4) {
         if (above) {
-          // Se o slur é acima, o obstáculo está abaixo dele.
+          // If the slur is above, the obstacle is below it.
           final verticalDistance = (midY - requiredHeight) - obstacle.rect.top;
           if (verticalDistance < clearance) {
             requiredHeight += (clearance - verticalDistance);
           }
         } else {
-          // Se o slur é abaixo, o obstáculo está acima dele.
+          // If the slur is below, the obstacle is above it.
           final verticalDistance =
               obstacle.rect.bottom - (midY + requiredHeight);
           if (verticalDistance < clearance) {
@@ -156,21 +146,21 @@ class SlurCalculator {
     final distance = end.dx - start.dx;
     final direction = above ? -1.0 : 1.0;
 
-    // Pontos de controle simétricos para uma curva mais elegante.
+    // Symmetric control points for a more elegant curve.
     final cp1X = start.dx + distance * 0.25;
     final cp2X = start.dx + distance * 0.75;
 
     final midY = (start.dy + end.dy) / 2;
     final apexY = midY + (height * direction);
 
-    // Ajusta os pontos de controle para formar um arco suave.
+    // Adjust control points to form a smooth arc.
     final cp1Y = start.dy + (apexY - start.dy) * 0.8;
     final cp2Y = end.dy + (apexY - end.dy) * 0.8;
 
     return [Offset(cp1X, cp1Y), Offset(cp2X, cp2Y)];
   }
 
-  /// Cria uma caixa delimitadora para um elemento musical.
+  /// Creates a bounding box for a musical element.
   ElementBoundingBox? _createElementBoundingBox(PositionedElement positioned) {
     final element = positioned.element;
     final pos = positioned.position;
@@ -179,11 +169,11 @@ class SlurCalculator {
 
     if (element is Note) {
       width = staffSpace * 1.2;
-      height = staffSpace * 3.5; // Altura da haste.
-      // Simplificação da posição da haste. Uma lógica mais completa usaria _calculateStaffPosition.
+      height = staffSpace * 3.5; // Stem height.
+      // Simplified stem position. A more complete logic would use _calculateTesteStaffPosition.
       final stemUp =
           pos.dy >
-          (positioned.system * staffSpace * 10 + staffSpace * 7); // Heurística
+          (positioned.system * staffSpace * 10 + staffSpace * 7); // Heuristic
       center = stemUp
           ? Offset(pos.dx, pos.dy - height / 2)
           : Offset(pos.dx, pos.dy + height / 2);
@@ -192,7 +182,7 @@ class SlurCalculator {
       height = staffSpace * 4.0;
       center = pos;
     } else {
-      // Adicione outros elementos que podem ser obstáculos aqui (ex: acidentes, ornamentos)
+      // Add other elements that can be obstacles here (e.g. accidentals, ornaments)
       return null;
     }
 
@@ -217,7 +207,7 @@ class SlurCalculator {
   }
 }
 
-/// Representa uma curva de slur calculada
+/// Represents a calculateTested slur curve
 class SlurCurve {
   final Offset startPoint;
   final Offset endPoint;
@@ -236,7 +226,7 @@ class SlurCurve {
   });
 }
 
-/// Grupo de notas ligadas por um slur
+/// Group of notes connected by a slur
 class SlurGroup {
   final Offset startPoint;
   final Offset endPoint;

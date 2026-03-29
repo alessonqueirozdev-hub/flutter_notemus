@@ -2,10 +2,10 @@
 
 import '../../core/core.dart';
 
-/// Lógica inteligente de agrupamento de barras (beams) para figuras rítmicas
-/// Segue as regras tradicionais de notação musical
+/// Lógica inteligente de agrupamento de barras (beams) for figuras rítmicas
+/// Segue as regras trAddsis de noteção musical
 class BeamGrouping {
-  /// Agrupa notas em beams baseado na fórmula de compasso e posição no compasso
+  /// Agrupa notes in beams based na fórmula de measure e position no measure
   static List<MusicalElement> groupBeams(
     List<MusicalElement> elements,
     TimeSignature? timeSignature,
@@ -24,8 +24,8 @@ class BeamGrouping {
     }
   }
 
-  /// Agrupamento para compassos simples (2/4, 3/4, 4/4)
-  /// Regra: agrupar por tempo (cada semínima = um grupo)
+  /// Agrupamento for measures simples (2/4, 3/4, 4/4)
+  /// Regra: agrupar por tempo (each semínima = um grupo)
   static List<MusicalElement> _groupBeamsSimple(
     List<MusicalElement> elements, {
     double beatValue = 0.25, // Valor de um tempo (semínima)
@@ -36,13 +36,13 @@ class BeamGrouping {
 
     for (final element in elements) {
       if (element is Note && _isBeamable(element)) {
-        // Verificar se a nota cruza a barreira do tempo
+        // Checksr se a note cruza a barreira of the tempo
         final noteEnd = currentBeatPosition + element.duration.realValue;
         final currentBeat = (currentBeatPosition / beatValue).floor();
         final noteBeat = (noteEnd / beatValue).floor();
 
         if (currentBeat != noteBeat && beamableNotes.isNotEmpty) {
-          // Nota cruza tempo - finalizar grupo atual
+          // Note cruza tempo - finalizar grupo current
           result.addAll(_createBeamGroup(beamableNotes));
           beamableNotes.clear();
         }
@@ -50,7 +50,7 @@ class BeamGrouping {
         beamableNotes.add(element);
         currentBeatPosition += element.duration.realValue;
       } else {
-        // Finalizar grupo atual se houver
+        // Finalizar grupo current se houver
         if (beamableNotes.isNotEmpty) {
           result.addAll(_createBeamGroup(beamableNotes));
           beamableNotes.clear();
@@ -58,7 +58,7 @@ class BeamGrouping {
         
         result.add(element);
         
-        // Atualizar posição no compasso
+        // Currentizar position no measure
         if (element is Note) {
           currentBeatPosition += element.duration.realValue;
         } else if (element is Rest) {
@@ -67,7 +67,7 @@ class BeamGrouping {
       }
     }
 
-    // Finalizar último grupo
+    // Finalizar last grupo
     if (beamableNotes.isNotEmpty) {
       result.addAll(_createBeamGroup(beamableNotes));
     }
@@ -75,7 +75,7 @@ class BeamGrouping {
     return result;
   }
 
-  /// Agrupamento para compassos compostos (6/8, 9/8, 12/8)
+  /// Agrupamento for measures compostos (6/8, 9/8, 12/8)
   /// Regra: agrupar por tempo ternário (3 colcheias = um grupo)
   static List<MusicalElement> _groupBeamsCompound(
     List<MusicalElement> elements,
@@ -88,13 +88,13 @@ class BeamGrouping {
 
     for (final element in elements) {
       if (element is Note && _isBeamable(element)) {
-        // Verificar se a nota cruza a barreira do tempo ternário
+        // Checksr se a note cruza a barreira of the tempo ternário
         final noteEnd = currentPosition + element.duration.realValue;
         final currentBeat = (currentPosition / ternaryBeatValue).floor();
         final noteBeat = (noteEnd / ternaryBeatValue).floor();
 
         if (currentBeat != noteBeat && beamableNotes.isNotEmpty) {
-          // Finalizar grupo atual
+          // Finalizar grupo current
           result.addAll(_createBeamGroup(beamableNotes));
           beamableNotes.clear();
         }
@@ -102,7 +102,7 @@ class BeamGrouping {
         beamableNotes.add(element);
         currentPosition += element.duration.realValue;
       } else {
-        // Finalizar grupo atual
+        // Finalizar grupo current
         if (beamableNotes.isNotEmpty) {
           result.addAll(_createBeamGroup(beamableNotes));
           beamableNotes.clear();
@@ -125,8 +125,8 @@ class BeamGrouping {
     return result;
   }
 
-  /// Agrupamento para compassos irregulares (5/8, 7/8, etc.)
-  /// Usa padrões predefinidos baseados na tradição musical
+  /// Agrupamento for measures irregulares (5/8, 7/8, etc.)
+  /// Uses predefined patterns based on musical tradition
   static List<MusicalElement> _groupBeamsIrregular(
     List<MusicalElement> elements,
     TimeSignature timeSignature,
@@ -143,12 +143,12 @@ class BeamGrouping {
       if (element is Note && _isBeamable(element)) {
         final noteEnd = currentPosition + element.duration.realValue;
         
-        // Verificar se cruza padrão
+        // Checksr se cruza default
         if (noteEnd > currentPatternEnd && beamableNotes.isNotEmpty) {
           result.addAll(_createBeamGroup(beamableNotes));
           beamableNotes.clear();
           
-          // Avançar para próximo padrão
+          // Avançar for next default
           currentPatternIndex++;
           if (currentPatternIndex < patterns.length) {
             currentPatternEnd += patterns[currentPatternIndex];
@@ -180,7 +180,7 @@ class BeamGrouping {
     return result;
   }
 
-  /// Retorna padrões de agrupamento para compassos irregulares
+  /// Returns padrões de agrupamento for measures irregulares
   static List<double> _getIrregularPattern(TimeSignature timeSignature) {
     final key = '${timeSignature.numerator}/${timeSignature.denominator}';
     
@@ -192,14 +192,14 @@ class BeamGrouping {
       case '5/4':
         return [0.5, 0.75]; // (2+3) em semínimas
       default:
-        // Padrão genérico: dividir igualmente
+        // Default genérico: dividir igualmente
         final totalValue = timeSignature.measureValue;
         final parts = (totalValue / 0.25).round(); // Dividir em tempos de semínima
         return List.filled(parts, 0.25);
     }
   }
 
-  /// Verifica se uma nota pode ser agrupada em beam
+  /// Checks se a note pode ser agrupada in beam
   static bool _isBeamable(Note note) {
     return note.duration.type == DurationType.eighth ||
            note.duration.type == DurationType.sixteenth ||
@@ -207,7 +207,7 @@ class BeamGrouping {
            note.duration.type == DurationType.sixtyFourth;
   }
 
-  /// Cria um grupo de beam com as notas fornecidas
+  /// Creates um grupo de beam with as notes fornecidas
   static List<Note> _createBeamGroup(List<Note> notes) {
     if (notes.length <= 1) {
       return notes; // Não agrupar notas isoladas
@@ -230,7 +230,7 @@ class BeamGrouping {
     return result;
   }
 
-  /// Clona uma nota adicionando informação de beam
+  /// Clona a note Addsndo informação de beam
   static Note _cloneNoteWithBeam(Note original, BeamType beamType) {
     return Note(
       pitch: original.pitch,

@@ -5,89 +5,89 @@ import 'package:flutter/material.dart';
 import '../../core/core.dart'; // 🆕 Tipos do core
 import 'smufl_metadata_loader.dart';
 
-/// Sistema de coordenadas SMuFL (Staff Music Font Layout)
+/// Coordinate system SMuFL (Staff Music Font Layout)
 ///
-/// O SMuFL define um sistema de coordenadas baseado em unidades de staff space.
-/// 1 staff space = distância entre duas linhas do pentagrama
-/// Valores em metadata SMuFL são expressos em staff spaces (1.0 = 1 staff space)
-/// CORREÇÃO: Metadados SMuFL usam staff spaces diretos, não 1/4 de staff space
+/// O SMuFL Definess um coordinate system based on unidades de staff space.
+/// 1 staff space = distância entre duas linhas of the staff
+/// Valores in metadata SMuFL are expressos in staff spaces (1.0 = 1 staff space)
+/// Fix: Metadados SMuFL usam staff spaces diretos, not 1/4 de staff space
 class SmuflCoordinates {
-  /// Converte unidades SMuFL para pixels
-  /// @param smuflUnits Valor em unidades SMuFL (staff spaces)
-  /// @param staffSpace Tamanho do staff space em pixels
+  /// Converts unidades SMuFL for pixels
+  /// @param smuflUnits Value in SMuFL units (staff spaces)
+  /// @param staffSpace Staff space size in pixels
   static double smuflToPixels(double smuflUnits, double staffSpace) {
     return smuflUnits * staffSpace;
   }
 
-  /// Converte pixels para unidades SMuFL
-  /// @param pixels Valor em pixels
-  /// @param staffSpace Tamanho do staff space em pixels
+  /// Converts pixels for unidades SMuFL
+  /// @param pixels Value in pixels
+  /// @param staffSpace Staff space size in pixels
   static double pixelsToSmufl(double pixels, double staffSpace) {
     return pixels / staffSpace;
   }
 
-  /// Calcula o staff space baseado na fonte
-  /// @param fontSize Tamanho da fonte em pixels
+  /// Calculatestes o staff space based na fonte
+  /// @param fontSize Size of the fonte in pixels
   static double getStaffSpaceFromFontSize(double fontSize) {
-    // CORREÇÃO: Para fontes SMuFL como Bravura, o staff space é 1/4 do tamanho da fonte
-    // Esta relação é definida na especificação SMuFL
+    // Fix: For fontes SMuFL como Bravura, o staff space é 1/4 of the Size of the fonte
+    // This relação é definida na especificação SMuFL
     return fontSize / 4.0;
   }
 
-  /// Valores oficiais do metadata Bravura conforme especificação SMuFL
-  /// Estes valores devem ser obtidos do metadata, mas fornecemos defaults seguros
+  /// Valores oficiais of the metadata Bravura according to especificação SMuFL
+  /// Estes valores devem ser obtidos of the metadata, mas fornecemos defaults seguros
 
-  /// Calcula a espessura de uma linha do pentagrama
-  /// @param staffSpace Tamanho do staff space
+  /// Calculatestes a espessura de a linha of the staff
+  /// @param staffSpace Staff space size
   static double getStaffLineThickness(double staffSpace) {
-    // Valor oficial Bravura: staffLineThickness = 0.13 staff spaces
+    // Value oficial Bravura: staffLineThickness = 0.13 staff spaces
     return staffSpace * 0.13;
   }
 
-  /// Calcula a espessura de uma haste
-  /// @param staffSpace Tamanho do staff space
+  /// Calculatestes a espessura de a stem
+  /// @param staffSpace Staff space size
   static double getStemThickness(double staffSpace) {
-    // Valor oficial Bravura: stemThickness = 0.12 staff spaces
+    // Value oficial Bravura: stemThickness = 0.12 staff spaces
     return staffSpace * 0.12;
   }
 
-  /// Calcula a altura padrão de uma haste
-  /// @param staffSpace Tamanho do staff space
+  /// Calculatestes a height default de a stem
+  /// @param staffSpace Staff space size
   static double getStemHeight(double staffSpace) {
-    // Valor oficial SMuFL: stemLength = 3.5 staff spaces
+    // Value oficial SMuFL: stemLength = 3.5 staff spaces
     return staffSpace * 3.5;
   }
 
-  /// Calcula a espessura das linhas suplementares
-  /// @param staffSpace Tamanho do staff space
+  /// Calculatestes a espessura das linhas suplementares
+  /// @param staffSpace Staff space size
   static double getLedgerLineThickness(double staffSpace) {
-    // Valor oficial Bravura: legerLineThickness = 0.16 staff spaces
+    // Value oficial Bravura: legerLineThickness = 0.16 staff spaces
     return staffSpace * 0.16;
   }
 
-  /// Calcula a extensão das linhas suplementares além da nota
-  /// @param staffSpace Tamanho do staff space
+  /// Calculatestes a extensão das linhas suplementares além of the note
+  /// @param staffSpace Staff space size
   static double getLedgerLineExtension(double staffSpace) {
-    // Valor oficial Bravura: legerLineExtension = 0.4 staff spaces
+    // Value oficial Bravura: legerLineExtension = 0.4 staff spaces
     return staffSpace * 0.4;
   }
 
-  /// Calcula a espessura das barras de compasso
-  /// @param staffSpace Tamanho do staff space
+  /// Calculatestes a espessura das barlines
+  /// @param staffSpace Staff space size
   static double getBarlineThickness(double staffSpace) {
-    // Valor oficial Bravura: thinBarlineThickness = 0.16 staff spaces
+    // Value oficial Bravura: thinBarlineThickness = 0.16 staff spaces
     return staffSpace * 0.16;
   }
 
-  /// Calcula a espessura das barras grossas
-  /// @param staffSpace Tamanho do staff space
+  /// Calculatestes a espessura das barras grossas
+  /// @param staffSpace Staff space size
   static double getThickBarlineThickness(double staffSpace) {
-    // Valor oficial Bravura: thickBarlineThickness = 0.5 staff spaces
+    // Value oficial Bravura: thickBarlineThickness = 0.5 staff spaces
     return staffSpace * 0.5;
   }
 }
 
-/// Classe para gerenciar bounding boxes de glifos
+/// Class for gerenciar bounding boxes de glifos
 class GlyphBoundingBox {
   final double bBoxNeX; // Nordeste X
   final double bBoxNeY; // Nordeste Y
@@ -101,7 +101,7 @@ class GlyphBoundingBox {
     required this.bBoxSwY,
   });
 
-  /// Cria um bounding box a partir dos dados de metadata SMuFL
+  /// Creates um bounding box a partir dos dados de metadata SMuFL
   factory GlyphBoundingBox.fromMetadata(Map<String, dynamic> bboxData) {
     final bBoxNE = bboxData['bBoxNE'] as List<dynamic>?;
     final bBoxSW = bboxData['bBoxSW'] as List<dynamic>?;
@@ -114,36 +114,36 @@ class GlyphBoundingBox {
     );
   }
 
-  /// Largura do glifo em unidades SMuFL
+  /// Width of the glifo in SMuFL units
   double get width => bBoxNeX - bBoxSwX;
 
-  /// Altura do glifo em unidades SMuFL
+  /// Height of the glifo in SMuFL units
   double get height => bBoxNeY - bBoxSwY;
 
-  /// Largura em pixels
+  /// Width in pixels
   double widthInPixels(double staffSpace) {
     return SmuflCoordinates.smuflToPixels(width, staffSpace);
   }
 
-  /// Altura em pixels
+  /// Height in pixels
   double heightInPixels(double staffSpace) {
     return SmuflCoordinates.smuflToPixels(height, staffSpace);
   }
 
-  /// Centro X do glifo
+  /// Centro X of the glifo
   double get centerX => (bBoxNeX + bBoxSwX) / 2;
 
-  /// Centro Y do glifo
+  /// Centro Y of the glifo
   double get centerY => (bBoxNeY + bBoxSwY) / 2;
 }
 
-/// Pontos de ancoragem para posicionamento preciso de glifos
+/// Anchor points for posicionamento preciso de glifos
 class GlyphAnchors {
   final Map<String, Offset> anchors;
 
   GlyphAnchors(this.anchors);
 
-  /// Cria anchors a partir dos dados de metadata SMuFL
+  /// Creates anchors a partir dos dados de metadata SMuFL
   factory GlyphAnchors.fromMetadata(Map<String, dynamic>? anchorsData) {
     final anchors = <String, Offset>{};
 
@@ -162,10 +162,10 @@ class GlyphAnchors {
     return GlyphAnchors(anchors);
   }
 
-  /// Obtém um ponto de ancoragem específico
+  /// Gets um anchor point específico
   Offset? getAnchor(String anchorName) => anchors[anchorName];
 
-  /// Converte um anchor para pixels
+  /// Converts um anchor for pixels
   Offset? getAnchorInPixels(String anchorName, double staffSpace) {
     final anchor = getAnchor(anchorName);
     if (anchor == null) return null;
@@ -176,7 +176,7 @@ class GlyphAnchors {
     );
   }
 
-  /// Anchors comuns para diferentes tipos de glifos
+  /// Anchors comuns for diferentes tipos de glifos
   static const Map<String, List<String>> commonAnchors = {
     'noteheads': ['stemUpSE', 'stemDownNW', 'opticalCenter'],
     'clefs': ['opticalCenter'],
@@ -187,7 +187,7 @@ class GlyphAnchors {
   };
 }
 
-/// Classe para informações completas de um glifo SMuFL
+/// Class for informações completas de um glifo SMuFL
 class SmuflGlyphInfo {
   final String name;
   final String codepoint;
@@ -203,40 +203,40 @@ class SmuflGlyphInfo {
     this.anchors,
   });
 
-  /// Verifica se o glifo tem informações de bounding box
+  /// Checks se o glifo tem informações de bounding box
   bool get hasBoundingBox => boundingBox != null;
 
-  /// Verifica se o glifo tem pontos de ancoragem
+  /// Checks se o glifo tem anchor points
   bool get hasAnchors => anchors != null && anchors!.anchors.isNotEmpty;
 }
 
-/// Utilitários para posicionamento baseado em SMuFL
+/// Utilitários for posicionamento based on SMuFL
 class SmuflPositioning {
-  /// Calcula a posição vertical de uma nota no pentagrama
-  /// @param staffPosition Posição na pauta (0 = linha central)
-  /// @param staffSpace Tamanho do staff space
+  /// Calculatestes a position vertical de a note no staff
+  /// @param staffPosition Staff position (0 = linha central)
+  /// @param staffSpace Staff space size
   static double noteYPosition(int staffPosition, double staffSpace) {
     return -staffPosition * (staffSpace / 2);
   }
 
-  /// Calcula se uma nota precisa de linhas suplementares
-  /// @param staffPosition Posição na pauta
+  /// Calculatestes se a note precisa de linhas suplementares
+  /// @param staffPosition Staff position
   static bool needsLedgerLines(int staffPosition) {
     return staffPosition.abs() > 4; // Fora das 5 linhas do pentagrama
   }
 
-  /// Calcula as posições das linhas suplementares necessárias
-  /// @param staffPosition Posição da nota
+  /// Calculatestes as positions das linhas suplementares necessárias
+  /// @param staffPosition Position of the note
   static List<int> getLedgerLinePositions(int staffPosition) {
     final lines = <int>[];
 
     if (staffPosition > 4) {
-      // Linhas acima do pentagrama
+      // Linhas acima of the staff
       for (int line = 6; line <= staffPosition; line += 2) {
         lines.add(line);
       }
     } else if (staffPosition < -4) {
-      // Linhas abaixo do pentagrama
+      // Linhas abaixo of the staff
       for (int line = -6; line >= staffPosition; line -= 2) {
         lines.add(line);
       }
@@ -245,9 +245,9 @@ class SmuflPositioning {
     return lines;
   }
 
-  /// Calcula o espaçamento horizontal entre elementos
-  /// @param elementType Tipo de elemento musical
-  /// @param staffSpace Tamanho do staff space
+  /// Calculatestes o spacing horizontal entre elementos
+  /// @param elementType Type de elemento musical
+  /// @param staffSpace Staff space size
   static double getElementSpacing(String elementType, double staffSpace) {
     const spacingRatios = {
       'clef': 1.5,
@@ -262,14 +262,14 @@ class SmuflPositioning {
     return staffSpace * ratio;
   }
 
-  /// Calcula a rotação necessária para um glifo
-  /// @param angle Ângulo em graus
+  /// Calculatestes a rotação necessária for um glifo
+  /// @param angle Ângulo in graus
   static Matrix4 getRotationMatrix(double angle) {
     final radians = angle * (math.pi / 180);
     return Matrix4.identity()..rotateZ(radians);
   }
 
-  /// Calcula a escala necessária para um glifo
+  /// Calculatestes a escala necessária for um glifo
   /// @param scaleX Escala horizontal
   /// @param scaleY Escala vertical
   static Matrix4 getScaleMatrix(double scaleX, double scaleY) {
@@ -277,49 +277,49 @@ class SmuflPositioning {
   }
 }
 
-/// Classe para posicionamento avançado baseado nos metadados SMuFL
+/// Class for posicionamento avançado based nos SMuFL metadata
 class SmuflAdvancedCoordinates {
   final double staffSpace;
   final SmuflMetadata metadata;
 
   SmuflAdvancedCoordinates({required this.staffSpace, required this.metadata});
 
-  /// Retorna a posição Y para ornamentos baseado em âncoras SMuFL
+  /// Returns a Y position for ornaments based on âncoras SMuFL
   double getOrnamentY(
     String noteGlyph,
     String ornamentGlyph,
     double baseY,
     bool above,
   ) {
-    // Usar anchors do metadata para posicionamento preciso
+    // Usesr anchors of the metadata for posicionamento preciso
     final anchors = metadata.getGlyphAnchors(noteGlyph);
 
     if (above) {
-      // Posição acima da nota usando âncora "above" se disponível
+      // Position acima of the note using âncora "above" se disponível
       if (anchors != null) {
         final anchor = anchors.getAnchor('above');
         if (anchor != null) {
           return baseY + (anchor.dy * staffSpace) - (staffSpace * 0.5);
         }
       }
-      // Posição padrão acima
+      // Position default acima
       return baseY - (staffSpace * 2.5);
     } else {
-      // Posição abaixo da nota usando âncora "below" se disponível
+      // Position abaixo of the note using âncora "below" se disponível
       if (anchors != null) {
         final anchor = anchors.getAnchor('below');
         if (anchor != null) {
           return baseY + (anchor.dy * staffSpace) + (staffSpace * 0.5);
         }
       }
-      // Posição padrão abaixo
+      // Position default abaixo
       return baseY + (staffSpace * 2.5);
     }
   }
 
-  /// Retorna a posição Y para dinâmicas baseado em âncoras SMuFL
+  /// Returns a Y position for dynamics based on âncoras SMuFL
   double getDynamicY(String noteGlyph, double baseY) {
-    // Dinâmicas sempre ficam abaixo da pauta
+    // Dynamics always ficam abaixo of the staff
     final anchors = metadata.getGlyphAnchors(noteGlyph);
 
     if (anchors != null) {
@@ -329,11 +329,11 @@ class SmuflAdvancedCoordinates {
       }
     }
 
-    // Posição padrão para dinâmicas (abaixo da pauta)
+    // Position default for dynamics (abaixo of the staff)
     return baseY + (staffSpace * 4.0);
   }
 
-  /// Retorna a posição para articulações baseado em âncoras SMuFL
+  /// Returns a position for articulations based on âncoras SMuFL
   double getArticulationY(
     String noteGlyph,
     String articulationGlyph,
@@ -361,7 +361,7 @@ class SmuflAdvancedCoordinates {
     }
   }
 
-  /// Retorna a altura da beam baseado na duração
+  /// Returns a height of the beam based na duração
   double getBeamHeight(DurationType durationType) {
     switch (durationType) {
       case DurationType.eighth:
@@ -377,14 +377,14 @@ class SmuflAdvancedCoordinates {
     }
   }
 
-  /// Calcula posições para beam groups seguindo regras musicais
+  /// Calculatestes positions for beam groups following regras musicais
   List<double> calculateBeamPositions(
     List<double> notePositionsY,
     bool stemUp,
   ) {
     if (notePositionsY.isEmpty) return [];
 
-    // Calcular inclinação baseada na diferença de altura
+    // Calculatestesr inclinação baseada na diferença de height
     final firstY = notePositionsY.first;
     final lastY = notePositionsY.last;
     final slope = stemUp
@@ -392,7 +392,7 @@ class SmuflAdvancedCoordinates {
         : // Beam sobe suavemente
           (lastY - firstY) * 0.3; // Beam desce suavemente
 
-    // Gerar posições interpoladas
+    // Generatesr positions interpoladas
     final positions = <double>[];
     for (int i = 0; i < notePositionsY.length; i++) {
       final ratio = notePositionsY.length > 1
@@ -406,14 +406,14 @@ class SmuflAdvancedCoordinates {
   }
 }
 
-/// Classe para posicionamento preciso baseado em anchors SMuFL
+/// Class for posicionamento preciso based on anchors SMuFL
 class SmuflGlyphPositioner {
   final SmuflMetadata metadata;
   final double staffSpace;
 
   SmuflGlyphPositioner({required this.metadata, required this.staffSpace});
 
-  /// Calcula a posição precisa de uma haste usando anchors SMuFL
+  /// Calculatestes a position precisa de a stem using anchors SMuFL
   Offset getStemPosition(
     String noteheadGlyph,
     bool stemUp,
@@ -421,16 +421,16 @@ class SmuflGlyphPositioner {
   ) {
     final anchors = metadata.getGlyphAnchors(noteheadGlyph);
     if (anchors == null) {
-      // Fallback para posicionamento tradicional se não há anchors
+      // Fallback for posicionamento tradded se not há anchors
       return _getFallbackStemPosition(notePosition, stemUp);
     }
 
-    // Usar anchors oficiais SMuFL
+    // Usesr anchors oficiais SMuFL
     final anchorName = stemUp ? 'stemUpSE' : 'stemDownNW';
     final anchor = anchors.getAnchor(anchorName);
 
     if (anchor != null) {
-      // Converter anchor para pixels e aplicar à posição da nota
+      // Convertsr anchor for pixels e Appliesr à position of the note
       final anchorPixels = anchor.toPixels(staffSpace);
       return Offset(
         notePosition.dx + anchorPixels.dx,
@@ -441,9 +441,9 @@ class SmuflGlyphPositioner {
     return _getFallbackStemPosition(notePosition, stemUp);
   }
 
-  /// Posicionamento de fallback quando não há anchors
+  /// Posicionamento de fallback when not há anchors
   Offset _getFallbackStemPosition(Offset notePosition, bool stemUp) {
-    // Usar largura padrão estimada da cabeça de nota
+    // Usesr width default estimada of the notehead
     final noteWidth = staffSpace * 1.18;
     final halfNoteWidth = noteWidth * 0.5;
     final stemThickness = SmuflCoordinates.getStemThickness(staffSpace);
@@ -455,7 +455,7 @@ class SmuflGlyphPositioner {
     return Offset(stemX, notePosition.dy);
   }
 
-  /// Calcula a posição de um acidente usando anchors SMuFL
+  /// Calculatestes a position de um accidental using anchors SMuFL
   Offset getAccidentalPosition(
     String noteheadGlyph,
     String accidentalGlyph,
@@ -464,11 +464,11 @@ class SmuflGlyphPositioner {
     // final noteAnchors = metadata.getGlyphAnchors(noteheadGlyph);
     final accidentalBBox = metadata.getGlyphBoundingBox(accidentalGlyph);
 
-    // Posição padrão: à esquerda da nota com espaçamento adequado
+    // Position default: à esquerda of the note with spacing adequado
     double accidentalX = notePosition.dx;
 
     if (accidentalBBox != null) {
-      // Usar largura real do acidente
+      // Usesr width real of the accidental
       final accidentalWidth = accidentalBBox.widthInPixels(staffSpace);
       final spacing = staffSpace * 0.2; // Espaçamento mínimo
       accidentalX -= accidentalWidth + spacing;
@@ -480,7 +480,7 @@ class SmuflGlyphPositioner {
     return Offset(accidentalX, notePosition.dy);
   }
 
-  /// Calcula a posição de ornamentos usando anchors SMuFL
+  /// Calculatestes a position de ornaments using anchors SMuFL
   Offset getOrnamentPosition(
     String noteheadGlyph,
     String ornamentGlyph,
@@ -502,12 +502,12 @@ class SmuflGlyphPositioner {
       }
     }
 
-    // Fallback para posicionamento tradicional
+    // Fallback for posicionamento tradded
     final offset = above ? -staffSpace * 2.0 : staffSpace * 2.0;
     return Offset(notePosition.dx, notePosition.dy + offset);
   }
 
-  /// Calcula a posição de articulações usando anchors SMuFL
+  /// Calculatestes a position de articulations using anchors SMuFL
   Offset getArticulationPosition(
     String noteheadGlyph,
     String articulationGlyph,
@@ -530,12 +530,12 @@ class SmuflGlyphPositioner {
       }
     }
 
-    // Fallback para posicionamento tradicional
+    // Fallback for posicionamento tradded
     final offset = above ? -staffSpace * 1.5 : staffSpace * 1.5;
     return Offset(notePosition.dx, notePosition.dy + offset);
   }
 
-  /// Calcula a posição central óptica de um glifo
+  /// Calculatestes a position central óptica de um glifo
   Offset getOpticalCenter(String glyphName, Offset basePosition) {
     final anchors = metadata.getGlyphAnchors(glyphName);
 
@@ -550,7 +550,7 @@ class SmuflGlyphPositioner {
       }
     }
 
-    // Se não há center óptico, usar o centro geométrico
+    // Se not há center óptico, Usesr o centro geométrico
     final boundingBox = metadata.getGlyphBoundingBox(glyphName);
     if (boundingBox != null) {
       final centerX = SmuflCoordinates.smuflToPixels(
@@ -568,9 +568,9 @@ class SmuflGlyphPositioner {
   }
 }
 
-/// Extensão para facilitar conversões
+/// Extensão for facilitar conversões
 extension OffsetSmuflExtension on Offset {
-  /// Converte um Offset de unidades SMuFL para pixels
+  /// Converts um Offset de unidades SMuFL for pixels
   Offset toPixels(double staffSpace) {
     return Offset(
       SmuflCoordinates.smuflToPixels(dx, staffSpace),
@@ -578,7 +578,7 @@ extension OffsetSmuflExtension on Offset {
     );
   }
 
-  /// Converte um Offset de pixels para unidades SMuFL
+  /// Converts um Offset de pixels for unidades SMuFL
   Offset toSmufl(double staffSpace) {
     return Offset(
       SmuflCoordinates.pixelsToSmufl(dx, staffSpace),

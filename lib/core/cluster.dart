@@ -10,7 +10,7 @@ enum ClusterType {
   pentatonic,   // Cluster pentatônico
 }
 
-/// Representa um cluster (grupo de notas adjacentes tocadas simultaneamente)
+/// Representa um cluster (grupo de notes adjacentes tocadas simultaneamente)
 class Cluster extends MusicalElement {
   final Pitch lowestPitch;
   final Pitch highestPitch;
@@ -31,7 +31,7 @@ class Cluster extends MusicalElement {
   })  : lowestNote = lowestNote ?? lowestPitch,
         highestNote = highestNote ?? highestPitch;
 
-  /// Retorna o glifo SMuFL apropriado
+  /// Returns o glifo SMuFL apropriado
   String get glyphName {
     return 'noteheadClusterRoundWhite'; // Pode variar
   }

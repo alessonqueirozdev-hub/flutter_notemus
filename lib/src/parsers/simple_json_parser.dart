@@ -3,7 +3,7 @@
 import 'dart:convert';
 import '../../core/core.dart';
 
-/// Parser para formato JSON simplificado com suporte a letras (lyrics)
+/// Parser for formato JSON simplificado with suporte a letras (lyrics)
 /// 
 /// Formato aceito:
 /// ```json
@@ -17,9 +17,9 @@ import '../../core/core.dart';
 /// ```
 class SimpleJsonParser {
   
-  /// Converte array JSON simplificado para Staff completo
+  /// Converts array JSON simplificado for Staff completo
   /// 
-  /// Exemplo:
+  /// Example:
   /// ```dart
   /// final jsonString = '''
   /// [
@@ -40,7 +40,7 @@ class SimpleJsonParser {
     final List<dynamic> notesJson = jsonDecode(jsonString);
     final staff = Staff();
     
-    // Criar primeiro compasso com atributos
+    // Createsr first measure with atributos
     var currentMeasure = Measure();
     currentMeasure.add(Clef(clefType: clefType));
     currentMeasure.add(KeySignature(keySignatureFifths));
@@ -58,7 +58,7 @@ class SimpleJsonParser {
       
       final noteDuration = note.duration.realValue;
       
-      // Se a nota não cabe no compasso atual, criar novo compasso
+      // Se a note not cabe no current measure, Createsr new measure
       if (currentDuration + noteDuration > measureCapacity) {
         if (autoBarlines) {
           currentMeasure.add(Barline(type: BarlineType.single));
@@ -72,7 +72,7 @@ class SimpleJsonParser {
       currentMeasure.add(note);
       currentDuration += noteDuration;
       
-      // Se completou o compasso exatamente, iniciar novo
+      // Se completou o measure exatamente, iniciar new
       if (currentDuration >= measureCapacity) {
         if (autoBarlines) {
           currentMeasure.add(Barline(type: BarlineType.single));
@@ -84,7 +84,7 @@ class SimpleJsonParser {
       }
     }
     
-    // Adicionar último compasso se tiver notas
+    // add last measure se tiver notes
     if (currentMeasure.elements.isNotEmpty) {
       if (autoBarlines) {
         currentMeasure.add(Barline(type: BarlineType.final_));
@@ -95,7 +95,7 @@ class SimpleJsonParser {
     return staff;
   }
   
-  /// Parse de uma nota no formato simplificado
+  /// Parse de a note no formato simplificado
   static Note? _parseSimpleNote(Map<String, dynamic> json) {
     final String? noteString = json['note'];
     if (noteString == null) return null;
@@ -112,14 +112,14 @@ class SimpleJsonParser {
     );
   }
   
-  /// Converte string de nota para objeto Pitch
+  /// Converts string de note for object Pitch
   /// 
   /// Formatos aceitos:
   /// - "C4" → Dó na 4ª oitava
-  /// - "C#4" → Dó sustenido na 4ª oitava
-  /// - "Db4" → Ré bemol na 4ª oitava
-  /// - "C##4" → Dó dobrado sustenido
-  /// - "Cbb4" → Dó dobrado bemol
+  /// - "C#4" → Dó sharp na 4ª oitava
+  /// - "Db4" → Ré flat na 4ª oitava
+  /// - "C##4" → Dó dobrado sharp
+  /// - "Cbb4" → Dó dobrado flat
   static Pitch? _parsePitchFromString(String noteString) {
     if (noteString.isEmpty) return null;
     
@@ -146,7 +146,7 @@ class SimpleJsonParser {
       }
     }
     
-    // Parse de oitava (resto da string)
+    // Parse de oitava (resto of the string)
     if (index < noteString.length) {
       octave = int.tryParse(noteString.substring(index)) ?? 4;
     }
@@ -158,7 +158,7 @@ class SimpleJsonParser {
     );
   }
   
-  /// Converte string de duração para objeto Duration
+  /// Converts string de duração for object Duration
   static Duration _parseDuration(String durationString) {
     DurationType type;
     
@@ -198,9 +198,9 @@ class SimpleJsonParser {
     return Duration(type);
   }
   
-  /// Renderiza APENAS um elemento isolado (ex: clave de sol)
+  /// Renders APENAS um elemento isolado (ex: treble clef)
   /// 
-  /// Exemplo:
+  /// Example:
   /// ```dart
   /// final clefJson = '{"type": "clef", "clefType": "treble"}';
   /// final element = SimpleJsonParser.parseSingleElement(clefJson);
@@ -320,7 +320,7 @@ class SimpleJsonParser {
     return Barline(type: type);
   }
   
-  /// Converte array de notas simples para JSON
+  /// Converts array de notes simples for JSON
   static String notesToSimpleJson(List<Note> notes) {
     final List<Map<String, dynamic>> jsonArray = [];
     
@@ -337,7 +337,7 @@ class SimpleJsonParser {
   static String _pitchToString(Pitch pitch) {
     String result = pitch.step;
     
-    // Adicionar alterações
+    // add alterações
     if (pitch.alter > 0) {
       result += '#' * pitch.alter.toInt();
     } else if (pitch.alter < 0) {

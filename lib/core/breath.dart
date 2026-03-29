@@ -13,20 +13,20 @@ enum BreathType {
   chokeCymbal,
 }
 
-/// Representa uma marca de respiração
+/// Representa a marca de respiração
 class Breath extends MusicalElement {
   final BreathType type;
 
   Breath({required this.type});
 }
 
-/// Representa uma cesura
+/// Representa a cesura
 class Caesura extends MusicalElement {
   final BreathType type;
 
   Caesura({this.type = BreathType.caesura});
   
-  /// Retorna o nome do glifo SMuFL apropriado
+  /// Returns o glyph name SMuFL apropriado
   String get glyphName {
     switch (type) {
       case BreathType.caesura:

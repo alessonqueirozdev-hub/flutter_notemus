@@ -6,30 +6,31 @@ import 'duration.dart';
 import 'ornament.dart';
 import 'dynamic.dart';
 import 'technique.dart';
+import 'text.dart';
 import '../src/music_model/bounding_box_support.dart';
 
-/// Define os tipos de articulações que uma nota pode ter.
+/// Definesss the articulation types that a note may have.
 enum ArticulationType {
-  staccato,         // Ponto
-  staccatissimo,    // Ponto triangular
-  accent,           // Acento
-  strongAccent,     // Acento forte
-  tenuto,           // Traço
-  marcato,          // Combinação de acento e tenuto
-  legato,           // Ligado (normalmente como slur)
-  portato,          // Combinação de staccato e tenuto
-  upBow,            // Arco para cima (cordas)
-  downBow,          // Arco para baixo (cordas)
-  harmonics,        // Harmônicos
+  staccato,         // Dot
+  staccatissimo,    // Triangular dot
+  accent,           // Accent
+  strongAccent,     // Strong accent
+  tenuto,           // Tenuto line
+  marcato,          // Combination of accent and tenuto
+  legato,           // Legato (usually as a slur)
+  portato,          // Combination of staccato and tenuto
+  upBow,            // Up bow (strings)
+  downBow,          // Down bow (strings)
+  harmonics,        // Harmonics
   pizzicato,        // Pizzicato
   snap,             // Snap pizzicato
-  thumb,            // Dedilhado com polegar
-  stopped,          // Notas abafadas (metal)
-  open,             // Notas abertas (metal)
-  halfStopped,      // Meio abafado (metal)
+  thumb,            // Thumb fingering
+  stopped,          // Stopped notes (brass)
+  open,             // Open notes (brass)
+  halfStopped,      // Half-stopped (brass)
 }
 
-/// Representa uma nota musical com altura e duração.
+/// Represents a musical note with pitch and duration.
 class Note extends MusicalElement with BoundingBoxSupport {
   final Pitch pitch;
   final Duration duration;
@@ -38,43 +39,47 @@ class Note extends MusicalElement with BoundingBoxSupport {
   final List<ArticulationType> articulations;
   final TieType? tie;
 
-  /// Opcional: Define se esta nota inicia ou termina uma ligadura de expressão.
+  /// Optional: Definesss whether this note starts or ends a slur.
   final SlurType? slur;
 
-  /// Lista de ornamentos aplicados à nota
+  /// List of ornaments applied to the note.
   final List<Ornament> ornaments;
 
-  /// Dinâmica específica da nota
+  /// Note-specific dynamic marking.
   final Dynamic? dynamicElement;
 
-  /// Técnicas especiais da nota
+  /// Special playing techniques for the note.
   final List<PlayingTechnique> techniques;
 
-  /// Número da voz para notação polifônica (1 = soprano, 2 = contralto, etc.)
-  /// null = voz única (padrão)
+  /// Voice number for polyphonic notetion (1 = soprano, 2 = alto, etc.).
+  /// null = single voice (default).
   final int? voice;
 
-  /// Número de traços de tremolo (0 = nenhum, 1-5 = número de traços)
+  /// Number of tremolo strokes (0 = none, 1–5 = number of strokes).
   final int tremoloStrokes;
 
-  /// Indica se esta nota é uma grace note (nota de ornamento)
+  /// Lyric syllables associated with this note (one per verse).
+  /// Index 0 = verse 1, index 1 = verse 2, etc.
+  final List<Syllable>? syllables;
+
+  /// Indicates whether this note is a grace note.
   final bool isGraceNote;
 
-  /// Altura alternativa para grace notes com uma altura específica
+  /// Alternate pitch for grace notes with a specific pitch.
   final Pitch? alternatePitch;
 
-  // === Campos de Tablatura (MEI `@tab.fret` e `@tab.string`) ===
+  // === Tablature fields (MEI `@tab.fret` and `@tab.string`) ===
 
-  /// Casa (fret) na tablatura. null = nota não é de tablatura.
-  /// Corresponde ao atributo `@tab.fret` do MEI v5.
-  /// 0 = corda solta (open string), 1–24 = casas numeradas.
+  /// Fret number in tablature. null = note is not a tablature note.
+  /// Corresponds to the MEI v5 `@tab.fret` attribute.
+  /// 0 = open string, 1–24 = numbered frets.
   final int? tabFret;
 
-  /// Número da corda na tablatura (1-based, corda mais aguda = 1).
-  /// Corresponde ao atributo `@tab.string` do MEI v5.
+  /// String number in tablature (1-based, highest string = 1).
+  /// Corresponds to the MEI v5 `@tab.string` attribute.
   final int? tabString;
 
-  /// Indica se esta nota é de tablatura (possui [tabFret] ou [tabString]).
+  /// Indicates whether this note is a tablature note (has [tabFret] or [tabString]).
   bool get isTabNote => tabFret != null || tabString != null;
 
   Note({
@@ -93,5 +98,6 @@ class Note extends MusicalElement with BoundingBoxSupport {
     this.alternatePitch,
     this.tabFret,
     this.tabString,
+    this.syllables,
   });
 }

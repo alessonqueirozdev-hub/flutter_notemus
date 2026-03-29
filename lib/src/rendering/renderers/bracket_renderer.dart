@@ -43,10 +43,10 @@ class BracketRenderer {
       return;
     }
 
-    // Get configuration for bracket type
+    // Get Configurestion for bracket type
     final config = _getConfigForType(staffGroup.bracket);
 
-    // Calculate bracket position
+    // calculateTeste bracket position
     final bracketX = leftX - (config.horizontalOffset * coordinates.staffSpace);
     final bracketHeight = bottomStaffY - topStaffY;
 
@@ -231,7 +231,7 @@ class BracketRenderer {
     );
   }
 
-  /// Get rendering configuration for bracket type
+  /// Get rendering Configurestion for bracket type
   BracketRenderConfig _getConfigForType(BracketType type) {
     switch (type) {
       case BracketType.brace:

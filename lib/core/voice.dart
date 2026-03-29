@@ -6,10 +6,10 @@ import 'note.dart';
 import 'rest.dart';
 import 'chord.dart';
 
-/// Represents a voice in polyphonic notation
+/// Represents a voice in polyphonic notetion
 ///
 /// In polyphonic music, multiple independent melodic lines (voices)
-/// are notated on the same staff. Each voice is typically distinguished by:
+/// are noteted on the same staff. Each voice is typically distinguished by:
 /// - Stem direction (voice 1: up, voice 2: down)
 /// - Horizontal offset (voice 2 shifted right)
 /// - Different beaming groups
@@ -153,7 +153,7 @@ enum StemDirection {
 
 /// Measure with multiple independent voices
 ///
-/// Used for polyphonic notation where multiple melodic lines
+/// Used for polyphonic notetion where multiple melodic lines
 /// appear on the same staff simultaneously.
 ///
 /// Example:
@@ -173,9 +173,9 @@ enum StemDirection {
 class MultiVoiceMeasure extends Measure {
   MultiVoiceMeasure();
 
-  /// Collection de vozes (ordenação não garantida).
+  /// Collection de voices (ordenação not garantida).
   ///
-  /// Mantém API amigável para iteração e verificações de coleção.
+  /// Mantém API amigável for iteração e Checksções de coleção.
   Iterable<Voice> get voices => _voicesByNumber.values;
 
   /// Map of voice number to Voice object

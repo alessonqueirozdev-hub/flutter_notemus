@@ -5,7 +5,7 @@ import '../../../../core/core.dart';
 import '../../../theme/music_score_theme.dart';
 import '../base_glyph_renderer.dart';
 
-/// Renderizador especializado APENAS para marcas de repetição (segno, coda, etc).
+/// Rendersdor especializado APENAS for marcas de repetição (segno, coda, etc).
 ///
 /// Responsabilidade única: desenhar símbolos de navegação musical.
 class RepeatMarkRenderer extends BaseGlyphRenderer {
@@ -18,15 +18,15 @@ class RepeatMarkRenderer extends BaseGlyphRenderer {
     required super.glyphSize,
   });
 
-  /// Renderiza marca de repetição.
+  /// Renders marca de repetição.
   void render(Canvas canvas, RepeatMark repeatMark, Offset basePosition) {
     final glyphName = _getRepeatMarkGlyph(repeatMark.type);
     if (glyphName == null) return;
 
-    // Posição tipográfica: acima da pauta
+    // Position tipográfica: acima of the staff
     final signY = coordinates.getStaffLineY(5) - (coordinates.staffSpace * 1.5);
 
-    // Usar opticalCenter anchor se disponível
+    // Usesr opticalCenter anchor se disponível
     final glyphInfo = metadata.getGlyphInfo(glyphName);
     double verticalAdjust = 0;
     if (glyphInfo != null && glyphInfo.hasAnchors) {

@@ -1,37 +1,37 @@
 // lib/src/beaming/beam_types.dart
 
-/// Direção da haste (stem) de uma nota
+/// Stem direction of a note.
 enum StemDirection {
-  /// Haste para cima (stem up)
+  /// Stem up.
   up,
-  
-  /// Haste para baixo (stem down)
+
+  /// Stem down.
   down,
-  
-  /// Sem haste (para notas inteiras/breves ou casos especiais)
+
+  /// No stem (for whole notes, breves, or special cases).
   none,
 }
 
-/// Tipo de inclinação do beam
+/// Beam slope type.
 enum BeamSlope {
-  /// Beam horizontal (mesma altura nas duas pontas)
+  /// Horizontal beam (same height at both ends).
   horizontal,
-  
-  /// Beam ascendente (subindo da esquerda para direita)
+
+  /// Ascending beam (rising from left to right).
   ascending,
-  
-  /// Beam descendente (descendo da esquerda para direita)
+
+  /// Descending beam (falling from left to right).
   descending,
 }
 
-/// Posição do beam em relação às linhas da pauta
+/// Position of the beam relative to staff lines.
 enum BeamLineAttachment {
-  /// Beam pendurado embaixo da linha (hastes para cima)
+  /// Beam hanging below the line (stem-up notes).
   hanging,
-  
-  /// Beam centrado na linha
+
+  /// Beam centered on the line.
   centered,
-  
-  /// Beam sentado em cima da linha (hastes para baixo)
+
+  /// Beam sitting above the line (stem-down notes).
   sitting,
 }

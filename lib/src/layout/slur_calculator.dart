@@ -1,4 +1,4 @@
-// lib/src/layout/slur_calculator.dart
+// lib/src/layout/slur_calculateTestor.dart
 
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
@@ -6,22 +6,22 @@ import 'bounding_box.dart';
 import 'skyline_calculator.dart';
 import '../engraving/engraving_rules.dart';
 
-/// Calculador de Slurs com curvas Bézier cúbicas
+/// Calculator de Slurs with curvas Bézier cúbicas
 ///
-/// Baseado em:
-/// - OpenSheetMusicDisplay (TieCalculator.ts e SlurCalculator.ts)
+/// Based on:
+/// - OpenSheetMusicDisplay (TiecalculateTestor.ts e SlurcalculateTestor.ts)
 /// - Behind Bars (Elaine Gould) - regras de slurs
 /// - SMuFL specification - anchors e positioning
 ///
 /// Algoritmo:
-/// 1. Ajustar pontos de início/fim com offsets (slurNoteHeadYOffset)
-/// 2. Coletar pontos do skyline entre início e fim
-/// 3. Rotacionar sistema de coordenadas para simplificar cálculos
-/// 4. Calcular inclinações máximas que evitam colisões
-/// 5. Limitar ângulos tangentes (30° a 80° conforme Behind Bars)
-/// 6. Gerar pontos de controle Bézier cúbica
-/// 7. Rotacionar de volta ao sistema original
-/// 8. Retornar curva Bézier final
+/// 1. Ajustar pontos de início/fim with offsets (slurNoteHeadYOffset)
+/// 2. Coletar pontos of the skyline entre início e fim
+/// 3. Rotacionar coordinate system for simplificar cálculos
+/// 4. Calculatestesr inclinações máximas that evitam colisões
+/// 5. Limitar ângulos tangentes (30° a 80° according to Behind Bars)
+/// 6. Generatesr pontos de controle Bézier cúbica
+/// 7. Rotacionar de volta ao system original
+/// 8. Returnsr curva Bézier final
 class SlurCalculator {
   final EngravingRules rules;
   final SkyBottomLineCalculator? skylineCalculator;
@@ -31,14 +31,14 @@ class SlurCalculator {
     this.skylineCalculator,
   }) : rules = rules ?? EngravingRules();
 
-  /// Calcula uma curva Bézier cúbica para um slur
+  /// Calculatestes a curva Bézier cúbica for um slur
   ///
-  /// @param startPoint Ponto inicial do slur (absolute position)
-  /// @param endPoint Ponto final do slur (absolute position)
-  /// @param placement Se true, slur acima das notas; se false, abaixo
-  /// @param notesBoundingBoxes BoundingBoxes das notas entre início e fim
-  /// @param staffSpace Tamanho do staff space em pixels
-  /// @return CubicBezierCurve com 4 pontos de controle
+  /// @param startPoint Start point of the slur (absolute position)
+  /// @param endPoint End point of the slur (absolute position)
+  /// @param placement If true, slur is above the notes; if false, below
+  /// @param notesBoundingBoxes BoundingBoxes das notes entre início e fim
+  /// @param staffSpace Staff space size in pixels
+  /// @return CubicBezierCurve with 4 pontos de controle
   CubicBezierCurve calculateSlur({
     required Offset startPoint,
     required Offset endPoint,
@@ -46,7 +46,7 @@ class SlurCalculator {
     List<BoundingBox>? notesBoundingBoxes,
     double staffSpace = 10.0,
   }) {
-    // 1. Ajustar pontos de início/fim com offset vertical
+    // 1. Ajustar pontos de início/fim with offset vertical
     final yOffsetPixels = rules.slurNoteHeadYOffset * staffSpace;
     final adjustedStart = placement
         ? Offset(startPoint.dx, startPoint.dy - yOffsetPixels)
@@ -56,17 +56,21 @@ class SlurCalculator {
         ? Offset(endPoint.dx, endPoint.dy - yOffsetPixels)
         : Offset(endPoint.dx, endPoint.dy + yOffsetPixels);
 
-    // 2. Calcular comprimento horizontal do slur
+    // 2. Calculatestesr comprimento horizontal of the slur
     final horizontalLength = (adjustedEnd.dx - adjustedStart.dx).abs();
 
-    // 3. Calcular altura ideal do slur baseado no comprimento
-    // Fórmula OSMD: height = k * sqrt(length) onde k varia com placement
+    // 3. Calculatestesr height ideal of the slur based no comprimento
+    // Fórmula OSMD: height = k * sqrt(length) where k varia with placement
     final heightFactor = placement ? 0.5 : 0.4;
     final idealHeight = heightFactor * math.sqrt(horizontalLength);
 
-    // 4. Ajustar altura se houver colisões com skyline
+    // 4. Ajustar height se houver colisões with skyline
+    // C2 FIX: removed redundant `&& notesBoundingBoxes != null` guard —
+    // _adjustHeightForCollisions only uses skylinecalculateTestor, so collision
+    // avoidance was never activated even though staff_renderer passes a
+    // SkyBottomLinecalculateTestor.
     double finalHeight = idealHeight;
-    if (skylineCalculator != null && notesBoundingBoxes != null) {
+    if (skylineCalculator != null) {
       finalHeight = _adjustHeightForCollisions(
         adjustedStart,
         adjustedEnd,
@@ -76,18 +80,18 @@ class SlurCalculator {
       );
     }
 
-    // 5. Calcular ângulo de inclinação do slur
+    // 5. Calculatestesr ângulo de inclinação of the slur
     final deltaY = adjustedEnd.dy - adjustedStart.dy;
     final deltaX = adjustedEnd.dx - adjustedStart.dx;
     double slopeAngle = math.atan2(deltaY, deltaX) * 180 / math.pi;
 
-    // Limitar ângulo de inclinação conforme regras
+    // Limitar ângulo de inclinação according to regras
     final maxSlopeAngle = rules.slurSlopeMaxAngle;
     if (slopeAngle.abs() > maxSlopeAngle) {
       slopeAngle = slopeAngle.sign * maxSlopeAngle;
     }
 
-    // 6. Calcular pontos de controle da curva Bézier cúbica
+    // 6. Calculatestesr pontos de controle of the curva Bézier cúbica
     final controlPoints = _calculateBezierControlPoints(
       adjustedStart,
       adjustedEnd,
@@ -104,7 +108,7 @@ class SlurCalculator {
     );
   }
 
-  /// Ajusta altura do slur para evitar colisões com notas
+  /// Ajusta height of the slur for evitar colisões with notes
   double _adjustHeightForCollisions(
     Offset startPoint,
     Offset endPoint,
@@ -114,14 +118,14 @@ class SlurCalculator {
   ) {
     if (skylineCalculator == null) return idealHeight;
 
-    // Obter pontos do skyline/bottomline no intervalo do slur
+    // Get pontos of the skyline/bottomline no intervalo of the slur
     final points = placement
         ? skylineCalculator!.getSkyLinePoints(startPoint.dx, endPoint.dx)
         : skylineCalculator!.getBottomLinePoints(startPoint.dx, endPoint.dx);
 
     if (points.isEmpty) return idealHeight;
 
-    // Encontrar ponto mais extremo (mais alto para placement=true, mais baixo para false)
+    // Encontrar ponto mais extremo (mais alto for placement=true, mais baixo for false)
     double extremeY = placement ? double.infinity : double.negativeInfinity;
     for (final point in points) {
       if (placement) {
@@ -131,29 +135,29 @@ class SlurCalculator {
       }
     }
 
-    // Calcular altura necessária para evitar colisão
+    // Calculatestesr height necessária for evitar colisão
     final midPointY = (startPoint.dy + endPoint.dy) / 2;
     final clearance = rules.slurClearanceMinimum * staffSpace;
 
     double requiredHeight;
     if (placement) {
-      // Slur acima: precisa ficar acima do skyline
+      // Slur acima: precisa ficar acima of the skyline
       requiredHeight = (midPointY - extremeY).abs() + clearance;
     } else {
-      // Slur abaixo: precisa ficar abaixo do bottomline
+      // Slur abaixo: precisa ficar abaixo of the bottomline
       requiredHeight = (extremeY - midPointY).abs() + clearance;
     }
 
-    // Retornar o maior entre altura ideal e altura necessária
+    // Returnsr o greater entre height ideal e height necessária
     return math.max(idealHeight, requiredHeight);
   }
 
-  /// Calcula os 4 pontos de controle de uma curva Bézier cúbica
+  /// Calculatestes os 4 pontos de controle de a curva Bézier cúbica
   ///
-  /// Algoritmo baseado em OSMD e Behind Bars:
+  /// Algoritmo based on OSMD e Behind Bars:
   /// - P0: ponto inicial
-  /// - P1: ponto de controle inicial (tangente com ângulo limitado)
-  /// - P2: ponto de controle final (tangente com ângulo limitado)
+  /// - P1: ponto de controle inicial (tangente with ângulo limitado)
+  /// - P2: ponto de controle final (tangente with ângulo limitado)
   /// - P3: ponto final
   List<Offset> _calculateBezierControlPoints(
     Offset start,
@@ -162,32 +166,32 @@ class SlurCalculator {
     double slopeAngle,
     bool placement,
   ) {
-    // Calcular comprimento horizontal e vertical
+    // Calculatestesr comprimento horizontal e vertical
     final dx = end.dx - start.dx;
     final dy = end.dy - start.dy;
     final length = math.sqrt(dx * dx + dy * dy);
 
-    // Calcular ângulos tangentes nos pontos inicial e final
-    // OSMD usa ângulos entre 30° e 80° conforme Behind Bars
+    // Calculatestesr ângulos tangentes nos pontos inicial e final
+    // OSMD Uses ângulos entre 30° e 80° according to Behind Bars
     final minTangentAngle = rules.slurTangentMinAngle * math.pi / 180;
     final maxTangentAngle = rules.slurTangentMaxAngle * math.pi / 180;
 
-    // Ângulo tangente baseado no comprimento do slur
+    // Ângulo tangente based no comprimento of the slur
     // Slurs curtos: ângulo mais íngreme
     // Slurs longos: ângulo mais suave
     final tangentAngleFactor = (length / 100.0).clamp(0.0, 1.0);
     final tangentAngle = minTangentAngle +
         (maxTangentAngle - minTangentAngle) * (1.0 - tangentAngleFactor);
 
-    // Calcular comprimento dos vetores de controle
-    // OSMD usa aproximadamente 1/3 do comprimento total
+    // Calculatestesr comprimento dos vetores de controle
+    // OSMD Uses aproximadamente 1/3 of the comprimento total
     final controlLength = length * 0.38;
 
     // P0: ponto inicial
     final p0 = start;
 
     // P1: ponto de controle inicial
-    // Direção: ângulo do slur + ângulo tangente
+    // Direção: ângulo of the slur + ângulo tangente
     final startControlAngle = math.atan2(dy, dx) +
         (placement ? -tangentAngle : tangentAngle);
     final p1 = Offset(
@@ -196,7 +200,7 @@ class SlurCalculator {
     );
 
     // P2: ponto de controle final
-    // Direção: ângulo do slur - ângulo tangente (simétrico)
+    // Direção: ângulo of the slur - ângulo tangente (simétrico)
     final endControlAngle = math.atan2(dy, dx) +
         (placement ? tangentAngle : -tangentAngle);
     final p2 = Offset(
@@ -210,17 +214,17 @@ class SlurCalculator {
     return [p0, p1, p2, p3];
   }
 
-  /// Calcula uma tie (ligadura de prolongamento)
+  /// Calculatestes a tie (tie/slur de prolongamento)
   ///
-  /// Ties são similares a slurs mas com regras específicas:
-  /// - Sempre conectam notas da mesma altura
-  /// - Altura baseada em interpolação linear (Behind Bars)
+  /// Ties are similares a slurs mas with regras específicas:
+  /// - Always conectam notes of the mesma height
+  /// - Height baseada in interpolação linear (Behind Bars)
   /// - Forma mais simétrica e previsível
   ///
-  /// @param startPoint Ponto inicial da tie
-  /// @param endPoint Ponto final da tie
-  /// @param placement Se true, tie acima; se false, abaixo
-  /// @param staffSpace Tamanho do staff space em pixels
+  /// @param startPoint Ponto inicial of the tie
+  /// @param endPoint Ponto final of the tie
+  /// @param placement if true, tie acima; if false, below
+  /// @param staffSpace Staff space size in pixels
   /// @return CubicBezierCurve
   CubicBezierCurve calculateTie({
     required Offset startPoint,
@@ -228,22 +232,22 @@ class SlurCalculator {
     required bool placement,
     double staffSpace = 10.0,
   }) {
-    // 1. Calcular comprimento horizontal (em staff spaces)
+    // 1. Calculatestesr comprimento horizontal (in staff spaces)
     final horizontalLengthSS = (endPoint.dx - startPoint.dx) / staffSpace;
 
-    // 2. Calcular altura usando interpolação linear (Behind Bars)
+    // 2. Calculatestesr height using interpolação linear (Behind Bars)
     // height = k * width + d
-    // Com limites mínimo e máximo
+    // With limites mínimo e máximo
     final heightSS = rules.calculateTieHeight(horizontalLengthSS);
     final heightPixels = heightSS * staffSpace;
 
-    // 3. Para ties, os pontos são sempre na mesma altura Y
-    // (diferente de slurs que podem conectar notas diferentes)
+    // 3. For ties, os pontos are always na mesma height Y
+    // (diferente de slurs that podem conectar notes diferentes)
     final adjustedStart = startPoint;
     final adjustedEnd = endPoint;
 
-    // 4. Calcular pontos de controle da Bézier
-    // Ties usam forma mais simétrica que slurs
+    // 4. Calculatestesr pontos de controle of the Bézier
+    // Ties use forma mais simétrica that slurs
     final controlPoints = _calculateTieBezierControlPoints(
       adjustedStart,
       adjustedEnd,
@@ -259,7 +263,7 @@ class SlurCalculator {
     );
   }
 
-  /// Calcula pontos de controle Bézier para ties (mais simétrico que slurs)
+  /// Calculatestes pontos de controle Bézier for ties (mais simétrico that slurs)
   List<Offset> _calculateTieBezierControlPoints(
     Offset start,
     Offset end,
@@ -267,12 +271,12 @@ class SlurCalculator {
     bool placement,
   ) {
     final dx = end.dx - start.dx;
-    // midX não usado, removido para evitar warning
+    // midX not used, removido for evitar warning
 
-    // Para ties, usar ângulo tangente MENOR (Behind Bars: ties devem ser achatados)
+    // For ties, Usesr ângulo tangente Smaller (Behind Bars: ties devem ser achatados)
     final tangentAngle = 25.0 * math.pi / 180; // Reduzido de 45° para 25°
 
-    // Comprimento dos vetores de controle: 35% do comprimento total (reduzido)
+    // Comprimento dos vetores de controle: 35% of the comprimento total (reduzido)
     final controlLength = dx * 0.35; // Reduzido de 0.4 para 0.35
 
     // P0: ponto inicial
@@ -300,16 +304,16 @@ class SlurCalculator {
     return [p0, p1, p2, p3];
   }
 
-  /// Calcula múltiplos pontos ao longo da curva Bézier
+  /// Calculatestes múltiplos pontos ao longo of the curva Bézier
   ///
-  /// Útil para:
-  /// - Renderização da curva
+  /// Útil for:
+  /// - Rendersção of the curva
   /// - Detecção de colisões precisa
-  /// - Atualização de skyline/bottomline
+  /// - Currentização de skyline/bottomline
   ///
   /// @param curve Curva Bézier
-  /// @param numPoints Número de pontos a gerar (padrão: 20)
-  /// @return Lista de offsets ao longo da curva
+  /// @param numPoints Number de pontos a Generatesr (default: 20)
+  /// @return List of offsets ao longo of the curva
   List<Offset> sampleBezierCurve(CubicBezierCurve curve, {int numPoints = 20}) {
     final points = <Offset>[];
 
@@ -321,11 +325,11 @@ class SlurCalculator {
     return points;
   }
 
-  /// Atualiza o skyline/bottomline com uma curva de slur/tie
+  /// Currentiza o skyline/bottomline with a curva de slur/tie
   ///
   /// @param curve Curva Bézier
-  /// @param placement Se true, atualiza skyline; se false, bottomline
-  /// @param thickness Espessura da linha do slur em pixels
+  /// @param placement if true, currentiza skyline; if false, bottomline
+  /// @param thickness Espessura of the linha of the slur in pixels
   void updateSkylineWithCurve(
     CubicBezierCurve curve, {
     required bool placement,
@@ -333,26 +337,26 @@ class SlurCalculator {
   }) {
     if (skylineCalculator == null) return;
 
-    // Amostrar pontos ao longo da curva
+    // Amostrar pontos ao longo of the curva
     final points = sampleBezierCurve(curve, numPoints: 30);
 
-    // Atualizar skyline/bottomline para cada ponto
+    // Currentizar skyline/bottomline for each ponto
     for (final point in points) {
       if (placement) {
-        // Slur acima: atualizar skyline (subtrair espessura)
+        // Slur acima: currentizar skyline (subtrair espessura)
         skylineCalculator!.updateSkyLine(point.dx, point.dy - thickness / 2);
       } else {
-        // Slur abaixo: atualizar bottomline (adicionar espessura)
+        // Slur abaixo: currentizar bottomline (add espessura)
         skylineCalculator!.updateBottomLine(point.dx, point.dy + thickness / 2);
       }
     }
   }
 }
 
-/// Representa uma curva Bézier cúbica
+/// Representa a curva Bézier cúbica
 ///
 /// Fórmula: B(t) = (1-t)³·P0 + 3(1-t)²t·P1 + 3(1-t)t²·P2 + t³·P3
-/// onde t ∈ [0, 1]
+/// where t ∈ [0, 1]
 class CubicBezierCurve {
   final Offset p0; // Ponto inicial
   final Offset p1; // Primeiro ponto de controle
@@ -366,7 +370,7 @@ class CubicBezierCurve {
     required this.p3,
   });
 
-  /// Calcula um ponto na curva em t ∈ [0, 1]
+  /// Calculatestes um ponto na curva in t ∈ [0, 1]
   Offset pointAt(double t) {
     final u = 1.0 - t;
     final tt = t * t;
@@ -388,7 +392,7 @@ class CubicBezierCurve {
     return Offset(x, y);
   }
 
-  /// Calcula a derivada (tangente) da curva em t ∈ [0, 1]
+  /// Calculatestes a derivada (tangente) of the curva in t ∈ [0, 1]
   Offset derivativeAt(double t) {
     final u = 1.0 - t;
     final uu = u * u;
@@ -406,15 +410,15 @@ class CubicBezierCurve {
     return Offset(dx, dy);
   }
 
-  /// Calcula o ângulo da tangente em t ∈ [0, 1] (em radianos)
+  /// Calculatestes o ângulo of the tangente in t ∈ [0, 1] (in radianos)
   double tangentAngleAt(double t) {
     final derivative = derivativeAt(t);
     return math.atan2(derivative.dy, derivative.dx);
   }
 
-  /// Calcula o comprimento aproximado da curva
+  /// Calculatestes o comprimento aproximado of the curva
   ///
-  /// Usa método de Simpson para integração numérica
+  /// Uses method de Simpson for integração numérica
   double approximateLength({int segments = 20}) {
     double length = 0.0;
     Offset previousPoint = p0;
@@ -431,7 +435,7 @@ class CubicBezierCurve {
     return length;
   }
 
-  /// Converte para Path do Flutter (para renderização)
+  /// Converts for Path of the Flutter (for Rendersção)
   Path toPath() {
     final path = Path();
     path.moveTo(p0.dx, p0.dy);
@@ -439,9 +443,9 @@ class CubicBezierCurve {
     return path;
   }
 
-  /// Calcula bounding box da curva
+  /// Calculatestes bounding box of the curva
   BoundingBox calculateBoundingBox() {
-    // Encontrar min/max de x e y ao longo da curva
+    // Encontrar min/max de x e y ao longo of the curva
     double minX = math.min(p0.dx, p3.dx);
     double maxX = math.max(p0.dx, p3.dx);
     double minY = math.min(p0.dy, p3.dy);

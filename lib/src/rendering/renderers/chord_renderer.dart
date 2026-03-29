@@ -1,21 +1,11 @@
-// lib/src/rendering/renderers/chord_renderer.dart
-// VERSÃƒO REFATORADA: Usa StaffPositionCalculator e BaseGlyphRenderer
-//
-// MELHORIAS IMPLEMENTADAS (Fase 2):
-// âœ… Usa StaffPositionCalculator unificado (elimina 42 linhas duplicadas)
-// âœ… Herda de BaseGlyphRenderer para renderizaÃ§Ã£o consistente
-// âœ… Usa drawGlyphWithBBox para 100% conformidade SMuFL
-// âœ… Cache automÃ¡tico de TextPainters para melhor performance
-
 import 'package:flutter/material.dart';
 
-import '../../../core/core.dart'; // ðŸ†• Tipos do core
-import '../../smufl/smufl_metadata_loader.dart';
+import '../../../core/core.dart';
 import '../../theme/music_score_theme.dart';
-import '../staff_coordinate_system.dart';
 import '../staff_position_calculator.dart';
 import 'base_glyph_renderer.dart';
 import 'note_renderer.dart';
+import 'primitives/dot_renderer.dart';
 
 class ChordRenderer extends BaseGlyphRenderer {
   final MusicScoreTheme theme;
@@ -23,20 +13,72 @@ class ChordRenderer extends BaseGlyphRenderer {
   final double stemThickness;
   final NoteRenderer noteRenderer;
 
-  // ignore: use_super_parameters
   ChordRenderer({
-    required StaffCoordinateSystem coordinates,
-    required SmuflMetadata metadata,
+    required super.coordinates,
+    required super.metadata,
     required this.theme,
-    required double glyphSize,
+    required super.glyphSize,
     required this.staffLineThickness,
     required this.stemThickness,
     required this.noteRenderer,
-  }) : super(
-         coordinates: coordinates,
-         metadata: metadata,
-         glyphSize: glyphSize,
-       );
+  });
+
+  static List<double> calculateClusterOffsets({
+    required List<int> positions,
+    required bool stemUp,
+    required double clusterOffset,
+  }) {
+    final offsets = List<double>.filled(positions.length, 0.0);
+    int runStart = 0;
+
+    while (runStart < positions.length) {
+      int runEnd = runStart;
+      while (runEnd < positions.length - 1 &&
+          (positions[runEnd] - positions[runEnd + 1]).abs() <= 1) {
+        runEnd++;
+      }
+
+      if (runEnd > runStart) {
+        // Per "Behind Bars" (Gould p.68-69):
+        // Stem-UP:   upper note of each adjacent pair shifts RIGHT (+)
+        // Stem-DOWN: lower note of each adjacent pair shifts LEFT  (-)
+        // Positions list is sorted highest-first, so:
+        //   index 0 = topmost note, index N-1 = bottommost note
+        final shiftSign = stemUp ? 1.0 : -1.0;
+        for (int index = runStart; index <= runEnd; index++) {
+          final bool shouldShift = stemUp
+              ? (runEnd - index) % 2 ==
+                    1 // stem-up: shifts upper note right
+              : (index - runStart) % 2 ==
+                    1; // stem-down: shifts lower note left
+          offsets[index] = shouldShift ? (shiftSign * clusterOffset) : 0.0;
+        }
+      }
+
+      runStart = runEnd + 1;
+    }
+
+    return offsets;
+  }
+
+  static bool resolveStemDirection({
+    required Chord chord,
+    required List<int> positions,
+    int? voiceNumber,
+  }) {
+    if (voiceNumber != null) {
+      return voiceNumber.isOdd;
+    }
+
+    if (chord.voice != null) {
+      return chord.voice!.isOdd;
+    }
+
+    final mostExtremePos = positions.reduce(
+      (left, right) => left.abs() > right.abs() ? left : right,
+    );
+    return mostExtremePos > 0;
+  }
 
   void render(
     Canvas canvas,
@@ -45,7 +87,6 @@ class ChordRenderer extends BaseGlyphRenderer {
     Clef currentClef, {
     int? voiceNumber,
   }) {
-    // MELHORIA: Usar StaffPositionCalculator unificado
     final sortedNotes = [...chord.notes]
       ..sort(
         (a, b) => StaffPositionCalculator.calculate(
@@ -55,121 +96,166 @@ class ChordRenderer extends BaseGlyphRenderer {
       );
 
     final positions = sortedNotes
-        .map((n) => StaffPositionCalculator.calculate(n.pitch, currentClef))
+        .map(
+          (note) => StaffPositionCalculator.calculate(note.pitch, currentClef),
+        )
         .toList();
+    final stemUp = resolveStemDirection(
+      chord: chord,
+      positions: positions,
+      voiceNumber: voiceNumber,
+    );
 
-    // POLYPHONIC: Determine stem direction based on voice or position
-    final stemUp = _getStemDirection(chord, positions, voiceNumber);
+    final noteheadGlyph = chord.duration.type.glyphName;
+    final noteheadInfo = metadata.getGlyphInfo(noteheadGlyph);
+    final noteheadBox = noteheadInfo?.boundingBox;
+    final noteheadCenterX = noteheadBox != null
+        ? ((noteheadBox.bBoxSwX + noteheadBox.bBoxNeX) / 2) *
+              coordinates.staffSpace
+        : (1.18 / 2) * coordinates.staffSpace;
+    final noteheadCenterY = noteheadBox != null
+        ? noteheadBox.centerY * coordinates.staffSpace
+        : 0.0;
+    final noteheadWidth = noteheadBox?.width ?? 1.18;
+    final clusterOffset = noteheadWidth * coordinates.staffSpace * 1.04;
+    final clusterOffsets = calculateClusterOffsets(
+      positions: positions,
+      stemUp: stemUp,
+      clusterOffset: clusterOffset,
+    );
+    final noteCenters = <Offset>[];
 
-    final Map<int, double> xOffsets = {
-      for (int i = 0; i < sortedNotes.length; i++) i: 0.0,
-    };
-
-    // CORREÃ‡ÃƒO TIPOGRÃFICA: colisÃµes de 2Âª/cluster exigem cabeÃ§as alternadas.
-    // Regra prÃ¡tica adotada:
-    // - haste para cima: nota SUPERIOR desloca para a direita;
-    // - haste para baixo: nota INFERIOR desloca para a esquerda.
-    final noteheadInfo = metadata.getGlyphInfo('noteheadBlack');
-    final noteWidth = noteheadInfo?.boundingBox?.width ?? 1.18;
-    final clusterOffset = noteWidth * coordinates.staffSpace;
-
-    for (int i = 0; i < sortedNotes.length - 1; i++) {
-      final interval = (positions[i] - positions[i + 1]).abs();
-      if (interval > 1) continue;
-
-      if (stemUp) {
-        // Nota superior (dissonÃ¢ncia do cluster) vai para o lado direito.
-        xOffsets[i] = clusterOffset;
-      } else {
-        // Nota inferior vai para o lado esquerdo.
-        xOffsets[i + 1] = -clusterOffset;
-      }
-    }
+    // ── Pre-compute accidental columns BEFORE drawing anything ──
+    // All accidentals are placed to the LEFT of the leftmost notehead.
+    // Each accidental gets a column: 0 = closest to notes, higher = further left.
+    // Two accidentals collide vertically if within 6 staff positions (SMuFL standard).
+    final accidentalColumns = <int, int>{};
+    const accidentalCollisionDistance = 6;
 
     for (int i = 0; i < sortedNotes.length; i++) {
-      final note = sortedNotes[i];
-      final staffPos = positions[i];
+      if (sortedNotes[i].pitch.accidentalGlyph == null) continue;
 
-      // MELHORIA: Usar StaffPositionCalculator.toPixelY
+      int column = 0;
+      for (int c = 0; c < sortedNotes.length; c++) {
+        bool collision = false;
+        for (final entry in accidentalColumns.entries) {
+          if (entry.value == c &&
+              (positions[i] - positions[entry.key]).abs() <=
+                  accidentalCollisionDistance) {
+            collision = true;
+            break;
+          }
+        }
+        if (!collision) {
+          column = c;
+          break;
+        }
+        column = c + 1;
+      }
+      accidentalColumns[i] = column;
+    }
+
+    // ── Draw accidentals ──
+    // All accidentals are positioned relative to basePosition.dx (the chord's
+    // musical x), NOT the individual note cluster offsets. This ensures all
+    // accidentals stay to the LEFT of ALL noteheads regardless of clustering.
+    for (final entry in accidentalColumns.entries) {
+      final i = entry.key;
+      final column = entry.value;
+      final note = sortedNotes[i];
+      final accidentalGlyph = note.pitch.accidentalGlyph!;
+      final rawWidth = metadata.getGlyphWidth(accidentalGlyph);
+      final accidentalWidth = rawWidth > 0 ? rawWidth : 1.0;
+
+      const accidentalClearance = 0.25;
+      final baseOffset =
+          (accidentalWidth + accidentalClearance) * coordinates.staffSpace;
+      final columnSpacing =
+          (accidentalWidth + accidentalClearance) * coordinates.staffSpace;
+
+      final staffPosition = positions[i];
       final noteY = StaffPositionCalculator.toPixelY(
-        staffPos,
+        staffPosition,
         coordinates.staffSpace,
         coordinates.staffBaseline.dy,
       );
 
-      final xOffset = xOffsets[i]!;
+      final accidentalX =
+          basePosition.dx - baseOffset - (column * columnSpacing);
 
-      // MELHORIA: Usar StaffPositionCalculator para ledger lines
-      _drawLedgerLines(canvas, basePosition.dx + xOffset, staffPos);
-
-      if (note.pitch.accidentalGlyph != null) {
-        // CORREÃ‡ÃƒO: Passar informaÃ§Ãµes adicionais para escalonamento de acidentes
-        _renderAccidental(
-          canvas,
-          note,
-          Offset(basePosition.dx + xOffset, noteY),
-          i,
-          sortedNotes,
-          positions,
-        );
-      }
-
-      // MELHORIA: Usar drawGlyphWithBBox herdado de BaseGlyphRenderer
       drawGlyphWithBBox(
         canvas,
-        glyphName: note.duration.type.glyphName,
-        position: Offset(basePosition.dx + xOffset, noteY),
+        glyphName: accidentalGlyph,
+        position: Offset(accidentalX, noteY),
+        color: theme.accidentalColor ?? theme.noteheadColor,
+        options: const GlyphDrawOptions(trackBounds: true),
+      );
+    }
+
+    // ── Draw noteheads and ledger lines ──
+    for (int index = 0; index < sortedNotes.length; index++) {
+      final staffPosition = positions[index];
+      final noteY = StaffPositionCalculator.toPixelY(
+        staffPosition,
+        coordinates.staffSpace,
+        coordinates.staffBaseline.dy,
+      );
+      final noteX = basePosition.dx + clusterOffsets[index];
+      final noteCenter = Offset(
+        noteX + noteheadCenterX,
+        noteY + noteheadCenterY,
+      );
+      noteCenters.add(noteCenter);
+
+      // Center ledger lines on the notehead's visual center, not its left edge.
+      final ledgerCenterX = noteX + noteheadCenterX;
+      _drawLedgerLines(
+        canvas,
+        ledgerCenterX,
+        staffPosition,
+        noteheadGlyph: noteheadGlyph,
+      );
+
+      drawGlyphWithBBox(
+        canvas,
+        glyphName: noteheadGlyph,
+        position: Offset(noteX, noteY),
         color: theme.noteheadColor,
         options: GlyphDrawOptions.noteheadDefault,
       );
+
+      _renderDots(
+        canvas,
+        dots: chord.duration.dots,
+        noteCenter: noteCenter,
+        staffPosition: staffPosition,
+      );
     }
 
-    if (chord.duration.type != DurationType.whole) {
-      // CORREÃ‡ÃƒO CRÃTICA: sortedNotes estÃ¡ em ordem DECRESCENTE de staffPosition
-      // - sortedNotes.first = nota mais ALTA (maior staffPosition)
-      // - sortedNotes.last = nota mais BAIXA (menor staffPosition)
-      //
-      // Haste para CIMA: deve comeÃ§ar na nota mais BAIXA
-      // Haste para BAIXO: deve comeÃ§ar na nota mais ALTA
-      final extremeNote = stemUp ? sortedNotes.last : sortedNotes.first;
-
-      // MELHORIA: Usar StaffPositionCalculator
-      final extremePos = StaffPositionCalculator.calculate(
-        extremeNote.pitch,
-        currentClef,
-      );
-      final extremeY = StaffPositionCalculator.toPixelY(
-        extremePos,
+    if (chord.duration.type != DurationType.whole && positions.isNotEmpty) {
+      final stemNoteIndex = stemUp ? positions.length - 1 : 0;
+      final stemY = StaffPositionCalculator.toPixelY(
+        positions[stemNoteIndex],
         coordinates.staffSpace,
         coordinates.staffBaseline.dy,
       );
-
-      final extremeNoteIndex = sortedNotes.indexOf(extremeNote);
-      final stemXOffset = xOffsets[extremeNoteIndex]!;
-
-      // ðŸŽ¯ CORREÃ‡ÃƒO CRÃTICA: Usar calculateChordStemLength do positioning engine
-      // A haste deve atravessar TODAS as notas do acorde!
-      final noteheadGlyph = chord.duration.type.glyphName;
       final beamCount = _getBeamCount(chord.duration.type);
-
-      // Calcular comprimento proporcional usando positioning engine
-      final sortedPositions = positions; // Already calculated earlier
-      final customStemLength = noteRenderer.positioningEngine.calculateChordStemLength(
-        noteStaffPositions: sortedPositions,
-        stemUp: stemUp,
-        beamCount: beamCount,
-      );
+      final customStemLength = noteRenderer.positioningEngine
+          .calculateChordStemLength(
+            noteStaffPositions: positions,
+            stemUp: stemUp,
+            beamCount: beamCount,
+          );
 
       final stemEnd = _renderChordStem(
         canvas,
-        Offset(basePosition.dx + stemXOffset, extremeY),
+        Offset(basePosition.dx + clusterOffsets[stemNoteIndex], stemY),
         noteheadGlyph,
         stemUp,
         customStemLength,
       );
-      
-      // Desenhar bandeirola se necessÃ¡rio
-      if (chord.duration.type.value < 0.25) {
+
+      if (chord.duration.type.value < 0.25 && chord.beam == null) {
         noteRenderer.flagRenderer.render(
           canvas,
           stemEnd,
@@ -178,9 +264,47 @@ class ChordRenderer extends BaseGlyphRenderer {
         );
       }
     }
+
+    if (noteCenters.isEmpty) return;
+
+    final minCenterX = noteCenters
+        .map((center) => center.dx)
+        .reduce((left, right) => left < right ? left : right);
+    final maxCenterX = noteCenters
+        .map((center) => center.dx)
+        .reduce((left, right) => left > right ? left : right);
+    final chordCenter = Offset(
+      (minCenterX + maxCenterX) * 0.5,
+      basePosition.dy,
+    );
+
+    if (chord.ornaments.isNotEmpty) {
+      // For arpeggio positioning: use a stable anchor at the chord's base
+      // position (center of notehead at basePosition.dx) instead of the
+      // leftmost cluster-shifted note center. This prevents cluster offsets
+      // from displacing the arpeggio sign too far left.
+      noteRenderer.ornamentRenderer.renderForChord(
+        canvas,
+        chord,
+        chordCenter,
+        positions.first,
+        positions.last,
+        voiceNumber: voiceNumber,
+        leadingNoteCenterX: minCenterX,
+        arpeggioReferenceCenterX: stemUp ? minCenterX : maxCenterX,
+        stemUp: stemUp,
+      );
+    }
+
+    if (chord.dynamic != null) {
+      noteRenderer.symbolAndTextRenderer.renderDynamic(
+        canvas,
+        chord.dynamic!,
+        Offset(chordCenter.dx, basePosition.dy),
+      );
+    }
   }
 
-  /// MÃ©todo auxiliar: calcular nÃºmero de barras
   int _getBeamCount(DurationType duration) {
     return switch (duration) {
       DurationType.eighth => 1,
@@ -191,102 +315,45 @@ class ChordRenderer extends BaseGlyphRenderer {
     };
   }
 
-  void _renderAccidental(
+  void _drawLedgerLines(
     Canvas canvas,
-    Note note,
-    Offset notePos,
-    int noteIndex,
-    List<Note> allNotes,
-    List<int> positions,
-  ) {
-    final accidentalGlyph = note.pitch.accidentalGlyph!;
-
-    // Largura real do acidente vinda do metadata (em staff spaces)
-    final accidentalWidth = metadata.getGlyphWidth(accidentalGlyph);
-
-    // Behind Bars: clearance de ~0.16 SS entre borda direita do acidente e borda esquerda da nota
-    const clearance = 0.16;
-    final baseOffset = (accidentalWidth + clearance) * coordinates.staffSpace;
-
-    // Escalonamento horizontal para acidentes em notas adjacentes (intervalo de 2Âª)
-    int stackLevel = 0;
-    for (int i = 0; i < noteIndex; i++) {
-      if (allNotes[i].pitch.accidentalGlyph != null) {
-        if ((positions[noteIndex] - positions[i]).abs() <= 1) {
-          stackLevel++;
-        }
-      }
+    double noteCenterX,
+    int staffPosition, {
+    required String noteheadGlyph,
+  }) {
+    if (!theme.showLedgerLines ||
+        !StaffPositionCalculator.needsLedgerLines(staffPosition)) {
+      return;
     }
-
-    // Borda ESQUERDA do acidente posicionada com clearance correto
-    // (sem centerHorizontally: a posiÃ§Ã£o Ã© a borda esquerda do glifo)
-    final accidentalX = notePos.dx - baseOffset - (stackLevel * coordinates.staffSpace * 0.6);
-
-    drawGlyphWithBBox(
-      canvas,
-      glyphName: accidentalGlyph,
-      position: Offset(accidentalX, notePos.dy),
-      color: theme.accidentalColor ?? theme.noteheadColor,
-      options: const GlyphDrawOptions(trackBounds: true),
-    );
-  }
-
-  void _drawLedgerLines(Canvas canvas, double x, int staffPosition) {
-    if (!theme.showLedgerLines) return;
-
-    // MELHORIA: Usar StaffPositionCalculator
-    if (!StaffPositionCalculator.needsLedgerLines(staffPosition)) return;
 
     final paint = Paint()
       ..color = theme.staffLineColor
       ..strokeWidth = staffLineThickness;
-
-    // CORREÃ‡ÃƒO CRÃTICA: Calcular centro horizontal CORRETO da nota
-    // x Ã© a posiÃ§Ã£o da borda ESQUERDA do glifo
-    final noteheadInfo = metadata.getGlyphInfo('noteheadBlack');
+    final noteheadInfo = metadata.getGlyphInfo(noteheadGlyph);
     final bbox = noteheadInfo?.boundingBox;
-    
-    // Centro relativo ao inÃ­cio do glyph (em staff spaces)
-    final centerOffsetSS = bbox != null
-        ? (bbox.bBoxSwX + bbox.bBoxNeX) / 2
-        : 1.18 / 2;
-    
-    final centerOffsetPixels = centerOffsetSS * coordinates.staffSpace;
-    final noteCenterX = x + centerOffsetPixels;
-    
-    final noteWidth =
+    final noteWidthPixels =
         bbox?.widthInPixels(coordinates.staffSpace) ??
         (coordinates.staffSpace * 1.18);
-
-    // CORREÃ‡ÃƒO SMuFL: Consistente com legerLineExtension (0.4) do metadata
     final extension = coordinates.staffSpace * 0.4;
-    final totalWidth = noteWidth + (2 * extension);
-
-    // MELHORIA: Usar StaffPositionCalculator.getLedgerLinePositions
+    final totalWidth = noteWidthPixels + (2 * extension);
     final ledgerPositions = StaffPositionCalculator.getLedgerLinePositions(
       staffPosition,
     );
 
-    for (final pos in ledgerPositions) {
+    for (final ledgerPosition in ledgerPositions) {
       final y = StaffPositionCalculator.toPixelY(
-        pos,
+        ledgerPosition,
         coordinates.staffSpace,
         coordinates.staffBaseline.dy,
       );
-
-      // CORREÃ‡ÃƒO: Centralizar na posiÃ§Ã£o REAL da nota
-      final lineStartX = noteCenterX - (totalWidth / 2);
-      final lineEndX = noteCenterX + (totalWidth / 2);
-      
       canvas.drawLine(
-        Offset(lineStartX, y),
-        Offset(lineEndX, y),
+        Offset(noteCenterX - (totalWidth / 2), y),
+        Offset(noteCenterX + (totalWidth / 2), y),
         paint,
       );
     }
   }
 
-  /// Renderiza haste de acorde com comprimento customizado
   Offset _renderChordStem(
     Canvas canvas,
     Offset notePosition,
@@ -294,26 +361,21 @@ class ChordRenderer extends BaseGlyphRenderer {
     bool stemUp,
     double customLength,
   ) {
-    // Obter Ã¢ncora SMuFL da cabeÃ§a de nota
-    final stemAnchor = stemUp
-        ? noteRenderer.positioningEngine.getStemUpAnchor(noteheadGlyph)
-        : noteRenderer.positioningEngine.getStemDownAnchor(noteheadGlyph);
-
-    // Converter Ã¢ncora de staff spaces para pixels
-    final stemAnchorPixels = Offset(
-      stemAnchor.dx * coordinates.staffSpace,
-      -stemAnchor.dy * coordinates.staffSpace, // INVERTER Y!
+    final stemX = noteRenderer.positioningEngine.calculateStemX(
+      noteX: notePosition.dx,
+      noteheadGlyphName: noteheadGlyph,
+      stemUp: stemUp,
+      staffSpace: coordinates.staffSpace,
     );
-
-    // PosiÃ§Ã£o inicial da haste
-    final stemX = notePosition.dx + stemAnchorPixels.dx;
-    final stemStartY = notePosition.dy + stemAnchorPixels.dy;
-
-    // Usar comprimento customizado (em staff spaces)
+    final stemStartY = noteRenderer.positioningEngine.calculateStemStartY(
+      noteY: notePosition.dy,
+      noteheadGlyphName: noteheadGlyph,
+      stemUp: stemUp,
+      staffSpace: coordinates.staffSpace,
+    );
     final stemLength = customLength * coordinates.staffSpace;
     final stemEndY = stemUp ? stemStartY - stemLength : stemStartY + stemLength;
 
-    // Desenhar haste
     final stemPaint = Paint()
       ..color = theme.stemColor
       ..strokeWidth = stemThickness
@@ -325,31 +387,36 @@ class ChordRenderer extends BaseGlyphRenderer {
       stemPaint,
     );
 
-    // Retornar posiÃ§Ã£o do final da haste (para bandeirola)
     return Offset(stemX, stemEndY);
   }
 
-  /// Determine stem direction based on voiceNumber (from PositionedElement) or chord position.
-  ///
-  /// In polyphonic context (voiceNumber != null):
-  ///   - Odd voice (1, 3, ...): stems up
-  ///   - Even voice (2, 4, ...): stems down
-  ///
-  /// Without voice: traditional rule based on most extreme position.
-  bool _getStemDirection(Chord chord, List<int> positions, int? voiceNumber) {
-    if (voiceNumber != null) {
-      return voiceNumber.isOdd;
-    }
+  void _renderDots(
+    Canvas canvas, {
+    required int dots,
+    required Offset noteCenter,
+    required int staffPosition,
+  }) {
+    if (dots == 0) return;
 
-    if (chord.voice != null) {
-      return chord.voice!.isOdd;
-    }
-
-    // Traditional rule: stems up if average position is on or below middle line
-    final mostExtremePos = positions.reduce(
-      (a, b) => a.abs() > b.abs() ? a : b,
+    final dotStaffPosition = DotRenderer.resolveDotStaffPosition(staffPosition);
+    final dotY = DotRenderer.calculateDotY(
+      dotStaffPosition: dotStaffPosition,
+      coordinates: coordinates,
     );
-    return mostExtremePos > 0;
-  }
+    final dotStartX = noteCenter.dx + (coordinates.staffSpace * 1.0);
 
+    for (int index = 0; index < dots; index++) {
+      final dotX = dotStartX + (index * coordinates.staffSpace * 0.6);
+      drawGlyphWithBBox(
+        canvas,
+        glyphName: 'augmentationDot',
+        position: Offset(dotX, dotY),
+        color: theme.noteheadColor,
+        options: const GlyphDrawOptions(
+          centerHorizontally: true,
+          trackBounds: false,
+        ),
+      );
+    }
+  }
 }

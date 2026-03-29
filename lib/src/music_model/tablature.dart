@@ -2,7 +2,7 @@
 
 import '../../core/core.dart'; // Tipos do core
 
-/// Representa uma tablatura para instrumentos de corda
+/// Representa a tablatura for instrumentos de corda
 class Tablature {
   final List<TabStaff> staffs;
   final String instrument; // Violão, baixo, etc.
@@ -18,7 +18,7 @@ class Tablature {
 
   void add(TabStaff staff) => staffs.add(staff);
 
-  /// Afinações pré-definidas para instrumentos comuns
+  /// Afinações pré-definidas for instrumentos comuns
   static const Map<String, List<String>> standardTunings = {
     'guitar_6': ['E4', 'B3', 'G3', 'D3', 'A2', 'E2'], // Violão 6 cordas
     'guitar_7': ['B4', 'E4', 'B3', 'G3', 'D3', 'A2', 'E2'], // Violão 7 cordas
@@ -28,7 +28,7 @@ class Tablature {
     'mandolin': ['E5', 'A4', 'D4', 'G3'], // Mandolina
   };
 
-  /// Cria uma tablatura padrão para violão
+  /// Creates a tablatura default for violão
   factory Tablature.guitar() {
     return Tablature(
       staffs: [],
@@ -38,7 +38,7 @@ class Tablature {
     );
   }
 
-  /// Cria uma tablatura padrão para baixo
+  /// Creates a tablatura default for baixo
   factory Tablature.bass() {
     return Tablature(
       staffs: [],
@@ -49,7 +49,7 @@ class Tablature {
   }
 }
 
-/// Representa uma pauta de tablatura
+/// Representa a staff de tablatura
 class TabStaff {
   final List<TabMeasure> measures = [];
   final String? name;
@@ -59,17 +59,17 @@ class TabStaff {
   void add(TabMeasure measure) => measures.add(measure);
 }
 
-/// Representa um compasso de tablatura
+/// Representa um measure de tablatura
 class TabMeasure {
   final List<TabElement> elements = [];
 
   void add(TabElement element) => elements.add(element);
 }
 
-/// Elemento base para tablatura
+/// Elemento base for tablatura
 abstract class TabElement extends MusicalElement {}
 
-/// Representa uma nota na tablatura
+/// Representa a note na tablatura
 class TabNote extends TabElement {
   final int string; // Número da corda (1-6 para violão)
   final int fret; // Casa do traste
@@ -83,19 +83,19 @@ class TabNote extends TabElement {
     this.techniques = const [],
   });
 
-  /// Calcula a altura da nota baseado na afinação
+  /// Calculatestes a height of the note based na afinação
   Pitch getPitch(List<String> tuning) {
     if (string < 1 || string > tuning.length) {
       throw ArgumentError('String number out of range');
     }
 
-    // Aqui seria necessário implementar a conversão de string para Pitch
-    // e adicionar os semitons do traste
+    // Aqui seria necessário implementar a conversão de string for Pitch
+    // e add os semitons of the traste
     return const Pitch(step: 'C', octave: 4); // Placeholder
   }
 }
 
-/// Representa um acorde na tablatura
+/// Representa um chord na tablatura
 class TabChord extends TabElement {
   final List<TabNote> notes;
   final Duration duration;
@@ -108,7 +108,7 @@ class TabChord extends TabElement {
   });
 }
 
-/// Técnicas especiais para instrumentos de corda
+/// Técnicas especiais for instrumentos de corda
 enum TabTechnique {
   // Técnicas básicas
   hammer, // Hammer-on
@@ -132,13 +132,13 @@ enum TabTechnique {
   ghost, // Ghost note
   deadNote, // Nota morta/abafada
 
-  // Articulações específicas
+  // Articulations específicas
   accent,
   staccato,
   legato,
 }
 
-/// Mapeamento de técnicas para glifos SMuFL
+/// Mapeamento de técnicas for glifos SMuFL
 const Map<TabTechnique, String> techniqueToGlyph = {
   TabTechnique.hammer: 'guitarString0', // Placeholder
   TabTechnique.pull: 'guitarString0',
@@ -153,21 +153,21 @@ const Map<TabTechnique, String> techniqueToGlyph = {
   TabTechnique.ghost: 'guitarGhostNote',
 };
 
-/// Pausa na tablatura
+/// PaUses na tablatura
 class TabRest extends TabElement {
   final Duration duration;
 
   TabRest({required this.duration});
 }
 
-/// Barra de compasso na tablatura
+/// Barline na tablatura
 class TabBarline extends TabElement {
   final BarlineType type;
 
   TabBarline({required this.type});
 }
 
-/// Indicação de tempo para tablatura
+/// Indicação de tempo for tablatura
 class TabTimeSignature extends TabElement {
   final int numerator;
   final int denominator;
@@ -175,20 +175,20 @@ class TabTimeSignature extends TabElement {
   TabTimeSignature({required this.numerator, required this.denominator});
 }
 
-/// Armadura de clave para tablatura (opcional)
+/// Armadura de clef for tablatura (opcional)
 class TabKeySignature extends TabElement {
   final int count;
 
   TabKeySignature(this.count);
 }
 
-/// Clave de tablatura
+/// Clef de tablatura
 class TabClef extends TabElement {
   final int numberOfStrings;
 
   TabClef({required this.numberOfStrings});
 
-  /// Retorna o glifo SMuFL apropriado
+  /// Returns o glifo SMuFL apropriado
   String get glyphName {
     switch (numberOfStrings) {
       case 4:
@@ -211,7 +211,7 @@ class Fingering extends TabElement {
 
 enum FingeringHand { left, right }
 
-/// Mapeamento de fingering para glifos
+/// Mapeamento de fingering for glifos
 const Map<int, String> fingeringToGlyph = {
   0: 'fingering0', // Polegar
   1: 'fingering1',
@@ -221,7 +221,7 @@ const Map<int, String> fingeringToGlyph = {
   5: 'fingering5',
 };
 
-/// Capo/pestana para guitarra
+/// Capo/pestana for guitarra
 class Capo extends TabElement {
   final int fret; // Casa onde está o capo
   final String? label; // Texto opcional
@@ -229,7 +229,7 @@ class Capo extends TabElement {
   Capo({required this.fret, this.label});
 }
 
-/// Bend com informações detalhadas
+/// Bend with informações detalhadas
 class DetailedBend extends TabElement {
   final int startFret;
   final int endFret;
@@ -322,9 +322,9 @@ enum RhythmSlashType {
   ghost,
 }
 
-/// Utilitários para tablatura
+/// Utilitários for tablatura
 class TabUtils {
-  /// Converte uma altura para posição na tablatura
+  /// Converts a height for position na tablatura
   static List<TabPosition> pitchToTabPositions(
     Pitch pitch,
     List<String> tuning,
@@ -332,27 +332,27 @@ class TabUtils {
     final positions = <TabPosition>[];
 
     // Implementação simplificada
-    // Na realidade, seria necessário calcular todas as posições possíveis
-    // para uma determinada altura em diferentes cordas
+    // Na realidade, seria necessário Calculatestesr all as positions possíveis
+    // for a determinada height in diferentes cordas
 
     return positions;
   }
 
-  /// Verifica se uma posição é fisicamente possível
+  /// Checks se a position é fisicamente possível
   static bool isPositionPlayable(List<TabNote> notes) {
-    // Verifica se as posições são fisicamente alcançáveis
+    // Checks se as positions are fisicamente alcançáveis
     // considerando o stretch máximo dos dedos
     return true; // Placeholder
   }
 
-  /// Sugere fingering otimizado para uma sequência de notas
+  /// Sugere fingering otimizado for a sequência de notes
   static List<Fingering> suggestFingering(List<TabNote> notes) {
-    // Algoritmo para sugerir dedilhado otimizado
+    // Algoritmo for sugerir dedilhado otimizado
     return []; // Placeholder
   }
 }
 
-/// Posição na tablatura (corda + traste)
+/// Position na tablatura (corda + traste)
 class TabPosition {
   final int string;
   final int fret;
@@ -365,7 +365,7 @@ class TabPosition {
   });
 }
 
-/// Template de acorde
+/// Template de chord
 class ChordTemplate {
   final String name;
   final List<TabPosition> positions;
@@ -379,8 +379,8 @@ class ChordTemplate {
     this.openStrings = const [],
   });
 
-  /// Biblioteca de acordes comuns
+  /// Biblioteca de chords comuns
   static const Map<String, ChordTemplate> commonChords = {
-    // Será implementado com acordes mais comuns
+    // Será implementado with chords mais comuns
   };
 }

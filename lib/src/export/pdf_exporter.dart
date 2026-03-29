@@ -116,7 +116,7 @@ class PdfExporter {
     );
   }
 
-  /// Add music notation pages to PDF
+  /// Add music notetion pages to PDF
   Future<void> _addMusicPages(pw.Document pdf) async {
     // TODO: Implement actual music rendering
     // For now, add placeholder pages showing staff groups

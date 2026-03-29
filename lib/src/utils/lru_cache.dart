@@ -1,70 +1,70 @@
 // lib/src/utils/lru_cache.dart
-// Implementação simples de LRU Cache usando LinkedHashMap
+// Implementação simples de LRU Cache using LinkedHashMap
 
 import 'dart:collection';
 
 /// Cache LRU (Least Recently Used) simples e síncrono
 ///
-/// Implementação baseada em [LinkedHashMap] que mantém ordem de acesso.
-/// Quando o cache atinge o tamanho máximo, remove o item menos recentemente usado.
+/// Implementação baseada in [LinkedHashMap] that mantém ordem de acesso.
+/// When o cache atinge o size máximo, remove o item menos recentemente used.
 ///
 /// **Performance:**
 /// - get(): O(1)
 /// - put(): O(1)
 /// - Eviction: O(1)
 ///
-/// **Thread-safety:** Não é thread-safe. Use em contexto single-threaded (renderização Flutter).
+/// **Thread-safety:** Not é thread-safe. Use in contexto single-threaded (Rendersção Flutter).
 class LruCache<K, V> {
   final int maxSize;
   final LinkedHashMap<K, V> _cache;
 
-  /// Cria um LRU cache com tamanho máximo especificado
+  /// Creates um LRU cache with size máximo especificado
   LruCache(this.maxSize) : _cache = LinkedHashMap<K, V>();
 
-  /// Obtém valor do cache
+  /// Gets value of the cache
   ///
-  /// Move o item para o fim (mais recente) se existir.
-  /// Retorna null se não encontrado.
+  /// Move o item for o fim (mais recente) se existir.
+  /// Returns null se not encontrado.
   V? get(K key) {
     if (!_cache.containsKey(key)) {
       return null;
     }
 
-    // Mover para o fim (mais recente)
+    // Mover for o fim (mais recente)
     final value = _cache[key] as V;
     _cache.remove(key);
     _cache[key] = value;
     return value;
   }
 
-  /// Adiciona ou atualiza valor no cache
+  /// Adds ou currentiza value no cache
   ///
-  /// Se cache está cheio, remove o item mais antigo (primeiro da lista).
+  /// Se cache está cheio, remove o item mais antigo (first of the list).
   void put(K key, V value) {
-    // Se já existe, remover para adicionar no fim
+    // Se já existe, remover for add no fim
     if (_cache.containsKey(key)) {
       _cache.remove(key);
     }
 
-    // Se atingiu limite, remover o mais antigo (primeiro item)
+    // Se atingiu limite, remover o mais antigo (first item)
     if (_cache.length >= maxSize) {
       _cache.remove(_cache.keys.first);
     }
 
-    // Adicionar no fim (mais recente)
+    // add no fim (mais recente)
     _cache[key] = value;
   }
 
-  /// Verifica se chave existe no cache
+  /// Checks se chave existe no cache
   bool containsKey(K key) => _cache.containsKey(key);
 
   /// Limpa todo o cache
   void clear() => _cache.clear();
 
-  /// Retorna número de itens no cache
+  /// Returns number de itens no cache
   int get size => _cache.length;
 
-  /// Retorna número de itens no cache (alias para size)
+  /// Returns number de itens no cache (alias for size)
   int get length => _cache.length;
 
   @override

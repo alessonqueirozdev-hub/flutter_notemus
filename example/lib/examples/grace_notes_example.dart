@@ -1,315 +1,247 @@
-// example/lib/examples/grace_notes_example.dart
-
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 
-/// Widget that demonstrates the rendering of appoggiaturas and ornamental notes
+import '../widgets/showcase_shell.dart';
+
 class GraceNotesExample extends StatelessWidget {
   const GraceNotesExample({super.key});
 
+  static const _accent = Color(0xFF0F766E);
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Family of Symbols: Appoggiaturas and Grace Notes'),
-        backgroundColor: Colors.teal.shade700,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 12.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _buildSection(
-              title: 'Simple Grace Notes',
-              description: 'Grace notes with different durations.',
-              elements: [
-                Clef(clefType: ClefType.treble),
-                // Simple appoggiatura
-                Note(
-                  pitch: const Pitch(step: 'F', octave: 4),
-                  duration: const Duration(DurationType.eighth), // Grace note
-                ),
-                Note(
-                  pitch: const Pitch(step: 'E', octave: 4),
-                  duration: const Duration(DurationType.quarter),
-                ),
-                // Long appoggiatura
-                Note(
-                  pitch: const Pitch(step: 'A', octave: 4),
-                  duration: const Duration(DurationType.quarter), // Grace note
-                ),
-                Note(
-                  pitch: const Pitch(step: 'G', octave: 4),
-                  duration: const Duration(DurationType.half),
-                ),
-              ],
-            ),
-            _buildSection(
-              title: 'Acciaccaturas',
-              description: 'Cut grace notes (acciaccaturas).',
-              elements: [
-                Clef(clefType: ClefType.treble),
-                // Simple acciaccatura
-                Note(
-                  pitch: const Pitch(step: 'D', octave: 5),
-                  duration: const Duration(DurationType.sixteenth), // Slashed grace note
-                  ornaments: [Ornament(type: OrnamentType.acciaccatura)],
-                ),
-                Note(
-                  pitch: const Pitch(step: 'C', octave: 5),
-                  duration: const Duration(DurationType.quarter),
-                ),
-                // Double acciaccatura
-                Note(
-                  pitch: const Pitch(step: 'B', octave: 4),
-                  duration: const Duration(DurationType.sixteenth),
-                  ornaments: [Ornament(type: OrnamentType.acciaccatura)],
-                ),
-                Note(
-                  pitch: const Pitch(step: 'C', octave: 5),
-                  duration: const Duration(DurationType.sixteenth),
-                  ornaments: [Ornament(type: OrnamentType.acciaccatura)],
-                ),
-                Note(
-                  pitch: const Pitch(step: 'A', octave: 4),
-                  duration: const Duration(DurationType.quarter),
-                ),
-              ],
-            ),
-            _buildSection(
-              title: 'Upper Grace Notes',
-              description: 'Grace notes resolving downward.',
-              elements: [
-                Clef(clefType: ClefType.treble),
-                Note(
-                  pitch: const Pitch(step: 'B', octave: 4),
-                  duration: const Duration(DurationType.eighth),
-                  ornaments: [Ornament(type: OrnamentType.appoggiaturaUp)],
-                ),
-                Note(
-                  pitch: const Pitch(step: 'A', octave: 4),
-                  duration: const Duration(DurationType.quarter),
-                ),
-                Note(
-                  pitch: const Pitch(step: 'D', octave: 5),
-                  duration: const Duration(DurationType.eighth),
-                  ornaments: [Ornament(type: OrnamentType.appoggiaturaUp)],
-                ),
-                Note(
-                  pitch: const Pitch(step: 'C', octave: 5),
-                  duration: const Duration(DurationType.quarter),
-                ),
-              ],
-            ),
-            _buildSection(
-              title: 'Lower Grace Notes',
-              description: 'Grace notes resolving upward.',
-              elements: [
-                Clef(clefType: ClefType.treble),
-                Note(
-                  pitch: const Pitch(step: 'F', octave: 4),
-                  duration: const Duration(DurationType.eighth),
-                  ornaments: [Ornament(type: OrnamentType.appoggiaturaDown)],
-                ),
-                Note(
-                  pitch: const Pitch(step: 'G', octave: 4),
-                  duration: const Duration(DurationType.quarter),
-                ),
-                Note(
-                  pitch: const Pitch(step: 'A', octave: 4),
-                  duration: const Duration(DurationType.eighth),
-                  ornaments: [Ornament(type: OrnamentType.appoggiaturaDown)],
-                ),
-                Note(
-                  pitch: const Pitch(step: 'B', octave: 4),
-                  duration: const Duration(DurationType.quarter),
-                ),
-              ],
-            ),
-            _buildSection(
-              title: 'Grace Note Groups',
-              description: 'Multiple grace notes in sequence.',
-              elements: [
-                Clef(clefType: ClefType.treble),
-                // Group of 3 grace notes
-                Note(
-                  pitch: const Pitch(step: 'F', octave: 4),
-                  duration: const Duration(DurationType.sixteenth),
-                ),
-                Note(
-                  pitch: const Pitch(step: 'G', octave: 4),
-                  duration: const Duration(DurationType.sixteenth),
-                ),
-                Note(
-                  pitch: const Pitch(step: 'A', octave: 4),
-                  duration: const Duration(DurationType.sixteenth),
-                ),
-                Note(
-                  pitch: const Pitch(step: 'B', octave: 4),
-                  duration: const Duration(DurationType.quarter),
-                ),
-                // Break
-                Rest(duration: const Duration(DurationType.quarter)),
-              ],
-            ),
-            _buildSection(
-              title: 'Grace Notes with Accidentals',
-              description: 'Grace notes with chromatic accidentals.',
-              elements: [
-                Clef(clefType: ClefType.treble),
-                Note(
-                  pitch: const Pitch(step: 'F', octave: 4, alter: 1.0, accidentalType: AccidentalType.sharp),
-                  duration: const Duration(DurationType.eighth),
-                ),
-                Note(
-                  pitch: const Pitch(step: 'G', octave: 4),
-                  duration: const Duration(DurationType.quarter),
-                ),
-                Note(
-                  pitch: const Pitch(step: 'D', octave: 4, alter: -1.0, accidentalType: AccidentalType.flat),
-                  duration: const Duration(DurationType.eighth),
-                  ornaments: [Ornament(type: OrnamentType.acciaccatura)],
-                ),
-                Note(
-                  pitch: const Pitch(step: 'C', octave: 4),
-                  duration: const Duration(DurationType.quarter),
-                ),
-              ],
-            ),
-            _buildSection(
-              title: 'Schleifers',
-              description: 'Ornaments that slide up to the main note.',
-              elements: [
-                Clef(clefType: ClefType.treble),
-                Note(
-                  pitch: const Pitch(step: 'C', octave: 4),
-                  duration: const Duration(DurationType.quarter),
-                  ornaments: [Ornament(type: OrnamentType.schleifer)],
-                ),
-                Note(
-                  pitch: const Pitch(step: 'E', octave: 4),
-                  duration: const Duration(DurationType.quarter),
-                  ornaments: [Ornament(type: OrnamentType.schleifer)],
-                ),
-                Note(
-                  pitch: const Pitch(step: 'G', octave: 4),
-                  duration: const Duration(DurationType.quarter),
-                  ornaments: [Ornament(type: OrnamentType.schleifer)],
-                ),
-                Rest(duration: const Duration(DurationType.quarter)),
-              ],
-            ),
-            _buildSection(
-              title: 'Appoggiaturas in Chords',
-              description: 'Grace notes applied to chords.',
-              elements: [
-                Clef(clefType: ClefType.treble),
-                // Acciaccatura before chord
-                Note(
-                  pitch: const Pitch(step: 'D', octave: 4),
-                  duration: const Duration(DurationType.sixteenth),
-                  ornaments: [Ornament(type: OrnamentType.acciaccatura)],
-                ),
-                Chord(
-                  notes: [
-                    Note(
-                      pitch: const Pitch(step: 'C', octave: 4),
-                      duration: const Duration(DurationType.quarter),
-                    ),
-                    Note(
-                      pitch: const Pitch(step: 'E', octave: 4),
-                      duration: const Duration(DurationType.quarter),
-                    ),
-                    Note(
-                      pitch: const Pitch(step: 'G', octave: 4),
-                      duration: const Duration(DurationType.quarter),
-                    ),
-                  ],
-                  duration: const Duration(DurationType.quarter),
-                ),
-                Rest(duration: const Duration(DurationType.half)),
-              ],
-            ),
-            _buildSection(
-              title: 'Appoggiaturas with Slurs',
-              description: 'Appoggiaturas connected to the main note by ligature.',
-              elements: [
-                Clef(clefType: ClefType.treble),
-                Note(
-                  pitch: const Pitch(step: 'A', octave: 4),
-                  duration: const Duration(DurationType.eighth),
-                  ornaments: [Ornament(type: OrnamentType.appoggiaturaUp)],
-                  slur: SlurType.start,
-                ),
-                Note(
-                  pitch: const Pitch(step: 'G', octave: 4),
-                  duration: const Duration(DurationType.quarter),
-                  slur: SlurType.end,
-                ),
-                Note(
-                  pitch: const Pitch(step: 'E', octave: 4),
-                  duration: const Duration(DurationType.eighth),
-                  ornaments: [Ornament(type: OrnamentType.appoggiaturaDown)],
-                  slur: SlurType.start,
-                ),
-                Note(
-                  pitch: const Pitch(step: 'F', octave: 4),
-                  duration: const Duration(DurationType.quarter),
-                  slur: SlurType.end,
-                ),
-              ],
-            ),
-          ],
+    return ExampleShowcasePage(
+      title: 'Grace Notes and Appoggiaturas',
+      subtitle:
+          'Compact showcases focused on the final grace-note geometry in v2.5.1: short slurs, cleaner stem avoidance, accidentals, and chord resolutions.',
+      accentColor: _accent,
+      children: [
+        ExampleSectionCard(
+          title: 'Upward and Downward Appoggiaturas',
+          description:
+              'The mini-slur now follows the grace-note stem direction and attaches to the notehead surface instead of drifting across the stem.',
+          accentColor: _accent,
+          child: ScorePreviewFrame(
+            staff: _buildStaff([
+              Clef(clefType: ClefType.treble),
+              Note(
+                pitch: const Pitch(step: 'B', octave: 4),
+                duration: const Duration(DurationType.eighth),
+                ornaments: [Ornament(type: OrnamentType.appoggiaturaUp)],
+              ),
+              Note(
+                pitch: const Pitch(step: 'A', octave: 4),
+                duration: const Duration(DurationType.quarter),
+              ),
+              Note(
+                pitch: const Pitch(step: 'F', octave: 4),
+                duration: const Duration(DurationType.eighth),
+                ornaments: [Ornament(type: OrnamentType.appoggiaturaDown)],
+              ),
+              Note(
+                pitch: const Pitch(step: 'G', octave: 4),
+                duration: const Duration(DurationType.quarter),
+              ),
+              Note(
+                pitch: const Pitch(step: 'D', octave: 5),
+                duration: const Duration(DurationType.eighth),
+                ornaments: [Ornament(type: OrnamentType.appoggiaturaUp)],
+              ),
+              Note(
+                pitch: const Pitch(step: 'C', octave: 5),
+                duration: const Duration(DurationType.quarter),
+              ),
+            ]),
+            accentColor: _accent,
+            minHeight: 225,
+            staffSpace: 16.5,
+          ),
         ),
-      ),
+        ExampleSectionCard(
+          title: 'Acciaccaturas with Chromatic Lead-In',
+          description:
+              'Short crushed notes stay compact and the accidental keeps a tighter, SMuFL-aware distance from the tiny grace note.',
+          accentColor: _accent,
+          child: ScorePreviewFrame(
+            staff: _buildStaff([
+              Clef(clefType: ClefType.treble),
+              Note(
+                pitch: const Pitch(
+                  step: 'D',
+                  octave: 5,
+                  alter: -1,
+                  accidentalType: AccidentalType.flat,
+                ),
+                duration: const Duration(DurationType.sixteenth),
+                ornaments: [Ornament(type: OrnamentType.acciaccatura)],
+              ),
+              Note(
+                pitch: const Pitch(step: 'C', octave: 5),
+                duration: const Duration(DurationType.quarter),
+              ),
+              Note(
+                pitch: const Pitch(
+                  step: 'F',
+                  octave: 4,
+                  alter: 1,
+                  accidentalType: AccidentalType.sharp,
+                ),
+                duration: const Duration(DurationType.sixteenth),
+                ornaments: [Ornament(type: OrnamentType.acciaccatura)],
+              ),
+              Note(
+                pitch: const Pitch(step: 'G', octave: 4),
+                duration: const Duration(DurationType.quarter),
+              ),
+              Note(
+                pitch: const Pitch(step: 'B', octave: 4),
+                duration: const Duration(DurationType.sixteenth),
+                ornaments: [Ornament(type: OrnamentType.acciaccatura)],
+              ),
+              Note(
+                pitch: const Pitch(step: 'A', octave: 4),
+                duration: const Duration(DurationType.quarter),
+              ),
+            ]),
+            accentColor: _accent,
+            minHeight: 225,
+            staffSpace: 16.5,
+          ),
+        ),
+        ExampleSectionCard(
+          title: 'Grace Notes Resolving into Chords',
+          description:
+              'Chord entries keep the grace connection anchored to the leading notehead, while the arpeggio sign stays visually aligned with the chord cluster.',
+          accentColor: _accent,
+          child: ScorePreviewFrame(
+            staff: _buildStaff([
+              Clef(clefType: ClefType.treble),
+              Chord(
+                notes: [
+                  Note(
+                    pitch: const Pitch(step: 'C', octave: 4),
+                    duration: const Duration(DurationType.quarter),
+                  ),
+                  Note(
+                    pitch: const Pitch(step: 'E', octave: 4),
+                    duration: const Duration(DurationType.quarter),
+                  ),
+                  Note(
+                    pitch: const Pitch(step: 'G', octave: 4),
+                    duration: const Duration(DurationType.quarter),
+                  ),
+                ],
+                duration: const Duration(DurationType.quarter),
+                ornaments: [
+                  Ornament(type: OrnamentType.acciaccatura),
+                  Ornament(type: OrnamentType.arpeggio),
+                ],
+              ),
+              Chord(
+                notes: [
+                  Note(
+                    pitch: const Pitch(step: 'D', octave: 4),
+                    duration: const Duration(DurationType.quarter),
+                  ),
+                  Note(
+                    pitch: const Pitch(step: 'F', octave: 4),
+                    duration: const Duration(DurationType.quarter),
+                  ),
+                  Note(
+                    pitch: const Pitch(step: 'A', octave: 4),
+                    duration: const Duration(DurationType.quarter),
+                  ),
+                ],
+                duration: const Duration(DurationType.quarter),
+              ),
+              Rest(duration: const Duration(DurationType.half)),
+            ]),
+            accentColor: _accent,
+            minHeight: 240,
+            staffSpace: 16.5,
+          ),
+        ),
+        ExampleSectionCard(
+          title: 'Phrase Context',
+          description:
+              'A short phrase that mixes grace-note entrances and regular note values, giving a more realistic reading of spacing and ornament balance.',
+          accentColor: _accent,
+          child: ScorePreviewFrame(
+            staff: _buildStaffWithMeasures([
+              [
+                Clef(clefType: ClefType.treble),
+                TimeSignature(numerator: 4, denominator: 4),
+                Note(
+                  pitch: const Pitch(step: 'A', octave: 4),
+                  duration: const Duration(DurationType.eighth),
+                  ornaments: [Ornament(type: OrnamentType.appoggiaturaDown)],
+                ),
+                Note(
+                  pitch: const Pitch(step: 'G', octave: 4),
+                  duration: const Duration(DurationType.quarter),
+                ),
+                Note(
+                  pitch: const Pitch(step: 'B', octave: 4),
+                  duration: const Duration(DurationType.quarter),
+                ),
+                Note(
+                  pitch: const Pitch(step: 'E', octave: 4),
+                  duration: const Duration(DurationType.sixteenth),
+                  ornaments: [Ornament(type: OrnamentType.acciaccatura)],
+                ),
+                Note(
+                  pitch: const Pitch(step: 'F', octave: 4),
+                  duration: const Duration(DurationType.quarter),
+                ),
+              ],
+              [
+                Note(
+                  pitch: const Pitch(step: 'C', octave: 5),
+                  duration: const Duration(DurationType.eighth),
+                  ornaments: [Ornament(type: OrnamentType.appoggiaturaUp)],
+                ),
+                Note(
+                  pitch: const Pitch(step: 'B', octave: 4),
+                  duration: const Duration(DurationType.quarter),
+                ),
+                Note(
+                  pitch: const Pitch(step: 'A', octave: 4),
+                  duration: const Duration(DurationType.quarter),
+                ),
+                Note(
+                  pitch: const Pitch(step: 'G', octave: 4),
+                  duration: const Duration(DurationType.quarter),
+                ),
+              ],
+            ]),
+            accentColor: _accent,
+            minHeight: 245,
+            staffSpace: 16.5,
+          ),
+        ),
+      ],
     );
   }
 
-  Widget _buildSection({
-    required String title,
-    required String description,
-    required List<MusicalElement> elements,
-  }) {
+  Staff _buildStaff(List<MusicalElement> elements) {
     final staff = Staff();
     final measure = Measure();
     for (final element in elements) {
       measure.add(element);
     }
     staff.add(measure);
+    return staff;
+  }
 
-    return Card(
-      elevation: 2.0,
-      margin: const EdgeInsets.only(bottom: 24.0),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              description,
-              style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              height: 190,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(color: Colors.grey.shade300),
-                borderRadius: BorderRadius.circular(4.0),
-              ),
-              child: MusicScore(
-                staff: staff,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  Staff _buildStaffWithMeasures(List<List<MusicalElement>> measures) {
+    final staff = Staff();
+    for (final elements in measures) {
+      final measure = Measure();
+      for (final element in elements) {
+        measure.add(element);
+      }
+      staff.add(measure);
+    }
+    return staff;
   }
 }
-

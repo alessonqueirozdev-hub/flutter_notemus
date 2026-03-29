@@ -2,12 +2,12 @@
 
 import '../layout/bounding_box.dart';
 
-/// Mixin que adiciona suporte a BoundingBox hierárquico para elementos musicais
+/// Mixin that Adds suporte a Hierarchical BoundingBox for elementos musicais
 ///
-/// Este mixin pode ser aplicado a qualquer MusicalElement para que ele possa
-/// armazenar e gerenciar seu BoundingBox hierárquico.
+/// This mixin pode ser Appliesdo a any MusicalElement for that it possa
+/// armazenar e gerenciar its Hierarchical BoundingBox.
 ///
-/// PADRÃO: Mixin Pattern
+/// Default: Mixin Pattern
 ///
 /// Uso:
 /// ```dart
@@ -16,37 +16,37 @@ import '../layout/bounding_box.dart';
 /// }
 /// ```
 mixin BoundingBoxSupport {
-  /// BoundingBox hierárquico associado a este elemento
+  /// Hierarchical BoundingBox associado a this elemento
   ///
-  /// Este é preenchido durante o processo de layout e atualizado
-  /// durante a renderização. Pode ser null se o layout ainda não
+  /// This é preenchido durante o processo de layout e currentizado
+  /// durante a Rendersção. Pode ser null se o layout still not
   /// foi executado.
   BoundingBox? _boundingBox;
 
-  /// Obtém o BoundingBox hierárquico deste elemento
+  /// Gets o Hierarchical BoundingBox deste elemento
   BoundingBox? get boundingBox => _boundingBox;
 
-  /// Define o BoundingBox hierárquico deste elemento
+  /// Definess o Hierarchical BoundingBox deste elemento
   set boundingBox(BoundingBox? bbox) => _boundingBox = bbox;
 
-  /// Verifica se este elemento tem um BoundingBox hierárquico válido
+  /// Checks se this elemento tem um Hierarchical BoundingBox válido
   bool get hasBoundingBox => _boundingBox != null;
 
-  /// Cria e retorna um novo BoundingBox hierárquico para este elemento
+  /// Creates e Returns um new Hierarchical BoundingBox for this elemento
   ///
-  /// Se já existe um BoundingBox, retorna o existente.
-  /// Caso contrário, cria um novo e o armazena.
+  /// Se já existe um BoundingBox, Returns o existente.
+  /// Caso contrário, Creates um new e o armazena.
   ///
-  /// @return BoundingBox hierárquico (novo ou existente)
+  /// @return Hierarchical BoundingBox (new ou existente)
   BoundingBox getOrCreateBoundingBox() {
     _boundingBox ??= BoundingBox();
     return _boundingBox!;
   }
 
-  /// Limpa o BoundingBox hierárquico deste elemento
+  /// Limpa o Hierarchical BoundingBox deste elemento
   ///
-  /// Remove todos os filhos e define como null.
-  /// Útil para recalcular layout do zero.
+  /// Remove all os filhos e Definess como null.
+  /// Útil for reCalculatestesr layout of the zero.
   void clearBoundingBox() {
     if (_boundingBox != null) {
       _boundingBox!.clearChildren();
@@ -54,53 +54,53 @@ mixin BoundingBoxSupport {
     }
   }
 
-  /// Atualiza a posição relativa do BoundingBox
+  /// Currentiza a position relativa of the BoundingBox
   ///
-  /// Conveniência para definir posição sem acessar boundingBox diretamente.
+  /// Conveniência for Define position sem acessar boundingBox diretamente.
   ///
-  /// @param x Posição X relativa ao pai
-  /// @param y Posição Y relativa ao pai
+  /// @param x X position relative to parent
+  /// @param y Y position relative to parent
   void setBoundingBoxPosition(double x, double y) {
     if (_boundingBox != null) {
       _boundingBox!.relativePosition = PointF2D(x, y);
     }
   }
 
-  /// Atualiza o tamanho do BoundingBox
+  /// Currentiza o Size of the BoundingBox
   ///
-  /// Conveniência para definir tamanho sem acessar boundingBox diretamente.
+  /// Conveniência for Define size sem acessar boundingBox diretamente.
   ///
-  /// @param width Largura
-  /// @param height Altura
+  /// @param width Width
+  /// @param height Height
   void setBoundingBoxSize(double width, double height) {
     if (_boundingBox != null) {
       _boundingBox!.size = SizeF2D(width, height);
     }
   }
 
-  /// Recalcula recursivamente as posições absolutas do BoundingBox
+  /// ReCalculatestes recursivamente as positions absolutas of the BoundingBox
   ///
-  /// Deve ser chamado após modificar posições relativas na hierarquia.
+  /// Deve ser chamado após modificar positions relativas na hierarquia.
   void updateBoundingBoxPositions() {
     if (_boundingBox != null) {
       _boundingBox!.calculateAbsolutePosition();
     }
   }
 
-  /// Recalcula recursivamente os bounds do BoundingBox
+  /// ReCalculatestes recursivamente os bounds of the BoundingBox
   ///
-  /// Deve ser chamado após modificar tamanhos ou adicionar/remover filhos.
+  /// Deve ser chamado após modificar sizes ou add/remover filhos.
   void updateBoundingBoxBounds() {
     if (_boundingBox != null) {
       _boundingBox!.calculateBoundingBox();
     }
   }
 
-  /// Adiciona um filho ao BoundingBox hierárquico deste elemento
+  /// Adds um filho ao Hierarchical BoundingBox deste elemento
   ///
-  /// Útil para construir hierarquia durante renderização.
+  /// Útil for construir hierarquia durante Rendersção.
   ///
-  /// @param childBBox BoundingBox do elemento filho
+  /// @param childBBox BoundingBox of the element filho
   void addBoundingBoxChild(BoundingBox childBBox) {
     if (_boundingBox != null) {
       _boundingBox!.addChild(childBBox);
@@ -108,9 +108,9 @@ mixin BoundingBoxSupport {
   }
 }
 
-/// Extension para facilitar uso de BoundingBoxSupport em listas
+/// Extension for facilitar uso de BoundingBoxSupport in listas
 extension BoundingBoxSupportList on List {
-  /// Atualiza posições de todos os elementos que têm BoundingBoxSupport
+  /// Currentiza positions de all os elementos that têm BoundingBoxSupport
   void updateAllBoundingBoxPositions() {
     for (final element in this) {
       if (element is BoundingBoxSupport) {
@@ -119,7 +119,7 @@ extension BoundingBoxSupportList on List {
     }
   }
 
-  /// Atualiza bounds de todos os elementos que têm BoundingBoxSupport
+  /// Currentiza bounds de all os elementos that têm BoundingBoxSupport
   void updateAllBoundingBoxBounds() {
     for (final element in this) {
       if (element is BoundingBoxSupport) {
@@ -128,7 +128,7 @@ extension BoundingBoxSupportList on List {
     }
   }
 
-  /// Limpa BoundingBoxes de todos os elementos
+  /// Limpa BoundingBoxes de all os elementos
   void clearAllBoundingBoxes() {
     for (final element in this) {
       if (element is BoundingBoxSupport) {

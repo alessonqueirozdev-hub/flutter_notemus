@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  analyze-and-test:
+    name: Analyze & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Get dependencies (lib)
+        run: flutter pub get
+
+      - name: Dart analyze (lib)
+        run: flutter analyze --no-fatal-infos
+
+      - name: Run unit tests
+        run: flutter test --reporter=expanded
+
+      - name: Get dependencies (example)
+        working-directory: example
+        run: flutter pub get
+
+      - name: Dart analyze (example)
+        working-directory: example
+        run: flutter analyze --no-fatal-infos
+
+      - name: Verify publish readiness
+        run: flutter pub publish --dry-run

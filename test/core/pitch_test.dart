@@ -254,7 +254,7 @@ void main() {
     });
 
     test('Natural accidental cancels previous accidental', () {
-      // In musical notation, natural cancels sharp or flat
+      // In musical notetion, natural cancels sharp or flat
       final fSharp = Pitch(step: 'F', octave: 4, accidentalType: AccidentalType.sharp);
       final fNatural = Pitch(step: 'F', octave: 4, accidentalType: AccidentalType.natural);
       final fPlain = Pitch(step: 'F', octave: 4);

@@ -1,19 +1,19 @@
 // lib/core/neume.dart
 //
-// Notação de Neuma (MEI v5 — Capítulo: Neume Notation)
-// Suporte a canto gregoriano e notação litúrgica medieval.
+// Noteção de Neuma (MEI v5 — Capítulo: Neume Notetion)
+// Suporte a canto gregoriano e noteção litúrgica medieval.
 
 import 'musical_element.dart';
 
-/// Forma do componente de neuma (MEI `@nc.form` ou `@form` em `<nc>`).
+/// Forma of the componente de neuma (MEI `@nc.form` ou `@form` in `<nc>`).
 ///
-/// Cada forma corresponde a um tipo específico de neuma simples ou ornamental.
+/// Each forma correspwhere a um type específico de neuma simples ou ornamental.
 enum NcForm {
   /// Ponto simples (punctum)
   punctum,
-  /// Virga (ponto com haste ascendente)
+  /// Virga (ponto with stem ascendente)
   virga,
-  /// Quilisma (nota oscilante)
+  /// Quilisma (note oscilante)
   quilisma,
   /// Oriscus
   oriscus,
@@ -23,13 +23,13 @@ enum NcForm {
   liquescentAscending,
   /// Liquescência descendente
   liquescentDescending,
-  /// Forma conectada (ligado a nota seguinte)
+  /// Forma conectada (ligado a note seguinte)
   connected,
 }
 
 /// Intervalo direcional entre neumas consecutivos.
 enum NeumeInterval {
-  /// Uníssono (mesma altura)
+  /// Uníssono (mesma height)
   unison,
   /// Passo acima
   stepAbove,
@@ -43,9 +43,9 @@ enum NeumeInterval {
 
 /// Representa um componente individual de neuma (MEI `<nc>` — neume component).
 ///
-/// Um neume component é a unidade mínima de uma figura de neuma, equivalente
-/// aproximadamente a uma nota em CMN. Pode ter altura (se adiastemático com
-/// linhas guia, ou em notação quadrada com pauta).
+/// Um neume component é a unidade mínima de a figura de neuma, equivalente
+/// aproximadamente a a note in CMN. Pode ter height (se adiastemático with
+/// linhas guia, ou in noteção quadrada with staff).
 ///
 /// ```dart
 /// NeumeComponent(
@@ -55,22 +55,22 @@ enum NeumeInterval {
 /// )
 /// ```
 class NeumeComponent {
-  /// Nome da nota (C–B), se a notação é diastema (com altura definida).
+  /// Name of the note (C–B), se a noteção é diastema (with height definida).
   final String? pitchName;
 
-  /// Oitava da nota.
+  /// Oitava of the note.
   final int? octave;
 
-  /// Forma gráfica do componente.
+  /// Forma gráfica of the componente.
   final NcForm form;
 
-  /// Direção do intervalo em relação ao componente anterior.
+  /// Direção of the intervalo in relação ao componente previous.
   final NeumeInterval? interval;
 
-  /// Indica se este componente é liquescente.
+  /// Indica se this componente é liquescente.
   final bool isLiquescent;
 
-  /// Indica conexão com o próximo componente (ligature graphique).
+  /// Indica conexão with o next componente (ligature graphique).
   final bool connected;
 
   const NeumeComponent({
@@ -83,12 +83,12 @@ class NeumeComponent {
   });
 }
 
-/// Tipo de neuma composto, identificando o padrão rítmico-melódico clássico.
+/// Type de neuma composto, identificando o default rítmico-melódico clássico.
 enum NeumeType {
   // === Neumas simples ===
-  /// Punctum — nota única
+  /// Punctum — note única
   punctum,
-  /// Virga — nota única com haste
+  /// Virga — note única with stem
   virga,
   /// Bivirga
   bivirga,
@@ -122,7 +122,7 @@ enum NeumeType {
   climacusResupinus,
 
   // === Neumas especiais ===
-  /// Quilisma (grupo com quilisma)
+  /// Quilisma (grupo with quilisma)
   quilismaGroup,
   /// Oriscus
   oriscusGroup,
@@ -131,14 +131,14 @@ enum NeumeType {
   /// Trigon
   trigon,
 
-  /// Neuma de tipo indefinido / customizado
+  /// Neuma de type indefinido / customizado
   custom,
 }
 
 /// Representa um neuma completo (MEI `<neume>`).
 ///
-/// Um neuma é um grupo de sons (componentes) que formam uma unidade rítmico-
-/// melódica na notação gregoriana. Corresponde a uma ou mais sílabas de texto.
+/// Um neuma é um grupo de sons (componentes) that formam a unidade rítmico-
+/// melódica na noteção gregoriana. Correspwhere a a ou mais syllables de texto.
 ///
 /// ```dart
 /// Neume(
@@ -150,16 +150,16 @@ enum NeumeType {
 /// )
 /// ```
 class Neume extends MusicalElement {
-  /// Tipo de neuma.
+  /// Type de neuma.
   final NeumeType type;
 
-  /// Componentes do neuma, em ordem de performance.
+  /// Componentes of the neuma, in ordem de performance.
   final List<NeumeComponent> components;
 
-  /// Sílaba de texto associada (letra do canto).
+  /// Syllable de texto associada (letra of the canto).
   final String? syllable;
 
-  /// Indica a tradição de notação (quadrada, adiastemática, etc.).
+  /// Indica a tradição de noteção (quadrada, adiastemática, etc.).
   final NeumeNotationStyle notationStyle;
 
   Neume({
@@ -170,36 +170,36 @@ class Neume extends MusicalElement {
   });
 }
 
-/// Estilo de notação de neuma.
+/// Estilo de noteção de neuma.
 enum NeumeNotationStyle {
-  /// Notação quadrada (notação gregoriana com pauta, séc. XII em diante)
+  /// Noteção quadrada (noteção gregoriana with staff, séc. XII in diante)
   square,
-  /// Notação adiastemática (sans pauta, apenas direção melódica)
+  /// Noteção adiastemática (sans staff, apenas direção melódica)
   adiastematic,
-  /// Notação neumática alemã (Hufnagel)
+  /// Noteção neumática alemã (Hufnagel)
   hufnagel,
-  /// Notação aquitana (pontos sobre linha)
+  /// Noteção aquitana (pontos sobre linha)
   aquitanian,
-  /// Notação beneventana
+  /// Noteção beneventana
   beneventan,
 }
 
 /// Indica a divisão entre palavras / respiração no canto gregoriano.
-/// Corresponde ao elemento `<division>` do MEI v5.
+/// Correspwhere ao elemento `<division>` of the MEI v5.
 class NeumeDivision extends MusicalElement {
-  /// Tipo de divisão (respiração entre sílabas).
+  /// Type de divisão (respiração entre syllables).
   final NeumeDivisionType type;
 
   NeumeDivision({this.type = NeumeDivisionType.minima});
 }
 
-/// Tipo de divisão no canto gregoriano.
+/// Type de divisão no canto gregoriano.
 enum NeumeDivisionType {
-  /// Divisão mínima (curta pausa)
+  /// Divisão mínima (curta paUses)
   minima,
-  /// Divisão menor
+  /// Divisão smaller
   minor,
-  /// Divisão maior
+  /// Divisão greater
   maior,
   /// Divisão final (finalis)
   finalis,

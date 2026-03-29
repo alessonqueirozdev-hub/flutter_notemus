@@ -12,41 +12,59 @@ void main() {
   const notePos = Offset(100, 200);
   final clef = Clef(clefType: ClefType.treble);
 
+  // staffBaselineY = notePos.dy so notes AT position 0 stay at y=200
+  const staffBaselineY = 200.0;
+
   setUpAll(() async {
     metadata = SmuflMetadata();
     await metadata.load();
-    renderer = SlurRenderer(staffSpace: staffSpace, metadata: metadata);
+    renderer = SlurRenderer(
+      staffSpace: staffSpace,
+      staffBaselineY: staffBaselineY,
+      metadata: metadata,
+    );
   });
 
   group('SlurRenderer endpoint geometry', () {
-    test(
-      'anchors ordinary slur starts near the right edge of the notehead',
-      () {
-        final note = Note(
-          pitch: const Pitch(step: 'C', octave: 4),
-          duration: const Duration(DurationType.quarter),
-        );
-        final bbox = metadata.getGlyphBoundingBox(
-          note.duration.type.glyphName,
-        )!;
-        final expectedRightEdge = notePos.dx + (bbox.bBoxNeX * staffSpace);
-        final edgeInset = (bbox.width * staffSpace * 0.16).clamp(
-          0.0,
-          staffSpace * 0.14,
-        );
+    test('anchors below slurs on the stem-free side for stem-up notes', () {
+      final note = Note(
+        pitch: const Pitch(step: 'C', octave: 4),
+        duration: const Duration(DurationType.quarter),
+      );
+      final bbox = metadata.getGlyphBoundingBox(note.duration.type.glyphName)!;
+      final noteCenterX = notePos.dx + (bbox.centerX * staffSpace);
 
-        final endpoint = renderer.calculateSlurEndpointForTesting(
-          notePos,
-          note,
-          clef,
-          isStart: true,
-          above: false,
-        );
+      final endpoint = renderer.calculateSlurEndpointForTesting(
+        notePos,
+        note,
+        clef,
+        isStart: true,
+        above: false,
+        stemUp: true,
+      );
 
-        expect(endpoint.dx, closeTo(expectedRightEdge - edgeInset, 0.001));
-        expect(endpoint.dx, greaterThan(notePos.dx));
-      },
-    );
+      expect(endpoint.dx, lessThan(noteCenterX));
+    });
+
+    test('anchors above slurs on the stem-free side for stem-down notes', () {
+      final note = Note(
+        pitch: const Pitch(step: 'B', octave: 4),
+        duration: const Duration(DurationType.quarter),
+      );
+      final bbox = metadata.getGlyphBoundingBox(note.duration.type.glyphName)!;
+      final noteCenterX = notePos.dx + (bbox.centerX * staffSpace);
+
+      final endpoint = renderer.calculateSlurEndpointForTesting(
+        notePos,
+        note,
+        clef,
+        isStart: false,
+        above: true,
+        stemUp: false,
+      );
+
+      expect(endpoint.dx, greaterThan(noteCenterX));
+    });
 
     test('anchors grace slur starts from the grace-note geometry', () {
       final note = Note(
@@ -54,9 +72,20 @@ void main() {
         duration: const Duration(DurationType.quarter),
         ornaments: [Ornament(type: OrnamentType.appoggiaturaUp)],
       );
+
+      // SlurRenderer now computes the ACTUAL note Y from pitch before delegating
+      // to graceSlurStartPointForNote, so expected must use the same note Y.
+      final staffPos = StaffPositionCalculator.calculate(note.pitch, clef);
+      final noteY = StaffPositionCalculator.toPixelY(
+        staffPos,
+        staffSpace,
+        staffBaselineY,
+      );
+      final adjustedNotePos = Offset(notePos.dx, noteY);
+
       final expected = graceSlurStartPointForNote(
         note: note,
-        notePos: notePos,
+        notePos: adjustedNotePos,
         above: true,
         staffSpace: staffSpace,
         glyphSize: staffSpace * 4.0,
@@ -75,7 +104,7 @@ void main() {
       expect(endpoint.dx, lessThan(notePos.dx));
     });
 
-    test('uses duration-specific notehead geometry for tie endpoints', () {
+    test('keeps tie endpoints on the stem-free side for stem-up notes', () {
       final startNote = Note(
         pitch: const Pitch(step: 'G', octave: 4),
         duration: const Duration(DurationType.whole),
@@ -88,11 +117,8 @@ void main() {
       final bbox = metadata.getGlyphBoundingBox(
         startNote.duration.type.glyphName,
       )!;
-      final edgePadding = staffSpace * 0.08;
-      final expectedStartX =
-          notePos.dx + (bbox.bBoxNeX * staffSpace) - edgePadding;
-      final expectedEndX =
-          endPos.dx + (bbox.bBoxSwX * staffSpace) + edgePadding;
+      final startCenterX = notePos.dx + (bbox.centerX * staffSpace);
+      final endCenterX = endPos.dx + (bbox.centerX * staffSpace);
 
       final (startPoint, endPoint) = renderer.calculateTieEndpointsForTesting(
         notePos,
@@ -100,10 +126,13 @@ void main() {
         endPos,
         endNote,
         tieAbove: false,
+        clef: clef,
+        startStemUp: true,
+        endStemUp: true,
       );
 
-      expect(startPoint.dx, closeTo(expectedStartX, 0.001));
-      expect(endPoint.dx, closeTo(expectedEndX, 0.001));
+      expect(startPoint.dx, lessThan(startCenterX));
+      expect(endPoint.dx, lessThan(endCenterX));
     });
   });
 }

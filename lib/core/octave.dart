@@ -32,7 +32,7 @@ class OctaveMark extends MusicalElement {
     this.showBracket = true,
   });
 
-  /// Retorna o deslocamento em oitavas
+  /// Returns o deslocamento in oitavas
   int get octaveShift {
     switch (type) {
       case OctaveType.va8:
@@ -50,7 +50,7 @@ class OctaveMark extends MusicalElement {
     }
   }
 
-  /// Retorna o texto da marca
+  /// Returns o texto of the marca
   String get text {
     switch (type) {
       case OctaveType.va8:

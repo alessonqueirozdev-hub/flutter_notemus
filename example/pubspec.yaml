@@ -1,6 +1,6 @@
 name: flutter_notemus_example
 description: Demonstrates how to use the flutter_notemus package.
-publish_to: 'none' # Prevent accidental publishing to pub.dev
+publish_to: 'none'
 
 environment:
   sdk: '>=3.1.0 <4.0.0'
@@ -8,14 +8,11 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
-  # Esta é a linha mais importante:
-  # Ela diz a este aplicativo de exemplo para usar a biblioteca
-  # que está na pasta pai (../).
+  flutter_localizations:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
   flutter_notemus:
     path: ../
-
-  # PDF export dependencies
   pdf: ^3.10.4
   printing: ^5.11.0
 

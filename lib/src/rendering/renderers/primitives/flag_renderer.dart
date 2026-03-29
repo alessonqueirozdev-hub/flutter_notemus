@@ -6,36 +6,17 @@ import '../../../theme/music_score_theme.dart';
 import '../../smufl_positioning_engine.dart';
 import '../base_glyph_renderer.dart';
 
-/// Renderizador especializado APENAS para bandeirolas (flags) de notas.
+/// Rendersdor especializado APENAS for bandeirolas (flags) de notes.
 ///
-/// Responsabilidade única: desenhar bandeirolas usando
-/// âncoras SMuFL para posicionamento preciso.
+/// Responsabilidade única: desenhar bandeirolas using
+/// âncoras SMuFL for posicionamento preciso.
 class FlagRenderer extends BaseGlyphRenderer {
   final MusicScoreTheme theme;
   final SMuFLPositioningEngine positioningEngine;
-
-  // ========== AJUSTES PARA BANDEIROLA PARA CIMA (stemUp = true) ==========
-  /// Ajuste visual empírico em X para bandeirola PARA CIMA
-  /// Valor determinado através de análise visual comparativa.
-  /// TODO: Investigar se deve ser proporcional ao staffSpace
-  static const double flagUpXOffset = 0.7; // pixels
-
-  /// Ajuste visual empírico em Y para bandeirola PARA CIMA
-  /// Valor determinado através de análise visual comparativa.
-  /// TODO: Investigar se deve ser proporcional ao staffSpace
-  static const double flagUpYOffset =
-      0; // pixels (negativo porque Y+ é para baixo)
-
-  // ========== AJUSTES PARA BANDEIROLA PARA BAIXO (stemUp = false) ==========
-  /// Ajuste visual empírico em X para bandeirola PARA BAIXO
-  /// Valor determinado através de análise visual comparativa.
-  /// TODO: Investigar se deve ser proporcional ao staffSpace
-  static const double flagDownXOffset = 0.7; // pixels (ajustar se necessário)
-
-  /// Ajuste visual empírico em Y para bandeirola PARA BAIXO
-  /// Valor determinado através de análise visual comparativa.
-  /// TODO: Investigar se deve ser proporcional ao staffSpace
-  static const double flagDownYOffset = 0.5; // pixels (ajustar se necessário)
+  static const double flagUpXOffset = 0.7;
+  static const double flagUpYOffset = 0;
+  static const double flagDownXOffset = 0.7;
+  static const double flagDownYOffset = 0.5;
 
   FlagRenderer({
     required super.metadata,
@@ -45,12 +26,12 @@ class FlagRenderer extends BaseGlyphRenderer {
     required this.positioningEngine,
   });
 
-  /// Renderiza bandeirola de uma nota.
+  /// Renders bandeirola de a note.
   ///
-  /// [canvas] - Canvas onde desenhar
-  /// [stemEnd] - Posição do final da haste
-  /// [duration] - Duração da nota
-  /// [stemUp] - Se a haste vai para cima
+  /// [canvas] - Canvas where desenhar
+  /// [stemEnd] - Position of the final of the stem
+  /// [duration] - Duração of the note
+  /// [stemUp] - Se a stem vai for cima
   void render(
     Canvas canvas,
     Offset stemEnd,
@@ -60,25 +41,19 @@ class FlagRenderer extends BaseGlyphRenderer {
     final flagGlyph = _getFlagGlyph(duration, stemUp);
     if (flagGlyph == null) return;
 
-    // Obter âncora da bandeirola
+    // Get âncora of the bandeirola
     final flagAnchor = positioningEngine.getFlagAnchor(flagGlyph);
 
-    // Converter âncora de spaces para pixels
-    // CORREÇÃO CRÍTICA: SMuFL usa Y+ para cima, Flutter usa Y+ para baixo
     final flagAnchorPixels = Offset(
       flagAnchor.dx * coordinates.staffSpace,
-      -flagAnchor.dy * coordinates.staffSpace, // INVERTER Y!
+      -flagAnchor.dy * coordinates.staffSpace,
     );
 
-    // Calcular posição da bandeirola com ajustes visuais (diferentes para cima/baixo)
     final xOffset = stemUp ? flagUpXOffset : flagDownXOffset;
     final yOffset = stemUp ? flagUpYOffset : flagDownYOffset;
 
     final flagX = stemEnd.dx - flagAnchorPixels.dx - xOffset;
-    final flagY =
-        stemEnd.dy -
-        flagAnchorPixels.dy -
-        yOffset; // Nota: yOffset já é negativo
+    final flagY = stemEnd.dy - flagAnchorPixels.dy - yOffset;
 
     // Desenhar bandeirola
     drawGlyphWithBBox(
@@ -90,7 +65,7 @@ class FlagRenderer extends BaseGlyphRenderer {
     );
   }
 
-  /// Retorna o glifo SMuFL correto para a bandeirola.
+  /// Returns o glifo SMuFL correto for a bandeirola.
   String? _getFlagGlyph(DurationType duration, bool stemUp) {
     return switch (duration) {
       DurationType.eighth => stemUp ? 'flag8thUp' : 'flag8thDown',

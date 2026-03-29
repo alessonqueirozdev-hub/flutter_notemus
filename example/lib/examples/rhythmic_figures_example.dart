@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 
-// Estrutura de dados para organizar cada figura
+// Estrutura de dados for organizar each figura
 class RhythmicFigure {
   final String name;
   final DurationType durationType;
@@ -86,7 +86,10 @@ class RhythmicFiguresExample extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Container(
-              height: 100, // Reduced height for a single staff
+              padding: const EdgeInsets.symmetric(
+                horizontal: 8.0,
+                vertical: 10.0,
+              ),
               decoration: BoxDecoration(
                 color: Colors.white,
                 border: Border.all(color: Colors.grey.shade300),
@@ -94,6 +97,7 @@ class RhythmicFiguresExample extends StatelessWidget {
               ),
               child: MusicScore(
                 staff: staff,
+                staffSpace: 14,
               ),
             ),
           ],

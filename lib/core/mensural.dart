@@ -1,12 +1,12 @@
 // lib/core/mensural.dart
 //
-// Notação Mensural (MEI v5 — Capítulo: Mensural Notation)
-// Suporte a notação medieval e renascentista (séc. XIII–XVII).
+// Noteção Mensural (MEI v5 — Capítulo: Mensural Notetion)
+// Suporte a noteção medieval e renascentista (séc. XIII–XVII).
 
 import 'musical_element.dart';
 import 'duration.dart';
 
-/// Forma da cabeça de nota mensural.
+/// Forma of the notehead mensural.
 enum MensuralHeadShape {
   /// Cabeça oblonga (longa, breve mensural)
   oblique,
@@ -18,10 +18,10 @@ enum MensuralHeadShape {
   square,
 }
 
-/// Orientação da plica (haste ornamental em notação mensural).
+/// Orientação of the plica (stem ornamental in noteção mensural).
 enum PlicaDirection { up, down }
 
-/// Valor mensural de uma nota (MEI `dur` em contexto mensural).
+/// Value mensural de a note (MEI `dur` in contexto mensural).
 enum MensuralDuration {
   /// Maxima (Mx)
   maxima,
@@ -35,18 +35,18 @@ enum MensuralDuration {
   minima,
   /// Semimínima (Sm)
   semiminima,
-  /// Fusa (Fu)
+  /// FUses (Fu)
   fusa,
-  /// Semifusa (Sf)
+  /// SemifUses (Sf)
   semifusa,
 }
 
-/// Representa uma nota em notação mensural (MEI `<note>` em contexto mensural).
+/// Representa a note in noteção mensural (MEI `<note>` in contexto mensural).
 ///
-/// Notas mensurais têm atributos específicos que não existem no CMN:
-/// - [headShape]: forma da cabeça da nota
+/// Notes mensurais têm atributos específicos that not existem no CMN:
+/// - [headShape]: forma of the cabeça of the note
 /// - [mensurQuality]: qualidade mensural (perfeita/imperfeita)
-/// - [plica]: ornamento de plica
+/// - [plica]: ornament de plica
 ///
 /// ```dart
 /// MensuralNote(
@@ -57,7 +57,7 @@ enum MensuralDuration {
 /// )
 /// ```
 class MensuralNote extends MusicalElement {
-  /// Nome da nota (C–B).
+  /// Name of the note (C–B).
   final String pitchName;
 
   /// Oitava.
@@ -66,19 +66,19 @@ class MensuralNote extends MusicalElement {
   /// Duração mensural.
   final MensuralDuration duration;
 
-  /// Forma da cabeça da nota.
+  /// Forma of the cabeça of the note.
   final MensuralHeadShape headShape;
 
-  /// Qualidade da nota (perfeita = ternária, imperfeita = binária, alterada).
+  /// Qualidade of the note (perfeita = ternária, imperfeita = binária, alterada).
   final MensuralNoteQuality quality;
 
-  /// Indica se esta nota tem plica (ornamento de haste diagonal).
+  /// Indica se this note tem plica (ornament de stem diagonal).
   final PlicaDirection? plica;
 
-  /// Alteração cromática (0 = natural, 1 = sustenido, -1 = bemol).
+  /// Alteração cromática (0 = natural, 1 = sharp, -1 = flat).
   final double alter;
 
-  /// Indica se esta nota é colorada (nota de cor) para indicar imperfeição/alteração.
+  /// Indica se this note é colorada (note de cor) for indicar imperfeição/alteração.
   final bool isColored;
 
   MensuralNote({
@@ -93,17 +93,17 @@ class MensuralNote extends MusicalElement {
   });
 }
 
-/// Qualidade de uma nota mensural.
+/// Qualidade de a note mensural.
 enum MensuralNoteQuality {
-  /// Perfeita: divisão ternária (valem 3 unidades menores)
+  /// Perfeita: divisão ternária (valem 3 unidades smalleres)
   perfecta,
-  /// Imperfeita: divisão binária (valem 2 unidades menores)
+  /// Imperfeita: divisão binária (valem 2 unidades smalleres)
   imperfecta,
-  /// Alterada: dobra o valor por alteração mensural (apenas breve e semibreve)
+  /// Alterada: dobra o value por alteração mensural (apenas breve e semibreve)
   alterata,
 }
 
-/// Pausa em notação mensural (MEI `<rest>` com `dur` mensural).
+/// PaUses in noteção mensural (MEI `<rest>` with `dur` mensural).
 class MensuralRest extends MusicalElement {
   final MensuralDuration duration;
   final int? lines;
@@ -113,8 +113,8 @@ class MensuralRest extends MusicalElement {
 
 /// Ligatura mensural (MEI `<ligature>`).
 ///
-/// Uma ligatura é um grupo de notas escritas ligadas graficamente, comum
-/// na notação medieval. A forma gráfica codifica as durações implicitamente.
+/// A ligatura é um grupo de notes escritas ligadas graficamente, comum
+/// na noteção medieval. A forma gráfica codifica as durações implicitamente.
 ///
 /// ```dart
 /// Ligature(
@@ -126,22 +126,22 @@ class MensuralRest extends MusicalElement {
 /// )
 /// ```
 class Ligature extends MusicalElement {
-  /// Notas que compõem a ligatura.
+  /// Notes that compõem a ligatura.
   final List<MensuralNote> notes;
 
-  /// Forma gráfica da ligatura.
+  /// Forma gráfica of the ligatura.
   final LigatureForm form;
 
   Ligature({required this.notes, this.form = LigatureForm.cumpropriete});
 }
 
-/// Forma de ligatura mensural (MEI `@form` em `<ligature>`).
+/// Forma de ligatura mensural (MEI `@form` in `<ligature>`).
 enum LigatureForm {
-  /// Cum proprietate, cum perfectione (forma padrão)
+  /// Cum proprietate, cum perfectione (forma default)
   cumpropriete,
-  /// Sine proprietate (sem propriedade)
+  /// Sine proprietate (sem property)
   sinepropriete,
-  /// Cum opposita proprietate (com propriedade oposta — indica semibreves)
+  /// Cum opposita proprietate (with property oposta — indica semibreves)
   cumoppositapropriete,
   /// Sine perfectione
   sineperfectione,
@@ -150,17 +150,17 @@ enum LigatureForm {
 /// Definição de mensura (MEI `<mensur>`).
 ///
 /// Especifica as relações de divisão entre os valores mensurais:
-/// - [modusmaior]: relação Maxima → Longa (2 ou 3)
+/// - [modusgreater]: relação Maxima → Longa (2 ou 3)
 /// - [modusmino]: relação Longa → Breve (2 ou 3)
 /// - [tempus]: relação Breve → Semibreve (2=binário, 3=ternário)
-/// - [prolatio]: relação Semibreve → Mínima (2=minor, 3=maior)
+/// - [prolatio]: relação Semibreve → Mínima (2=minor, 3=greater)
 ///
 /// ```dart
 /// Mensur(tempus: 3, prolatio: 2)  // Tempus perfectum, prolatio minor
-/// Mensur(tempus: 2, prolatio: 3)  // Tempus imperfectum, prolatio maior
+/// Mensur(tempus: 2, prolatio: 3)  // Tempus imperfectum, prolatio greater
 /// ```
 class Mensur extends MusicalElement {
-  /// Modus maior (relação Maxima/Longa): 2 ou 3.
+  /// Modus greater (relação Maxima/Longa): 2 ou 3.
   final int? modusmaior;
 
   /// Modus minor (relação Longa/Breve): 2 ou 3.
@@ -175,10 +175,10 @@ class Mensur extends MusicalElement {
   /// Sinal visual de mensura (círculo, semicírculo, etc.).
   final MensurSign? sign;
 
-  /// Indica mensura com ponto de perfeição.
+  /// Indica mensura with ponto de perfeição.
   final bool dot;
 
-  /// Indica mensura com barra de diminuição (alla breve).
+  /// Indica mensura with barra de diminuição (alla breve).
   final bool slash;
 
   Mensur({
@@ -200,13 +200,13 @@ enum MensurSign {
   semicircle,
   /// Semicírculo cortado (alla breve / cut time mensural)
   cut,
-  /// Símbolo C com ponto
+  /// Símbolo C with ponto
   cWithDot,
 }
 
 /// Proporção mensural (MEI `<proport>`).
 ///
-/// Indica uma mudança de proporção rítmica (ex.: sesquialtera 3:2,
+/// Indica a mudança de proporção rítmica (ex.: sesquialtera 3:2,
 /// dupla proporção 2:1).
 ///
 /// ```dart
@@ -214,20 +214,20 @@ enum MensurSign {
 /// ProportMark(num: 2, numbase: 1)  // Dupla proporção
 /// ```
 class ProportMark extends MusicalElement {
-  /// Numerador da proporção.
+  /// Numerador of the proporção.
   final int num;
 
-  /// Denominador da proporção.
+  /// Denominador of the proporção.
   final int numbase;
 
   ProportMark({required this.num, required this.numbase});
 
-  /// Retorna o modificador de duração (numbase / num).
+  /// Returns o modificador de duração (numbase / num).
   double get modifier => numbase / num;
 }
 
-/// Converte uma duração mensural para valor relativo à semibreve.
-/// Apenas indicativo; o valor real depende da mensura ativa.
+/// Converts a duração mensural for value relativo à semibreve.
+/// Apenas indicativo; o value real depende of the mensura ativa.
 double mensuralDurationToValue(MensuralDuration duration) =>
     switch (duration) {
       MensuralDuration.maxima     => 8.0,
@@ -240,7 +240,7 @@ double mensuralDurationToValue(MensuralDuration duration) =>
       MensuralDuration.semifusa   => 0.0625,
     };
 
-/// Retorna o [DurationType] moderno mais próximo de uma [MensuralDuration].
+/// Returns o [DurationType] moderno mais next de a [MensuralDuration].
 DurationType mensuralToModernDuration(MensuralDuration d) =>
     switch (d) {
       MensuralDuration.maxima     => DurationType.maxima,

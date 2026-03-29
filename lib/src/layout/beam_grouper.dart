@@ -1,12 +1,14 @@
 // lib/src/layout/beam_grouper.dart
 
-import '../../core/core.dart'; // 🆕 Tipos do core
+import '../../core/core.dart';
 
-/// Responsável por agrupar figuras musicais em grupos de beam
-/// seguindo as regras musicais tradicionais baseadas na fórmula de compasso
+/// Responsible for grouping rhythmic figures into beam groups.
 class BeamGrouper {
-
-  /// Agrupa notas em beams baseado na fórmula de compasso e configurações do compasso
+  /// Groups notes into beams from a note-only timeline.
+  ///
+  /// This entry point is kept for compatibility. It now respects
+  /// non-beamable notes as hard barriers, but cannot see rests because they are
+  /// not part of the input collection.
   static List<BeamGroup> groupNotesForBeaming(
     List<Note> notes,
     TimeSignature timeSignature, {
@@ -14,164 +16,199 @@ class BeamGrouper {
     BeamingMode beamingMode = BeamingMode.automatic,
     List<List<int>> manualBeamGroups = const [],
   }) {
-    final groups = <BeamGroup>[];
-    final beamableNotes = notes.where(_isBeamable).toList();
+    final items = notes
+        .map(
+          (note) => _BeamingItem.note(
+            note: note,
+            duration: note.duration.realValue,
+            isBeamable: _isBeamable(note),
+          ),
+        )
+        .toList();
 
-    if (beamableNotes.isEmpty) return groups;
+    return _groupTimelineItems(
+      items,
+      timeSignature,
+      autoBeaming: autoBeaming,
+      beamingMode: beamingMode,
+      manualBeamGroups: manualBeamGroups,
+    );
+  }
 
-    // Verificar se beaming está desabilitado
-    if (!autoBeaming || beamingMode == BeamingMode.forceFlags) {
-      return groups; // Retorna lista vazia = usar flags individuais
+  /// Groups beams while respecting the full rhythmic timeline of the measure,
+  /// including rests and non-beamable notes as real boundaries.
+  static List<BeamGroup> groupElementsForBeaming(
+    List<MusicalElement> elements,
+    TimeSignature timeSignature, {
+    bool autoBeaming = true,
+    BeamingMode beamingMode = BeamingMode.automatic,
+    List<List<int>> manualBeamGroups = const [],
+  }) {
+    final items = <_BeamingItem>[];
+
+    for (final element in elements) {
+      if (element is Note) {
+        items.add(
+          _BeamingItem.note(
+            note: element,
+            duration: element.duration.realValue,
+            isBeamable: _isBeamable(element),
+          ),
+        );
+      } else if (element is Rest) {
+        items.add(_BeamingItem.rest(duration: element.duration.realValue));
+      }
     }
 
-    // Aplicar modo de beaming específico
+    return _groupTimelineItems(
+      items,
+      timeSignature,
+      autoBeaming: autoBeaming,
+      beamingMode: beamingMode,
+      manualBeamGroups: manualBeamGroups,
+    );
+  }
+
+  static List<BeamGroup> _groupTimelineItems(
+    List<_BeamingItem> items,
+    TimeSignature timeSignature, {
+    bool autoBeaming = true,
+    BeamingMode beamingMode = BeamingMode.automatic,
+    List<List<int>> manualBeamGroups = const [],
+  }) {
+    final groups = <BeamGroup>[];
+    final notes = items.map((item) => item.note).whereType<Note>().toList();
+
+    if (notes.isEmpty) return groups;
+
+    if (!autoBeaming || beamingMode == BeamingMode.forceFlags) {
+      return groups;
+    }
+
     switch (beamingMode) {
       case BeamingMode.forceBeamAll:
-        return _groupAllNotes(beamableNotes);
-
+        return _groupAllRuns(_collectBeamableRuns(items));
       case BeamingMode.conservative:
-        return _groupConservative(beamableNotes);
-
+        return _groupConservativeRuns(_collectBeamableRuns(items));
       case BeamingMode.manual:
-        return _groupManual(beamableNotes, manualBeamGroups);
-
+        return _groupManual(notes, manualBeamGroups);
       case BeamingMode.automatic:
       default:
-        // Usar estratégia automática baseada na fórmula de compasso
         final strategy = _getGroupingStrategy(timeSignature);
         switch (strategy) {
           case BeamingStrategy.simple:
-            return _groupSimpleTime(beamableNotes, timeSignature);
+            return _groupSimpleTime(items, timeSignature);
           case BeamingStrategy.compound:
-            return _groupCompoundTime(beamableNotes, timeSignature);
+            return _groupCompoundTime(items, timeSignature);
           case BeamingStrategy.irregular:
-            return _groupIrregularTime(beamableNotes, timeSignature);
+            return _groupIrregularTime(items, timeSignature);
         }
     }
   }
 
-  /// Verifica se uma nota pode ser agrupada em beam
   static bool _isBeamable(Note note) {
-    return note.duration.type.value <= 0.125; // Colcheia ou menor
+    return note.duration.type.value <= 0.125;
   }
 
-  /// Determina a estratégia de agrupamento baseado na fórmula de compasso
   static BeamingStrategy _getGroupingStrategy(TimeSignature timeSignature) {
     final denominator = timeSignature.denominator;
     final numerator = timeSignature.numerator;
 
-    // Compassos compostos (denominador 8 e numerador divisível por 3)
     if (denominator == 8 && numerator % 3 == 0) {
       return BeamingStrategy.compound;
     }
 
-    // Compassos simples regulares (2/4, 3/4, 4/4, etc.)
     if ([2, 3, 4].contains(numerator) && [2, 4, 8].contains(denominator)) {
       return BeamingStrategy.simple;
     }
 
-    // Compassos irregulares (5/8, 7/8, etc.)
     return BeamingStrategy.irregular;
   }
 
-  /// Agrupamento para compassos simples (2/4, 3/4, 4/4)
   static List<BeamGroup> _groupSimpleTime(
-    List<Note> notes,
+    List<_BeamingItem> items,
     TimeSignature timeSignature,
   ) {
     final groups = <BeamGroup>[];
-    
-    // Regra simples para 4/4: agrupar por tempo (quarter note = 0.25)
-    // Para outros compassos simples, agrupar por beat unit
     final beatUnit = 1.0 / timeSignature.denominator;
-    
+
     var currentGroup = <Note>[];
     var currentPosition = 0.0;
 
-    for (final note in notes) {
-      final noteDuration = note.duration.realValue;
-      final noteEnd = currentPosition + noteDuration;
-      
-      // Determinar em qual beat esta nota começa e termina
+    for (final item in items) {
+      if (item.note == null || !item.isBeamable) {
+        _addGroupIfValid(groups, currentGroup);
+        currentGroup = <Note>[];
+        currentPosition += item.duration;
+        continue;
+      }
+
+      final note = item.note!;
+      final noteEnd = currentPosition + item.duration;
       final startBeat = (currentPosition / beatUnit).floor();
-      final endBeat = ((noteEnd - 0.0001) / beatUnit).floor(); // Tolerância
-      
-      // Se a nota cruza para o próximo beat, finalizar grupo atual
+      final endBeat = ((noteEnd - 0.0001) / beatUnit).floor();
+
       if (startBeat != endBeat && currentGroup.isNotEmpty) {
-        // Finalizar o grupo anterior
-        if (currentGroup.length >= 2) {
-          groups.add(BeamGroup(notes: List.from(currentGroup)));
-        }
-        currentGroup = [note]; // Iniciar novo grupo com esta nota
+        _addGroupIfValid(groups, currentGroup);
+        currentGroup = [note];
       } else {
-        // Nota está dentro do mesmo beat, adicionar ao grupo
         currentGroup.add(note);
       }
-      
+
       currentPosition = noteEnd;
     }
 
-    // Adiciona grupo final se tiver pelo menos 2 notas
-    if (currentGroup.length >= 2) {
-      groups.add(BeamGroup(notes: currentGroup));
-    }
-
+    _addGroupIfValid(groups, currentGroup);
     return groups;
   }
 
-  /// Agrupamento para compassos compostos (6/8, 9/8, 12/8)
   static List<BeamGroup> _groupCompoundTime(
-    List<Note> notes,
+    List<_BeamingItem> items,
     TimeSignature timeSignature,
   ) {
     final groups = <BeamGroup>[];
-    final beatUnit = 3.0 / timeSignature.denominator; // 3 colcheias por tempo
+    final beatUnit = 3.0 / timeSignature.denominator;
 
     var currentGroup = <Note>[];
     var currentBeatPosition = 0.0;
 
-    for (final note in notes) {
-      final noteDuration = note.duration.realValue;
-      final nextBeatPosition = currentBeatPosition + noteDuration;
+    for (final item in items) {
+      if (item.note == null || !item.isBeamable) {
+        _addGroupIfValid(groups, currentGroup);
+        currentGroup = <Note>[];
+        currentBeatPosition += item.duration;
+        continue;
+      }
 
-      // Verifica se a nota atravessa um tempo ternário
+      final note = item.note!;
+      final nextBeatPosition = currentBeatPosition + item.duration;
       final currentBeat = (currentBeatPosition / beatUnit).floor();
       final nextBeat = (nextBeatPosition / beatUnit).floor();
 
       if (currentBeat != nextBeat && currentGroup.isNotEmpty) {
-        // Finaliza o grupo atual se atravessa um tempo
-        if (currentGroup.length >= 2) {
-          groups.add(BeamGroup(notes: List.from(currentGroup)));
-        }
-        currentGroup.clear();
+        _addGroupIfValid(groups, currentGroup);
+        currentGroup = <Note>[];
       }
 
       currentGroup.add(note);
       currentBeatPosition = nextBeatPosition;
 
-      // Finaliza grupo se completou um tempo ternário
-      if (_isEndOfCompoundBeat(nextBeatPosition, beatUnit) && currentGroup.length >= 2) {
-        groups.add(BeamGroup(notes: List.from(currentGroup)));
+      if (_isEndOfCompoundBeat(nextBeatPosition, beatUnit) &&
+          currentGroup.length >= 2) {
+        groups.add(BeamGroup(notes: List<Note>.from(currentGroup)));
         currentGroup.clear();
       }
     }
 
-    // Adiciona grupo final se tiver pelo menos 2 notas
-    if (currentGroup.length >= 2) {
-      groups.add(BeamGroup(notes: currentGroup));
-    }
-
+    _addGroupIfValid(groups, currentGroup);
     return groups;
   }
 
-  /// Agrupamento para compassos irregulares (5/8, 7/8, etc.)
   static List<BeamGroup> _groupIrregularTime(
-    List<Note> notes,
+    List<_BeamingItem> items,
     TimeSignature timeSignature,
   ) {
     final groups = <BeamGroup>[];
-
-    // Define padrões de subdivisão para compassos irregulares comuns
     final subdivisions = _getIrregularSubdivisions(timeSignature);
 
     var currentGroup = <Note>[];
@@ -179,22 +216,31 @@ class BeamGrouper {
     var subdivisionIndex = 0;
     var subdivisionStart = 0.0;
 
-    for (final note in notes) {
-      final noteDuration = note.duration.realValue;
-      final nextPosition = currentPosition + noteDuration;
+    for (final item in items) {
+      if (item.note == null || !item.isBeamable) {
+        _addGroupIfValid(groups, currentGroup);
+        currentGroup = <Note>[];
+        currentPosition += item.duration;
 
-      // Verifica se ultrapassou a subdivisão atual
+        while (subdivisionIndex < subdivisions.length &&
+            currentPosition >
+                subdivisionStart + subdivisions[subdivisionIndex]) {
+          subdivisionStart += subdivisions[subdivisionIndex];
+          subdivisionIndex++;
+        }
+        continue;
+      }
+
+      final note = item.note!;
+      final nextPosition = currentPosition + item.duration;
+
       if (subdivisionIndex < subdivisions.length) {
-        final subdivisionEnd = subdivisionStart + subdivisions[subdivisionIndex];
+        final subdivisionEnd =
+            subdivisionStart + subdivisions[subdivisionIndex];
 
         if (nextPosition > subdivisionEnd && currentGroup.isNotEmpty) {
-          // Finaliza o grupo atual
-          if (currentGroup.length >= 2) {
-            groups.add(BeamGroup(notes: List.from(currentGroup)));
-          }
+          _addGroupIfValid(groups, currentGroup);
           currentGroup.clear();
-
-          // Avança para próxima subdivisão
           subdivisionStart = subdivisionEnd;
           subdivisionIndex++;
         }
@@ -204,15 +250,10 @@ class BeamGrouper {
       currentPosition = nextPosition;
     }
 
-    // Adiciona grupo final se tiver pelo menos 2 notas
-    if (currentGroup.length >= 2) {
-      groups.add(BeamGroup(notes: currentGroup));
-    }
-
+    _addGroupIfValid(groups, currentGroup);
     return groups;
   }
 
-  /// Retorna subdivisões para compassos irregulares
   static List<double> _getIrregularSubdivisions(TimeSignature timeSignature) {
     final numerator = timeSignature.numerator;
     final denominator = timeSignature.denominator;
@@ -220,13 +261,12 @@ class BeamGrouper {
 
     switch ('$numerator/$denominator') {
       case '5/8':
-        return [2 * eighthNote, 3 * eighthNote]; // 2+3 ou 3+2 (padrão 2+3)
+        return [2 * eighthNote, 3 * eighthNote];
       case '7/8':
-        return [2 * eighthNote, 2 * eighthNote, 3 * eighthNote]; // 2+2+3
+        return [2 * eighthNote, 2 * eighthNote, 3 * eighthNote];
       case '5/4':
-        return [1.0, 1.0]; // 2+3 semínimas
+        return [1.0, 1.0];
       default:
-        // Padrão: grupos de 2 ou 3 baseado no numerador
         final subdivisions = <double>[];
         var remaining = numerator;
         final unit = 1.0 / denominator;
@@ -244,19 +284,18 @@ class BeamGrouper {
     }
   }
 
-  /// Verifica se chegou ao final de um tempo composto
   static bool _isEndOfCompoundBeat(double position, double beatUnit) {
     const tolerance = 0.0001;
     return (position % beatUnit).abs() < tolerance;
   }
 
-  /// Agrupa todas as notas possíveis em um único beam
-  static List<BeamGroup> _groupAllNotes(List<Note> notes) {
-    if (notes.length < 2) return [];
-    return [BeamGroup(notes: notes)];
+  static List<BeamGroup> _groupAllRuns(List<List<Note>> runs) {
+    return runs
+        .where((run) => run.length >= 2)
+        .map((run) => BeamGroup(notes: List<Note>.from(run)))
+        .toList();
   }
 
-  /// Agrupamento conservador - apenas grupos óbvios de 2 notas consecutivas
   static List<BeamGroup> _groupConservative(List<Note> notes) {
     final groups = <BeamGroup>[];
 
@@ -264,7 +303,6 @@ class BeamGrouper {
       final currentNote = notes[i];
       final nextNote = notes[i + 1];
 
-      // Agrupar apenas se ambas têm duração igual
       if (currentNote.duration.type == nextNote.duration.type) {
         groups.add(BeamGroup(notes: [currentNote, nextNote]));
       }
@@ -273,12 +311,53 @@ class BeamGrouper {
     return groups;
   }
 
-  /// Agrupamento manual baseado em índices especificados
-  static List<BeamGroup> _groupManual(List<Note> notes, List<List<int>> manualGroups) {
+  static List<BeamGroup> _groupConservativeRuns(List<List<Note>> runs) {
+    final groups = <BeamGroup>[];
+
+    for (final run in runs) {
+      groups.addAll(_groupConservative(run));
+    }
+
+    return groups;
+  }
+
+  static List<List<Note>> _collectBeamableRuns(List<_BeamingItem> items) {
+    final runs = <List<Note>>[];
+    var currentRun = <Note>[];
+
+    for (final item in items) {
+      if (item.note != null && item.isBeamable) {
+        currentRun.add(item.note!);
+        continue;
+      }
+
+      if (currentRun.isNotEmpty) {
+        runs.add(List<Note>.from(currentRun));
+        currentRun = <Note>[];
+      }
+    }
+
+    if (currentRun.isNotEmpty) {
+      runs.add(List<Note>.from(currentRun));
+    }
+
+    return runs;
+  }
+
+  static void _addGroupIfValid(List<BeamGroup> groups, List<Note> notes) {
+    if (notes.length >= 2) {
+      groups.add(BeamGroup(notes: List<Note>.from(notes)));
+    }
+  }
+
+  static List<BeamGroup> _groupManual(
+    List<Note> notes,
+    List<List<int>> manualGroups,
+  ) {
     final groups = <BeamGroup>[];
 
     for (final groupIndices in manualGroups) {
-      if (groupIndices.length < 2) continue; // Precisa de pelo menos 2 notas
+      if (groupIndices.length < 2) continue;
 
       final groupNotes = <Note>[];
       for (final index in groupIndices) {
@@ -287,7 +366,6 @@ class BeamGrouper {
         }
       }
 
-      // Só criar o grupo se todas as notas forem beamáveis e tivermos pelo menos 2
       if (groupNotes.length >= 2 && groupNotes.every(_isBeamable)) {
         groups.add(BeamGroup(notes: groupNotes));
       }
@@ -297,34 +375,22 @@ class BeamGrouper {
   }
 }
 
-/// Estratégias de agrupamento
-enum BeamingStrategy {
-  simple,    // Compassos simples (2/4, 3/4, 4/4)
-  compound,  // Compassos compostos (6/8, 9/8, 12/8)
-  irregular, // Compassos irregulares (5/8, 7/8, etc.)
-}
+enum BeamingStrategy { simple, compound, irregular }
 
-/// Representa um grupo de notas que devem ser unidas por beam
 class BeamGroup {
   final List<Note> notes;
   final BeamGroupType type;
 
-  BeamGroup({
-    required this.notes,
-    this.type = BeamGroupType.primary,
-  });
+  BeamGroup({required this.notes, this.type = BeamGroupType.primary});
 
-  /// Retorna true se o grupo tem pelo menos 2 notas
   bool get isValid => notes.length >= 2;
 
-  /// Retorna a duração mais curta no grupo
   DurationType get shortestDuration {
     return notes.map((n) => n.duration.type).reduce((a, b) {
       return a.value < b.value ? a : b;
     });
   }
 
-  /// Retorna o número de beams necessárias para este grupo
   int get numberOfBeams {
     switch (shortestDuration) {
       case DurationType.eighth:
@@ -340,7 +406,6 @@ class BeamGroup {
     }
   }
 
-  /// Verifica se todas as notas no grupo têm a mesma duração
   bool get hasUniformDuration {
     if (notes.isEmpty) return true;
     final firstDuration = notes.first.duration.type;
@@ -348,9 +413,20 @@ class BeamGroup {
   }
 }
 
-/// Tipos de beam para diferentes situações
-enum BeamGroupType {
-  primary,    // Beam principal
-  secondary,  // Beam secundária (para subdivisões)
-  partial,    // Beam parcial (para mistura de durações)
+enum BeamGroupType { primary, secondary, partial }
+
+class _BeamingItem {
+  final Note? note;
+  final double duration;
+  final bool isBeamable;
+
+  const _BeamingItem.note({
+    required this.note,
+    required this.duration,
+    required this.isBeamable,
+  });
+
+  const _BeamingItem.rest({required this.duration})
+    : note = null,
+      isBeamable = false;
 }

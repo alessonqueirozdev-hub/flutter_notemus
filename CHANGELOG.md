@@ -4,25 +4,35 @@ All notable changes to Flutter Notemus are documented in this file.
 
 The format is based on Keep a Changelog and this project follows Semantic Versioning.
 
-## [2.5.1] - 2026-03-24
+## [2.5.1] - 2026-03-29
 
-### Changed
-
-- Improved repaint performance in large scores by comparing a deterministic layout signature in `MusicScorePainter.shouldRepaint` instead of a full element-by-element scan.
-- Added `LayoutResult` and `layoutWithSignature()` to `LayoutEngine`, while preserving existing `layout()` API compatibility.
-- Updated README release status and installation snippet to `^2.5.1`.
-- Updated MEI audit document version references to `v2.5.1`.
-
-### Fixed
-
-- Preserved `voiceNumber` context during horizontal justification so multi-voice rendering remains consistent after system expansion.
-- Preserved complete note metadata during beaming processing (`tremoloStrokes`, `isGraceNote`, `alternatePitch`, tablature fields, and `xmlId`) to avoid data loss in downstream renderers/parsers.
-- Stabilized spacing model behavior and adaptive expansion blend to reduce subtle density drift in existing scores.
+This release finishes the pub.dev polish pass for engraving quality, showcase coverage, release documentation, and codebase hygiene.
 
 ### Added
 
-- Regression tests for painter repaint behavior and layout signature stability.
-- Spacing regression profile guardrail test to lock expected density/position distribution for a mixed-symbol measure.
+- A curated Cupertino-based example gallery with restored public demos for grace notes, slurs/ties, lyrics/text, tuplets, octave marks, ornaments, and articulation coverage.
+- New regression tests for chord slur/tie grouping, articulation helpers, tuplet rest centering, SMuFL positioning, and the example app smoke suite.
+- GitHub roadmap issues for styling/theming, editable score workflows, score hit-testing, real-time interactivity, and production-ready MIDI/audio support.
+- CI workflow (`.github/workflows/ci.yml`) that runs `flutter analyze`, `flutter test`, and `flutter pub publish --dry-run` on every push and pull request.
+
+### Changed
+
+- `MusicScorePainter.shouldRepaint` continues to use a deterministic layout signature, and `LayoutEngine.layoutWithSignature()` remains the compatibility-safe path for signature-aware layout.
+- Example score previews now use a white canvas, independent scroll controllers, explicit Cupertino icon font loading, larger default typography, and vertically centered score content in bounded cards.
+- Example score previews no longer shrink responsively by default, improving beam, lyric, grace-note, and octave-mark legibility in the public gallery.
+- All source comments and documentation strings migrated to English throughout the entire codebase (library, tests, and examples).
+
+### Fixed
+
+- Slurs, ties, and grace-note ligatures now route on the stem-free side of the notehead, including chord-aware tie grouping and grace-note entry geometry.
+- Tuplet brackets and numbers keep better clearance from note/beam fields, and mixed tuplets now center internal rests on the rhythmic slot instead of drifting left.
+- Arpeggio signs sit closer to chord noteheads and octave-mark examples keep the ottava text, dashed span, and hook inside the preview area.
+- Beaming processing preserves complete note metadata during layout, including lyric syllables and auxiliary note properties required by downstream renderers/parsers.
+- Articulation placement follows the effective stem direction, which keeps tenuto/accent placement consistent even when notes are beamed or voice-driven.
+- Preserved `voiceNumber` context during horizontal justification so multi-voice rendering remains consistent after system expansion.
+- Stabilized spacing model behavior and adaptive expansion blend to reduce subtle density drift in existing scores.
+- Resolved garbled UTF-8 characters in source comments across all affected files (Issue #11 closed).
+- Extracted duplicate stem X-offset constants in `BeamRenderer` into a single `_stemXOffset()` helper, eliminating the repeated inline definition.
 
 ## [2.5.0] - 2026-03-23
 

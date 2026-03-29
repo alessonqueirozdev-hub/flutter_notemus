@@ -2,18 +2,18 @@
 
 import 'note.dart';  // ✅ Import needed for Note type
 
-/// Lado do colchete de quiáltera
+/// Lado of the colchete de tuplet
 enum BracketSide {
-  /// Lado da haste (padrão)
+  /// Lado of the stem (default)
   stem,
 
-  /// Lado da cabeça da nota (usado em música vocal)
+  /// Lado of the cabeça of the note (used in música vocal)
   notehead,
 }
 
-/// Configuração do colchete de quiáltera
+/// Configuresção of the colchete de tuplet
 class TupletBracket {
-  /// Espessura da linha do colchete (0.125 staff spaces por padrão)
+  /// Espessura of the linha of the colchete (0.125 staff spaces por default)
   final double thickness;
 
   /// Comprimento dos ganchos nas extremidades
@@ -22,14 +22,14 @@ class TupletBracket {
   /// Mostrar colchete
   final bool show;
 
-  /// Lado onde o colchete aparece
+  /// Lado where o colchete aparece
   final BracketSide side;
 
-  /// Inclinação do colchete (0 = horizontal)
+  /// Inclinação of the colchete (0 = horizontal)
   /// Máximo recomendado: 1.75 staff spaces de diferença vertical
   final double slope;
 
-  /// Distância mínima do colchete às notas (0.75 staff spaces)
+  /// Distância mínima of the colchete às notes (0.75 staff spaces)
   final double minDistanceFromNotes;
 
   /// Máxima inclinação permitida (1.75 staff spaces)
@@ -44,37 +44,37 @@ class TupletBracket {
     this.minDistanceFromNotes = 0.75,
   });
 
-  /// Determina se o colchete deve ser mostrado com base nas notas
+  /// Determina se o colchete deve ser mostrado with base nas notes
   ///
   /// Regras (Behind Bars standard):
-  /// - NÃO mostrar se todas as notas estão beamed juntas
-  /// - MOSTRAR se está do lado da cabeça (música vocal)
-  /// - MOSTRAR se notas não têm beams ou há rests
-  /// - MOSTRAR se show=false (força esconder)
+  /// - Not mostrar se all as notes estão beamed juntas
+  /// - MOSTRAR se está of the lado of the cabeça (música vocal)
+  /// - MOSTRAR se notes not têm beams ou há rests
+  /// - MOSTRAR se show=false (força escwherer)
   bool shouldShow(List<dynamic> notes) {
-    // Se está do lado da cabeça, sempre mostrar
+    // Se está of the lado of the cabeça, always mostrar
     if (side == BracketSide.notehead) return true;
 
-    // Se show=false, forçar esconder
+    // Se show=false, forçar escwherer
     if (!show) return false;
 
-    // ✅ CORREÇÃO P9: Verificar se todas as notas têm beam
-    // Se sim, esconder bracket (Behind Bars standard)
-    // Se não (rests, unbeamed notes), mostrar bracket
+    // ✅ CORREÇÃO P9: Checksr se all as notes têm beam
+    // Se sim, escwherer bracket (Behind Bars standard)
+    // Se not (rests, unbeamed notes), mostrar bracket
 
     // Filtrar apenas Notes (ignorar rests)
     final actualNotes = notes.whereType<Note>().toList();
 
-    // Se não há notas, ou há rests misturados, mostrar bracket
+    // Se not há notes, ou há rests misturados, mostrar bracket
     if (actualNotes.isEmpty || actualNotes.length < notes.length) {
       return true;
     }
 
-    // Verificar se TODAS as notas têm beam definido
+    // Checksr se All as notes têm beam defined
     final allNotesBeamed = actualNotes.every((note) => note.beam != null);
 
-    // Se todas têm beam, esconder bracket (apenas mostrar número)
-    // Se alguma não tem beam, mostrar bracket
+    // Se all têm beam, escwherer bracket (apenas mostrar number)
+    // Se alguma not tem beam, mostrar bracket
     return !allNotesBeamed;
   }
 }

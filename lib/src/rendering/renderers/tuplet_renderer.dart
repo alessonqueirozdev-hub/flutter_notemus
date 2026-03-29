@@ -1,29 +1,27 @@
-// lib/src/rendering/renderers/tuplet_renderer.dart
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+
 import '../../../core/core.dart';
-import '../../smufl/smufl_metadata_loader.dart';
 import '../../theme/music_score_theme.dart';
 import '../smufl_positioning_engine.dart';
-import '../staff_coordinate_system.dart';
+import '../staff_position_calculator.dart';
+import 'base_glyph_renderer.dart';
 import 'note_renderer.dart';
 import 'rest_renderer.dart';
 
-/// Renderizador especializado para grupos de tercina e outras quiÃ¡lteras
-class TupletRenderer {
-  final StaffCoordinateSystem coordinates;
-  final SmuflMetadata metadata;
+/// Specialized renderer for tuplets and other irregular rhythmic groups.
+class TupletRenderer extends BaseGlyphRenderer {
   final MusicScoreTheme theme;
-  final double glyphSize;
   final NoteRenderer noteRenderer;
   final RestRenderer restRenderer;
   final SMuFLPositioningEngine positioningEngine;
 
   TupletRenderer({
-    required this.coordinates,
-    required this.metadata,
+    required super.coordinates,
+    required super.metadata,
     required this.theme,
-    required this.glyphSize,
+    required super.glyphSize,
     required this.noteRenderer,
     required this.restRenderer,
     required this.positioningEngine,
@@ -38,329 +36,364 @@ class TupletRenderer {
     double currentX = basePosition.dx;
     final spacing = coordinates.staffSpace * 2.5;
 
-    // allPositions: todos os elementos (notas + pausas) para o alcance do bracket
-    final List<Offset> allPositions = [];
-    // noteOnlyPositions: apenas notas, para calcular stemUp/extremeY corretamente
-    final List<Offset> noteOnlyPositions = [];
-    final List<Note> notes = [];
-    final clefString = _getClefString(currentClef);
+    final allPositions = <Offset>[];
+    final noteOnlyPositions = <Offset>[];
+    final notes = <Note>[];
 
-    // Aplicar beams automÃ¡ticos se apropriado
     final processedElements = _applyAutomaticBeams(tuplet.elements);
+    final processedNotes = processedElements.whereType<Note>().toList();
+    final noteHeadWidth = coordinates.staffSpace * 1.2;
+    final slotCenterOffset = calculateTupletSlotCenterOffset(processedElements);
+    double? spanStartX;
+    double? spanEndX;
 
-    // Renderizar elementos individuais do tuplet
     for (final element in processedElements) {
       if (element is Note) {
-        final noteY = coordinates.getNoteY(
-          element.pitch.step,
-          element.pitch.octave,
-          clef: clefString,
+        final staffPosition = StaffPositionCalculator.calculate(
+          element.pitch,
+          currentClef,
+        );
+        final noteY = StaffPositionCalculator.toPixelY(
+          staffPosition,
+          coordinates.staffSpace,
+          coordinates.staffBaseline.dy,
         );
 
         noteRenderer.render(
           canvas,
           element,
-          Offset(currentX, noteY),
+          Offset(currentX, basePosition.dy),
           currentClef,
         );
-        final pos = Offset(currentX, noteY);
-        allPositions.add(pos);
-        noteOnlyPositions.add(pos);
+
+        final position = Offset(currentX, noteY);
+        allPositions.add(Offset(currentX + slotCenterOffset, noteY));
+        noteOnlyPositions.add(position);
         notes.add(element);
+        spanStartX ??= currentX;
+        spanEndX = currentX + noteHeadWidth;
         currentX += spacing;
       } else if (element is Rest) {
-        restRenderer.render(canvas, element, Offset(currentX, basePosition.dy));
-        allPositions.add(Offset(currentX, basePosition.dy));
+        final restAnchorX = resolveTupletElementAnchorX(
+          element: element,
+          slotX: currentX,
+          slotCenterOffset: slotCenterOffset,
+        );
+        restRenderer.render(
+          canvas,
+          element,
+          Offset(restAnchorX, basePosition.dy),
+        );
+        allPositions.add(Offset(restAnchorX, basePosition.dy));
+        spanStartX ??= restAnchorX - (noteHeadWidth * 0.5);
+        spanEndX = restAnchorX + (noteHeadWidth * 0.5);
         currentX += spacing;
       }
     }
 
-    // Desenhar beams se as notas foram beamadas
-    if (noteOnlyPositions.length >= 2 &&
-        processedElements.whereType<Note>().isNotEmpty &&
-        processedElements.whereType<Note>().first.beam != null) {
+    final hasBeams =
+        noteOnlyPositions.length >= 2 &&
+        processedNotes.isNotEmpty &&
+        processedNotes.first.beam != null;
+    final beamCount = hasBeams
+        ? _resolveBeamCount(processedNotes.first.duration.type)
+        : 0;
+
+    if (hasBeams) {
       _drawSimpleBeams(canvas, noteOnlyPositions, notes);
     }
 
-    // O alcance horizontal deve considerar todos os elementos (incluindo pausas),
-    // para manter o nÃºmero/bracket centralizados no agrupamento real.
-    if (tuplet.showBracket && allPositions.length >= 2) {
+    if (tuplet.showBracket &&
+        allPositions.length >= 2 &&
+        spanStartX != null &&
+        spanEndX != null) {
       _drawTupletBracket(
         canvas,
-        spanPositions: allPositions,
+        startX: spanStartX,
+        endX: spanEndX,
+        anchorPositions: allPositions,
         notePositions: noteOnlyPositions,
         number: tuplet.actualNotes,
+        beamCount: beamCount,
       );
     }
 
-    if (tuplet.showNumber && allPositions.isNotEmpty) {
+    if (tuplet.showNumber &&
+        allPositions.isNotEmpty &&
+        spanStartX != null &&
+        spanEndX != null) {
       _drawTupletNumber(
         canvas,
-        spanPositions: allPositions,
+        startX: spanStartX,
+        endX: spanEndX,
+        anchorPositions: allPositions,
         notePositions: noteOnlyPositions,
         number: tuplet.actualNotes,
+        beamCount: beamCount,
       );
     }
   }
 
-  /// Determina se as hastes vÃ£o para cima baseado nas posiÃ§Ãµes das NOTAS.
+  @visibleForTesting
+  double calculateTupletSlotCenterOffset(List<MusicalElement> elements) {
+    final referenceNote = elements.whereType<Note>().firstOrNull;
+    if (referenceNote == null) {
+      return coordinates.staffSpace * 0.6;
+    }
+
+    final glyphName = referenceNote.duration.type.glyphName;
+    final glyphBounds = metadata.getGlyphBoundingBox(glyphName);
+    if (glyphBounds == null) {
+      return coordinates.staffSpace * 0.6;
+    }
+
+    return glyphBounds.centerX * coordinates.staffSpace;
+  }
+
+  @visibleForTesting
+  double resolveTupletElementAnchorX({
+    required MusicalElement element,
+    required double slotX,
+    required double slotCenterOffset,
+  }) {
+    if (element is Rest) {
+      return slotX + slotCenterOffset;
+    }
+    return slotX;
+  }
+
   bool _stemUp(List<Offset> notePositions) {
     final staffCenterY = coordinates.staffBaseline.dy;
     final averageY =
-        notePositions.map((p) => p.dy).reduce((a, b) => a + b) /
+        notePositions.map((position) => position.dy).reduce((a, b) => a + b) /
         notePositions.length;
     return averageY >= staffCenterY;
   }
 
-  /// Calcula a posiÃ§Ã£o Y do colchete do tuplet, com clamping dentro dos limites do pentagrama.
-  double _calculateBracketY(List<Offset> notePositions) {
+  double _calculateBracketY(
+    List<Offset> notePositions, {
+    required int beamCount,
+  }) {
     final stemUp = _stemUp(notePositions);
 
-    double extremeY;
-    if (stemUp) {
-      // Nota mais alta (menor Y) determina onde a haste termina
-      extremeY =
-          notePositions.map((p) => p.dy).reduce((a, b) => a < b ? a : b);
-    } else {
-      // Nota mais baixa (maior Y) determina onde a haste termina
-      extremeY =
-          notePositions.map((p) => p.dy).reduce((a, b) => a > b ? a : b);
-    }
+    final extremeY = stemUp
+        ? notePositions.map((position) => position.dy).reduce(math.min)
+        : notePositions.map((position) => position.dy).reduce(math.max);
 
     final stemLength = coordinates.staffSpace * 3.5;
-    final clearance = coordinates.staffSpace * 0.75;
-    final bracketOffset = stemLength + clearance;
+    final beamThickness = coordinates.staffSpace * 0.5;
+    final beamGap = coordinates.staffSpace * 0.25;
+    final beamStackDepth = beamCount <= 0
+        ? 0.0
+        : beamThickness + ((beamCount - 1) * (beamThickness + beamGap));
+    final clearance = coordinates.staffSpace * (beamCount > 0 ? 0.95 : 0.75);
 
-    double bracketY = stemUp
-        ? extremeY - bracketOffset
-        : extremeY + bracketOffset;
-
-    // Clamp: evitar colchetes muito distantes do pentagrama
     if (stemUp) {
-      final minY = coordinates.getStaffLineY(5) - coordinates.staffSpace * 2.0;
-      if (bracketY < minY) bracketY = minY;
-    } else {
-      final maxY = coordinates.getStaffLineY(1) + coordinates.staffSpace * 1.0;
-      if (bracketY > maxY) bracketY = maxY;
+      final beamTopY = extremeY - stemLength - beamStackDepth;
+      final unclamped = beamTopY - clearance;
+      final minY = coordinates.getStaffLineY(5) - coordinates.staffSpace * 2.6;
+      return unclamped < minY ? minY : unclamped;
     }
 
-    return bracketY;
+    final beamBottomY = extremeY + stemLength + beamStackDepth;
+    final unclamped = beamBottomY + clearance;
+    final maxY = coordinates.getStaffLineY(1) + coordinates.staffSpace * 2.6;
+    return unclamped > maxY ? maxY : unclamped;
   }
 
   void _drawTupletBracket(
     Canvas canvas, {
-    required List<Offset> spanPositions,
+    required double startX,
+    required double endX,
+    required List<Offset> anchorPositions,
     required List<Offset> notePositions,
     required int number,
+    required int beamCount,
   }) {
-    if (spanPositions.length < 2) return;
+    if (anchorPositions.length < 2) {
+      return;
+    }
 
-    final firstNotePos = spanPositions.first;
-    final lastNotePos = spanPositions.last;
-
-    // Adicionar largura da Ãºltima nota para cobrir atÃ© o fim
-    final noteHeadWidth = coordinates.staffSpace * 1.2;
-    final actualLastX = lastNotePos.dx + noteHeadWidth;
-
-    final referenceNotes = notePositions.isNotEmpty ? notePositions : spanPositions;
+    final referenceNotes = notePositions.isNotEmpty
+        ? notePositions
+        : anchorPositions;
     final stemUp = _stemUp(referenceNotes);
-    final bracketY = _calculateBracketY(referenceNotes);
+    final bracketY = _calculateBracketY(referenceNotes, beamCount: beamCount);
 
     final paint = Paint()
-      ..color = theme.stemColor
+      ..color = theme.tupletColor ?? theme.stemColor
       ..strokeWidth = coordinates.staffSpace * 0.12
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.square;
 
-    // Bracket proporcional â€” deixar espaÃ§o para o nÃºmero no centro (30% livre)
-    final totalWidth = actualLastX - firstNotePos.dx;
-    final leftEnd = firstNotePos.dx + (totalWidth * 0.35);
-    final rightStart = actualLastX - (totalWidth * 0.35);
+    final totalWidth = endX - startX;
+    final centerX = (startX + endX) / 2;
+    final minSegmentLength = coordinates.staffSpace * 0.5;
+    final requestedGap = math.max(
+      coordinates.staffSpace * 1.9,
+      number.toString().length * coordinates.staffSpace * 1.25,
+    );
+    final numberGap = math.min(totalWidth * 0.5, requestedGap);
+    double leftEnd = centerX - (numberGap * 0.5);
+    double rightStart = centerX + (numberGap * 0.5);
+
+    if (leftEnd - startX < minSegmentLength) {
+      leftEnd = startX + minSegmentLength;
+    }
+    if (endX - rightStart < minSegmentLength) {
+      rightStart = endX - minSegmentLength;
+    }
+
     final hookLength = coordinates.staffSpace * 0.5;
 
-    // Linha horizontal esquerda
-    canvas.drawLine(
-      Offset(firstNotePos.dx, bracketY),
-      Offset(leftEnd, bracketY),
-      paint,
-    );
-
-    // Linha horizontal direita
+    canvas.drawLine(Offset(startX, bracketY), Offset(leftEnd, bracketY), paint);
     canvas.drawLine(
       Offset(rightStart, bracketY),
-      Offset(actualLastX, bracketY),
+      Offset(endX, bracketY),
       paint,
     );
 
-    // Behind Bars: hooks apontam na direÃ§Ã£o das notas
     final hookDirection = stemUp ? hookLength : -hookLength;
-
     canvas.drawLine(
-      Offset(firstNotePos.dx, bracketY),
-      Offset(firstNotePos.dx, bracketY + hookDirection),
+      Offset(startX, bracketY),
+      Offset(startX, bracketY + hookDirection),
       paint,
     );
     canvas.drawLine(
-      Offset(actualLastX, bracketY),
-      Offset(actualLastX, bracketY + hookDirection),
+      Offset(endX, bracketY),
+      Offset(endX, bracketY + hookDirection),
       paint,
     );
   }
 
   void _drawTupletNumber(
     Canvas canvas, {
-    required List<Offset> spanPositions,
+    required double startX,
+    required double endX,
+    required List<Offset> anchorPositions,
     required List<Offset> notePositions,
     required int number,
+    required int beamCount,
   }) {
-    if (spanPositions.isEmpty) return;
+    if (anchorPositions.isEmpty) {
+      return;
+    }
 
-    final firstNotePos = spanPositions.first;
-    final lastNotePos = spanPositions.last;
-    final noteHeadWidth = coordinates.staffSpace * 1.2;
-    final actualLastX = lastNotePos.dx + noteHeadWidth;
+    final referenceNotes = notePositions.isNotEmpty
+        ? notePositions
+        : anchorPositions;
+    final stemUp = _stemUp(referenceNotes);
+    final bracketY = _calculateBracketY(referenceNotes, beamCount: beamCount);
+    final centerX = (startX + endX) / 2;
 
-    final referenceNotes = notePositions.isNotEmpty ? notePositions : spanPositions;
-    final stemUp = _stemUp(referenceNotes); // consistente com bracket
-    final bracketY = _calculateBracketY(referenceNotes);
-    final centerX = (firstNotePos.dx + actualLastX) / 2;
-
-    // NÃºmero acima do colchete para hastes para cima, abaixo para hastes para baixo
     final numberOffset = stemUp
-        ? -coordinates.staffSpace * 0.7
-        : coordinates.staffSpace * 0.7;
+        ? -coordinates.staffSpace * 0.95
+        : coordinates.staffSpace * 0.95;
     final numberY = bracketY + numberOffset;
 
     final glyphName = 'tuplet$number';
     final numberSize = coordinates.staffSpace * 2.2;
+    final glyphBounds = metadata.getGlyphBoundingBox(glyphName);
 
-    _drawGlyph(
+    if (glyphBounds != null) {
+      final maskRect = RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: Offset(centerX, numberY),
+          width:
+              glyphBounds.widthInPixels(coordinates.staffSpace) +
+              (coordinates.staffSpace * 0.7),
+          height:
+              glyphBounds.heightInPixels(coordinates.staffSpace) +
+              (coordinates.staffSpace * 0.55),
+        ),
+        Radius.circular(coordinates.staffSpace * 0.35),
+      );
+      canvas.drawRRect(maskRect, Paint()..color = const Color(0xFFFFFFFF));
+    }
+
+    drawGlyphWithBBox(
       canvas,
       glyphName: glyphName,
       position: Offset(centerX, numberY),
-      size: numberSize,
-      color: theme.stemColor,
-      centerVertically: true,
-      centerHorizontally: true,
-    );
-  }
-
-  void _drawGlyph(
-    Canvas canvas, {
-    required String glyphName,
-    required Offset position,
-    required double size,
-    required Color color,
-    bool centerVertically = false,
-    bool centerHorizontally = false,
-  }) {
-    final character = metadata.getCodepoint(glyphName);
-    if (character.isEmpty) return;
-
-    final textPainter = TextPainter(
-      text: TextSpan(
-        text: character,
-        style: TextStyle(
-          fontFamily: 'Bravura',
-          fontSize: size,
-          color: color,
-          height: 1.0,
-        ),
+      color: theme.tupletColor ?? theme.stemColor,
+      options: GlyphDrawOptions(
+        size: numberSize,
+        centerVertically: true,
+        centerHorizontally: true,
+        trackBounds: false,
       ),
-      textDirection: TextDirection.ltr,
-    );
-
-    textPainter.layout();
-
-    final yOffset = centerVertically ? -textPainter.height * 0.5 : 0;
-    final xOffset = centerHorizontally ? -textPainter.width * 0.5 : 0;
-
-    textPainter.paint(
-      canvas,
-      Offset(position.dx + xOffset, position.dy + yOffset),
     );
   }
 
-  /// Converte Clef para string compatÃ­vel com getNoteY
-  String _getClefString(Clef clef) {
-    switch (clef.actualClefType) {
-      case ClefType.treble:
-      case ClefType.treble8va:
-      case ClefType.treble8vb:
-      case ClefType.treble15ma:
-      case ClefType.treble15mb:
-        return 'treble';
-      case ClefType.bass:
-      case ClefType.bassThirdLine:
-      case ClefType.bass8va:
-      case ClefType.bass8vb:
-      case ClefType.bass15ma:
-      case ClefType.bass15mb:
-        return 'bass';
-      case ClefType.alto:
-        return 'alto';
-      case ClefType.tenor:
-        return 'tenor';
-      default:
-        return 'treble';
-    }
-  }
-
-  /// Desenha beams para as notas beamadas do tuplet
   void _drawSimpleBeams(
     Canvas canvas,
     List<Offset> notePositions,
     List<Note> notes,
   ) {
-    if (notePositions.length < 2 || notes.length < 2) return;
+    if (notePositions.length < 2 || notes.length < 2) {
+      return;
+    }
 
-    final stemHeight = coordinates.staffSpace * 3.5;
-    final beamThickness = coordinates.staffSpace * 0.5; // SMuFL spec: 0.5 SS
-    final beamGap = coordinates.staffSpace * 0.25;      // SMuFL spec: 0.25 SS
-    // EspaÃ§amento center-to-center entre beams = espessura + gap
+    final beamThickness = coordinates.staffSpace * 0.5;
+    final beamGap = coordinates.staffSpace * 0.25;
     final beamSpacing = beamThickness + beamGap;
-
     final stemUp = _stemUp(notePositions);
 
     final paint = Paint()
-      ..color = theme.stemColor
+      ..color = theme.beamColor ?? theme.stemColor
       ..style = PaintingStyle.fill;
 
-    // Calcular stemX de cada nota usando Ã¢ncoras SMuFL (igual ao StemRenderer)
-    final stemXs = List.generate(notePositions.length, (i) {
-      final noteheadGlyph = notes[i].duration.type.glyphName;
-      return _getStemX(notePositions[i].dx, noteheadGlyph, stemUp);
+    final stemXs = List.generate(notePositions.length, (index) {
+      final noteheadGlyph = notes[index].duration.type.glyphName;
+      return positioningEngine.calculateStemX(
+        noteX: notePositions[index].dx,
+        noteheadGlyphName: noteheadGlyph,
+        stemUp: stemUp,
+        staffSpace: coordinates.staffSpace,
+      );
     });
 
-    // Endpoints do beam
-    final stemOffset = stemUp ? -stemHeight : stemHeight;
-    final firstStemTop = notePositions.first.dy + stemOffset;
-    final lastStemTop = notePositions.last.dy + stemOffset;
+    final beamCount = _resolveBeamCount(notes.first.duration.type);
+    final staffPositions = notePositions
+        .map((position) => coordinates.getStaffPosition(position.dy))
+        .toList();
+    final beamHeightSpaces = positioningEngine.calculateBeamHeight(
+      staffPosition: staffPositions.first,
+      stemUp: stemUp,
+      allStaffPositions: staffPositions,
+      beamCount: beamCount,
+    );
+    final beamAngleSpaces = positioningEngine.calculateBeamAngle(
+      noteStaffPositions: staffPositions,
+      stemUp: stemUp,
+    );
 
     final firstStemX = stemXs.first;
     final lastStemX = stemXs.last;
-    final beamSlope = (lastStemX - firstStemX) != 0
-        ? (lastStemTop - firstStemTop) / (lastStemX - firstStemX)
-        : 0.0;
+    final averageNoteY =
+        notePositions.map((position) => position.dy).reduce((a, b) => a + b) /
+        notePositions.length;
+    final beamBaseY = stemUp
+        ? averageNoteY - (beamHeightSpaces * coordinates.staffSpace)
+        : averageNoteY + (beamHeightSpaces * coordinates.staffSpace);
+    final xDistance = lastStemX - firstStemX;
+    double beamSlope = xDistance == 0
+        ? 0.0
+        : (beamAngleSpaces * coordinates.staffSpace) / xDistance;
+
+    final melodicDelta = staffPositions.last - staffPositions.first;
+    if (melodicDelta != 0 && beamSlope != 0.0) {
+      final expectedSign = melodicDelta > 0 ? -1.0 : 1.0;
+      if (beamSlope.sign != expectedSign) {
+        beamSlope = -beamSlope;
+      }
+    }
 
     double getBeamY(double x) {
-      return firstStemTop + (beamSlope * (x - firstStemX));
+      return beamBaseY + (beamSlope * (x - firstStemX));
     }
 
-    // NÃºmero de beams baseado na duraÃ§Ã£o
-    int beamCount = 1;
-    if (notes.first.duration.type == DurationType.sixteenth) {
-      beamCount = 2;
-    } else if (notes.first.duration.type == DurationType.thirtySecond) {
-      beamCount = 3;
-    } else if (notes.first.duration.type == DurationType.sixtyFourth) {
-      beamCount = 4;
-    }
-
-    // Desenhar beams â€” cada beam deslocado por (beamThickness + beamGap) na direÃ§Ã£o certa
     for (int level = 0; level < beamCount; level++) {
-      // Para stemUp: beams adicionais crescem para baixo (em direÃ§Ã£o Ã s notas)
-      // Para stemDown: beams adicionais crescem para cima (em direÃ§Ã£o Ã s notas)
       final yOffset = stemUp ? (level * beamSpacing) : -(level * beamSpacing);
       final startX = firstStemX;
       final endX = lastStemX;
@@ -368,46 +401,53 @@ class TupletRenderer {
       final endY = getBeamY(endX) + yOffset;
 
       final thicknessDirection = stemUp ? beamThickness : -beamThickness;
-      final path = Path();
-      path.moveTo(startX, startY);
-      path.lineTo(endX, endY);
-      path.lineTo(endX, endY + thicknessDirection);
-      path.lineTo(startX, startY + thicknessDirection);
-      path.close();
+      final path = Path()
+        ..moveTo(startX, startY)
+        ..lineTo(endX, endY)
+        ..lineTo(endX, endY + thicknessDirection)
+        ..lineTo(startX, startY + thicknessDirection)
+        ..close();
 
       canvas.drawPath(path, paint);
     }
 
-    // Desenhar hastes
     final stemPaint = Paint()
       ..color = theme.stemColor
-      ..strokeWidth = coordinates.staffSpace * 0.12;
+      ..strokeWidth =
+          metadata.getEngravingDefault('stemThickness') *
+          coordinates.staffSpace;
 
-    for (int i = 0; i < notePositions.length; i++) {
-      final noteheadGlyph = notes[i].duration.type.glyphName;
-      final stemX = _getStemX(notePositions[i].dx, noteheadGlyph, stemUp);
-      final noteY = notePositions[i].dy;
+    for (int index = 0; index < notePositions.length; index++) {
+      final noteheadGlyph = notes[index].duration.type.glyphName;
+      final stemX = stemXs[index];
+      final stemStartY = positioningEngine.calculateStemStartY(
+        noteY: notePositions[index].dy,
+        noteheadGlyphName: noteheadGlyph,
+        stemUp: stemUp,
+        staffSpace: coordinates.staffSpace,
+      );
       final beamY = getBeamY(stemX);
 
-      canvas.drawLine(Offset(stemX, noteY), Offset(stemX, beamY), stemPaint);
+      canvas.drawLine(
+        Offset(stemX, stemStartY),
+        Offset(stemX, beamY),
+        stemPaint,
+      );
     }
   }
 
-  /// Calcula o X da haste usando Ã¢ncoras SMuFL (igual ao StemRenderer).
-  double _getStemX(double noteX, String noteheadGlyph, bool stemUp) {
-    const stemUpXOffset = 0.7;
-    const stemDownXOffset = -0.8;
-    final xOffset = stemUp ? stemUpXOffset : stemDownXOffset;
-    final stemAnchor = stemUp
-        ? positioningEngine.getStemUpAnchor(noteheadGlyph)
-        : positioningEngine.getStemDownAnchor(noteheadGlyph);
-    return noteX + (stemAnchor.dx * coordinates.staffSpace - xOffset);
+  int _resolveBeamCount(DurationType durationType) {
+    return switch (durationType) {
+      DurationType.eighth => 1,
+      DurationType.sixteenth => 2,
+      DurationType.thirtySecond => 3,
+      DurationType.sixtyFourth => 4,
+      _ => 1,
+    };
   }
 
-  /// Aplica beams automÃ¡ticos Ã s notas do tuplet se todas forem beamable e sem pausas
   List<MusicalElement> _applyAutomaticBeams(List<MusicalElement> elements) {
     final notes = elements.whereType<Note>().toList();
-    // SÃ³ aplica beams se nÃ£o hÃ¡ pausas e hÃ¡ pelo menos 2 notas
     if (notes.length != elements.length || notes.length < 2) {
       return elements;
     }
@@ -419,31 +459,30 @@ class TupletRenderer {
           note.duration.type == DurationType.sixtyFourth;
     });
 
-    if (!beamable) return elements;
+    if (!beamable) {
+      return elements;
+    }
 
     final beamedNotes = <Note>[];
-    for (int i = 0; i < notes.length; i++) {
-      BeamType? beamType;
-      if (i == 0) {
-        beamType = BeamType.start;
-      } else if (i == notes.length - 1) {
-        beamType = BeamType.end;
-      } else {
-        beamType = BeamType.inner;
-      }
+    for (int index = 0; index < notes.length; index++) {
+      final beamType = switch (index) {
+        0 => BeamType.start,
+        _ when index == notes.length - 1 => BeamType.end,
+        _ => BeamType.inner,
+      };
 
       beamedNotes.add(
         Note(
-          pitch: notes[i].pitch,
-          duration: notes[i].duration,
+          pitch: notes[index].pitch,
+          duration: notes[index].duration,
           beam: beamType,
-          articulations: notes[i].articulations,
-          tie: notes[i].tie,
-          slur: notes[i].slur,
-          ornaments: notes[i].ornaments,
-          dynamicElement: notes[i].dynamicElement,
-          techniques: notes[i].techniques,
-          voice: notes[i].voice,
+          articulations: notes[index].articulations,
+          tie: notes[index].tie,
+          slur: notes[index].slur,
+          ornaments: notes[index].ornaments,
+          dynamicElement: notes[index].dynamicElement,
+          techniques: notes[index].techniques,
+          voice: notes[index].voice,
         ),
       );
     }

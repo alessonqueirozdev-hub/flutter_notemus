@@ -12,16 +12,19 @@ import '../../layout/slur_calculator.dart';
 import '../../smufl/smufl_metadata_loader.dart';
 import '../grace_note_geometry.dart';
 import '../staff_position_calculator.dart';
+import 'chord_renderer.dart';
 
 class SlurRenderer {
   final EngravingRules rules;
   final SmuflMetadata metadata;
   final double staffSpace;
+  final double staffBaselineY;
   final SkyBottomLineCalculator? skylineCalculator;
 
   SlurRenderer({
     required this.staffSpace,
     required this.metadata,
+    required this.staffBaselineY,
     EngravingRules? rules,
     this.skylineCalculator,
   }) : rules = rules ?? EngravingRules();
@@ -84,55 +87,63 @@ class SlurRenderer {
       final startElement = positions[group.first];
       final endElement = positions[group.last];
 
+      // Fix: skip grace-note slurs — now rendered by the grace-note renderer
+      // automaticamente pelo OrnamentRenderer._renderGraceSlur
+      if (_hasGraceOrnamentOnElement(startElement.element)) {
+        continue;
+      }
+
       final tempStart = _pickNoteFromElement(
-        startElement.element,
+        startElement,
         above: true,
         clef: currentClef,
+        preferredSlurType: SlurType.start,
       );
       final tempEnd = _pickNoteFromElement(
-        endElement.element,
+        endElement,
         above: true,
         clef: currentClef,
+        preferredSlurType: SlurType.end,
       );
       if (tempStart == null || tempEnd == null) {
         continue;
       }
 
-      final direction = _calculateSlurDirection(
-        tempStart,
-        tempEnd,
-        currentClef,
-      );
+      final direction = _calculateSlurDirection(tempStart, tempEnd);
       final slurAbove = direction == SlurDirection.up;
 
       final startNote = _pickNoteFromElement(
-        startElement.element,
+        startElement,
         above: slurAbove,
         clef: currentClef,
+        preferredSlurType: SlurType.start,
       )!;
       final endNote = _pickNoteFromElement(
-        endElement.element,
+        endElement,
         above: slurAbove,
         clef: currentClef,
+        preferredSlurType: SlurType.end,
       )!;
-      final isGraceSlur = _hasGraceOrnamentOnElement(startElement.element);
+      final isGraceSlur = false; // Grace slurs handled by OrnamentRenderer
 
       final startPoint = _calculateSlurEndpoint(
-        startElement.position,
-        startNote,
+        startNote.noteOrigin,
+        startNote.note,
         currentClef,
         isStart: true,
         above: slurAbove,
         isGraceSlur: isGraceSlur,
+        stemUp: startNote.stemUp,
       );
 
       final endPoint = _calculateSlurEndpoint(
-        endElement.position,
-        endNote,
+        endNote.noteOrigin,
+        endNote.note,
         currentClef,
         isStart: false,
         above: slurAbove,
         isGraceSlur: isGraceSlur,
+        stemUp: endNote.stemUp,
       );
 
       final calculator = SlurCalculator(
@@ -161,72 +172,208 @@ class SlurRenderer {
     for (final group in tieGroups.values) {
       final startElement = positions[group.first];
       final endElement = positions[group.last];
+      final tiePairs = _resolveTiePairs(startElement, endElement, currentClef);
 
-      if (startElement.element is! Note || endElement.element is! Note) {
-        continue;
+      for (final pair in tiePairs) {
+        final tieAbove = !pair.start.stemUp;
+        final (startPoint, endPoint) = _calculateTieEndpoints(
+          pair.start.noteOrigin,
+          pair.start.note,
+          pair.end.noteOrigin,
+          pair.end.note,
+          tieAbove: tieAbove,
+          clef: currentClef,
+          startStemUp: pair.start.stemUp,
+          endStemUp: pair.end.stemUp,
+        );
+
+        final calculator = SlurCalculator(rules: rules);
+        final curve = calculator.calculateTie(
+          startPoint: startPoint,
+          endPoint: endPoint,
+          placement: tieAbove,
+          staffSpace: staffSpace,
+        );
+
+        _drawVariableThicknessCurve(canvas, curve, color, isSlur: false);
       }
-
-      final startNote = startElement.element as Note;
-      final staffPos = StaffPositionCalculator.calculate(
-        startNote.pitch,
-        currentClef,
-      );
-      final tieAbove = staffPos > 0;
-      final endNote = endElement.element as Note;
-
-      final (startPoint, endPoint) = _calculateTieEndpoints(
-        startElement.position,
-        startNote,
-        endElement.position,
-        endNote,
-        tieAbove: tieAbove,
-      );
-
-      final calculator = SlurCalculator(rules: rules);
-      final curve = calculator.calculateTie(
-        startPoint: startPoint,
-        endPoint: endPoint,
-        placement: tieAbove,
-        staffSpace: staffSpace,
-      );
-
-      _drawVariableThicknessCurve(canvas, curve, color, isSlur: false);
     }
   }
 
-  Note? _pickNoteFromElement(
-    dynamic element, {
+  _ElementNotePlacement? _pickNoteFromElement(
+    PositionedElement element, {
     required bool above,
     required Clef clef,
+    SlurType? preferredSlurType,
   }) {
-    if (element is Note) {
-      return element;
+    final placements = _resolveElementPlacements(element, clef);
+    if (placements.isEmpty) {
+      return null;
     }
-    if (element is Chord) {
-      final sorted = [...element.notes]
-        ..sort(
-          (a, b) => StaffPositionCalculator.calculate(
-            b.pitch,
-            clef,
-          ).compareTo(StaffPositionCalculator.calculate(a.pitch, clef)),
-        );
-      return above ? sorted.first : sorted.last;
+
+    final preferredPlacements = preferredSlurType == null
+        ? placements
+        : placements
+              .where(
+                (placement) =>
+                    placement.note.slur == preferredSlurType ||
+                    placement.note.slur == SlurType.inner,
+              )
+              .toList();
+    final candidates = preferredPlacements.isNotEmpty
+        ? preferredPlacements
+        : placements;
+
+    candidates.sort(
+      (left, right) => right.staffPosition.compareTo(left.staffPosition),
+    );
+    return above ? candidates.first : candidates.last;
+  }
+
+  List<_ElementNotePlacement> _resolveElementPlacements(
+    PositionedElement element,
+    Clef clef,
+  ) {
+    final placements = <_ElementNotePlacement>[];
+    if (element.element is Note) {
+      final note = element.element as Note;
+      final staffPosition = StaffPositionCalculator.calculate(note.pitch, clef);
+      final noteY = StaffPositionCalculator.toPixelY(
+        staffPosition,
+        staffSpace,
+        staffBaselineY,
+      );
+      placements.add(
+        _ElementNotePlacement(
+          note: note,
+          noteOrigin: Offset(element.position.dx, noteY),
+          staffPosition: staffPosition,
+          stemUp: _resolveStemUp(note, staffPosition, element.voiceNumber),
+        ),
+      );
+      return placements;
     }
-    return null;
+
+    if (element.element is! Chord) {
+      return placements;
+    }
+
+    final chord = element.element as Chord;
+    final sortedNotes = [...chord.notes]
+      ..sort(
+        (left, right) => StaffPositionCalculator.calculate(
+          right.pitch,
+          clef,
+        ).compareTo(StaffPositionCalculator.calculate(left.pitch, clef)),
+      );
+    final positions = sortedNotes
+        .map((note) => StaffPositionCalculator.calculate(note.pitch, clef))
+        .toList();
+    final stemUp = ChordRenderer.resolveStemDirection(
+      chord: chord,
+      positions: positions,
+      voiceNumber: element.voiceNumber,
+    );
+    final noteheadBox = metadata
+        .getGlyphInfo(chord.duration.type.glyphName)
+        ?.boundingBox;
+    final noteheadWidth =
+        ((noteheadBox?.width ?? metadata.getGlyphWidth('noteheadBlack')).clamp(
+          0.7,
+          2.2,
+        )).toDouble();
+    final clusterOffset = noteheadWidth * staffSpace * 1.04;
+    final clusterOffsets = ChordRenderer.calculateClusterOffsets(
+      positions: positions,
+      stemUp: stemUp,
+      clusterOffset: clusterOffset,
+    );
+
+    for (int index = 0; index < sortedNotes.length; index++) {
+      final staffPosition = positions[index];
+      final noteY = StaffPositionCalculator.toPixelY(
+        staffPosition,
+        staffSpace,
+        staffBaselineY,
+      );
+      placements.add(
+        _ElementNotePlacement(
+          note: sortedNotes[index],
+          noteOrigin: Offset(
+            element.position.dx + clusterOffsets[index],
+            noteY,
+          ),
+          staffPosition: staffPosition,
+          stemUp: stemUp,
+        ),
+      );
+    }
+
+    return placements;
+  }
+
+  List<_TiePair> _resolveTiePairs(
+    PositionedElement startElement,
+    PositionedElement endElement,
+    Clef clef,
+  ) {
+    final startCandidates = _resolveElementPlacements(startElement, clef)
+        .where(
+          (placement) =>
+              placement.note.tie == TieType.start ||
+              placement.note.tie == TieType.inner,
+        )
+        .toList();
+    final endCandidates = _resolveElementPlacements(endElement, clef)
+        .where(
+          (placement) =>
+              placement.note.tie == TieType.end ||
+              placement.note.tie == TieType.inner,
+        )
+        .toList();
+
+    if (startCandidates.isEmpty || endCandidates.isEmpty) {
+      return const [];
+    }
+
+    final pairs = <_TiePair>[];
+    final claimedEnds = <int>{};
+    for (final start in startCandidates) {
+      for (int index = 0; index < endCandidates.length; index++) {
+        if (claimedEnds.contains(index)) {
+          continue;
+        }
+
+        final end = endCandidates[index];
+        if (!_sameWrittenPitch(start.note, end.note)) {
+          continue;
+        }
+
+        pairs.add(_TiePair(start: start, end: end));
+        claimedEnds.add(index);
+        break;
+      }
+    }
+
+    return pairs;
+  }
+
+  bool _sameWrittenPitch(Note left, Note right) {
+    return left.pitch.step == right.pitch.step &&
+        left.pitch.octave == right.pitch.octave &&
+        left.pitch.alter == right.pitch.alter;
   }
 
   SlurDirection _calculateSlurDirection(
-    Note startNote,
-    Note endNote,
-    Clef clef,
+    _ElementNotePlacement startNote,
+    _ElementNotePlacement endNote,
   ) {
-    final startStaffPos = StaffPositionCalculator.calculate(
-      startNote.pitch,
-      clef,
-    );
-    final endStaffPos = StaffPositionCalculator.calculate(endNote.pitch, clef);
-    final avgPos = (startStaffPos + endStaffPos) / 2;
-    return avgPos > 0 ? SlurDirection.down : SlurDirection.up;
+    if (startNote.stemUp == endNote.stemUp) {
+      return startNote.stemUp ? SlurDirection.down : SlurDirection.up;
+    }
+
+    final avgPos = (startNote.staffPosition + endNote.staffPosition) / 2;
+    return avgPos > 0 ? SlurDirection.up : SlurDirection.down;
   }
 
   Offset _calculateSlurEndpoint(
@@ -236,15 +383,22 @@ class SlurRenderer {
     required bool isStart,
     required bool above,
     bool isGraceSlur = false,
+    bool? stemUp,
   }) {
     final metrics = _resolveNoteheadMetrics(notePos, note);
-    final noteY = notePos.dy;
     final effectiveGraceSlur = isGraceSlur || hasGraceOrnament(note);
+
+    final staffPos = StaffPositionCalculator.calculate(note.pitch, clef);
+    final noteY = StaffPositionCalculator.toPixelY(
+      staffPos,
+      staffSpace,
+      staffBaselineY,
+    );
 
     if (isStart && effectiveGraceSlur) {
       return graceSlurStartPointForNote(
         note: note,
-        notePos: notePos,
+        notePos: Offset(notePos.dx, noteY),
         above: above,
         staffSpace: staffSpace,
         glyphSize: staffSpace * 4.0,
@@ -252,44 +406,20 @@ class SlurRenderer {
       );
     }
 
-    final staffPos = StaffPositionCalculator.calculate(note.pitch, clef);
-    final stemUp = staffPos <= 0;
-    final noteClearance = math.max(
-      metrics.halfHeight * 0.28,
-      staffSpace * 0.14,
+    final resolvedStemUp = stemUp ?? _resolveStemUp(note, staffPos);
+
+    // Slurs anchor to the notehead surface, not the stem.
+    final noteheadClearance = math.max(
+      metrics.halfHeight + staffSpace * 0.15,
+      staffSpace * 0.4,
     );
-    final stemLength =
-        (metadata.getEngravingDefaultValue('stemLength') ?? 3.5) * staffSpace;
-    final clearanceFromStem = staffSpace * 0.08;
-
-    double yOffset;
-    if (effectiveGraceSlur && !isStart) {
-      yOffset = noteClearance * (above ? -1 : 1);
-    } else if (above && stemUp) {
-      yOffset = -(stemLength + clearanceFromStem);
-    } else if (!above && !stemUp) {
-      yOffset = stemLength + clearanceFromStem;
-    } else {
-      yOffset = noteClearance * (above ? -1 : 1);
-    }
-
-    if (above && stemUp) {
-      final stemAnchor =
-          metrics.stemUpAnchor ?? Offset(metrics.rightEdge, noteY);
-      return Offset(stemAnchor.dx + (staffSpace * 0.04), noteY + yOffset);
-    }
-
-    if (!above && !stemUp) {
-      final stemAnchor =
-          metrics.stemDownAnchor ?? Offset(metrics.leftEdge, noteY);
-      return Offset(stemAnchor.dx - (staffSpace * 0.04), noteY + yOffset);
-    }
-
-    final edgeInset = math.min(metrics.width * 0.16, staffSpace * 0.14);
-    final x = isStart
-        ? metrics.rightEdge - edgeInset
-        : metrics.leftEdge + edgeInset;
-
+    final yOffset = noteheadClearance * (above ? -1 : 1);
+    final x = _resolveStemSafeAnchorX(
+      metrics,
+      stemUp: resolvedStemUp,
+      above: above,
+      isStart: isStart,
+    );
     return Offset(x, noteY + yOffset);
   }
 
@@ -299,25 +429,89 @@ class SlurRenderer {
     Offset endPos,
     Note endNote, {
     required bool tieAbove,
+    required Clef clef,
+    bool? startStemUp,
+    bool? endStemUp,
   }) {
     final startMetrics = _resolveNoteheadMetrics(startPos, startNote);
     final endMetrics = _resolveNoteheadMetrics(endPos, endNote);
-    final clearance = math.max(
-      math.max(startMetrics.halfHeight, endMetrics.halfHeight) * 0.55,
-      staffSpace * 0.28,
+
+    // Compute ACTUAL notehead Y from pitch (positions carry system-baseline Y).
+    final startStaffPos = StaffPositionCalculator.calculate(
+      startNote.pitch,
+      clef,
     );
-    final edgePadding = staffSpace * 0.08;
+    final endStaffPos = StaffPositionCalculator.calculate(endNote.pitch, clef);
+    final startNoteY = StaffPositionCalculator.toPixelY(
+      startStaffPos,
+      staffSpace,
+      staffBaselineY,
+    );
+    final endNoteY = StaffPositionCalculator.toPixelY(
+      endStaffPos,
+      staffSpace,
+      staffBaselineY,
+    );
+
+    // Tie sits just outside the notehead surface (Behind Bars: 0.25 SS clearance).
+    final clearance = math.max(
+      math.max(startMetrics.halfHeight, endMetrics.halfHeight) +
+          staffSpace * 0.1,
+      staffSpace * 0.35,
+    );
 
     return (
       Offset(
-        startMetrics.rightEdge - edgePadding,
-        startPos.dy + (tieAbove ? -clearance : clearance),
+        _resolveStemSafeAnchorX(
+          startMetrics,
+          stemUp: startStemUp ?? _resolveStemUp(startNote, startStaffPos),
+          above: tieAbove,
+          isStart: true,
+        ),
+        startNoteY + (tieAbove ? -clearance : clearance),
       ),
       Offset(
-        endMetrics.leftEdge + edgePadding,
-        endPos.dy + (tieAbove ? -clearance : clearance),
+        _resolveStemSafeAnchorX(
+          endMetrics,
+          stemUp: endStemUp ?? _resolveStemUp(endNote, endStaffPos),
+          above: tieAbove,
+          isStart: false,
+        ),
+        endNoteY + (tieAbove ? -clearance : clearance),
       ),
     );
+  }
+
+  double _resolveStemSafeAnchorX(
+    _NoteheadMetrics metrics, {
+    required bool stemUp,
+    required bool above,
+    required bool isStart,
+  }) {
+    final centerX = (metrics.leftEdge + metrics.rightEdge) * 0.5;
+    final stemSafeInset = math.min(metrics.width * 0.18, staffSpace * 0.22);
+    final directionalInset = math.min(metrics.width * 0.08, staffSpace * 0.12);
+
+    if (above && !stemUp) {
+      return centerX + (isStart ? stemSafeInset : directionalInset);
+    }
+
+    if (!above && stemUp) {
+      return centerX - (isStart ? directionalInset : stemSafeInset);
+    }
+
+    final edgeInset = math.min(metrics.width * 0.16, staffSpace * 0.14);
+    return isStart
+        ? metrics.rightEdge - edgeInset
+        : metrics.leftEdge + edgeInset;
+  }
+
+  bool _resolveStemUp(Note note, int staffPosition, [int? voiceNumber]) {
+    final effectiveVoice = voiceNumber ?? note.voice;
+    if (effectiveVoice != null) {
+      return effectiveVoice.isOdd;
+    }
+    return staffPosition <= 0;
   }
 
   Offset calculateSlurEndpointForTesting(
@@ -327,6 +521,7 @@ class SlurRenderer {
     required bool isStart,
     required bool above,
     bool isGraceSlur = false,
+    bool? stemUp,
   }) {
     return _calculateSlurEndpoint(
       notePos,
@@ -335,6 +530,7 @@ class SlurRenderer {
       isStart: isStart,
       above: above,
       isGraceSlur: isGraceSlur,
+      stemUp: stemUp,
     );
   }
 
@@ -344,6 +540,9 @@ class SlurRenderer {
     Offset endPos,
     Note endNote, {
     required bool tieAbove,
+    required Clef clef,
+    bool? startStemUp,
+    bool? endStemUp,
   }) {
     return _calculateTieEndpoints(
       startPos,
@@ -351,6 +550,9 @@ class SlurRenderer {
       endPos,
       endNote,
       tieAbove: tieAbove,
+      clef: clef,
+      startStemUp: startStemUp,
+      endStemUp: endStemUp,
     );
   }
 
@@ -465,4 +667,25 @@ class _NoteheadMetrics {
     required this.stemUpAnchor,
     required this.stemDownAnchor,
   });
+}
+
+class _ElementNotePlacement {
+  final Note note;
+  final Offset noteOrigin;
+  final int staffPosition;
+  final bool stemUp;
+
+  const _ElementNotePlacement({
+    required this.note,
+    required this.noteOrigin,
+    required this.staffPosition,
+    required this.stemUp,
+  });
+}
+
+class _TiePair {
+  final _ElementNotePlacement start;
+  final _ElementNotePlacement end;
+
+  const _TiePair({required this.start, required this.end});
 }

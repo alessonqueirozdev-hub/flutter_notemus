@@ -4,7 +4,7 @@ import 'musical_element.dart';
 
 /// Sufixo de figura de baixo cifrado.
 ///
-/// Corresponde ao atributo `@ext` do elemento `<f>` no MEI v5.
+/// Correspwhere ao atributo `@ext` of the element `<f>` no MEI v5.
 enum FigureSuffix {
   /// Nenhum sufixo
   none,
@@ -16,9 +16,9 @@ enum FigureSuffix {
   tick,
 }
 
-/// Sinal de alteração de uma figura de baixo cifrado.
+/// Sinal de alteração de a figura de baixo cifrado.
 ///
-/// Corresponde ao atributo `@accid` do elemento `<f>` no MEI v5.
+/// Correspwhere ao atributo `@accid` of the element `<f>` no MEI v5.
 enum FigureAccidental {
   none,
   sharp,
@@ -28,7 +28,7 @@ enum FigureAccidental {
   doubleFlat,
 }
 
-/// Representa uma única figura do baixo cifrado, correspondendo ao
+/// Representa a única figura of the baixo cifrado, correspwherendo ao
 /// elemento `<f>` (figure) dentro de `<fb>` no MEI v5.
 ///
 /// ```dart
@@ -36,14 +36,14 @@ enum FigureAccidental {
 /// FigureElement(numeral: '4', suffix: FigureSuffix.slash)
 /// ```
 class FigureElement {
-  /// Numeral da figura (ex.: "2", "4", "6", "7", "9"). Pode ser null para
-  /// figuras com apenas acidente.
+  /// Numeral of the figura (ex.: "2", "4", "6", "7", "9"). Pode ser null for
+  /// figuras with apenas accidental.
   final String? numeral;
 
-  /// Alteração aplicada à figura.
+  /// Alteração Appliesda à figura.
   final FigureAccidental accidental;
 
-  /// Sufixo da figura (extensão, barra, etc.).
+  /// Sufixo of the figura (extensão, barra, etc.).
   final FigureSuffix suffix;
 
   const FigureElement({
@@ -53,11 +53,11 @@ class FigureElement {
   });
 }
 
-/// Representa uma indicação de baixo cifrado (thoroughbass / figured bass),
-/// correspondendo ao elemento `<fb>` (figured bass) do MEI v5.
+/// Representa a indicação de baixo cifrado (thoroughbass / figured bass),
+/// correspwherendo ao elemento `<fb>` (figured bass) of the MEI v5.
 ///
-/// O baixo cifrado é uma convenção de notação barroca onde números e acidentes
-/// acima ou abaixo de uma nota de baixo indicam quais harmonias devem ser
+/// O baixo cifrado é a convenção de noteção barroca where numbers e accidentals
+/// acima ou abaixo de a note de baixo indicam quais harmonias devem ser
 /// realizadas pelo instrumentista.
 ///
 /// ```dart
@@ -69,10 +69,10 @@ class FigureElement {
 /// )
 /// ```
 class FiguredBass extends MusicalElement {
-  /// Figuras do baixo cifrado, de cima para baixo.
+  /// Figuras of the baixo cifrado, de cima for baixo.
   final List<FigureElement> figures;
 
-  /// Indica se a realização deve ser exibida acima da nota (padrão = abaixo).
+  /// Indica se a realização deve ser exibida acima of the note (default = abaixo).
   final bool above;
 
   FiguredBass({

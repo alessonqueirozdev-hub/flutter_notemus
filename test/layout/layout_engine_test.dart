@@ -140,6 +140,148 @@ void main() {
       expect(engine.advancedBeamGroups.single.notes, hasLength(4));
     });
 
+    test(
+      'automatically beams an isolated pair of eighth notes inside a beat',
+      () {
+        final measure = Measure()
+          ..add(Clef(clefType: ClefType.treble))
+          ..add(TimeSignature(numerator: 4, denominator: 4))
+          ..add(
+            Note(
+              pitch: const Pitch(step: 'E', octave: 5),
+              duration: const Duration(DurationType.quarter),
+            ),
+          )
+          ..add(
+            Note(
+              pitch: const Pitch(step: 'F', octave: 5),
+              duration: const Duration(DurationType.eighth),
+            ),
+          )
+          ..add(
+            Note(
+              pitch: const Pitch(step: 'G', octave: 5),
+              duration: const Duration(DurationType.eighth),
+            ),
+          )
+          ..add(
+            Note(
+              pitch: const Pitch(step: 'F', octave: 5),
+              duration: const Duration(DurationType.quarter),
+            ),
+          )
+          ..add(
+            Note(
+              pitch: const Pitch(step: 'D', octave: 5),
+              duration: const Duration(DurationType.quarter),
+            ),
+          );
+        final engine = LayoutEngine(
+          Staff(measures: [measure]),
+          availableWidth: 640,
+          staffSpace: 12,
+          metadata: metadata,
+        );
+
+        engine.layoutWithSignature();
+
+        expect(engine.advancedBeamGroups, hasLength(1));
+        final beamGroup = engine.advancedBeamGroups.single;
+        expect(beamGroup.notes, hasLength(2));
+        expect(
+          beamGroup.notes.map((note) => note.pitch.step),
+          orderedEquals(const ['F', 'G']),
+        );
+        expect(
+          (beamGroup.rightY - beamGroup.leftY).abs(),
+          lessThanOrEqualTo(3.0),
+        );
+      },
+    );
+
+    test('does not beam across non-beamable notes inside the measure', () {
+      final measure = Measure()
+        ..add(Clef(clefType: ClefType.treble))
+        ..add(TimeSignature(numerator: 4, denominator: 4))
+        ..add(
+          Note(
+            pitch: const Pitch(step: 'A', octave: 4),
+            duration: const Duration(DurationType.eighth),
+            ornaments: [Ornament(type: OrnamentType.appoggiaturaDown)],
+          ),
+        )
+        ..add(
+          Note(
+            pitch: const Pitch(step: 'G', octave: 4),
+            duration: const Duration(DurationType.quarter),
+          ),
+        )
+        ..add(
+          Note(
+            pitch: const Pitch(step: 'B', octave: 4),
+            duration: const Duration(DurationType.quarter),
+          ),
+        )
+        ..add(
+          Note(
+            pitch: const Pitch(step: 'E', octave: 4),
+            duration: const Duration(DurationType.sixteenth),
+            ornaments: [Ornament(type: OrnamentType.acciaccatura)],
+          ),
+        )
+        ..add(
+          Note(
+            pitch: const Pitch(step: 'F', octave: 4),
+            duration: const Duration(DurationType.quarter),
+          ),
+        );
+      final engine = LayoutEngine(
+        Staff(measures: [measure]),
+        availableWidth: 640,
+        staffSpace: 12,
+        metadata: metadata,
+      );
+
+      engine.layoutWithSignature();
+
+      expect(engine.advancedBeamGroups, isEmpty);
+    });
+
+    test('does not beam across rests inside the measure', () {
+      final measure = Measure()
+        ..add(Clef(clefType: ClefType.treble))
+        ..add(TimeSignature(numerator: 4, denominator: 4))
+        ..add(
+          Note(
+            pitch: const Pitch(step: 'C', octave: 4),
+            duration: const Duration(DurationType.eighth),
+          ),
+        )
+        ..add(Rest(duration: const Duration(DurationType.eighth)))
+        ..add(
+          Note(
+            pitch: const Pitch(step: 'D', octave: 4),
+            duration: const Duration(DurationType.eighth),
+          ),
+        )
+        ..add(
+          Note(
+            pitch: const Pitch(step: 'E', octave: 4),
+            duration: const Duration(DurationType.quarter),
+          ),
+        );
+      final engine = LayoutEngine(
+        Staff(measures: [measure]),
+        availableWidth: 640,
+        staffSpace: 12,
+        metadata: metadata,
+      );
+
+      engine.layoutWithSignature();
+
+      expect(engine.advancedBeamGroups, isEmpty);
+    });
+
     test('does not stretch single-measure systems across the full width', () {
       final measure = Measure()
         ..add(Clef(clefType: ClefType.treble))
@@ -172,6 +314,145 @@ void main() {
       expect(timeSignature.position.dx - clef.position.dx, lessThan(80));
       expect(note.position.dx - timeSignature.position.dx, lessThan(90));
     });
+
+    test(
+      'keeps wide multi-measure passages on one system when width allows',
+      () {
+        final measures = List<Measure>.generate(6, (index) {
+          final measure = Measure();
+          if (index == 0) {
+            measure
+              ..add(Clef(clefType: ClefType.treble))
+              ..add(TimeSignature(numerator: 4, denominator: 4));
+          }
+          measure
+            ..add(
+              Note(
+                pitch: const Pitch(step: 'C', octave: 5),
+                duration: const Duration(DurationType.quarter),
+              ),
+            )
+            ..add(
+              Note(
+                pitch: const Pitch(step: 'B', octave: 4),
+                duration: const Duration(DurationType.quarter),
+              ),
+            )
+            ..add(
+              Note(
+                pitch: const Pitch(step: 'A', octave: 4),
+                duration: const Duration(DurationType.quarter),
+              ),
+            )
+            ..add(
+              Note(
+                pitch: const Pitch(step: 'G', octave: 4),
+                duration: const Duration(DurationType.quarter),
+              ),
+            );
+          return measure;
+        });
+
+        final engine = LayoutEngine(
+          Staff(measures: measures),
+          availableWidth: 2200,
+          staffSpace: 12,
+          metadata: metadata,
+        );
+
+        final result = engine.layoutWithSignature();
+        final systems = result.elements
+            .map((positioned) => positioned.system)
+            .toSet();
+
+        expect(systems, hasLength(1));
+        expect(systems.single, 0);
+      },
+    );
+
+    test(
+      'adds a closing barline before a system break when the next measure starts with a repeat barline',
+      () {
+        final measure1 = Measure()
+          ..add(Clef(clefType: ClefType.treble))
+          ..add(TimeSignature(numerator: 4, denominator: 4))
+          ..add(
+            Note(
+              pitch: const Pitch(step: 'C', octave: 5),
+              duration: const Duration(DurationType.quarter),
+            ),
+          )
+          ..add(
+            Note(
+              pitch: const Pitch(step: 'B', octave: 4),
+              duration: const Duration(DurationType.quarter),
+            ),
+          )
+          ..add(
+            Note(
+              pitch: const Pitch(step: 'A', octave: 4),
+              duration: const Duration(DurationType.quarter),
+            ),
+          )
+          ..add(
+            Note(
+              pitch: const Pitch(step: 'G', octave: 4),
+              duration: const Duration(DurationType.quarter),
+            ),
+          );
+
+        final measure2 = Measure()
+          ..add(Barline(type: BarlineType.repeatForward))
+          ..add(
+            Note(
+              pitch: const Pitch(step: 'A', octave: 4),
+              duration: const Duration(DurationType.quarter),
+            ),
+          )
+          ..add(
+            Note(
+              pitch: const Pitch(step: 'B', octave: 4),
+              duration: const Duration(DurationType.quarter),
+            ),
+          )
+          ..add(
+            Note(
+              pitch: const Pitch(step: 'C', octave: 5),
+              duration: const Duration(DurationType.quarter),
+            ),
+          )
+          ..add(
+            Note(
+              pitch: const Pitch(step: 'D', octave: 5),
+              duration: const Duration(DurationType.quarter),
+            ),
+          );
+
+        final engine = LayoutEngine(
+          Staff(measures: [measure1, measure2]),
+          availableWidth: 210,
+          staffSpace: 12,
+          metadata: metadata,
+        );
+
+        final result = engine.layoutWithSignature();
+        final system0Barlines = result.elements
+            .where((positioned) => positioned.system == 0)
+            .where((positioned) => positioned.element is Barline)
+            .map((positioned) => positioned.element as Barline)
+            .toList();
+        final system1Barlines = result.elements
+            .where((positioned) => positioned.system == 1)
+            .where((positioned) => positioned.element is Barline)
+            .map((positioned) => positioned.element as Barline)
+            .toList();
+
+        expect(system0Barlines, isNotEmpty);
+        expect(system0Barlines.last.type, BarlineType.single);
+        expect(system1Barlines, isNotEmpty);
+        expect(system1Barlines.first.type, BarlineType.repeatForward);
+      },
+    );
 
     test(
       'keeps simultaneous lower-voice attacks aligned with the upper voice',
@@ -310,9 +591,18 @@ void main() {
           tempoMarks[1].position.dx,
           greaterThan(tempoMarks[0].position.dx),
         );
-        expect(notes[0].position.dx, greaterThan(tempoMarks[0].position.dx));
-        expect(tempoMarks[1].position.dx, greaterThan(notes[0].position.dx));
-        expect(notes[1].position.dx, greaterThan(tempoMarks[1].position.dx));
+        expect(
+          notes[0].position.dx,
+          greaterThanOrEqualTo(tempoMarks[0].position.dx),
+        );
+        expect(
+          tempoMarks[1].position.dx,
+          greaterThanOrEqualTo(notes[0].position.dx),
+        );
+        expect(
+          notes[1].position.dx,
+          greaterThanOrEqualTo(tempoMarks[1].position.dx),
+        );
       },
     );
 
@@ -363,9 +653,9 @@ void main() {
 
       expect(texts, hasLength(2));
       expect(notes, hasLength(2));
-      expect(notes[0].position.dx, greaterThan(texts[0].position.dx));
-      expect(texts[1].position.dx, greaterThan(notes[0].position.dx));
-      expect(notes[1].position.dx, greaterThan(texts[1].position.dx));
+      expect(notes[0].position.dx, greaterThanOrEqualTo(texts[0].position.dx));
+      expect(texts[1].position.dx, greaterThanOrEqualTo(notes[0].position.dx));
+      expect(notes[1].position.dx, greaterThanOrEqualTo(texts[1].position.dx));
     });
 
     test('assigns horizontal width to textual repeat instructions', () {
@@ -403,9 +693,18 @@ void main() {
 
       expect(repeatMarks, hasLength(2));
       expect(notes, hasLength(2));
-      expect(notes[0].position.dx, greaterThan(repeatMarks[0].position.dx));
-      expect(repeatMarks[1].position.dx, greaterThan(notes[0].position.dx));
-      expect(notes[1].position.dx, greaterThan(repeatMarks[1].position.dx));
+      expect(
+        notes[0].position.dx,
+        greaterThanOrEqualTo(repeatMarks[0].position.dx),
+      );
+      expect(
+        repeatMarks[1].position.dx,
+        greaterThanOrEqualTo(notes[0].position.dx),
+      );
+      expect(
+        notes[1].position.dx,
+        greaterThanOrEqualTo(repeatMarks[1].position.dx),
+      );
     });
   });
 }

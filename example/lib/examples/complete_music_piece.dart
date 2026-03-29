@@ -245,24 +245,14 @@ class CompleteMusicPieceExample extends StatelessWidget {
       ..add(_note('F', 5, DurationType.quarter))
       ..add(_note('D', 5, DurationType.quarter));
 
-    final measure10 = Measure(
-      beamingMode: BeamingMode.manual,
-      manualBeamGroups: const [
-        [1, 2],
-      ],
-    )
+    final measure10 = Measure()
       ..add(_note('E', 5, DurationType.quarter))
       ..add(_note('F', 5, DurationType.eighth))
       ..add(_note('G', 5, DurationType.eighth))
       ..add(_note('F', 5, DurationType.quarter))
       ..add(_note('D', 5, DurationType.quarter));
 
-    final measure11 = Measure(
-      beamingMode: BeamingMode.manual,
-      manualBeamGroups: const [
-        [1, 2],
-      ],
-    )
+    final measure11 = Measure()
       ..add(_note('E', 5, DurationType.quarter))
       ..add(_note('F', 5, DurationType.eighth))
       ..add(_note('G', 5, DurationType.eighth))
@@ -367,7 +357,10 @@ class CompleteMusicPieceExample extends StatelessWidget {
           _buildLegendRow('Meter', '4/4 throughout the piece'),
           _buildLegendRow('Tempo', 'Allegro assai with metronome marking'),
           _buildLegendRow('Form', 'Four phrases in A A B A structure'),
-          _buildLegendRow('Detail', 'Manual beams in the two eighth-note bars'),
+          _buildLegendRow(
+            'Detail',
+            'Automatic beaming in the two eighth-note bars',
+          ),
           _buildLegendRow('Finish', 'Explicit final double barline'),
         ],
       ),

@@ -209,7 +209,7 @@ class VoltaBracketsExample extends StatelessWidget {
       duration: const Duration(DurationType.quarter),
     ));
 
-    // 1ª volta com final ABERTO
+    // 1ª volta with final ABERTO
     final measure2 = Measure();
     measure2.add(VoltaBracket(number: 1, length: 120.0, hasOpenEnd: true));
     measure2.add(Note(

@@ -2,7 +2,7 @@
 
 import 'musical_element.dart';
 
-/// Represents a volta bracket (1st/2nd ending) in music notation.
+/// Represents a volta bracket (1st/2nd ending) in music notetion.
 ///
 /// Volta brackets indicate alternative endings for a repeated section.
 /// The first time through a repeat the passage under bracket 1 is played;

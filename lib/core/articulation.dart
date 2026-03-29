@@ -3,7 +3,7 @@
 import 'musical_element.dart';
 import 'note.dart'; // Para ArticulationType
 
-/// Representa uma articulação aplicada a uma nota
+/// Representa a articulation Appliesda a a note
 class Articulation extends MusicalElement {
   final ArticulationType type;
   final bool above;

@@ -234,7 +234,7 @@ class StaffGroup {
   }
 }
 
-/// Configuration for bracket/brace rendering
+/// Configurestion for bracket/brace rendering
 class BracketRenderConfig {
   /// Thickness of bracket/brace lines (in staff spaces)
   final double thickness;
@@ -257,7 +257,7 @@ class BracketRenderConfig {
     this.glyphName,
   });
 
-  /// Factory: Configuration for brace { rendering
+  /// Factory: Configurestion for brace { rendering
   factory BracketRenderConfig.brace() {
     return const BracketRenderConfig(
       thickness: 0.16,
@@ -266,7 +266,7 @@ class BracketRenderConfig {
     );
   }
 
-  /// Factory: Configuration for bracket [ rendering
+  /// Factory: Configurestion for bracket [ rendering
   factory BracketRenderConfig.bracket() {
     return const BracketRenderConfig(
       thickness: 0.16,
@@ -275,7 +275,7 @@ class BracketRenderConfig {
     );
   }
 
-  /// Factory: Configuration for line | rendering
+  /// Factory: Configurestion for line | rendering
   factory BracketRenderConfig.line() {
     return const BracketRenderConfig(
       thickness: 0.08, // Thinner than bracket

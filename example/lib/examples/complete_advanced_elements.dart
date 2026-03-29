@@ -343,7 +343,7 @@ class CompleteAdvancedElementsExample extends StatelessWidget {
     measure.add(Clef(clefType: ClefType.treble));
     measure.add(TimeSignature(numerator: 4, denominator: 4));
 
-    // Frase com slur
+    // Frase with slur
     measure.add(Note(
       pitch: const Pitch(step: 'C', octave: 5),
       duration: const Duration(DurationType.quarter),
@@ -492,7 +492,7 @@ class CompleteAdvancedElementsExample extends StatelessWidget {
       duration: const Duration(DurationType.whole),
     ));
 
-    // Adicionar crescendo (hairpin)
+    // add crescendo (hairpin)
     measure3.add(Dynamic(
       type: DynamicType.crescendo,
       isHairpin: true,

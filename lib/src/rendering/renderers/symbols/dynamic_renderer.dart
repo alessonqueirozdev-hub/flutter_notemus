@@ -5,9 +5,9 @@ import '../../../../core/core.dart';
 import '../../../theme/music_score_theme.dart';
 import '../base_glyph_renderer.dart';
 
-/// Renderizador especializado APENAS para dinâmicas musicais (p, f, mf, crescendo, etc).
+/// Rendersdor especializado APENAS for dynamics musicais (p, f, mf, crescendo, etc).
 ///
-/// Responsabilidade única: desenhar indicações de dinâmica.
+/// Responsabilidade única: desenhar indicações de dynamic.
 class DynamicRenderer extends BaseGlyphRenderer {
   final MusicScoreTheme theme;
 
@@ -18,7 +18,7 @@ class DynamicRenderer extends BaseGlyphRenderer {
     required super.glyphSize,
   });
 
-  /// Renderiza dinâmica.
+  /// Renders dynamic.
   void render(
     Canvas canvas,
     Dynamic dynamic,
@@ -62,15 +62,15 @@ class DynamicRenderer extends BaseGlyphRenderer {
     }
   }
 
-  /// Renderiza hairpin (crescendo/diminuendo).
+  /// Renders hairpin (crescendo/diminuendo).
   void _renderHairpin(
     Canvas canvas,
     Dynamic dynamic,
     Offset basePosition, {
     double verticalOffset = 0.0,
   }) {
-    // CORREÇÃO: Comprimento proporcional ao número de notas abrangidas
-    // Se length não especificado, usar comprimento padrão de 4 staff spaces por nota
+    // Fix: Comprimento proporcional ao number de notes abrangidas
+    // Se length not especificado, Usesr comprimento default de 4 staff spaces por note
     // Mas permitir override via dynamic.length
     final defaultLength = coordinates.staffSpace * 6.0; // Aumentado de 4.0 para 6.0
     final length = dynamic.length ?? defaultLength;
@@ -80,8 +80,8 @@ class DynamicRenderer extends BaseGlyphRenderer {
         (coordinates.staffSpace * 2.5) +
         verticalOffset;
     
-    // CORREÇÃO: Altura proporcional também (mais expressiva)
-    final height = coordinates.staffSpace * 0.9; // Aumentado de 0.75
+    // Fix: Meia-abertura of the hairpin ~0.5 SS (abertura total ~1.0 SS)
+    final height = coordinates.staffSpace * 0.5;
 
     final hairpinThickness = metadata.getEngravingDefault('hairpinThickness');
     final paint = Paint()
@@ -90,19 +90,7 @@ class DynamicRenderer extends BaseGlyphRenderer {
       ..strokeCap = StrokeCap.butt; // CORREÇÃO: Pontas quadradas (não arredondadas)
 
     if (dynamic.type == DynamicType.crescendo) {
-      // Crescendo: abre para direita (<)
-      canvas.drawLine(
-        Offset(basePosition.dx, hairpinY - height),
-        Offset(basePosition.dx + length, hairpinY),
-        paint,
-      );
-      canvas.drawLine(
-        Offset(basePosition.dx, hairpinY + height),
-        Offset(basePosition.dx + length, hairpinY),
-        paint,
-      );
-    } else if (dynamic.type == DynamicType.diminuendo) {
-      // Diminuendo: fecha para direita (>)
+      // Crescendo: ponta à esquerda, abre à direita (<)
       canvas.drawLine(
         Offset(basePosition.dx, hairpinY),
         Offset(basePosition.dx + length, hairpinY - height),
@@ -113,10 +101,22 @@ class DynamicRenderer extends BaseGlyphRenderer {
         Offset(basePosition.dx + length, hairpinY + height),
         paint,
       );
+    } else if (dynamic.type == DynamicType.diminuendo) {
+      // Diminuendo: aberto à esquerda, ponta à direita (>)
+      canvas.drawLine(
+        Offset(basePosition.dx, hairpinY - height),
+        Offset(basePosition.dx + length, hairpinY),
+        paint,
+      );
+      canvas.drawLine(
+        Offset(basePosition.dx, hairpinY + height),
+        Offset(basePosition.dx + length, hairpinY),
+        paint,
+      );
     }
   }
 
-  /// Desenha texto de dinâmica customizado.
+  /// Desenha texto de dynamic customizado.
   void _drawCustomDynamicText(Canvas canvas, String text, double x, double y) {
     final textStyle =
         theme.dynamicTextStyle ??
@@ -124,6 +124,7 @@ class DynamicRenderer extends BaseGlyphRenderer {
           fontSize: glyphSize * 0.4,
           fontStyle: FontStyle.italic,
           color: theme.dynamicColor ?? theme.noteheadColor,
+          fontFamilyFallback: const ['Academico', 'Century Schoolbook', 'Edwin', 'serif'],
         );
 
     final textPainter = TextPainter(

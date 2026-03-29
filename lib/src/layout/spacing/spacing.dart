@@ -1,6 +1,6 @@
-/// Sistema de Espaçamento Inteligente
+/// System de Intelligent spacing
 /// 
-/// Exporta todos os componentes do sistema de espaçamento tipográfico musical.
+/// Exports all os componentes of the system de spacing tipográfico musical.
 /// 
 /// **Uso básico:**
 /// ```dart
@@ -10,7 +10,7 @@
 /// 
 /// engine.initializeOpticalCompensator(staffSpace);
 /// 
-/// final symbols = [...]; // Lista de MusicalSymbolInfo
+/// final symbols = [...]; // List of MusicalSymbolInfo
 /// final textual = engine.computeTextualSpacing(...);
 /// final durational = engine.computeDurationalSpacing(...);
 /// final final = engine.combineSpacings(...);

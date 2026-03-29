@@ -1,11 +1,11 @@
-/// Sistema de compensação óptica para espaçamento musical
+/// System de compensação óptica for spacing musical
 /// 
-/// Aplica ajustes visuais baseados em contexto para melhorar
-/// a aparência percebida do espaçamento, seguindo princípios
+/// Applies visual adjustments based on context to improve
+/// a aparência percebida of the spacing, following princípios
 /// de Sibelius, LilyPond e Behind Bars.
 library;
 
-/// Tipos de elementos musicais para compensação
+/// Tipos de elementos musicais for compensação
 enum SymbolType {
   note,
   rest,
@@ -20,7 +20,7 @@ enum SymbolType {
   ornament,
 }
 
-/// Contexto para cálculo de compensação óptica
+/// Contexto for cálculo de compensação óptica
 class OpticalContext {
   final SymbolType type;
   final bool? stemUp; // null se não aplicável
@@ -38,7 +38,7 @@ class OpticalContext {
     this.beamCount,
   });
 
-  /// Criar contexto para nota
+  /// Createsr contexto for note
   factory OpticalContext.note({
     required bool stemUp,
     required double duration,
@@ -56,7 +56,7 @@ class OpticalContext {
     );
   }
 
-  /// Criar contexto para pausa
+  /// Createsr contexto for paUses
   factory OpticalContext.rest({required double duration}) {
     return OpticalContext(
       type: SymbolType.rest,
@@ -64,7 +64,7 @@ class OpticalContext {
     );
   }
 
-  /// Criar contexto para acorde
+  /// Createsr contexto for chord
   factory OpticalContext.chord({
     required bool stemUp,
     required double duration,
@@ -79,15 +79,15 @@ class OpticalContext {
   }
 }
 
-/// Calculadora de compensação óptica
+/// Calculatora de compensação óptica
 /// 
-/// Implementa as regras de ajuste visual baseadas em:
-/// - Direção de hastes
+/// Implementa as regras de ajuste visual baseadas in:
+/// - Direção de stems
 /// - Transições de duração
-/// - Proximidade de acidentes
+/// - Proximidade de accidentals
 /// - Densidade local
 class OpticalCompensator {
-  /// Espaço base (staff space em pixels)
+  /// Space base (staff space in pixels)
   final double staffSpace;
 
   /// Ativar compensação
@@ -105,9 +105,9 @@ class OpticalCompensator {
     this.intensity = 1.0,
   });
 
-  /// Calcula compensação total entre dois símbolos
+  /// Calculatestes compensação total entre dois símbolos
   /// 
-  /// **Retorna:** Ajuste em pixels (positivo = afastar, negativo = aproximar)
+  /// **Returns:** Ajuste in pixels (positivo = afastar, negativo = aproximar)
   double calculateCompensation(
     OpticalContext previous,
     OpticalContext current, {
@@ -117,16 +117,16 @@ class OpticalCompensator {
 
     double totalCompensation = 0.0;
 
-    // Regra 1: Hastes alternadas
+    // Regra 1: Stems alternadas
     totalCompensation += _compensateForAlternatingStem(previous, current);
 
-    // Regra 2: Pausa seguida de nota com haste para cima
+    // Regra 2: PaUses seguida de note with stem up
     totalCompensation += _compensateForRestBeforeNote(previous, current);
 
     // Regra 3: Transição de duração
     totalCompensation += _compensateForDurationTransition(previous, current);
 
-    // Regra 4: Acidentes
+    // Regra 4: Accidentals
     totalCompensation += _compensateForAccidental(current, localDensity);
 
     // Regra 5: Pontos de aumento
@@ -138,9 +138,9 @@ class OpticalCompensator {
     return totalCompensation * intensity;
   }
 
-  /// Regra 1: Compensação para hastes alternadas
+  /// Regra 1: Compensação for stems alternadas
   /// 
-  /// Medir entre hastes (não cabeças) para parecer uniforme
+  /// Medir entre stems (not cabeças) for parecer uniforme
   double _compensateForAlternatingStem(
     OpticalContext prev,
     OpticalContext curr,
@@ -148,17 +148,17 @@ class OpticalCompensator {
     if (prev.stemUp == null || curr.stemUp == null) return 0.0;
 
     if (prev.stemUp! && !curr.stemUp!) {
-      // Haste para cima → Haste para baixo: AFASTAR
+      // Stem up → Stem down: AFASTAR
       return 0.15 * staffSpace;
     } else if (!prev.stemUp! && curr.stemUp!) {
-      // Haste para baixo → Haste para cima: APROXIMAR
+      // Stem down → Stem up: APROXIMAR
       return -0.1 * staffSpace;
     }
 
     return 0.0;
   }
 
-  /// Regra 2: Pausa seguida de nota com haste para cima
+  /// Regra 2: PaUses seguida de note with stem up
   double _compensateForRestBeforeNote(
     OpticalContext prev,
     OpticalContext curr,
@@ -174,7 +174,7 @@ class OpticalCompensator {
 
   /// Regra 3: Transição de duração
   /// 
-  /// Nota curta após nota longa: leve aproximação
+  /// Note curta após note longa: leve aproximação
   double _compensateForDurationTransition(
     OpticalContext prev,
     OpticalContext curr,
@@ -188,37 +188,37 @@ class OpticalCompensator {
     return 0.0;
   }
 
-  /// Regra 4: Compensação para acidentes
+  /// Regra 4: Compensação for accidentals
   /// 
-  /// Ajusta espaço baseado em densidade local
+  /// Ajusta space based on densidade local
   double _compensateForAccidental(
     OpticalContext curr,
     double density,
   ) {
     if (!curr.hasAccidental) return 0.0;
 
-    // Interpolar entre espaçamento ideal (0.5 SS) e mínimo (0.25 SS)
+    // Interpolar entre spacing ideal (0.5 SS) e mínimo (0.25 SS)
     final double idealSpace = 0.5 * staffSpace;
     final double minSpace = 0.25 * staffSpace;
 
     return _lerp(idealSpace, minSpace, density);
   }
 
-  /// Regra 5: Compensação para pontos de aumento
+  /// Regra 5: Compensação for pontos de aumento
   /// 
-  /// Notas pontuadas precisam de espaço extra à direita
+  /// Notes pontuadas precisam de space extra à direita
   double _compensateForDots(
     OpticalContext prev,
     OpticalContext curr,
   ) {
     double compensation = 0.0;
 
-    // Se o anterior é pontuado, adicionar espaço
+    // Se o previous é pontuado, add space
     if (prev.isDotted) {
       compensation += 0.12 * staffSpace;
     }
 
-    // Se o atual é pontuado, verificar se há espaço suficiente
+    // Se o current é pontuado, Checksr se há space suficiente
     if (curr.isDotted) {
       compensation += 0.05 * staffSpace;
     }
@@ -226,14 +226,14 @@ class OpticalCompensator {
     return compensation;
   }
 
-  /// Regra 6: Compensação para beams (barras de ligação)
+  /// Regra 6: Compensação for beams (barras de ligação)
   /// 
-  /// Notas com beams podem ser aproximadas
+  /// Notes with beams podem ser aproximadas
   double _compensateForBeams(
     OpticalContext prev,
     OpticalContext curr,
   ) {
-    // Se ambas estão em beams, podem ser ligeiramente mais próximas
+    // Se ambas estão in beams, podem ser ligeiramente mais próximas
     if (prev.beamCount != null &&
         curr.beamCount != null &&
         prev.beamCount! > 0 &&
@@ -249,13 +249,13 @@ class OpticalCompensator {
     return a + (b - a) * t.clamp(0.0, 1.0);
   }
 
-  /// Calcula densidade local baseada em número de elementos
+  /// Calculatestes densidade local baseada in number de elementos
   /// 
-  /// **Parâmetros:**
-  /// - `elementCount`: Número de elementos em uma janela
-  /// - `windowWidth`: Largura da janela em pixels
+  /// **Parameters:**
+  /// - `elementCount`: Number de elementos in a janela
+  /// - `windowWidth`: Width of the janela in pixels
   /// 
-  /// **Retorna:** Densidade normalizada (0.0 - 1.0)
+  /// **Returns:** Densidade normalizada (0.0 - 1.0)
   double calculateLocalDensity(int elementCount, double windowWidth) {
     if (windowWidth <= 0) return 0.5;
 
@@ -266,9 +266,9 @@ class OpticalCompensator {
     return ((density - 1.0) / 4.0).clamp(0.0, 1.0);
   }
 
-  /// Calcula compensação para compassos compostos
+  /// Calculatestes compensação for measures compostos
   /// 
-  /// Adiciona espaço entre pulsos ternários (6/8, 9/8, 12/8)
+  /// Adds space entre pulsos ternários (6/8, 9/8, 12/8)
   double compensateForCompoundMeterPulse({
     required bool isStartOfPulse,
     required double pulseSpacing,
@@ -278,9 +278,9 @@ class OpticalCompensator {
     return pulseSpacing * staffSpace * intensity;
   }
 
-  /// Calcula compensação para barlines
+  /// Calculatestes compensação for barlines
   /// 
-  /// Retorna [spaceBefore, spaceAfter] em pixels
+  /// Returns [spaceBefore, spaceAfter] in pixels
   List<double> compensateForBarline({
     required BarlineType type,
   }) {
@@ -314,9 +314,9 @@ class OpticalCompensator {
     return [before * intensity, after * intensity];
   }
 
-  /// Calcula compensação para mudança de clave
+  /// Calculatestes compensação for mudança de clef
   /// 
-  /// Retorna [spaceBefore, spaceAfter] em pixels
+  /// Returns [spaceBefore, spaceAfter] in pixels
   List<double> compensateForClefChange({
     required bool isAtBeginning,
   }) {
@@ -326,7 +326,7 @@ class OpticalCompensator {
       return [0.0, 0.0]; // Sem espaço extra no início
     }
 
-    // Mudança no meio do compasso
+    // Mudança no meio of the measure
     return [
       0.5 * staffSpace * intensity,
       0.75 * staffSpace * intensity,
@@ -334,7 +334,7 @@ class OpticalCompensator {
   }
 }
 
-/// Tipos de barline para compensação
+/// Tipos de barline for compensação
 enum BarlineType {
   single,
   doubleBar,

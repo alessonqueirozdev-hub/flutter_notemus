@@ -1,22 +1,22 @@
-// lib/src/rendering/staff_position_calculator.dart
-// NOVA CLASSE: Cálculo unificado de posições na pauta
+// lib/src/rendering/staff_position_calculateTestor.dart
+// Cálculo unificado de position na staff
 //
-// Esta classe centraliza TODA a lógica de conversão de alturas (pitches)
-// para posições no pentagrama, eliminando inconsistências entre renderizadores.
+// This class centraliza TODA a lógica de conversão de heights (pitches)
+// for positions no staff, eliminando inconsistências entre Renderers.
 //
-// Baseado em:
+// Based on:
 // - Especificação MusicXML (pitch/octave system)
-// - Prática musical tradicional
+// - Prática musical tradded
 // - Validado contra Verovio e OpenSheetMusicDisplay
 
 import '../../core/core.dart'; // 🆕 Tipos do core
 
-/// Calculadora unificada de posições na pauta
+/// Calculatora unificada de staff positions
 ///
-/// Esta classe é a ÚNICA fonte de verdade para conversão Pitch → StaffPosition
-/// Garante consistência absoluta entre todos os renderizadores.
+/// This class é a ÚNICA fonte de verdade for conversão Pitch → StaffPosition
+/// Garante consistência absoluta entre all os Renderers.
 class StaffPositionCalculator {
-  /// Mapeamento de steps (C, D, E, F, G, A, B) para posições diatônicas
+  /// Mapeamento de steps (C, D, E, F, G, A, B) for positions diatônicas
   /// C=0, D=1, E=2, F=3, G=4, A=5, B=6
   static const Map<String, int> _stepToDiatonic = {
     'C': 0,
@@ -28,63 +28,63 @@ class StaffPositionCalculator {
     'B': 6,
   };
 
-  /// Converte uma altura (Pitch) em posição na pauta para uma dada clave
+  /// Converts a height (Pitch) in staff position for a dada clef
   ///
-  /// @param pitch Altura musical (step + octave)
-  /// @param clef Clave de referência
-  /// @return Posição na pauta (0 = linha central, positivo = acima, negativo = abaixo)
+  /// @param pitch Musical pitch (step + octave)
+  /// @param clef Clef reference
+  /// @return Staff position (0 = linha central, positivo = acima, negativo = abaixo)
   ///
-  /// Sistema de coordenadas:
-  /// - staffPosition = 0: linha do meio (linha 3)
-  /// - staffPosition = 2: espaço acima da linha 2
-  /// - staffPosition = -2: espaço abaixo da linha 4
-  /// - Cada incremento = meio staff space (meia posição diatônica)
+  /// Coordinate system:
+  /// - staffPosition = 0: linha of the meio (linha 3)
+  /// - staffPosition = 2: space acima of the linha 2
+  /// - staffPosition = -2: space abaixo of the linha 4
+  /// - Each incremento = meio staff space (meia position diatônica)
   static int calculate(Pitch pitch, Clef clef) {
     final pitchStep = _stepToDiatonic[pitch.step] ?? 0;
 
-    // Dados de referência por tipo de clave
-    // baseStep: nota que está na linha de referência da clave
-    // baseOctave: oitava dessa nota
+    // Dados reference por type de clef
+    // baseStep: note that está na linha reference of the clef
+    // baseOctave: oitava dessa note
     final ClefReference ref = _getClefReference(clef.actualClefType);
 
-    // Calcular distância diatônica da nota de referência
-    // Claves com deslocamento de oitava (ex.: treble8vb) alteram a altura
-    // sonora, mas NAO alteram a escrita no pentagrama.
-    // Por isso, o calculo visual usa apenas a oitava escrita da nota.
+    // Calculatestesr distância diatônica of the note reference
+    // Clefs with deslocamento de oitava (ex.: treble8vb) alteram a height
+    // sonora, mas NAO alteram a escrita no staff.
+    // Por isso, o calculo visual Uses apenas a oitava escrita of the note.
     final octaveAdjust = pitch.octave - ref.baseOctave;
     final diatonicDistance = (pitchStep - ref.baseStep) + (octaveAdjust * 7);
 
-    // Converter distância diatônica para posição na pauta
-    // staffPosition aumenta para CIMA (valores positivos = acima do centro)
-    // CORREÇÃO: Somar diatonicDistance (não subtrair) para que notas mais agudas
+    // Convertsr distância diatônica for staff position
+    // staffPosition aumenta for CIMA (valores positivos = acima of the centro)
+    // Fix: Somar diatonicDistance (not subtrair) for that notes mais agudas
     // tenham staffPosition mais alto
     return ref.basePosition + diatonicDistance;
   }
 
-  /// Verifica se uma posição precisa de linhas suplementares
+  /// Checks se a position precisa de linhas suplementares
   ///
-  /// @param staffPosition Posição calculada na pauta
-  /// @return true se a nota está fora das 5 linhas do pentagrama
+  /// @param staffPosition Calculated staff position
+  /// @return true se a note está fora das 5 linhas of the staff
   static bool needsLedgerLines(int staffPosition) {
-    // Linhas do pentagrama vão de -4 a +4
+    // Linhas of the staff vão de -4 a +4
     // staffPosition -4 = linha 5 (inferior)
     // staffPosition +4 = linha 1 (superior)
-    // Notas em posições ímpares (espaços) entre -4 e +4 não precisam de linhas suplementares
-    // Notas em posições pares (linhas) entre -4 e +4 não precisam de linhas suplementares
+    // Notes at odd positions (spaces) between -4 and +4 do not need ledger lines
+    // Notes in positions pares (linhas) entre -4 e +4 not precisam de linhas suplementares
     return staffPosition > 4 || staffPosition < -4;
   }
 
-  /// Calcula quais linhas suplementares são necessárias
+  /// Calculatestes quais linhas suplementares are necessárias
   ///
-  /// @param staffPosition Posição da nota
-  /// @return Lista de posições onde desenhar linhas suplementares
+  /// @param staffPosition Position of the note
+  /// @return List of positions where desenhar linhas suplementares
   static List<int> getLedgerLinePositions(int staffPosition) {
     final lines = <int>[];
 
     if (staffPosition > 4) {
-      // Linhas acima do pentagrama
-      // Se a nota está em posição ímpar (espaço), desenhar linha abaixo e acima se necessário
-      // Se a nota está em posição par (linha), desenhar essa linha
+      // Linhas acima of the staff
+      // Se a note está in position ímpar (space), desenhar linha abaixo e acima se necessário
+      // Se a note está in position par (linha), desenhar this linha
       int startLine = staffPosition % 2 == 0
           ? staffPosition
           : staffPosition - 1;
@@ -92,7 +92,7 @@ class StaffPositionCalculator {
         lines.add(line);
       }
     } else if (staffPosition < -4) {
-      // Linhas abaixo do pentagrama
+      // Linhas abaixo of the staff
       int startLine = staffPosition % 2 == 0
           ? staffPosition
           : staffPosition + 1;
@@ -104,29 +104,29 @@ class StaffPositionCalculator {
     return lines;
   }
 
-  /// Converte posição da pauta para coordenada Y em pixels
+  /// Converts position of the staff for coordenada Y in pixels
   ///
-  /// @param staffPosition Posição na pauta
-  /// @param staffSpace Tamanho do staff space em pixels
-  /// @param staffBaseline Coordenada Y da linha central da pauta
-  /// @return Coordenada Y em pixels (sistema de coordenadas de tela)
+  /// @param staffPosition Staff position
+  /// @param staffSpace Staff space size in pixels
+  /// @param staffBaseline Coordenada Y of the linha central of the staff
+  /// @return Coordenada Y in pixels (coordinate system de tela)
   static double toPixelY(
     int staffPosition,
     double staffSpace,
     double staffBaseline,
   ) {
-    // staffPosition positivo = acima do centro = Y menor (coordenadas de tela)
-    // staffPosition negativo = abaixo do centro = Y maior
-    // Cada posição = 0.5 staff spaces
+    // staffPosition positivo = acima of the centro = Y smaller (coordenadas de tela)
+    // staffPosition negativo = abaixo of the centro = Y greater
+    // Each position = 0.5 staff spaces
     return staffBaseline - (staffPosition * staffSpace * 0.5);
   }
 
-  /// Obtém referência de clave para cálculos
+  /// Gets reference de clef for cálculos
   static ClefReference _getClefReference(ClefType clefType) {
     switch (clefType) {
-      // CLAVE DE SOL (G Clef)
-      // G4 na segunda linha (linha 2 de baixo para cima)
-      // A linha 2 está 1 linha ABAIXO da linha central (linha 3)
+      // Treble clef (G Clef)
+      // G4 na segunda linha (linha 2 de baixo for cima)
+      // A linha 2 está 1 linha ABAIXO of the linha central (linha 3)
       // staffPosition: linha central = 0, então linha 2 = -2
       case ClefType.treble:
       case ClefType.treble8va:
@@ -139,9 +139,9 @@ class StaffPositionCalculator {
           basePosition: -2, // Segunda linha está 2 semitons ABAIXO do centro
         );
 
-      // CLAVE DE FÁ (F Clef)
-      // F3 na quarta linha (linha 4 de baixo para cima)
-      // A linha 4 está 1 linha ACIMA da linha central (linha 3)
+      // Bass clef (F Clef)
+      // F3 na quarta linha (linha 4 de baixo for cima)
+      // A linha 4 está 1 linha ACIMA of the linha central (linha 3)
       // staffPosition: linha central = 0, então linha 4 = +2
       case ClefType.bass:
       case ClefType.bassThirdLine:
@@ -155,7 +155,7 @@ class StaffPositionCalculator {
           basePosition: 2, // Quarta linha está 2 semitons ACIMA do centro
         );
 
-      // CLAVE DE DÓ (C Clef) - Alto
+      // C clef (C Clef) - Alto
       // C4 na linha central (staffPosition 0)
       case ClefType.alto:
         return ClefReference(
@@ -164,7 +164,7 @@ class StaffPositionCalculator {
           basePosition: 0, // Linha central
         );
 
-      // CLAVE DE DÓ (C Clef) - Tenor
+      // C clef (C Clef) - Tenor
       // C4 na quarta linha (staffPosition +2)
       case ClefType.tenor:
         return ClefReference(
@@ -173,18 +173,18 @@ class StaffPositionCalculator {
           basePosition: 2, // Quarta linha (acima da linha central)
         );
 
-      // CLAVE DE PERCUSSÃO
+      // Clef DE PERCUSSÃO
       case ClefType.percussion:
       case ClefType.percussion2:
         return ClefReference(baseStep: 0, baseOctave: 4, basePosition: 0);
 
-      // CLAVE DE TABLATURA
+      // Clef DE TABLATURA
       case ClefType.tab6:
       case ClefType.tab4:
         return ClefReference(baseStep: 0, baseOctave: 4, basePosition: 0);
 
       default:
-        // Fallback: Clave de Sol
+        // Fallback: Treble clef
         return ClefReference(
           baseStep: 4, // G
           baseOctave: 4,
@@ -194,15 +194,15 @@ class StaffPositionCalculator {
   }
 }
 
-/// Dados de referência de uma clave
+/// Dados reference de a clef
 class ClefReference {
-  /// Step (0-6) da nota que está na linha de referência
+  /// Step (0-6) of the note that está na linha reference
   final int baseStep;
 
-  /// Oitava da nota de referência
+  /// Oitava of the note reference
   final int baseOctave;
 
-  /// Posição na pauta da linha de referência
+  /// Staff position of the linha reference
   final int basePosition;
 
   const ClefReference({
@@ -212,20 +212,20 @@ class ClefReference {
   });
 }
 
-/// Extensão para facilitar uso em Pitch
+/// Extensão for facilitar uso in Pitch
 extension PitchStaffPosition on Pitch {
-  /// Calcula posição na pauta para uma clave
+  /// Calculatestes staff position for a clef
   int staffPosition(Clef clef) {
     return StaffPositionCalculator.calculate(this, clef);
   }
 
-  /// Verifica se precisa de linhas suplementares
+  /// Checks se precisa de linhas suplementares
   bool needsLedgerLines(Clef clef) {
     final position = staffPosition(clef);
     return StaffPositionCalculator.needsLedgerLines(position);
   }
 
-  /// Obtém linhas suplementares necessárias
+  /// Gets linhas suplementares necessárias
   List<int> getLedgerLinePositions(Clef clef) {
     final position = staffPosition(clef);
     return StaffPositionCalculator.getLedgerLinePositions(position);

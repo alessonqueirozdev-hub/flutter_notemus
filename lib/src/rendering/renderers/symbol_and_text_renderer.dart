@@ -3,8 +3,8 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import '../../../core/core.dart'; // ðŸ†• Tipos do core
-import '../../layout/collision_detector.dart'; // CORREÃ‡ÃƒO: Import collision detector
+import '../../../core/core.dart'; // 🆕 Tipos do core
+import '../../layout/collision_detector.dart'; // CORREÇÃO: Import collision detector
 import '../../smufl/smufl_metadata_loader.dart';
 import '../../theme/music_score_theme.dart';
 import '../staff_coordinate_system.dart';
@@ -24,19 +24,27 @@ class HairpinGeometry {
 }
 
 class SymbolAndTextRenderer {
+  /// SMuFL/Bravura recommended text font families (engravingDefaults.textFontFamily)
+  static const List<String> smuflTextFontFallback = [
+    'Academico',
+    'Century Schoolbook',
+    'Edwin',
+    'serif',
+  ];
+
   final StaffCoordinateSystem coordinates;
   final SmuflMetadata metadata;
   final MusicScoreTheme theme;
   final double glyphSize;
   final CollisionDetector?
-  collisionDetector; // CORREÃ‡ÃƒO: Adicionar collision detector
+  collisionDetector; // CORREÇÃO: Adicionar collision detector
 
   SymbolAndTextRenderer({
     required this.coordinates,
     required this.metadata,
     required this.theme,
     required this.glyphSize,
-    this.collisionDetector, // CORREÃ‡ÃƒO: ParÃ¢metro opcional
+    this.collisionDetector, // CORREÇÃO: Parâmetro opcional
   });
 
   static Offset calculateTextPaintOrigin(
@@ -73,12 +81,12 @@ class SymbolAndTextRenderer {
       return;
     }
 
-    // PosiÃ§Ã£o depende da famÃ­lia do sÃ­mbolo:
-    // - navegaÃ§Ã£o (segno/coda): acima da pauta
-    // - repeats/simile/percent: centralizados na pauta
+    // Position depende of the família of the símbolo:
+    // - navegação (segno/coda): acima of the staff
+    // - repeats/simile/percent: centralizados na staff
     final signY = _getRepeatMarkY(repeatMark.type);
 
-    // CORREÃ‡ÃƒO SMuFL: Usar opticalCenter anchor se disponÃ­vel
+    // Fix: SMuFL: Use opticalCenter anchor se disponível
     _drawGlyph(
       canvas,
       glyphName: glyphName,
@@ -183,14 +191,15 @@ class SymbolAndTextRenderer {
       case RepeatType.coda:
       case RepeatType.segnoSquare:
       case RepeatType.codaSquare:
-        return 0.64;
+        // Segno/Coda: escala reduzida for not quebrar spacing of the measure
+        return 0.45;
       case RepeatType.repeat1Bar:
       case RepeatType.simile:
       case RepeatType.percentRepeat:
         return 0.92;
       case RepeatType.repeat2Bars:
       case RepeatType.repeat4Bars:
-        return 0.9;
+        return 0.92;
       case RepeatType.repeatDots:
       case RepeatType.repeatLeft:
       case RepeatType.repeatRight:
@@ -206,7 +215,7 @@ class SymbolAndTextRenderer {
       case RepeatType.daCapoAlFine:
       case RepeatType.fine:
       case RepeatType.toCoda:
-        return 0.9;
+        return 0.92;
     }
   }
 
@@ -253,8 +262,9 @@ class SymbolAndTextRenderer {
               fontSize: 15,
               fontStyle: FontStyle.italic,
               fontWeight: FontWeight.w600,
+              fontFamilyFallback: smuflTextFontFallback,
             ))
-        .copyWith(color: baseColor);
+        .copyWith(color: baseColor, fontFamilyFallback: smuflTextFontFallback);
   }
 
   TextStyle _repeatCountStyle() {
@@ -281,21 +291,21 @@ class SymbolAndTextRenderer {
     }
 
     final glyphName = _getDynamicGlyph(dynamic.type);
-    // CORREÃ‡ÃƒO TIPOGRÃFICA SMuFL: DinÃ¢micas devem ficar 2.5 staff spaces abaixo da Ãºltima linha
-    // CORREÃ‡ÃƒO LACERDA: Adicionar verticalOffset para evitar sobreposiÃ§Ã£o
+    // CORREÃ‡ÃƒO TIPOGRÃFICA SMuFL: DinÃ¢micas devem ficar 2.5 staff spaces abaixo of the Ãºltima linha
+    // Fix: LACERDA: Add verticalOffset for evitar sobreposição
     final dynamicY =
         coordinates.getStaffLineY(1) +
         (coordinates.staffSpace * 2.5) +
         verticalOffset;
 
     if (glyphName != null) {
-      // CORREÃ‡ÃƒO SMuFL: Escala de dinÃ¢micas nÃ£o deveria ser hardcoded (0.9)
-      // Usar tamanho base e deixar a fonte SMuFL definir proporÃ§Ãµes
+      // Fix: SMuFL: Escala de dynamic not deveria ser hardcoded (0.9)
+      // Usesr size base e deixar a fonte SMuFL Define proporções
       _drawGlyph(
         canvas,
         glyphName: glyphName,
         position: Offset(basePosition.dx, dynamicY),
-        size: glyphSize, // Remover escala arbitrÃ¡ria de 0.9
+        size: glyphSize, // Remover escala arbitrária de 0.9
         color: theme.dynamicColor ?? theme.noteheadColor,
         centerVertically: true,
         centerHorizontally: true,
@@ -317,16 +327,16 @@ class SymbolAndTextRenderer {
     double verticalOffset = 0.0,
   }) {
     final length = dynamic.length ?? coordinates.staffSpace * 6;
-    // CORREÃ‡ÃƒO: Usar mesma posiÃ§Ã£o Y que dinÃ¢micas
-    // CORREÃ‡ÃƒO LACERDA: Adicionar verticalOffset para evitar sobreposiÃ§Ã£o
+    // Fix: Use mesma Y position that dynamic
+    // Fix: LACERDA: Add verticalOffset for evitar sobreposição
     final hairpinY =
         coordinates.getStaffLineY(1) +
         (coordinates.staffSpace * 2.5) +
         verticalOffset;
-    // CORREÃ‡ÃƒO TIPOGRÃFICA SMuFL: Altura recomendada de 0.75-1.0 staff spaces
-    final height = coordinates.staffSpace * 0.9;
+    // CORREÃ‡ÃƒO TIPOGRÃFICA SMuFL: Height recomendada de 0.75-1.0 staff spaces
+    final height = coordinates.staffSpace * 0.5;
 
-    // CORREÃ‡ÃƒO CRÃTICA SMuFL: Usar hairpinThickness ao invÃ©s de thinBarlineThickness
+    // CORREÃ‡ÃƒO CRÃTICA SMuFL: Usesr hairpinThickness ao invÃ©s de thinBarlineThickness
     final hairpinThickness = metadata.getEngravingDefault('hairpinThickness');
     final paint = Paint()
       ..color = theme.dynamicColor ?? theme.noteheadColor
@@ -412,9 +422,11 @@ class SymbolAndTextRenderer {
               fontSize: glyphSize * fontScale,
               fontStyle: FontStyle.italic,
               fontWeight: FontWeight.w500,
+              fontFamilyFallback: smuflTextFontFallback,
             ))
         .copyWith(
           color: baseColor,
+          fontFamilyFallback: smuflTextFontFallback,
           fontSize:
               (theme.dynamicTextStyle?.fontSize ??
               theme.expressionTextStyle?.fontSize ??
@@ -440,6 +452,7 @@ class SymbolAndTextRenderer {
               fontSize: coordinates.staffSpace * 1.1,
               fontStyle: FontStyle.italic,
               fontWeight: FontWeight.w500,
+              fontFamilyFallback: smuflTextFontFallback,
             );
         break;
       default:
@@ -448,6 +461,7 @@ class SymbolAndTextRenderer {
             TextStyle(
               fontSize: coordinates.staffSpace,
               fontWeight: FontWeight.w500,
+              fontFamilyFallback: smuflTextFontFallback,
             );
         break;
     }
@@ -467,6 +481,7 @@ class SymbolAndTextRenderer {
     return baseStyle.copyWith(
       color: baseStyle.color ?? baseColor,
       fontFamily: text.fontFamily ?? baseStyle.fontFamily,
+      fontFamilyFallback: smuflTextFontFallback,
       fontSize: text.fontSize ?? baseStyle.fontSize,
       fontStyle: fontStyle,
       fontWeight: fontWeight,
@@ -616,9 +631,13 @@ class SymbolAndTextRenderer {
               fontSize: coordinates.staffSpace * 1.3,
               fontWeight: FontWeight.w600,
               fontStyle: FontStyle.italic,
+              fontFamilyFallback: smuflTextFontFallback,
               letterSpacing: 0.15,
             ))
-        .copyWith(color: theme.tempoTextStyle?.color ?? baseColor);
+        .copyWith(
+          color: theme.tempoTextStyle?.color ?? baseColor,
+          fontFamilyFallback: smuflTextFontFallback,
+        );
   }
 
   double _tempoMarkCenterY() {
@@ -627,8 +646,8 @@ class SymbolAndTextRenderer {
 
   void renderBreath(Canvas canvas, Breath breath, Offset basePosition) {
     final glyphName = 'breathMarkComma';
-    // CORREÃ‡ÃƒO MUSICOLÃ“GICA: RespiraÃ§Ã£o deve ficar ACIMA da pauta, nÃ£o na 4Âª linha
-    // PosiÃ§Ã£o correta: acima da 5Âª linha (linha superior)
+    // Fix: MUSICOLÓGICA: Respiração deve ficar ACIMA of the staff, not na 4ª linha
+    // Position correta: acima of the 5ª linha (linha superior)
     _drawGlyph(
       canvas,
       glyphName: glyphName,
@@ -644,8 +663,8 @@ class SymbolAndTextRenderer {
   }
 
   void renderCaesura(Canvas canvas, Caesura caesura, Offset basePosition) {
-    // CORREÃ‡ÃƒO MUSICOLÃ“GICA: Cesura deve atravessar toda a pauta
-    // Usar linha central (3Âª linha/baseline) como referÃªncia, nÃ£o a 5Âª linha
+    // Fix: MUSICOLÓGICA: Cesura deve atravessar toda a staff
+    // Usesr linha central (3ª linha/baseline) como reference, not a 5ª linha
     _drawGlyph(
       canvas,
       glyphName: caesura.glyphName,
@@ -675,7 +694,7 @@ class SymbolAndTextRenderer {
         ? coordinates.getStaffLineY(5) - (coordinates.staffSpace * 1.8)
         : coordinates.getStaffLineY(1) + (coordinates.staffSpace * 1.8);
 
-    // Ajusta Y dinamicamente se notas em linhas suplementares conflitam com a marcacao
+    // Ajusta Y dinamicamente se notes in linhas suplementares conflitam with a marcacao
     final double yPosition;
     if (referenceNoteY != null) {
       if (isAbove) {
@@ -688,7 +707,8 @@ class SymbolAndTextRenderer {
     } else {
       yPosition = standardY;
     }
-    final xStart = startX ?? basePosition.dx;
+    final xStart =
+        (startX ?? basePosition.dx) + (coordinates.staffSpace * 0.22);
 
     // 1. Draw the text label
     final style =
@@ -697,13 +717,18 @@ class SymbolAndTextRenderer {
           fontStyle: FontStyle.italic,
           fontWeight: FontWeight.bold,
         );
+    final octaveColor = theme.octaveColor ?? style.color ?? Colors.black87;
     final tp = TextPainter(
-      text: TextSpan(text: octaveMark.text, style: style),
+      text: TextSpan(
+        text: octaveMark.text,
+        style: style.copyWith(color: octaveColor),
+      ),
       textAlign: TextAlign.left,
       textDirection: TextDirection.ltr,
     );
     tp.layout();
-    tp.paint(canvas, Offset(xStart, yPosition - tp.height / 2));
+    final labelTopY = yPosition - (tp.height * (isAbove ? 0.58 : 0.46));
+    tp.paint(canvas, Offset(xStart, labelTopY));
     final textEndX = xStart + tp.width;
 
     // 2. Draw a dashed horizontal line after the text
@@ -714,11 +739,11 @@ class SymbolAndTextRenderer {
     final lineY = yPosition;
 
     final linePaint = Paint()
-      ..color = (style.color ?? Colors.black87)
-      ..strokeWidth = coordinates.staffSpace * 0.1
+      ..color = octaveColor
+      ..strokeWidth = coordinates.staffSpace * 0.12
       ..style = PaintingStyle.stroke;
 
-    final lineStartX = textEndX + coordinates.staffSpace * 0.2;
+    final lineStartX = textEndX + coordinates.staffSpace * 0.28;
     final lineEndX = targetEndX > lineStartX
         ? targetEndX
         : lineStartX + coordinates.staffSpace * 0.5;

@@ -2,9 +2,9 @@
 
 import 'package:flutter/material.dart';
 
-/// Configuration for music score animations
+/// Configurestion for music score animations
 ///
-/// Defines durations, curves, and behavior for various animation types
+/// Definesss durations, curves, and behavior for various animation types
 /// that can be applied to musical elements in the score.
 class AnimationConfig {
   // ═══════════════════════════════════════════════════════════════════════
@@ -123,7 +123,7 @@ class AnimationConfig {
   });
 
   // ═══════════════════════════════════════════════════════════════════════
-  // PRESET CONFIGURATIONS
+  // PRESET ConfiguresTIONS
   // ═══════════════════════════════════════════════════════════════════════
 
   /// Subtle entrance animation (recommended for most use cases)

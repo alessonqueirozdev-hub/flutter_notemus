@@ -180,14 +180,14 @@ class CompleteArticulationsOrnamentsExample extends StatelessWidget {
     measure.add(Clef(clefType: ClefType.treble));
     measure.add(TimeSignature(numerator: 4, denominator: 4));
 
-    // Arco para cima
+    // Arco for cima
     measure.add(Note(
       pitch: const Pitch(step: 'G', octave: 4),
       duration: const Duration(DurationType.quarter),
       articulations: [ArticulationType.upBow],
     ));
 
-    // Arco para baixo
+    // Arco for baixo
     measure.add(Note(
       pitch: const Pitch(step: 'A', octave: 4),
       duration: const Duration(DurationType.quarter),
@@ -332,7 +332,7 @@ class CompleteArticulationsOrnamentsExample extends StatelessWidget {
       duration: const Duration(DurationType.quarter),
     ));
 
-    // Compasso 2: Caesura
+    // Measure 2: Caesura
     final measure2 = Measure();
     measure2.add(Note(
       pitch: const Pitch(step: 'F', octave: 5),
@@ -366,7 +366,7 @@ class CompleteArticulationsOrnamentsExample extends StatelessWidget {
     measure.add(KeySignature(3));
     measure.add(TimeSignature(numerator: 4, denominator: 4));
 
-    // Nota com trino + staccato
+    // Note with trino + staccato
     measure.add(Note(
       pitch: const Pitch(step: 'A', octave: 4),
       duration: const Duration(DurationType.quarter),
@@ -374,7 +374,7 @@ class CompleteArticulationsOrnamentsExample extends StatelessWidget {
       ornaments: [Ornament(type: OrnamentType.trill)],
     ));
 
-    // Nota com acento + mordente
+    // Note with acento + mordente
     measure.add(Note(
       pitch: const Pitch(step: 'B', octave: 4),
       duration: const Duration(DurationType.quarter),
@@ -382,7 +382,7 @@ class CompleteArticulationsOrnamentsExample extends StatelessWidget {
       ornaments: [Ornament(type: OrnamentType.invertedMordent)],
     ));
 
-    // Nota com tenuto + grupeto
+    // Note with tenuto + grupeto
     measure.add(Note(
       pitch: Pitch.withAccidental(step: 'C', octave: 5, accidentalType: AccidentalType.sharp),
       duration: const Duration(DurationType.quarter),
@@ -390,7 +390,7 @@ class CompleteArticulationsOrnamentsExample extends StatelessWidget {
       ornaments: [Ornament(type: OrnamentType.turn)],
     ));
 
-    // Nota com fermata + marcato
+    // Note with fermata + marcato
     measure.add(Note(
       pitch: const Pitch(step: 'D', octave: 5),
       duration: const Duration(DurationType.quarter),

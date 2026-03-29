@@ -1,8 +1,8 @@
 // lib/src/smufl/glyph_categories.dart
 
-/// Categorias completas de símbolos SMuFL organizadas por função musical
+/// Complete SMuFL symbol categories organized by musical function
 class SmuflGlyphCategories {
-  // === CLAVES ===
+  // === CLEFS ===
   static const Map<String, String> clefs = {
     'gClef': 'Clave de Sol',
     'gClef8va': 'Clave de Sol 8ª acima',
@@ -22,7 +22,7 @@ class SmuflGlyphCategories {
     '4stringTabClef': 'Clave de Tablatura 4 cordas',
   };
 
-  // === CABEÇAS DE NOTA ===
+  // === NOTEHEADS ===
   static const Map<String, String> noteheads = {
     'noteheadWhole': 'Semibreve',
     'noteheadHalf': 'Mínima',
@@ -54,7 +54,7 @@ class SmuflGlyphCategories {
     'noteheadSlashedWhole1': 'Cortada 1 semibreve',
   };
 
-  // === ACIDENTES ===
+  // === ACCIDENTALS ===
   static const Map<String, String> accidentals = {
     'accidentalFlat': 'Bemol',
     'accidentalNatural': 'Bequadro',
@@ -71,7 +71,7 @@ class SmuflGlyphCategories {
     'accidentalKomaSharp': 'Koma sustenido',
   };
 
-  // === PAUSAS ===
+  // === RESTS ===
   static const Map<String, String> rests = {
     'restMaxima': 'Pausa de máxima',
     'restLonga': 'Pausa de longa',
@@ -89,7 +89,7 @@ class SmuflGlyphCategories {
     'rest1024th': 'Pausa de trigésima segunda',
   };
 
-  // === BANDEIROLAS ===
+  // === FLAGS ===
   static const Map<String, String> flags = {
     'flag8thUp': 'Bandeirola colcheia para cima',
     'flag8thDown': 'Bandeirola colcheia para baixo',
@@ -109,7 +109,7 @@ class SmuflGlyphCategories {
     'flag1024thDown': 'Bandeirola trigésima segunda para baixo',
   };
 
-  // === FÓRMULAS DE COMPASSO ===
+  // === TIME SIGNATURES ===
   static const Map<String, String> timeSignatures = {
     'timeSig0': 'Número 0',
     'timeSig1': 'Número 1',
@@ -132,7 +132,7 @@ class SmuflGlyphCategories {
     'timeSigFractionalSlash': 'Barra fracional',
   };
 
-  // === ARTICULAÇÕES ===
+  // === ARTICULATIONS ===
   static const Map<String, String> articulations = {
     'articAccentAbove': 'Acento acima',
     'articAccentBelow': 'Acento abaixo',
@@ -158,7 +158,7 @@ class SmuflGlyphCategories {
     'articUnstressBelow': 'Unstress abaixo',
   };
 
-  // === ORNAMENTOS ===
+  // === ORNAMENTS ===
   static const Map<String, String> ornaments = {
     'ornamentTrill': 'Trinado',
     'ornamentTrillFlat': 'Trinado com bemol',
@@ -178,7 +178,7 @@ class SmuflGlyphCategories {
     'ornamentZigZagLineWithRightEnd': 'Linha zigzag com fim direito',
   };
 
-  // === DINÂMICAS ===
+  // === DYNAMICS ===
   static const Map<String, String> dynamics = {
     'dynamicPiano': 'Piano (p)',
     'dynamicMezzo': 'Mezzo (m)',
@@ -205,7 +205,7 @@ class SmuflGlyphCategories {
     'dynamicDiminuendoHairpin': 'Diminuendo',
   };
 
-  // === BARRAS DE COMPASSO ===
+  // === Barlines ===
   static const Map<String, String> barlines = {
     'barlineSingle': 'Barra simples',
     'barlineDouble': 'Barra dupla',
@@ -221,7 +221,7 @@ class SmuflGlyphCategories {
     'barlineTick': 'Tick',
   };
 
-  // === NÚMEROS ===
+  // === NumberS ===
   static const Map<String, String> numbers = {
     'tuplet0': 'Número 0 (quiáltera)',
     'tuplet1': 'Número 1 (quiáltera)',
@@ -265,7 +265,7 @@ class SmuflGlyphCategories {
     'caesuraCurved': 'Caesura curva',
   };
 
-  // === SINAIS DE OITAVA ===
+  // === Octave marks ===
   static const Map<String, String> octaves = {
     'ottava': '8va (oitava acima)',
     'ottavaBassa': '8vb (oitava abaixo)',
@@ -306,9 +306,9 @@ class SmuflGlyphCategories {
     'accSagittal11LargeDiesisDown': 'Sagittal grande diesis para baixo',
   };
 
-  // === MÉTODOS UTILITÁRIOS ===
+  // === MethodS UTILITÁRIOS ===
 
-  /// Retorna todas as categorias disponíveis
+  /// Returns all as categorias disponíveis
   static Map<String, Map<String, String>> getAllCategories() {
     return {
       'clefs': clefs,
@@ -331,7 +331,7 @@ class SmuflGlyphCategories {
     };
   }
 
-  /// Busca um glifo por nome em todas as categorias
+  /// Finds um glifo por name in all as categorias
   static String? findGlyphDescription(String glyphName) {
     final allCategories = getAllCategories();
     for (final category in allCategories.values) {
@@ -342,7 +342,7 @@ class SmuflGlyphCategories {
     return null;
   }
 
-  /// Retorna a categoria de um glifo
+  /// Returns a categoria de um glifo
   static String? findGlyphCategory(String glyphName) {
     final allCategories = getAllCategories();
     for (final entry in allCategories.entries) {
@@ -353,7 +353,7 @@ class SmuflGlyphCategories {
     return null;
   }
 
-  /// Retorna todos os glifos de uma categoria específica
+  /// Returns all os glifos de a categoria específica
   static Map<String, String> getGlyphsInCategory(String category) {
     final allCategories = getAllCategories();
     return allCategories[category] ?? {};

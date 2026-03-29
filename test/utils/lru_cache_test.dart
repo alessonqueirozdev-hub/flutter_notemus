@@ -3,7 +3,7 @@ import 'package:test/test.dart';
 
 void main() {
   group('LruCache', () {
-    test('básico - adicionar e recuperar', () {
+    test('basic - add and retrieve', () {
       final cache = LruCache<String, int>(3);
       cache.put('a', 1);
       cache.put('b', 2);
@@ -15,41 +15,41 @@ void main() {
       expect(cache.get('c'), 3);
     });
 
-    test('eviction - remove item menos recente', () {
+    test('eviction - removes least recently used item', () {
       final cache = LruCache<String, int>(3);
       cache.put('a', 1);
       cache.put('b', 2);
       cache.put('c', 3);
 
-      // Adicionar 4º item deve remover 'a' (menos recente)
+      // Adding the 4th item should remove 'a' (least recently used)
       cache.put('d', 4);
 
       expect(cache.size, 3);
-      expect(cache.get('a'), null); // Removido
+      expect(cache.get('a'), null); // Removed
       expect(cache.get('b'), 2);
       expect(cache.get('c'), 3);
       expect(cache.get('d'), 4);
     });
 
-    test('LRU behavior - item acessado fica recente', () {
+    test('LRU behavior - accessed item becomes recent', () {
       final cache = LruCache<String, int>(3);
       cache.put('a', 1);
       cache.put('b', 2);
       cache.put('c', 3);
 
-      // Acessar 'a' o torna recente
+      // Accessing 'a' makes it recent
       cache.get('a');
 
-      // Adicionar 'd' deve remover 'b' (agora é o menos recente)
+      // Adding 'd' should remove 'b' (now the least recently used)
       cache.put('d', 4);
 
-      expect(cache.get('a'), 1); // Ainda presente (foi acessado)
-      expect(cache.get('b'), null); // Removido (menos recente)
+      expect(cache.get('a'), 1); // Still present (was accessed)
+      expect(cache.get('b'), null); // Removed (least recently used)
       expect(cache.get('c'), 3);
       expect(cache.get('d'), 4);
     });
 
-    test('clear - limpa todo o cache', () {
+    test('clear - clears the entire cache', () {
       final cache = LruCache<String, int>(3);
       cache.put('a', 1);
       cache.put('b', 2);
@@ -63,12 +63,12 @@ void main() {
       expect(cache.get('b'), null);
     });
 
-    test('atualizar valor existente', () {
+    test('update existing value', () {
       final cache = LruCache<String, int>(3);
       cache.put('a', 1);
       cache.put('b', 2);
 
-      // Atualizar 'a'
+      // Update 'a'
       cache.put('a', 10);
 
       expect(cache.get('a'), 10);

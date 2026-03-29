@@ -61,7 +61,7 @@ class BarElementRenderer {
       centerVertically: true,
     );
 
-    // CORREÇÃO: NÃO desenhar indicação de oitava manual
+    // Fix: Not desenhar indicação de oitava manual
     // Os glyphs SMuFL como 'gClef8va' já contêm o "8" embutido
   }
 
@@ -223,6 +223,10 @@ class BarElementRenderer {
     required Color color,
     bool centerVertically = false,
     bool centerHorizontally = false,
+    // A2 FIX: when true, position.y is treated as the SMuFL y=0 baseline
+    // (e.g. G-line for gClef, F-line for fClef) and the glyph is anchored
+    // to the font's alphabetic baseline rather than the layout-box centre.
+    bool useBaseline = false,
   }) {
     final character = metadata.getCodepoint(glyphName);
     if (character.isEmpty) return;
@@ -240,7 +244,18 @@ class BarElementRenderer {
       textDirection: TextDirection.ltr,
     );
     textPainter.layout();
-    double yOffset = centerVertically ? -textPainter.height * 0.5 : 0;
+    double yOffset;
+    if (useBaseline) {
+      // Shift so the font's alphabetic baseline lands exactly at position.dy.
+      final ascent = textPainter.computeDistanceToActualBaseline(
+        TextBaseline.alphabetic,
+      );
+      yOffset = -ascent;
+    } else if (centerVertically) {
+      yOffset = -textPainter.height * 0.5;
+    } else {
+      yOffset = 0;
+    }
     double xOffset = centerHorizontally ? -textPainter.width * 0.5 : 0;
     textPainter.paint(
       canvas,

@@ -17,7 +17,7 @@ enum LineType {
   voltaBracket,
 }
 
-/// Representa uma linha de prolongamento
+/// Representa a linha de prolongamento
 class Line extends MusicalElement {
   final LineType type;
   final double startX;

@@ -2,7 +2,7 @@
 
 import 'dart:math';
 
-/// Tipos de acidentes disponíveis na SMuFL
+/// Available accidental types in SMuFL.
 enum AccidentalType {
   natural,
   sharp,
@@ -18,17 +18,17 @@ enum AccidentalType {
   komaSharp,
   komaFlat,
 
-  // Acidentes microtonais
+  // Microtonal accidentals
   sagittal11MediumDiesisUp,
   sagittal11MediumDiesisDown,
   sagittal11LargeDiesisUp,
   sagittal11LargeDiesisDown,
 
-  // Acidentes personalizados
+  // Custom accidentals
   custom,
 }
 
-/// Conversão de AccidentalType para valor de alteração
+/// Mapping from AccidentalType to alteration value.
 const Map<AccidentalType, double> accidentalToAlter = {
   AccidentalType.natural: 0.0,
   AccidentalType.sharp: 1.0,
@@ -49,7 +49,7 @@ const Map<AccidentalType, double> accidentalToAlter = {
   AccidentalType.sagittal11LargeDiesisDown: -0.333333,
 };
 
-/// Mapeamento de AccidentalType para nome do glifo SMuFL
+/// Mapping from AccidentalType to SMuFL glyph name.
 const Map<AccidentalType, String> accidentalToGlyph = {
   AccidentalType.natural: 'accidentalNatural',
   AccidentalType.sharp: 'accidentalSharp',
@@ -85,21 +85,21 @@ const Map<AccidentalType, String> accidentalToGlyph = {
 /// Pitch.fromString('C#5') // C-sharp 5
 /// ```
 class Pitch {
-  /// A letra da nota (C, D, E, F, G, A, B).
+  /// The note letter name (C, D, E, F, G, A, B).
   final String step;
 
-  /// A oitava (normalmente 4 é a oitava central).
+  /// The octave number (4 is the standard middle octave).
   final int octave;
 
-  /// Alteração cromática: -2.0 = dobrado bemol, -1.0 = bemol, 0.0 = natural,
-  /// +1.0 = sustenido, +2.0 = dobrado sustenido.
-  /// Suporte para microtons com valores decimais.
+  /// Chromatic alteration: -2.0 = double flat, -1.0 = flat, 0.0 = natural,
+  /// +1.0 = sharp, +2.0 = double sharp.
+  /// Decimal values are supported for microtones.
   final double alter;
 
-  /// Tipo específico de acidente (opcional, para notações especiais)
+  /// Specific accidental type (optional, for special notetions).
   final AccidentalType? accidentalType;
 
-  /// Para acidentes personalizados
+  /// For custom accidentals.
   final String? customAccidentalGlyph;
 
   const Pitch({
@@ -110,11 +110,11 @@ class Pitch {
     this.customAccidentalGlyph,
   });
 
-  /// Alteraçāo efetiva usada para cálculo.
+  /// Effective alteration value used for calculateTestions.
   ///
-  /// Mantém compatibilidade retroativa: quando [accidentalType] é fornecido e
-  /// [alter] permanece no valor padrão (`0.0`), usa o valor implícito do
-  /// acidente para cálculo de MIDI/frequência.
+  /// Maintains backward compatibility: when [accidentalType] is provided and
+  /// [alter] remains at its default value (`0.0`), uses the implicit value of
+  /// the accidental for MIDI/frequency calculateTestion.
   double get effectiveAlter {
     if (alter != 0.0 || accidentalType == null) {
       return alter;
@@ -122,7 +122,7 @@ class Pitch {
     return accidentalToAlter[accidentalType] ?? alter;
   }
 
-  /// Construtor com tipo de acidente específico
+  /// Constructor with a specific accidental type.
   factory Pitch.withAccidental({
     required String step,
     required int octave,
@@ -136,24 +136,24 @@ class Pitch {
     );
   }
 
-  /// Constrói um Pitch a partir de uma string (ex: "C4", "F#5", "Bb3")
+  /// Constructs a Pitch from a string (e.g. "C4", "F#5", "Bb3").
   factory Pitch.fromString(String notation) {
     if (notation.isEmpty) {
       throw ArgumentError('Notation cannot be empty');
     }
 
-    // Extrair a nota base (primeira letra)
+    // Extract the base note (first letter)
     final step = notation[0].toUpperCase();
     if (!'CDEFGAB'.contains(step)) {
       throw ArgumentError('Invalid note step: $step');
     }
 
-    // Encontrar onde começa o número da oitava
+    // Find where the octave number begins
     int octaveStart = 1;
     double alter = 0.0;
     AccidentalType? accidentalType;
 
-    // Processar acidentes
+    // Process accidentals
     if (notation.length > 1) {
       for (int i = 1; i < notation.length; i++) {
         final char = notation[i];
@@ -170,7 +170,7 @@ class Pitch {
       }
     }
 
-    // Extrair a oitava
+    // Extract the octave
     if (octaveStart >= notation.length) {
       throw ArgumentError('Missing octave number in notation: $notation');
     }
@@ -189,8 +189,8 @@ class Pitch {
     );
   }
 
-  /// Calcula o número MIDI da nota (C4 = 60).
-  /// Para microtons, retorna o valor mais próximo.
+  /// calculateTestes the MIDI note number (C4 = 60).
+  /// For microtones, returns the nearest integer value.
   int get midiNumber {
     const stepToSemitone = {
       'C': 0,
@@ -205,7 +205,7 @@ class Pitch {
     return (octave + 1) * 12 + semitone + effectiveAlter.round();
   }
 
-  /// Calcula a frequência em Hz (A4 = 440Hz)
+  /// calculateTestes the frequency in Hz (A4 = 440 Hz).
   double get frequency {
     const a4MidiNumber = 69; // A4
     const a4Frequency = 440.0;
@@ -214,13 +214,13 @@ class Pitch {
     return a4Frequency * pow(2.0, midiDifference / 12.0).toDouble();
   }
 
-  /// Retorna o nome do glifo SMuFL para o acidente
+  /// Returns the SMuFL glyph name for the accidental.
   String? get accidentalGlyph {
     if (customAccidentalGlyph != null) return customAccidentalGlyph;
     if (accidentalType != null) return accidentalToGlyph[accidentalType];
 
-    // Inferir acidente baseado no valor de alter
-    if (effectiveAlter == 0.0) return null; // Sem acidente
+    // Infer accidental from alter value
+    if (effectiveAlter == 0.0) return null; // No accidental
     if (effectiveAlter == 1.0) return accidentalToGlyph[AccidentalType.sharp];
     if (effectiveAlter == -1.0) return accidentalToGlyph[AccidentalType.flat];
     if (effectiveAlter == 2.0) return accidentalToGlyph[AccidentalType.doubleSharp];
@@ -228,22 +228,22 @@ class Pitch {
     if (effectiveAlter == 0.5) return accidentalToGlyph[AccidentalType.quarterToneSharp];
     if (effectiveAlter == -0.5) return accidentalToGlyph[AccidentalType.quarterToneFlat];
 
-    return null; // Para valores não mapeados
+    return null; // For unmapped values
   }
 
-  /// Verifica se a nota tem microtom
+  /// Returns true if the pitch has a microtonal alteration.
   bool get hasMicrotone {
     return effectiveAlter != effectiveAlter.round().toDouble();
   }
 
-  /// Retorna o intervalo em cents da nota temperada mais próxima
+  /// Returns the deviation in cents from the nearest tempered pitch.
   double get centsDeviation {
     final semitoneDeviation = effectiveAlter - effectiveAlter.round();
-    return semitoneDeviation * 100.0; // 100 cents = 1 semitom
+    return semitoneDeviation * 100.0; // 100 cents = 1 semitone
   }
 
-  /// Retorna a classe de altura (pitch class) como inteiro 0–11, conforme
-  /// o atributo `pclass` do MEI v5. C=0, C#=1, D=2, ..., B=11.
+  /// Returns the pitch class as an integer 0–11, as per the MEI v5
+  /// `pclass` attribute. C=0, C#=1, D=2, ..., B=11.
   int get pitchClass {
     const stepToSemitone = {
       'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11,
@@ -251,16 +251,16 @@ class Pitch {
     return ((stepToSemitone[step]! + effectiveAlter.round()) % 12 + 12) % 12;
   }
 
-  /// Retorna o nome de solmização desta nota em dó fixo (do, re, mi, fa, sol, la, si).
-  /// Equivalente ao sistema de solmização do MEI v5.
+  /// Returns the fixed-of the solmization name of this pitch (of the, re, mi, fa, sol, la, si).
+  /// Equivalent to the MEI v5 solmization system.
   String get solmizationName {
     final idx = _stepToSolmIndex[step] ?? 0;
     return _solmizationNames[idx];
   }
 
-  /// Constrói um [Pitch] a partir de nome de solmização em dó fixo.
-  /// [syllable] pode ser 'do', 're', 'mi', 'fa', 'sol', 'la', 'si' (ou 'ti').
-  /// [octave] é o número da oitava; [alter] é a alteração cromática.
+  /// Constructs a [Pitch] from a fixed-of the solmization syllable.
+  /// [syllable] may be 'of the', 're', 'mi', 'fa', 'sol', 'la', 'si' (or 'ti').
+  /// [octave] is the octave number; [alter] is the chromatic alteration.
   factory Pitch.fromSolmization(
     String syllable, {
     required int octave,
@@ -274,7 +274,7 @@ class Pitch {
     final normalized = syllable.toLowerCase();
     final step = solmToStep[normalized];
     if (step == null) {
-      throw ArgumentError('Syllable de solmização inválida: $syllable. '
+      throw ArgumentError('Invalid solmization syllable: $syllable. '
           'Use: do, re, mi, fa, sol, la, si');
     }
     return Pitch(
@@ -316,7 +316,7 @@ class Pitch {
   }
 }
 
-/// Mapeamento de nome de nota para índice de solmização (dó fixo)
+/// Mapping from note name to solmization index (fixed-of the).
 const Map<String, int> _stepToSolmIndex = {
   'C': 0, 'D': 1, 'E': 2, 'F': 3, 'G': 4, 'A': 5, 'B': 6,
 };
@@ -325,9 +325,9 @@ const List<String> _solmizationNames = [
   'do', 're', 'mi', 'fa', 'sol', 'la', 'si',
 ];
 
-/// Classe utilitária para operações com alturas
+/// Utility class for pitch operations.
 class PitchUtils {
-  /// Converte um número MIDI para Pitch
+  /// Converts a MIDI number to a Pitch.
   static Pitch fromMidiNumber(
     int midiNumber, {
     AccidentalType preferredAccidental = AccidentalType.sharp,
@@ -399,13 +399,13 @@ class PitchUtils {
     }
   }
 
-  /// Calcula o intervalo em semitons entre duas alturas
+  /// calculateTestes the interval in semitones between two pitches.
   static double intervalInSemitones(Pitch pitch1, Pitch pitch2) {
     return (pitch2.midiNumber - pitch1.midiNumber).toDouble() +
         (pitch2.alter - pitch1.alter);
   }
 
-  /// Transpõe uma altura por um número de semitons
+  /// Transposes a pitch by a number of semitones.
   static Pitch transpose(Pitch pitch, double semitones) {
     final newMidiNumber = pitch.midiNumber + semitones.round();
     final remainder = semitones - semitones.round();

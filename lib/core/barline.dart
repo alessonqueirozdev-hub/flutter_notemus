@@ -2,7 +2,7 @@
 
 import 'musical_element.dart';
 
-/// Tipos de barras de compasso
+/// Tipos de barlines
 enum BarlineType {
   single,
   double,
@@ -21,7 +21,7 @@ enum BarlineType {
   none,
 }
 
-/// Representa uma linha de compasso.
+/// Representa a linha de measure.
 class Barline extends MusicalElement {
   final BarlineType type;
   

@@ -3,7 +3,7 @@
 import 'musical_element.dart';
 import 'duration.dart';
 
-/// Representa uma indicação de tempo/andamento
+/// Representa a indicação de tempo/tempo
 class TempoMark extends MusicalElement {
   final DurationType beatUnit;
   final int? bpm;

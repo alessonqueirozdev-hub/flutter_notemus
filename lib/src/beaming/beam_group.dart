@@ -4,37 +4,37 @@ import 'package:flutter_notemus/core/note.dart';
 import 'package:flutter_notemus/src/beaming/beam_segment.dart';
 import 'package:flutter_notemus/src/beaming/beam_types.dart';
 
-/// Representa um grupo de notas conectadas por beams com geometria calculada
-/// (Versão avançada com análise de inclinação e segmentos)
+/// Represents a group of notes connected by beams with calculateTested geometry.
+/// (Advanced version with slope analysis and beam segments.)
 class AdvancedBeamGroup {
-  /// Notas no grupo (devem ser consecutivas)
+  /// Notes in the group (must be consecutive).
   List<Note> notes;
-  
-  /// Direção das hastes para todo o grupo
+
+  /// Stem direction for the entire group.
   StemDirection stemDirection = StemDirection.up;
-  
-  /// Segmentos de beam (primary, secondary, fractional, etc.)
+
+  /// Beam segments (primary, secondary, fractional, etc.).
   final List<BeamSegment> beamSegments = [];
-  
-  /// Posição X do início do beam (primeira nota)
+
+  /// X position at the start of the beam (first note).
   double leftX = 0;
-  
-  /// Posição X do fim do beam (última nota)
+
+  /// X position at the end of the beam (last note).
   double rightX = 0;
-  
-  /// Posição Y do beam na primeira nota (topo/base da haste)
+
+  /// Y position of the beam at the first note (top/base of stem).
   double leftY = 0;
-  
-  /// Posição Y do beam na última nota (topo/base da haste)
+
+  /// Y position of the beam at the last note (top/base of stem).
   double rightY = 0;
-  
-  /// Inclinação do beam (slope)
+
+  /// Beam slope.
   double get slope {
     if (rightX == leftX) return 0;
     return (rightY - leftY) / (rightX - leftX);
   }
   
-  /// Se o beam é horizontal (sem inclinação)
+  /// Whether the beam is horizontal (no slope).
   bool get isHorizontal => leftY == rightY;
 
   AdvancedBeamGroup({
@@ -42,7 +42,7 @@ class AdvancedBeamGroup {
     this.stemDirection = StemDirection.up,
   });
 
-  /// Interpola a posição Y do beam em uma posição X específica
+  /// Interpolates the beam Y position at a given X position.
   double interpolateBeamY(double x) {
     if (isHorizontal || rightX == leftX) {
       return leftY;

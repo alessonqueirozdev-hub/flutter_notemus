@@ -23,12 +23,12 @@ class Staff {
   /// All measures in this staff, in chronological order.
   final List<Measure> measures;
 
-  /// Número de linhas da pauta. Padrão é 5 (CMN). Valores válidos conforme MEI:
-  /// - 1: percussão / notação de linha única
-  /// - 4: tablatura de 4 cordas / algumas notações históricas
-  /// - 5: CMN padrão (padrão)
-  /// - 6: tablatura de guitarra
-  /// Corresponde ao atributo `lines` de `<staffDef>` no MEI v5.
+  /// Number of staff lines. Defaults to 5 (CMN). Valid values per MEI:
+  /// - 1: percussion / single-line notetion
+  /// - 4: 4-string tablature / some historical notetions
+  /// - 5: standard CMN (default)
+  /// - 6: guitar tablature
+  /// Corresponds to the `lines` attribute of `<staffDef>` in MEI v5.
   final int lineCount;
 
   /// Creates a [Staff] with the given [measures] list.

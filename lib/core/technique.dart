@@ -28,7 +28,7 @@ enum TechniqueType {
   tremolo,
 }
 
-/// Representa uma técnica de execução
+/// Representa a técnica de execução
 class PlayingTechnique extends MusicalElement {
   final TechniqueType type;
   final String? text;
@@ -36,7 +36,7 @@ class PlayingTechnique extends MusicalElement {
   PlayingTechnique({required this.type, this.text});
 }
 
-/// Técnicas específicas de nota
+/// Técnicas específicas de note
 enum NoteTechnique {
   harmonic,
   glissando,

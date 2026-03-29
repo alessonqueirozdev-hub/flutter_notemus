@@ -1,10 +1,10 @@
 // lib/flutter_notemus.dart
-// VERSÃƒÆ’O CORRIGIDA: Widget principal com todas as melhorias
+// Corrected implementation: Widget principal with all as melhorias
 
-/// Flutter Notemus Ã¢â‚¬â€ professional music notation rendering for Flutter.
+/// Flutter Notemus — professional music notetion rendering for Flutter.
 ///
 /// This package provides a complete solution for rendering high-quality
-/// music notation in Flutter apps, built on the SMuFL (Standard Music
+/// music notetion in Flutter apps, built on the SMuFL (Standard Music
 /// Font Layout) specification using the Bravura font.
 ///
 /// ## Quick Start
@@ -19,17 +19,19 @@
 /// )
 /// ```
 ///
-/// ## Key Classes
+/// ## Key Classs
 /// - [MusicScore]: The main Flutter widget to embed in your app
-/// - [Staff]: Top-level container for music notation
+/// - [Staff]: Top-level container for music notetion
 /// - [Measure]: Container for musical elements within a bar
 /// - [Note]: A pitched note with duration, articulations, and ornaments
 /// - [Rest]: A rest (silence) with duration
 /// - [Chord]: Multiple simultaneous notes
 library;
 
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
-import 'core/core.dart'; // Ã°Å¸â€ â€¢ Usar tipos do core
+import 'core/core.dart'; // 🆕 Usar tipos do core
 import 'src/layout/layout_engine.dart';
 import 'src/parsers/json_parser.dart';
 import 'src/parsers/mei_parser.dart';
@@ -41,7 +43,7 @@ import 'src/rendering/staff_coordinate_system.dart';
 import 'src/smufl/smufl_metadata_loader.dart';
 import 'src/theme/music_score_theme.dart';
 
-// Ã°Å¸â€ â€¢ NOVA ARQUITETURA - Toda teoria musical em core/
+// 🆕 New ARQUITETURA - Toda teoria musical in core/
 export 'core/core.dart';
 export 'midi.dart';
 
@@ -61,7 +63,7 @@ export 'src/rendering/staff_renderer.dart';
 export 'src/rendering/renderers/base_glyph_renderer.dart';
 export 'src/layout/collision_detector.dart';
 
-/// The main Flutter widget for rendering music notation.
+/// The main Flutter widget for rendering music notetion.
 ///
 /// [MusicScore] asynchronously loads SMuFL font metadata and then renders
 /// the provided [Staff] using a [CustomPaint] canvas. It supports horizontal
@@ -109,6 +111,18 @@ class MusicScore extends StatefulWidget {
   /// Minimum scale factor applied to [staffSpace] in responsive mode.
   final double minResponsiveScale;
 
+  /// Prevents vertical clipping in constrained containers by scaling the score down.
+  ///
+  /// When enabled and the available height is bounded, [MusicScore] performs a
+  /// second layout pass using a reduced [staffSpace] so the full staff fits.
+  final bool preventVerticalOverflow;
+
+  /// Lower bound for automatic vertical fit scaling.
+  ///
+  /// Smaller values prioritize "always fit" behavior in very short containers,
+  /// while larger values prioritize readability over guaranteed fit.
+  final double minimumVerticalFitScale;
+
   const MusicScore({
     super.key,
     required this.staff,
@@ -117,6 +131,8 @@ class MusicScore extends StatefulWidget {
     this.enableResponsiveLayout = true,
     this.responsiveBreakpointWidth = 640.0,
     this.minResponsiveScale = 0.72,
+    this.preventVerticalOverflow = true,
+    this.minimumVerticalFitScale = 0.4,
   });
 
   factory MusicScore.fromJson({
@@ -228,33 +244,83 @@ class _MusicScoreState extends State<MusicScore> {
         return LayoutBuilder(
           builder: (BuildContext context, BoxConstraints constraints) {
             final viewportWidth = _resolveViewportWidth(context, constraints);
-            final effectiveStaffSpace = _resolveEffectiveStaffSpace(
+            var effectiveStaffSpace = _resolveEffectiveStaffSpace(
               viewportWidth,
             );
 
-            final layoutEngine = LayoutEngine(
+            var layoutEngine = LayoutEngine(
               widget.staff,
               availableWidth: viewportWidth,
               staffSpace: effectiveStaffSpace,
               metadata: _metadata,
             );
 
-            final layoutResult = layoutEngine.layoutWithSignature();
-            final positionedElements = layoutResult.elements;
+            var layoutResult = layoutEngine.layoutWithSignature();
+            var positionedElements = layoutResult.elements;
 
             if (positionedElements.isEmpty) {
               return const Center(child: Text('Empty score'));
             }
 
-            final totalHeight = _calculateTotalHeight(
+            var totalHeight = _calculateTotalHeight(
               positionedElements,
               effectiveStaffSpace,
             );
+            var contentWidth = _calculateContentWidth(
+              positionedElements,
+              effectiveStaffSpace,
+            );
+
+            final hasBoundedHeight =
+                constraints.hasBoundedHeight &&
+                constraints.maxHeight.isFinite &&
+                constraints.maxHeight > 0;
+            if (hasBoundedHeight) {
+              final adaptiveScale = _resolveAdaptiveContainerScale(
+                viewportWidth: viewportWidth,
+                maxHeight: constraints.maxHeight,
+                totalHeight: totalHeight,
+                contentWidth: contentWidth,
+              );
+
+              if ((adaptiveScale - 1.0).abs() > 0.02) {
+                final nextStaffSpace = effectiveStaffSpace * adaptiveScale;
+                if ((nextStaffSpace - effectiveStaffSpace).abs() > 0.01) {
+                  effectiveStaffSpace = nextStaffSpace;
+                }
+                layoutEngine = LayoutEngine(
+                  widget.staff,
+                  availableWidth: viewportWidth,
+                  staffSpace: effectiveStaffSpace,
+                  metadata: _metadata,
+                );
+                layoutResult = layoutEngine.layoutWithSignature();
+                positionedElements = layoutResult.elements;
+
+                if (positionedElements.isEmpty) {
+                  return const Center(child: Text('Empty score'));
+                }
+
+                totalHeight = _calculateTotalHeight(
+                  positionedElements,
+                  effectiveStaffSpace,
+                );
+                contentWidth = _calculateContentWidth(
+                  positionedElements,
+                  effectiveStaffSpace,
+                );
+              }
+            }
+
             final viewportSize = Size(
               viewportWidth,
               constraints.hasBoundedHeight && constraints.maxHeight.isFinite
                   ? constraints.maxHeight
                   : totalHeight,
+            );
+            final centeredCanvasHeight = math.max(
+              totalHeight,
+              viewportSize.height,
             );
 
             return SingleChildScrollView(
@@ -263,19 +329,26 @@ class _MusicScoreState extends State<MusicScore> {
               child: SingleChildScrollView(
                 scrollDirection: Axis.vertical,
                 controller: _verticalController,
-                child: RepaintBoundary(
-                  child: CustomPaint(
-                    size: Size(viewportWidth, totalHeight),
-                    painter: MusicScorePainter(
-                      positionedElements: positionedElements,
-                      positionedElementsSignature: layoutResult.signature,
-                      metadata: SmuflMetadata(),
-                      theme: widget.theme,
-                      staffSpace: effectiveStaffSpace,
-                      layoutEngine: layoutEngine,
-                      viewportSize: viewportSize,
-                      horizontalController: _horizontalController,
-                      verticalController: _verticalController,
+                child: SizedBox(
+                  width: viewportWidth,
+                  height: centeredCanvasHeight,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: RepaintBoundary(
+                      child: CustomPaint(
+                        size: Size(viewportWidth, totalHeight),
+                        painter: MusicScorePainter(
+                          positionedElements: positionedElements,
+                          positionedElementsSignature: layoutResult.signature,
+                          metadata: SmuflMetadata(),
+                          theme: widget.theme,
+                          staffSpace: effectiveStaffSpace,
+                          layoutEngine: layoutEngine,
+                          viewportSize: viewportSize,
+                          horizontalController: _horizontalController,
+                          verticalController: _verticalController,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -314,6 +387,121 @@ class _MusicScoreState extends State<MusicScore> {
     return widget.staffSpace * scale;
   }
 
+  double _resolveAdaptiveContainerScale({
+    required double viewportWidth,
+    required double maxHeight,
+    required double totalHeight,
+    required double contentWidth,
+  }) {
+    if (!maxHeight.isFinite ||
+        maxHeight <= 0 ||
+        !totalHeight.isFinite ||
+        totalHeight <= 0 ||
+        !contentWidth.isFinite ||
+        contentWidth <= 0) {
+      return 1.0;
+    }
+
+    final widthFitScale = viewportWidth / contentWidth;
+    final heightFitScale = maxHeight / totalHeight;
+    final fitScale = math.min(widthFitScale, heightFitScale);
+
+    if (fitScale < 1.0) {
+      if (!widget.preventVerticalOverflow && heightFitScale < 1.0) {
+        return 1.0;
+      }
+      return fitScale.clamp(widget.minimumVerticalFitScale, 1.0);
+    }
+
+    final desiredWidth =
+        viewportWidth * _resolveDesiredWidthCoverage(viewportWidth);
+    final desiredHeight =
+        maxHeight * _resolveDesiredHeightCoverage(viewportWidth);
+    final widthGrowthScale = desiredWidth / contentWidth;
+    final heightGrowthScale = desiredHeight / totalHeight;
+    final targetScale = math.min(widthGrowthScale, heightGrowthScale);
+    if (targetScale <= 1.0) {
+      return 1.0;
+    }
+
+    final maximumScale = _resolveMaximumAdaptiveScale(viewportWidth);
+    final upperBound = math.min(maximumScale, fitScale);
+    return targetScale.clamp(1.0, upperBound);
+  }
+
+  double _resolveMaximumAdaptiveScale(double viewportWidth) {
+    if (viewportWidth >= 1200) {
+      return 1.8;
+    }
+    if (viewportWidth >= 900) {
+      return 1.6;
+    }
+    if (viewportWidth >= widget.responsiveBreakpointWidth) {
+      return 1.42;
+    }
+    return 1.12;
+  }
+
+  double _resolveDesiredWidthCoverage(double viewportWidth) {
+    if (viewportWidth >= 1200) {
+      return 0.9;
+    }
+    if (viewportWidth >= 900) {
+      return 0.88;
+    }
+    if (viewportWidth >= widget.responsiveBreakpointWidth) {
+      return 0.84;
+    }
+    return 0.96;
+  }
+
+  double _resolveDesiredHeightCoverage(double viewportWidth) {
+    if (viewportWidth >= 1200) {
+      return 0.82;
+    }
+    if (viewportWidth >= 900) {
+      return 0.78;
+    }
+    if (viewportWidth >= widget.responsiveBreakpointWidth) {
+      return 0.74;
+    }
+    return 0.68;
+  }
+
+  double _calculateContentWidth(
+    List<PositionedElement> elements,
+    double effectiveStaffSpace,
+  ) {
+    if (elements.isEmpty) {
+      return 0.0;
+    }
+
+    final systemBounds = <int, ({double minX, double maxX})>{};
+    for (final positioned in elements) {
+      final current = systemBounds[positioned.system];
+      final x = positioned.position.dx;
+      if (current == null) {
+        systemBounds[positioned.system] = (minX: x, maxX: x);
+        continue;
+      }
+
+      systemBounds[positioned.system] = (
+        minX: x < current.minX ? x : current.minX,
+        maxX: x > current.maxX ? x : current.maxX,
+      );
+    }
+
+    double maxSpan = 0.0;
+    for (final bounds in systemBounds.values) {
+      final span = bounds.maxX - bounds.minX;
+      if (span > maxSpan) {
+        maxSpan = span;
+      }
+    }
+
+    return maxSpan + (effectiveStaffSpace * 2.4);
+  }
+
   double _calculateTotalHeight(
     List<PositionedElement> elements,
     double effectiveStaffSpace,
@@ -335,7 +523,7 @@ class _MusicScoreState extends State<MusicScore> {
   }
 }
 
-/// Custom [CustomPainter] that renders positioned music notation elements.
+/// Custom [CustomPainter] that renders positioned music notetion elements.
 ///
 /// Optimised for large scores through viewport culling: only systems that
 /// intersect the current scroll viewport are painted. A [RepaintBoundary]
@@ -395,32 +583,33 @@ class MusicScorePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (metadata.isNotLoaded || positionedElements.isEmpty) return;
 
-    // OTIMIZAÃƒâ€¡ÃƒÆ’O 1: Clip canvas ao viewport
+    // Optimisation: Clip canvas ao viewport
     canvas.clipRect(Rect.fromLTWH(0, 0, size.width, size.height));
 
-    // OTIMIZAÃƒâ€¡ÃƒÆ’O 2: Calcular sistemas visÃƒÂ­veis
+    // Optimisation: Calculate system visíveis
     final systemHeight = staffSpace * 10;
     final visibleSystemRange = _calculateVisibleSystems(systemHeight);
 
-    // Agrupar elementos por sistema
+    // Agrupar elementos por system
     final Map<int, List<PositionedElement>> systemGroups = {};
 
     for (final element in positionedElements) {
       systemGroups.putIfAbsent(element.system, () => []).add(element);
     }
 
-    // OTIMIZAÃƒâ€¡ÃƒÆ’O 3: Renderizar APENAS sistemas visÃƒÂ­veis
+    // Optimisation: Render APENAS system visíveis
     for (final entry in systemGroups.entries) {
       final systemIndex = entry.key;
 
-      // Skip sistemas fora do viewport
+      // Skip systems fora of the viewport
       if (!visibleSystemRange.contains(systemIndex)) {
         continue;
       }
 
       final elements = entry.value;
-      // Move the baseline down to preserve headroom for text and ornaments above the staff.
-      final systemY = (systemIndex * staffSpace * 10) + (staffSpace * 6.5);
+      // Keep the renderer baseline aligned with LayoutCursor.currentY so
+      // noteheads, stems and advanced beams share the same vertical reference.
+      final systemY = (systemIndex * staffSpace * 10) + (staffSpace * 5.0);
       final staffBaseline = Offset(0, systemY);
 
       final coordinates = StaffCoordinateSystem(
@@ -437,25 +626,25 @@ class MusicScorePainter extends CustomPainter {
       renderer.renderStaff(canvas, elements, size, layoutEngine: layoutEngine);
     }
 
-    // DEBUG: Para ver quantos sistemas foram renderizados vs pulados:
+    // DEBUG: For ver quantos systems foram Rendersdos vs pulados:
     // int rendered = visibleSystemRange.length;
     // int skipped = systemGroups.length - rendered;
-    // debugPrint('Canvas Clipping: Renderizados=$rendered, Pulados=$skipped');
+    // debugPrint('Canvas Clipping: Rendersdos=$rendered, Pulados=$skipped');
   }
 
-  /// Calcula quais sistemas estÃƒÂ£o visÃƒÂ­veis no viewport atual
+  /// Calculatestes quais systems estão visíveis no viewport current
   ///
-  /// Retorna um range (Set) de ÃƒÂ­ndices de sistemas que intersectam o viewport.
-  /// Adiciona margem de 1 sistema acima e abaixo para suavidade no scroll.
+  /// Returns um range (Set) de indexs de systems that intersectam o viewport.
+  /// Adds margem de 1 system acima e abaixo for suavidade no scroll.
   Set<int> _calculateVisibleSystems(double systemHeight) {
-    // VALIDAÃƒâ€¡ÃƒÆ’O: Prevenir divisÃƒÂ£o por zero e valores invÃƒÂ¡lidos
+    // Validation: Prevenir divisão por zero e valores inválidos
     if (systemHeight <= 0 || !systemHeight.isFinite) {
-      // Fallback: renderizar apenas sistema 0
+      // Fallback: Rendersr apenas system 0
       return {0};
     }
 
     if (!viewportSize.height.isFinite || viewportSize.height <= 0) {
-      // Fallback: renderizar apenas sistema 0
+      // Fallback: Rendersr apenas system 0
       return {0};
     }
 
@@ -464,20 +653,20 @@ class MusicScorePainter extends CustomPainter {
         : 0.0;
 
     if (!scrollOffsetY.isFinite) {
-      // Fallback: renderizar apenas sistema 0
+      // Fallback: Rendersr apenas system 0
       return {0};
     }
 
-    // Viewport Y range (com margem)
+    // Viewport Y range (with margem)
     final margin = systemHeight; // 1 sistema de margem
     final viewportTop = scrollOffsetY - margin;
     final viewportBottom = scrollOffsetY + viewportSize.height + margin;
 
-    // Calcular sistemas visÃƒÂ­veis com proteÃƒÂ§ÃƒÂ£o contra Infinity
+    // Calculatestesr systems visíveis with proteção contra Infinity
     final firstSystemRaw = (viewportTop / systemHeight).floor();
     final lastSystemRaw = (viewportBottom / systemHeight).ceil();
 
-    // Validar que os valores sÃƒÂ£o finitos antes de fazer clamp
+    // Validar that os valores are finitos antes de fazer clamp
     if (!firstSystemRaw.isFinite || !lastSystemRaw.isFinite) {
       return {0};
     }
@@ -490,7 +679,7 @@ class MusicScorePainter extends CustomPainter {
       return {0};
     }
 
-    // Retornar range como Set
+    // Returnsr range como Set
     return Set<int>.from(
       List<int>.generate(lastSystem - firstSystem + 1, (i) => firstSystem + i),
     );

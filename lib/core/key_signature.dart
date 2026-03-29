@@ -2,7 +2,7 @@
 
 import 'musical_element.dart';
 
-/// Modo tonal, conforme o atributo `@mode` de `<staffDef>` no MEI v5.
+/// Modo tonal, according to o atributo `@mode` de `<staffDef>` no MEI v5.
 enum KeyMode {
   major,
   minor,
@@ -12,20 +12,20 @@ enum KeyMode {
   mixolydian,
   aeolian,
   locrian,
-  /// Armadura sem modo definido (ex.: música atonal, modal indeterminado)
+  /// Armadura sem modo defined (ex.: música atonal, modal indeterminado)
   none,
 }
 
-/// Representa a armadura de clave.
+/// Representa a armadura de clef.
 ///
-/// [count] usa convenção MEI: positivo = sustenidos, negativo = bemóis.
-/// [mode] corresponde ao atributo `@mode` de `<staffDef>` no MEI v5.
+/// [count] Uses convenção MEI: positivo = sharps, negativo = bemóis.
+/// [mode] correspwhere ao atributo `@mode` de `<staffDef>` no MEI v5.
 class KeySignature extends MusicalElement {
-  /// Número de sustenidos (positivo) ou bemóis (negativo).
+  /// Number de sharps (positivo) ou bemóis (negativo).
   final int count;
 
-  /// Contagem da armadura anterior (para renderizar naturais de cancelamento).
-  /// Positivo = sustenidos anteriores, negativo = bemóis anteriores.
+  /// Contagem of the armadura previous (for Rendersr naturais de cancelamento).
+  /// Positivo = sharps previouses, negativo = bemóis previouses.
   /// null = nenhum cancelamento necessário.
   final int? previousCount;
 

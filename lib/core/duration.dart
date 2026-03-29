@@ -1,11 +1,11 @@
 // lib/src/music_model/duration.dart
 
-/// Define os tipos de duração rítmica.
+/// Definess os tipos de duração rítmica.
 ///
-/// Inclui todas as durações do MEI v5: de [maxima] (8 semibreves) a
-/// [twoThousandFortyEighth] (1/2048 de semibreve).
+/// Inclui all as durações of the MEI v5: de [maxima] (8 semibreves) a
+/// [twoThoUsesndFortyEighth] (1/2048 de semibreve).
 enum DurationType {
-  // === Durações longas (notação mensural / histórica) ===
+  // === Durações longas (noteção mensural / histórica) ===
   /// Maxima — 8 semibreves (MEI `dur="maxima"`)
   maxima(8.0, 'noteheadWhole'),
   /// Longa — 4 semibreves (MEI `dur="long"`)
@@ -33,15 +33,15 @@ enum DurationType {
   /// 1/2048 de semibreve (MEI `dur="2048"`)
   twoThousandFortyEighth(0.00048828125, 'noteheadBlack');
 
-  /// O valor numérico relativo à semibreve (semibreve = 1.0).
+  /// O value numérico relativo à semibreve (semibreve = 1.0).
   final double value;
 
-  /// O nome do glifo SMuFL para a cabeça da nota.
+  /// O glyph name SMuFL for a cabeça of the note.
   final String glyphName;
 
   const DurationType(this.value, this.glyphName);
 
-  /// O nome do glifo SMuFL para a pausa correspondente a esta duração.
+  /// O glyph name SMuFL for a paUses correspwherente a this duração.
   String get restGlyphName => switch (this) {
     DurationType.maxima => 'restMaxima',
     DurationType.long => 'restLonga',
@@ -60,20 +60,20 @@ enum DurationType {
     DurationType.twoThousandFortyEighth => 'rest2048th',
   };
 
-  /// Se notas desta duração precisam de haste.
+  /// Se notes desta duração precisam de stem.
   bool get needsStem =>
       this != DurationType.whole &&
       this != DurationType.breve &&
       this != DurationType.long &&
       this != DurationType.maxima;
 
-  /// Se notas desta duração precisam de bandeirola (flag).
+  /// Se notes desta duração precisam de bandeirola (flag).
   bool get needsFlag => value <= DurationType.eighth.value;
 
-  /// Se a cabeça desta nota é preenchida (semínima em diante).
+  /// Se a cabeça desta note é preenchida (semínima in diante).
   bool get isFilled => value <= DurationType.quarter.value;
 
-  /// Retorna o valor MEI `dur` como string (ex.: "4", "8", "breve", "long").
+  /// Returns o value MEI `dur` como string (ex.: "4", "8", "breve", "long").
   String get meiDurValue => switch (this) {
     DurationType.maxima => 'maxima',
     DurationType.long => 'long',
@@ -92,7 +92,7 @@ enum DurationType {
     DurationType.twoThousandFortyEighth => '2048',
   };
 
-  /// Constrói um [DurationType] a partir do valor MEI `dur` (string).
+  /// Constrói um [DurationType] a partir of the value MEI `dur` (string).
   static DurationType fromMeiValue(String meiDur) {
     return switch (meiDur) {
       'maxima' => DurationType.maxima,
@@ -115,22 +115,22 @@ enum DurationType {
   }
 }
 
-/// Representa a duração de uma nota ou pausa.
+/// Representa a duração de a note ou paUses.
 class Duration {
-  /// O tipo de duração (semibreve, mínima, etc.).
+  /// O type de duração (semibreve, mínima, etc.).
   final DurationType type;
 
-  /// O número de pontos de aumento.
+  /// O number de pontos de aumento.
   final int dots;
 
   const Duration(this.type, {this.dots = 0});
 
-  /// Calcula a duração real incluindo pontos de aumento.
+  /// Calculatestes a duração real incluindo pontos de aumento.
   ///
-  /// Alias para [absoluteValue].
+  /// Alias for [absoluteValue].
   double get realValue => absoluteValue;
 
-  /// Calcula a duração real incluindo pontos de aumento.
+  /// Calculatestes a duração real incluindo pontos de aumento.
   /// Fórmula: valor_original + (valor_original * 0.5^1) + (valor_original * 0.5^2) + ...
   double get absoluteValue {
     double value = type.value;

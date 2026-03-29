@@ -2,21 +2,21 @@
 
 import 'time_signature.dart';
 
-/// Configuração do número da quiáltera
+/// Configuresção of the number of the tuplet
 class TupletNumber {
-  /// Tamanho da fonte (padrão: 1.2 staff spaces)
+  /// Size of the fonte (default: 1.2 staff spaces)
   final double fontSize;
   
-  /// Espaço à esquerda do número (0.4 staff spaces)
+  /// Space à esquerda of the number (0.4 staff spaces)
   final double gapLeft;
   
-  /// Espaço à direita do número (0.5 staff spaces)
+  /// Space à direita of the number (0.5 staff spaces)
   final double gapRight;
   
-  /// Mostrar como razão completa (ex: 3:2) em vez de apenas numerador (3)
+  /// Mostrar como razão completa (ex: 3:2) in vez de apenas numerador (3)
   final bool showAsRatio;
   
-  /// Mostrar figura de nota junto à razão (ex: 3:2♩)
+  /// Mostrar figura de note junto à razão (ex: 3:2♩)
   final bool showNoteValue;
   
   const TupletNumber({
@@ -30,21 +30,21 @@ class TupletNumber {
   /// Determina se deve mostrar a razão completa
   /// 
   /// Regras:
-  /// - Mostrar para quiálteras irracionais (denominador não é potência de 2 ou 3)
+  /// - Mostrar for tuplets irracionais (denominador not é potência de 2 ou 3)
   /// - Mostrar se há ambiguidade no contexto
   /// - Mostrar se duração total é incomum
   static bool shouldShowRatio(int numerator, int denominator, TimeSignature? timeSig) {
-    // Quiálteras irracionais sempre mostram razão
+    // Tuplets irracionais always mostram razão
     if (isIrrational(denominator)) return true;
     
     // Razões comuns podem ser simplificadas
     if (isCommonRatio(numerator, denominator, timeSig)) return false;
     
-    // Por padrão, mostrar razão completa se não é comum
+    // Por default, mostrar razão completa se not é comum
     return true;
   }
   
-  /// Verifica se o denominador é irracional (não é potência de 2 ou 3)
+  /// Checks se o denominador é irracional (not é potência de 2 ou 3)
   static bool isIrrational(int denominator) {
     // Potências de 2: 1, 2, 4, 8, 16, 32...
     if (isPowerOf2(denominator)) return false;
@@ -52,11 +52,11 @@ class TupletNumber {
     // Potências de 3: 1, 3, 9, 27...
     if (isPowerOf3(denominator)) return false;
     
-    // Não é potência de 2 nem 3 = irracional
+    // Not é potência de 2 nem 3 = irracional
     return true;
   }
   
-  /// Verifica se é uma razão comum e inequívoca
+  /// Checks se é a razão comum e inequívoca
   static bool isCommonRatio(int numerator, int denominator, TimeSignature? timeSig) {
     if (timeSig == null) return false;
     
@@ -77,13 +77,13 @@ class TupletNumber {
     return false;
   }
   
-  /// Verifica se n é potência de 2
+  /// Checks se n é potência de 2
   static bool isPowerOf2(int n) {
     if (n <= 0) return false;
     return (n & (n - 1)) == 0;
   }
   
-  /// Verifica se n é potência de 3
+  /// Checks se n é potência de 3
   static bool isPowerOf3(int n) {
     if (n <= 0) return false;
     while (n > 1) {
@@ -93,7 +93,7 @@ class TupletNumber {
     return n == 1;
   }
   
-  /// Gera o texto do número
+  /// Generates o texto of the number
   String generateText(int numerator, int denominator, {bool forceRatio = false}) {
     if (forceRatio || showAsRatio) {
       return '$numerator:$denominator';

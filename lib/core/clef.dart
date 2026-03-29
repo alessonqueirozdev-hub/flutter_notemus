@@ -2,60 +2,60 @@
 
 import 'musical_element.dart';
 
-/// Tipos de claves musicais disponíveis
+/// Available musical clef types.
 enum ClefType {
-  /// Clave de Sol (G clef)
+  /// Treble clef (G clef)
   treble,
-  /// Clave de Sol 8ª acima
+  /// Treble clef, 8va (one octave above)
   treble8va,
-  /// Clave de Sol 8ª abaixo
+  /// Treble clef, 8vb (one octave below)
   treble8vb,
-  /// Clave de Sol 15ª acima
+  /// Treble clef, 15ma (two octaves above)
   treble15ma,
-  /// Clave de Sol 15ª abaixo
+  /// Treble clef, 15mb (two octaves below)
   treble15mb,
-  /// Clave de Fá (F clef) - 4ª linha (posição padrão)
+  /// Bass clef (F clef) — 4th line (standard position)
   bass,
-  /// Clave de Fá na 3ª linha
+  /// Bass clef on the 3rd line
   bassThirdLine,
-  /// Clave de Fá 8ª acima
+  /// Bass clef, 8va (one octave above)
   bass8va,
-  /// Clave de Fá 8ª abaixo
+  /// Bass clef, 8vb (one octave below)
   bass8vb,
-  /// Clave de Fá 15ª acima
+  /// Bass clef, 15ma (two octaves above)
   bass15ma,
-  /// Clave de Fá 15ª abaixo
+  /// Bass clef, 15mb (two octaves below)
   bass15mb,
 
-  /// Clave de Dó na 1ª linha (soprano)
+  /// C clef on the 1st line (soprano)
   soprano,
-  /// Clave de Dó na 2ª linha (mezzo-soprano)
+  /// C clef on the 2nd line (mezzo-soprano)
   mezzoSoprano,
-  /// Clave de Dó na 3ª linha (alto/viola)
+  /// C clef on the 3rd line (alto/viola)
   alto,
-  /// Clave de Dó na 4ª linha (tenor)
+  /// C clef on the 4th line (tenor)
   tenor,
-  /// Clave de Dó na 5ª linha (baritono - histórico)
+  /// C clef on the 5th line (baritone — historical)
   baritone,
-  /// Clave de Dó 8ª abaixo
+  /// C clef, 8vb (one octave below)
   c8vb,
-  /// Clave de percussão 1
+  /// Percussion clef 1
   percussion,
-  /// Clave de percussão 2
+  /// Percussion clef 2
   percussion2,
-  /// Clave de tablatura 6 cordas
+  /// 6-string tablature clef
   tab6,
-  /// Clave de tablatura 4 cordas
+  /// 4-string tablature clef
   tab4,
 }
 
-/// Representa uma clave no início de uma pauta.
+/// Represents a clef at the beginning of a staff.
 class Clef extends MusicalElement {
   final ClefType clefType;
-  final int? staffPosition; // Para claves de Dó que podem variar de posição
+  final int? staffPosition; // For C clefs that can vary in position
 
   Clef({this.clefType = ClefType.treble, this.staffPosition, String? type}) {
-    // Backward compatibility - se type for fornecido, converta para ClefType
+    // Backward compatibility — if type is provided, convert to ClefType
     if (type != null) {
       switch (type) {
         case 'g':
@@ -77,7 +77,7 @@ class Clef extends MusicalElement {
 
   ClefType _clefType = ClefType.treble;
 
-  /// Getter para o tipo de clave "real" (sem transposição de oitava)
+  /// Returns the "real" clef type (without octave transposition).
   ClefType get actualClefType {
     switch (_clefType) {
       case ClefType.treble8va:
@@ -95,7 +95,7 @@ class Clef extends MusicalElement {
     }
   }
 
-  /// Retorna o glifo SMuFL correspondente à clave
+  /// Returns the SMuFL glyph name corresponding to this clef.
   String get glyphName {
     switch (_clefType) {
       case ClefType.treble:
@@ -138,8 +138,8 @@ class Clef extends MusicalElement {
     }
   }
 
-  /// Retorna a posição da linha de referência da clave no pentagrama
-  /// (0 = linha central, positivo = acima, negativo = abaixo)
+  /// Returns the reference line position of the clef on the staff
+  /// (0 = middle line, positive = above, negative = below).
   int get referenceLinePosition {
     switch (_clefType) {
       case ClefType.treble:
@@ -147,38 +147,38 @@ class Clef extends MusicalElement {
       case ClefType.treble8vb:
       case ClefType.treble15ma:
       case ClefType.treble15mb:
-        return 2; // Sol na 2ª linha
+        return 2; // G on the 2nd line
       case ClefType.bass:
       case ClefType.bass8va:
       case ClefType.bass8vb:
       case ClefType.bass15ma:
       case ClefType.bass15mb:
-        return -2; // Fá na 4ª linha (posição padrão)
+        return -2; // F on the 4th line (standard position)
       case ClefType.bassThirdLine:
-        return -1; // Fá na 3ª linha
+        return -1; // F on the 3rd line
 
-      // Claves de Dó em todas as posições
+      // C clefs in all positions
       case ClefType.soprano:
-        return 2; // Dó na 1ª linha
+        return 2; // C on the 1st line
       case ClefType.mezzoSoprano:
-        return 1; // Dó na 2ª linha
+        return 1; // C on the 2nd line
       case ClefType.alto:
-        return 0; // Dó na 3ª linha (linha central)
+        return 0; // C on the 3rd line (middle line)
       case ClefType.tenor:
-        return -1; // Dó na 4ª linha
+        return -1; // C on the 4th line
       case ClefType.baritone:
-        return -2; // Dó na 5ª linha
+        return -2; // C on the 5th line
       case ClefType.c8vb:
-        return 0; // Dó na 3ª linha (oitava abaixo)
+        return 0; // C on the 3rd line (one octave below)
       case ClefType.percussion:
       case ClefType.percussion2:
       case ClefType.tab6:
       case ClefType.tab4:
-        return 0; // Centralizada
+        return 0; // Centered
     }
   }
 
-  /// Retorna o deslocamento de oitava aplicado pela clave
+  /// Returns the octave shift applied by the clef.
   int get octaveShift {
     switch (_clefType) {
       case ClefType.treble8va:
@@ -230,8 +230,8 @@ class Clef extends MusicalElement {
     }
   }
 
-  /// Obtém a posição vertical da linha de referência da clave no pentagrama
-  /// conforme especificações SMuFL (em unidades staff space)
+  /// Returns the vertical offset of the clef reference line on the staff
+  /// according to SMuFL specifications (in staff space units).
   double get referenceLineOffsetSmufl {
     switch (_clefType) {
       case ClefType.treble:
@@ -239,32 +239,32 @@ class Clef extends MusicalElement {
       case ClefType.treble8vb:
       case ClefType.treble15ma:
       case ClefType.treble15mb:
-        return -1.0; // Sol na 2ª linha (1 staff space abaixo do centro)
+        return -1.0; // G on the 2nd line (1 staff space below center)
       case ClefType.bass:
       case ClefType.bass8va:
       case ClefType.bass8vb:
       case ClefType.bass15ma:
       case ClefType.bass15mb:
-        return 1.0; // Fá na 4ª linha (1 staff space acima do centro)
+        return 1.0; // F on the 4th line (1 staff space above center)
       case ClefType.bassThirdLine:
-        return 0.0; // Fá na 3ª linha (linha central)
+        return 0.0; // F on the 3rd line (middle line)
       case ClefType.soprano:
-        return -2.0; // Dó na 1ª linha
+        return -2.0; // C on the 1st line
       case ClefType.mezzoSoprano:
-        return -1.0; // Dó na 2ª linha
+        return -1.0; // C on the 2nd line
       case ClefType.alto:
-        return 0.0; // Dó na 3ª linha (linha central)
+        return 0.0; // C on the 3rd line (middle line)
       case ClefType.tenor:
-        return 1.0; // Dó na 4ª linha
+        return 1.0; // C on the 4th line
       case ClefType.baritone:
-        return 2.0; // Dó na 5ª linha
+        return 2.0; // C on the 5th line
       case ClefType.c8vb:
-        return 0.0; // Dó na 3ª linha (oitava abaixo)
+        return 0.0; // C on the 3rd line (one octave below)
       case ClefType.percussion:
       case ClefType.percussion2:
       case ClefType.tab6:
       case ClefType.tab4:
-        return 0.0; // Centralizada
+        return 0.0; // Centered
     }
   }
 }

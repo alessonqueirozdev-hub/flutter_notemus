@@ -3,8 +3,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 
-/// ðŸŽ¼ PROFESSIONAL EXAMPLE OF QUIALTERES
-/// Baseado em Behind Bars (Elaine Gould)
+/// 🎼 PROFESSIONAL EXAMPLE OF QUIALTERES
+/// Based on Behind Bars (Elaine Gould)
 class TupletsProfessionalExample extends StatelessWidget {
   const TupletsProfessionalExample({super.key});
 
@@ -12,7 +12,7 @@ class TupletsProfessionalExample extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('ðŸŽµ Professional Tuplets'),
+        title: const Text('🎵 Professional Tuplets'),
         backgroundColor: Colors.deepPurple.shade700,
       ),
       body: ListView(
@@ -152,7 +152,7 @@ class TupletsProfessionalExample extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Text(
-          'ðŸ“š References: Behind Bars (Gould), SMuFL, Dorico, Flutter Notemus',
+          '📚 References: Behind Bars (Gould), SMuFL, Dorico, Flutter Notemus',
           style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
         ),
       ),

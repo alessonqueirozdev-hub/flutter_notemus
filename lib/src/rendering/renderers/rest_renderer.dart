@@ -1,11 +1,11 @@
 // lib/src/rendering/renderers/rest_renderer.dart
-// VERSÃO REFATORADA: Herda de BaseGlyphRenderer
+// Refactored implementation: Herda de BaseGlyphRenderer
 //
 // MELHORIAS IMPLEMENTADAS (Fase 2):
-// ✅ Herda de BaseGlyphRenderer para renderização consistente
-// ✅ Usa drawGlyphWithBBox para 100% conformidade SMuFL
-// ✅ Cache automático de TextPainters para melhor performance
-// ✅ Elimina método _drawGlyph duplicado (30 linhas)
+// ✅ Herda de BaseGlyphRenderer for Rendersção consistente
+// ✅ Uses drawGlyphWithBBox for 100% conformidade SMuFL
+// ✅ Cache automático de TextPainters for melhor performance
+// ✅ Elimina method _drawGlyph duplicado (30 linhas)
 
 import 'package:flutter/material.dart';
 import '../../../core/core.dart'; // 🆕 Tipos do core
@@ -39,24 +39,24 @@ class RestRenderer extends BaseGlyphRenderer {
     String glyphName;
     int staffPosition;
 
-    // Posicionamento conforme Behind Bars (Gould, p. 109-110) e SMuFL:
+    // Posicionamento according to Behind Bars (Gould, p. 109-110) e SMuFL:
     //
-    // A correção de baseline em drawGlyphWithBBox posiciona o SMuFL Y=0 exatamente
-    // em restY (= toPixelY(staffPosition)). Por isso:
+    // A correção de baseline in drawGlyphWithBBox posiciona o SMuFL Y=0 exatamente
+    // in restY (= toPixelY(staffPosition)). Por isso:
     //
-    //   restWhole: topo do glifo em Y=0, corpo desce → restY = linha da qual pende
-    //     Voz 1: pende da linha 4  → staffPos = +2  (toPixelY(2) = baseline − ss)
-    //     Voz 2: pende da linha 2  → staffPos = −2  (toPixelY(−2) = baseline + ss)
+    //   restWhole: topo of the glifo in Y=0, corpo desce → restY = linha of the qual pende
+    //     Voice 1: pende of the linha 4  → staffPos = +2  (toPixelY(2) = baseline − ss)
+    //     Voice 2: pende of the linha 2  → staffPos = −2  (toPixelY(−2) = baseline + ss)
     //
-    //   restHalf: base do glifo em Y=0, corpo sobe → restY = linha sobre a qual senta
-    //     Voz 1: senta na linha 3  → staffPos =  0  (toPixelY(0)  = baseline)
-    //     Voz 2: senta na linha 1  → staffPos = −4  (toPixelY(−4) = baseline + 2ss)
+    //   restHalf: base of the glifo in Y=0, corpo sobe → restY = linha sobre a qual senta
+    //     Voice 1: senta na linha 3  → staffPos =  0  (toPixelY(0)  = baseline)
+    //     Voice 2: senta na linha 1  → staffPos = −4  (toPixelY(−4) = baseline + 2ss)
     //
-    //   Pausas curtas (quarter, 8th…): glifo centrado em Y=0
-    //     Voz 1: centro da pauta   → staffPos =  0
-    //     Voz 2: metade inferior   → staffPos = −4 (2 espaços abaixo do centro)
+    //   PaUsess curtas (quarter, 8th…): glifo centrado in Y=0
+    //     Voice 1: centro of the staff   → staffPos =  0
+    //     Voice 2: lower half → staffPos = −4 (2 spaces below centre)
     //
-    // Convenção: vozes pares = para baixo, vozes ímpares = para cima (padrão)
+    // Convenção: voices pares = for baixo, voices ímpares = for cima (default)
     final isVoiceDown = voiceNumber != null && voiceNumber.isEven;
 
     switch (rest.duration.type) {
@@ -99,8 +99,8 @@ class RestRenderer extends BaseGlyphRenderer {
 
     final restPosition = Offset(position.dx, restY);
 
-    // MELHORIA: Usar drawGlyphWithBBox herdado de BaseGlyphRenderer
-    // Isso automaticamente aplica o ajuste de bounding box SMuFL
+    // MELHORIA: Usesr drawGlyphWithBBox herdado de BaseGlyphRenderer
+    // Isso automaticamente applies o ajuste de bounding box SMuFL
     drawGlyphWithBBox(
       canvas,
       glyphName: glyphName,
@@ -109,7 +109,7 @@ class RestRenderer extends BaseGlyphRenderer {
       options: GlyphDrawOptions.restDefault,
     );
 
-    // Renderizar ornamentos se presentes
+    // Rendersr ornaments se presentes
     if (rest.ornaments.isNotEmpty) {
       final placeholderNote = Note(
         pitch: Pitch(step: 'B', octave: 4), // Posição central da pauta

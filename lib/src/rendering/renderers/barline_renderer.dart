@@ -1,41 +1,50 @@
 import 'package:flutter/painting.dart';
 
 import '../../../core/core.dart';
+import '../../smufl/smufl_metadata_loader.dart';
 import '../../theme/music_score_theme.dart';
-import 'base_glyph_renderer.dart';
+import '../staff_coordinate_system.dart';
+import 'glyph_renderer.dart';
 
-/// Renderiza barlines com alinhamento por bounding box SMuFL.
-/// Isso elimina gaps visuais e descolamento entre barra final/repetiÃ§Ã£o e pauta.
-class BarlineRenderer extends BaseGlyphRenderer {
-  static const double barlineYOffset = 0.0;
+/// Renders barlines using stable SMuFL glyph placement tuned for this engine.
+///
+/// We intentionally avoid bbox-top alignment here because text-baseline and
+/// SMuFL bbox origins differ for barline glyphs and can vertically detach the
+/// final barline from the staff.
+class BarlineRenderer {
+  static const double barlineHeightMultiplier = 4.0;
+  static const double barlineYOffset = -2.0;
   static const double barlineXOffset = 0.0;
 
+  final StaffCoordinateSystem coordinates;
+  final SmuflMetadata metadata;
   final MusicScoreTheme theme;
+  final GlyphRenderer glyphRenderer;
+  final double glyphSize;
 
   BarlineRenderer({
-    required super.coordinates,
-    required super.metadata,
+    required this.coordinates,
+    required this.metadata,
     required this.theme,
-    required super.glyphSize,
+    required this.glyphRenderer,
+    required this.glyphSize,
   });
 
   void render(Canvas canvas, Barline barline, Offset position) {
     final glyphName = _getGlyphName(barline.type);
-
     final topY =
-        coordinates.getStaffLineY(5) + (barlineYOffset * coordinates.staffSpace);
+        coordinates.getStaffLineY(1) +
+        (barlineYOffset * coordinates.staffSpace);
     final x = position.dx + (barlineXOffset * coordinates.staffSpace);
+    final barlineHeight = coordinates.staffSpace * barlineHeightMultiplier;
 
-    drawGlyphWithBBox(
+    glyphRenderer.drawGlyph(
       canvas,
       glyphName: glyphName,
       position: Offset(x, topY),
+      size: barlineHeight,
       color: theme.barlineColor,
-      options: const GlyphDrawOptions(
-        alignLeft: true,
-        alignTop: true,
-        trackBounds: false,
-      ),
+      centerVertically: false,
     );
   }
 

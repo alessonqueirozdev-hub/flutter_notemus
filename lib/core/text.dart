@@ -25,42 +25,42 @@ enum TextType {
 /// Posicionamento de texto
 enum TextPlacement { above, below, inside }
 
-/// Tipo de sílaba para hifenização de letras de música.
+/// Type de syllable for hifenização de letras de música.
 ///
-/// Corresponde ao atributo `@con` do elemento `<syl>` no MEI v5:
-/// - [single]: sílaba isolada (sem hifenização)
-/// - [initial]: sílaba inicial de palavra hifenizada (ex.: "can-")
-/// - [middle]: sílaba intermediária ("-ta-")
-/// - [terminal]: sílaba final ("-te")
+/// Correspwhere ao atributo `@con` of the element `<syl>` no MEI v5:
+/// - [single]: syllable isolada (sem hifenização)
+/// - [initial]: syllable inicial de palavra hifenizada (ex.: "can-")
+/// - [middle]: syllable intermediária ("-ta-")
+/// - [terminal]: syllable final ("-te")
 /// - [hyphen]: caractere de hífen explícito
 enum SyllableType {
-  /// Palavra completa / sílaba única (MEI `con` ausente ou "s")
+  /// Palavra completa / syllable única (MEI `con` ausente ou "s")
   single,
-  /// Sílaba inicial, seguida de hífen (MEI `con="i"`)
+  /// Syllable inicial, seguida de hífen (MEI `con="i"`)
   initial,
-  /// Sílaba intermediária (MEI `con="m"`)
+  /// Syllable intermediária (MEI `con="m"`)
   middle,
-  /// Sílaba final (MEI `con="t"`)
+  /// Syllable final (MEI `con="t"`)
   terminal,
   /// Hífen explícito (MEI `con="d"` — double bar extension)
   hyphen,
 }
 
-/// Representa uma sílaba de letra de música, correspondendo ao elemento
-/// `<syl>` do MEI v5.
+/// Representa a syllable de letra de música, correspwherendo ao elemento
+/// `<syl>` of the MEI v5.
 ///
 /// ```dart
 /// Syllable(text: 'can', type: SyllableType.initial)  // "can-"
 /// Syllable(text: 'ta', type: SyllableType.terminal)  // "-ta"
 /// ```
 class Syllable {
-  /// Texto da sílaba.
+  /// Texto of the syllable.
   final String text;
 
-  /// Tipo de conexão da sílaba (hifenização).
+  /// Type de conexão of the syllable (hifenização).
   final SyllableType type;
 
-  /// Indica se o texto deve ser exibido em itálico (ex.: extensão de vogal).
+  /// Indica se o texto deve ser exibido in itálico (ex.: extensão de vogal).
   final bool italic;
 
   const Syllable({
@@ -70,9 +70,9 @@ class Syllable {
   });
 }
 
-/// Representa um verso de letra, correspondendo ao elemento `<verse>` do MEI v5.
+/// Representa um verso de letra, correspwherendo ao elemento `<verse>` of the MEI v5.
 ///
-/// Suporta múltiplos versos numerados (`@n`) com sílabas [Syllable] individuais.
+/// Suporta múltiplos versos numerados (`@n`) with syllables [Syllable] individuais.
 ///
 /// ```dart
 /// Verse(
@@ -84,13 +84,13 @@ class Syllable {
 /// )
 /// ```
 class Verse extends MusicalElement {
-  /// Número do verso (MEI `@n`). Padrão = 1.
+  /// Number of the verso (MEI `@n`). Default = 1.
   final int number;
 
-  /// Sílabas deste verso.
+  /// Syllables deste verso.
   final List<Syllable> syllables;
 
-  /// Idioma do verso (MEI `@xml:lang`), ex.: 'la', 'pt', 'en'.
+  /// Idioma of the verso (MEI `@xml:lang`), ex.: 'la', 'pt', 'en'.
   final String? language;
 
   Verse({

@@ -194,23 +194,23 @@ For a full conformance audit see [`doc/MEI_V5_AUDIT.md`](doc/MEI_V5_AUDIT.md).
 
 ### What's New in 2.5.1
 
-- Layout rendering now preserves voice context during horizontal justification.
-- Beaming processing preserves complete note metadata used by renderers and parsers.
-- Spacing model and expansion blend were stabilized to reduce unexpected density drift.
-- `MusicScorePainter.shouldRepaint` now uses a deterministic layout signature for lower repaint comparison cost on large scores.
-- Added regression guardrails with focused tests for spacing profile stability and painter repaint behavior.
+- Stem-safe slur and tie routing now keeps curves on the notehead side for regular notes, grace notes, and chord ties.
+- Arpeggio, tuplet, and octave-mark engraving were retuned for tighter alignment, clearer brackets, stronger contrast, and vertically centered score previews.
+- The example gallery was refreshed with a Cupertino shell, restored non-redundant public demos, dedicated scroll controllers, white score canvases, and new lyrics/text coverage.
+- Layout rendering still preserves voice context during horizontal justification, while beaming now retains the note metadata consumed by downstream renderers and parsers.
+- `MusicScorePainter.shouldRepaint` continues to use a deterministic layout signature, backed by expanded regression coverage for spacing, grouping, articulation helpers, and example smoke tests.
 
 ---
 
 ## Open Pending Work
 
-All pending work is tracked as GitHub issues:
+All pending work is tracked as GitHub issues, with the local index mirrored in [`doc/OPEN_ISSUES.md`](doc/OPEN_ISSUES.md).
 
-- Native audio backend parity (iOS/macOS/Linux/Windows): https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/1
-- Real notation engraving for PDF export: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/2
-- SMuFL brace workflow for staff groups: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/3
-- Stem/flag primitive parameterization via engraving defaults: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/4
-- Robust fallback for `repeatBoth`: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/5
+- Audio, export, and playback roadmap: [#1](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/1), [#2](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/2), [#15](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/15), [#20](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/20)
+- Engraving and layout follow-up: [#3](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/3), [#4](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/4), [#5](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/5), [#8](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/8), [#9](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/9), [#14](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/14)
+- Content and text rendering follow-up: [#11](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/11), [#12](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/12), [#13](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/13)
+- Editor and interactivity roadmap: [#16](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/16), [#17](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/17), [#18](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/18), [#19](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/19)
+- Remaining example/system integration work: [#7](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/7)
 
 ---
 

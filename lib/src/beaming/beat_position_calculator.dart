@@ -1,13 +1,13 @@
-// lib/src/beaming/beat_position_calculator.dart
+// lib/src/beaming/beat_position_calculateTestor.dart
 
 import 'package:flutter_notemus/core/core.dart';
 
-/// Informações sobre a posição de um evento musical dentro de um beat
+/// Information about the beat position of a musical event.
 class BeatPositionInfo {
-  /// Índice do beat (0 = primeiro beat, 1 = segundo beat, etc.)
+  /// Beat index (0 = first beat, 1 = second beat, etc.).
   final int beatIndex;
-  
-  /// Posição dentro do beat (0.0 = início, 1.0 = fim)
+
+  /// Position within the beat (0.0 = start, 1.0 = end).
   final double positionWithinBeat;
 
   BeatPositionInfo({
@@ -20,13 +20,13 @@ class BeatPositionInfo {
       'BeatPositionInfo(beatIndex: $beatIndex, positionWithinBeat: ${positionWithinBeat.toStringAsFixed(3)})';
 }
 
-/// Representa um evento musical (nota ou pausa) com sua posição temporal
+/// Represents a musical event (note or rest) with its temporal position.
 class NoteEvent {
-  /// Posição no compasso (0.0 = início, 1.0 = fim do compasso)
-  /// Normalizado em fração do compasso total
+  /// Position within the bar (0.0 = start, 1.0 = end of bar).
+  /// Normalized as a fraction of the total bar length.
   final double positionInBar;
-  
-  /// Duração em semibreves (1.0 = semibreve, 0.5 = mínima, etc.)
+
+  /// Duration in whole notes (1.0 = whole, 0.5 = half, etc.).
   final double duration;
 
   NoteEvent({
@@ -39,23 +39,23 @@ class NoteEvent {
       'NoteEvent(pos: ${positionInBar.toStringAsFixed(3)}, dur: ${duration.toStringAsFixed(3)})';
 }
 
-/// Calculador profissional de posições de beat para qualquer fórmula de compasso
+/// Calculator profissional de positions de beat for any fórmula de measure
 ///
-/// Baseado em:
+/// Based on:
 /// - Behind Bars (Elaine Gould) - regras de beaming
 /// - Music Engraving Tips - convenções tipográficas
 /// - Prática profissional de editoração musical
 ///
 /// Suporta:
-/// - Compassos simples (2/4, 3/4, 4/4, etc.)
-/// - Compassos compostos (6/8, 9/8, 12/8, etc.)
-/// - Compassos irregulares (5/8, 7/8, 11/16, etc.)
+/// - Measures simples (2/4, 3/4, 4/4, etc.)
+/// - Measures compostos (6/8, 9/8, 12/8, etc.)
+/// - Measures irregulares (5/8, 7/8, 11/16, etc.)
 /// - Agrupamentos customizados
 class BeatPositionCalculator {
   final TimeSignature timeSignature;
   
-  /// Agrupamentos customizados para compassos irregulares
-  /// Exemplo: 7/8 pode ser [2, 2, 3] ou [3, 2, 2]
+  /// Agrupamentos customizados for measures irregulares
+  /// Example: 7/8 pode ser [2, 2, 3] ou [3, 2, 2]
   final List<int>? customBeatGrouping;
 
   BeatPositionCalculator(
@@ -63,27 +63,27 @@ class BeatPositionCalculator {
     this.customBeatGrouping,
   });
 
-  /// Verifica se o compasso é composto (numerador divisível por 3, denominador 8)
-  /// Exemplos: 6/8, 9/8, 12/8
+  /// Checks se o measure é composto (numerador divisível por 3, denominador 8)
+  /// Examples: 6/8, 9/8, 12/8
   bool get isCompound =>
       timeSignature.numerator % 3 == 0 && timeSignature.denominator == 8;
 
-  /// Retorna o comprimento de um beat em semibreves
+  /// Returns o comprimento de um beat in semibreves
   ///
-  /// - Compasso simples: 1/denominador (ex: 4/4 → 1/4 = 0.25)
-  /// - Compasso composto: 3/denominador (ex: 6/8 → 3/8 = 0.375)
+  /// - Measure simples: 1/denominador (ex: 4/4 → 1/4 = 0.25)
+  /// - Measure composto: 3/denominador (ex: 6/8 → 3/8 = 0.375)
   double get beatLength {
     if (isCompound) {
-      // Beat é nota pontuada (3 subdivisões)
+      // Beat é note pontuada (3 subdivisões)
       return 3.0 / timeSignature.denominator;
     }
     return 1.0 / timeSignature.denominator;
   }
 
-  /// Retorna o número de beats por compasso
+  /// Returns o number de beats por measure
   ///
-  /// - Compasso simples: numerador (ex: 4/4 → 4 beats)
-  /// - Compasso composto: numerador/3 (ex: 6/8 → 2 beats)
+  /// - Measure simples: numerador (ex: 4/4 → 4 beats)
+  /// - Measure composto: numerador/3 (ex: 6/8 → 2 beats)
   int get beatsPerBar {
     if (isCompound) {
       return timeSignature.numerator ~/ 3;
@@ -91,14 +91,14 @@ class BeatPositionCalculator {
     return timeSignature.numerator;
   }
 
-  /// Retorna o comprimento total do compasso em semibreves
+  /// Returns o comprimento total of the measure in semibreves
   double barLengthInWholeNotes() =>
       timeSignature.numerator / timeSignature.denominator;
 
-  /// Retorna informações sobre a posição de beat de um ponto temporal
+  /// Returns informações sobre a position de beat de um ponto temporal
   ///
-  /// @param positionInBar Posição normalizada no compasso (0.0 a 1.0)
-  /// @return BeatPositionInfo com índice do beat e posição dentro dele
+  /// @param positionInBar Normalised position within the measure (0.0 a 1.0)
+  /// @return BeatPositionInfo with index of the beat e position dentro dele
   BeatPositionInfo getBeatPosition(double positionInBar) {
     final double beatLen = beatLength;
     final int beatIndex = (positionInBar / beatLen).floor();
@@ -110,24 +110,24 @@ class BeatPositionCalculator {
     );
   }
 
-  /// Retorna a posição de beat de um evento musical
+  /// Returns a position de beat de um evento musical
   BeatPositionInfo getNoteBeatPosition(NoteEvent note) =>
       getBeatPosition(note.positionInBar);
 
-  /// Retorna as posições onde beams devem ser quebrados segundo Behind Bars
+  /// Returns as positions where beams devem ser broken per Behind Bars
   ///
   /// **REGRAS:**
-  /// - Quebra no início de cada beat (exceto beat 0)
-  /// - Compassos simples: quebra a cada beat
-  /// - Compassos compostos: quebra entre grupos de 3
-  /// - Compassos irregulares: usa agrupamentos customizados
+  /// - Quebra no início de each beat (exceto beat 0)
+  /// - Measures simples: quebra a each beat
+  /// - Measures compostos: quebra entre grupos de 3
+  /// - Measures irregulares: Uses agrupamentos customizados
   List<double> getStandardBeamBreakPositions() {
     final List<double> positions = [];
     final double beatLen = beatLength;
     final double barLen = barLengthInWholeNotes();
 
     if (customBeatGrouping != null) {
-      // Compassos irregulares com agrupamentos customizados
+      // Measures irregulares with agrupamentos customizados
       double currentPos = 0.0;
       for (int i = 0; i < customBeatGrouping!.length; i++) {
         currentPos += customBeatGrouping![i] / timeSignature.denominator;
@@ -136,7 +136,7 @@ class BeatPositionCalculator {
         }
       }
     } else {
-      // Compassos regulares: quebra no início de cada beat
+      // Measures regulares: quebra no início de each beat
       for (int i = 1; i < beatsPerBar; i++) {
         final double breakPoint = beatLen * i;
         if (breakPoint < barLen) {
@@ -148,21 +148,21 @@ class BeatPositionCalculator {
     return positions;
   }
 
-  /// Determina se um beam deve ser quebrado nesta posição
+  /// Determina se um beam deve ser quebrado nesta position
   ///
   /// **REGRAS BEHIND BARS:**
-  /// 1. Sempre quebra no início do compasso (posição 0.0)
+  /// 1. Always quebra no início of the measure (position 0.0)
   /// 2. Quebra nos pontos de beat definidos pela métrica
-  /// 3. Nunca agrupa além do meio do compasso em 4/4
-  /// 4. Em 6/8, quebra entre os 2 beats (após 3ª colcheia)
-  /// 5. Tolerância de 1e-7 para comparações de ponto flutuante
+  /// 3. Never agrupa além of the meio of the measure in 4/4
+  /// 4. in 6/8, quebra entre os 2 beats (após 3ª colcheia)
+  /// 5. Tolerância de 1e-7 for comparações de ponto flutuante
   ///
-  /// @param note Evento musical a verificar
-  /// @param context Lista de notas no contexto (opcional para regras avançadas)
+  /// @param note Evento musical a Checksr
+  /// @param context List of notes no contexto (opcional for regras avançadas)
   bool shouldBreakBeam(NoteEvent note, {List<NoteEvent>? context}) {
     const double tolerance = 1e-7;
 
-    // Regra básica: sempre quebra no início do compasso
+    // Regra básica: always quebra no início of the measure
     if (note.positionInBar.abs() < tolerance) {
       return true;
     }
@@ -176,7 +176,7 @@ class BeatPositionCalculator {
 
     // ✅ REGRAS ESPECIAIS BEHIND BARS
 
-    // 4/4: Nunca beam além do meio do compasso (beat 3)
+    // 4/4: Never beam além of the meio of the measure (beat 3)
     if (timeSignature.numerator == 4 && timeSignature.denominator == 4) {
       const double middleOfBar = 0.5; // Beat 3 em 4/4
       if ((note.positionInBar - middleOfBar).abs() < tolerance) {
@@ -184,7 +184,7 @@ class BeatPositionCalculator {
       }
     }
 
-    // 6/8 (e similares): Quebra na metade do compasso (entre beats 1 e 2)
+    // 6/8 (e similares): Quebra na metade of the measure (entre beats 1 e 2)
     if (isCompound && beatsPerBar == 2) {
       final double halfBar = barLengthInWholeNotes() / 2;
       if ((note.positionInBar - halfBar).abs() < tolerance) {
@@ -192,18 +192,18 @@ class BeatPositionCalculator {
       }
     }
 
-    // 3/4: Quebra em cada beat (já coberto por getStandardBeamBreakPositions)
-    // Mas garantir que não agrupa além do beat
+    // 3/4: Quebra in each beat (já coberto por getStandardBeamBreakPositions)
+    // Mas garantir that not agrupa além of the beat
     if (timeSignature.numerator == 3 && timeSignature.denominator == 4) {
-      // Já tratado pela lógica padrão
+      // Já tratado pela lógica default
     }
 
     return false;
   }
 
-  /// Retorna todas as posições iniciais de beats no compasso
+  /// Returns all as positions iniciais de beats no measure
   ///
-  /// Útil para renderização de grid visual ou debug
+  /// Útil for Rendersção de grid visual ou debug
   List<double> getAllBeatPositionsInBar() {
     final List<double> positions = [0.0]; // Sempre inclui início
     final double beatLen = beatLength;
@@ -219,12 +219,12 @@ class BeatPositionCalculator {
     return positions;
   }
 
-  /// Converte uma posição absoluta (acumulada desde início da música)
-  /// para posição relativa dentro do compasso
+  /// Converts a position absoluta (acumulada desde início of the música)
+  /// for position relativa dentro of the measure
   ///
-  /// @param absolutePosition Posição em semibreves desde o início
-  /// @param measureStartPosition Posição do início do compasso
-  /// @return Posição normalizada no compasso (0.0 a 1.0)
+  /// @param absolutePosition Position in semibreves desde o início
+  /// @param measureStartPosition Position of the início of the measure
+  /// @return Normalised position within the measure (0.0 a 1.0)
   double absoluteToBarPosition(
     double absolutePosition,
     double measureStartPosition,
@@ -234,11 +234,11 @@ class BeatPositionCalculator {
     return relativePos / barLen;
   }
 
-  /// Converte Note para NoteEvent com posição calculada
+  /// Converts Note for NoteEvent with position Calculatestesda
   ///
-  /// @param note Nota musical
-  /// @param positionInMeasure Posição acumulada dentro do compasso (em semibreves)
-  /// @return NoteEvent pronto para análise
+  /// @param note Note musical
+  /// @param positionInMeasure Position acumulada dentro of the measure (in semibreves)
+  /// @return NoteEvent pronto for análise
   NoteEvent noteToEvent(Note note, double positionInMeasure) {
     final double barLen = barLengthInWholeNotes();
     final double normalizedPosition = positionInMeasure / barLen;

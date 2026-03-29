@@ -1,8 +1,8 @@
 // lib/core/score_def.dart
 //
 // Definição global de partitura (MEI v5 — scoreDef)
-// Corresponde ao elemento `<scoreDef>` que agrupa definições de
-// clave, armadura e fórmula de compasso de forma centralizada.
+// Correspwhere ao elemento `<scoreDef>` that agrupa definições de
+// clef, armadura e fórmula de measure de forma centralizada.
 
 import 'clef.dart';
 import 'key_signature.dart';
@@ -10,12 +10,12 @@ import 'time_signature.dart';
 import 'dynamic.dart';
 import 'tempo.dart';
 
-/// Definição global de partitura, correspondendo ao elemento `<scoreDef>`
-/// do MEI v5.
+/// Definição global de partitura, correspwherendo ao elemento `<scoreDef>`
+/// of the MEI v5.
 ///
-/// `<scoreDef>` centraliza informações que se aplicam a toda a partitura
-/// no início de um `<section>` ou após uma mudança global, evitando repetir
-/// as mesmas definições em cada `<staffDef>`.
+/// `<scoreDef>` centraliza informações that se Appliesm a toda a partitura
+/// no início de um `<section>` ou após a mudança global, evitando repetir
+/// as mesmas definições in each `<staffDef>`.
 ///
 /// ```dart
 /// ScoreDefinition(
@@ -26,26 +26,26 @@ import 'tempo.dart';
 /// )
 /// ```
 class ScoreDefinition {
-  /// Clave padrão para todas as pautas (pode ser sobreposta por `<staffDef>`).
+  /// Clef default for all as staves (pode ser sobreposta por `<staffDef>`).
   final Clef? clef;
 
-  /// Armadura de clave global.
+  /// Armadura de clef global.
   final KeySignature? keySignature;
 
-  /// Fórmula de compasso global.
+  /// Fórmula de measure global.
   final TimeSignature? timeSignature;
 
-  /// Indicação de tempo (andamento).
+  /// Indicação de tempo (tempo).
   final TempoMark? tempo;
 
-  /// Dinâmica inicial.
+  /// Dynamic inicial.
   final Dynamic? dynamic;
 
-  /// Número de linhas padrão para todas as pautas (normalmente 5).
-  /// Corresponde a `@lines` em `<staffDef>`.
+  /// Number de linhas default for all as staves (normalmente 5).
+  /// Correspwhere a `@lines` in `<staffDef>`.
   final int defaultStaffLines;
 
-  /// Direção padrão dos acidentes acima da pauta.
+  /// Direção default dos accidentals acima of the staff.
   final bool accidentalsAbove;
 
   /// Identificador único MEI (`xml:id`).

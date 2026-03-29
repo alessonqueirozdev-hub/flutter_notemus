@@ -2,10 +2,10 @@
 
 import 'musical_element.dart';
 
-/// Direção de uma ligadura
+/// Direção de a tie/slur
 enum SlurDirection { up, down, auto }
 
-/// Representa uma ligadura de expressão avançada
+/// Representa a slur avançada
 class AdvancedSlur extends MusicalElement {
   final SlurType type;
   final SlurDirection direction;

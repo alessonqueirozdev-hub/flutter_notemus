@@ -6,10 +6,10 @@ import '../../../theme/music_score_theme.dart';
 import '../../smufl_positioning_engine.dart';
 import '../base_glyph_renderer.dart';
 
-/// Renderizador especializado APENAS para acidentes (accidentals).
+/// Rendersdor especializado APENAS for accidentals (accidentals).
 ///
-/// Responsabilidade única: desenhar acidentes (sustenidos, bemóis, etc.)
-/// usando posicionamento SMuFL preciso.
+/// Responsabilidade única: desenhar accidentals (sharps, bemóis, etc.)
+/// using posicionamento SMuFL preciso.
 class AccidentalRenderer extends BaseGlyphRenderer {
   final MusicScoreTheme theme;
   final SMuFLPositioningEngine positioningEngine;
@@ -22,12 +22,12 @@ class AccidentalRenderer extends BaseGlyphRenderer {
     required this.positioningEngine,
   });
 
-  /// Renderiza acidente de uma nota.
+  /// Renders accidental de a note.
   ///
-  /// [canvas] - Canvas onde desenhar
-  /// [note] - Nota com acidente
-  /// [notePosition] - Posição da cabeça da nota
-  /// [staffPosition] - Posição da nota na pauta
+  /// [canvas] - Canvas where desenhar
+  /// [note] - Note with accidental
+  /// [notePosition] - Position of the cabeça of the note
+  /// [staffPosition] - Position of the note na staff
   void render(
     Canvas canvas,
     Note note,
@@ -39,20 +39,20 @@ class AccidentalRenderer extends BaseGlyphRenderer {
     final accidentalGlyph = note.pitch.accidentalGlyph!;
     final noteheadGlyph = note.duration.type.glyphName;
 
-    // Calcular posição do acidente usando positioning engine
+    // Calculatestesr position of the accidental using positioning engine
     final accidentalPosition = positioningEngine.calculateAccidentalPosition(
       accidentalGlyph: accidentalGlyph,
       noteheadGlyph: noteheadGlyph,
       staffPosition: staffPosition,
     );
 
-    // Posição final do acidente
+    // Position final of the accidental
     final accidentalX =
         notePosition.dx + (accidentalPosition.dx * coordinates.staffSpace);
     final accidentalY =
         notePosition.dy + (accidentalPosition.dy * coordinates.staffSpace);
 
-    // Desenhar acidente
+    // Desenhar accidental
     drawGlyphWithBBox(
       canvas,
       glyphName: accidentalGlyph,

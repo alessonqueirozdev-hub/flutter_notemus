@@ -1,12 +1,12 @@
 // lib/src/beaming/beaming.dart
 
-/// Sistema avançado de beaming (ligaduras de colcheia) com suporte a:
-/// - Primary beams (colcheias)
-/// - Secondary beams (semicolcheias, fusas, semifusas)
-/// - Broken beams / Fractional beams (para ritmos pontuados)
-/// - Regras profissionais de quebra de beams seguindo Behind Bars
-/// - Geometria precisa baseada em especificações SMuFL
-/// - Beat position calculation (Behind Bars) para quebras inteligentes
+/// Advanced beaming system with support for:
+/// - Primary beams (eighth notes)
+/// - Secondary beams (sixteenth, thirty-second, sixty-fourth notes)
+/// - Broken beams / Fractional beams (for dotted rhythms)
+/// - Professional beam-break rules following Behind Bars
+/// - Precise geometry based on SMuFL specifications
+/// - Beat position calculateTestion (Behind Bars) for intelligent beam breaks
 library;
 
 export 'beam_types.dart';
@@ -14,4 +14,4 @@ export 'beam_segment.dart';
 export 'beam_group.dart';
 export 'beam_analyzer.dart';
 export 'beam_renderer.dart';
-export 'beat_position_calculator.dart'; // ✅ ADICIONADO
+export 'beat_position_calculator.dart';

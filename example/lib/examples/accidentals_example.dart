@@ -9,7 +9,7 @@ class AccidentalsExample extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Cria uma lista de elementos musicais para demonstrar cada acidente
+    // Creates a list of elementos musicais for demonstrar each accidental
     final List<MusicalElement> accidentalElements = [
       Clef(clefType: ClefType.treble),
       Note(

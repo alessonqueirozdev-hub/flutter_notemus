@@ -6,14 +6,14 @@ import 'time_signature.dart';
 import 'tuplet_bracket.dart';
 import 'tuplet_number.dart';
 
-/// Razão de uma quiáltera
+/// Razão de a tuplet
 class TupletRatio {
   final int actualNotes;  // Numerador
   final int normalNotes;  // Denominador
 
   const TupletRatio(this.actualNotes, this.normalNotes);
   
-  /// Modificador que será aplicado às durações
+  /// Modificador that será Appliesdo às durações
   /// Fórmula: normalNotes / actualNotes
   double get modifier => normalNotes / actualNotes;
   
@@ -21,46 +21,46 @@ class TupletRatio {
   String toString() => '$actualNotes:$normalNotes';
 }
 
-/// Representa uma quiáltera (tercina, quintina, etc.)
+/// Representa a tuplet (tercina, quintina, etc.)
 /// 
-/// Implementação completa baseada em Behind Bars (Elaine Gould)
+/// Implementação completa baseada in Behind Bars (Elaine Gould)
 class Tuplet extends MusicalElement {
-  /// Numerador da razão (número de notas na quiáltera)
+  /// Numerador of the razão (number de notes na tuplet)
   final int actualNotes;
   
-  /// Denominador da razão (número de notas normais que seriam tocadas)
+  /// Denominador of the razão (number de notes normais that seriam tocadas)
   final int normalNotes;
   
-  /// Elementos dentro da quiáltera (notas, pausas)
+  /// Elementos dentro of the tuplet (notes, paUsess)
   final List<MusicalElement> elements;
   
-  /// Apenas as notas (filtradas de elements)
+  /// Apenas as notes (filtradas de elements)
   final List<Note> notes;
   
-  /// Configuração do colchete
+  /// Configuresção of the colchete
   final TupletBracket? bracketConfig;
   
-  /// Configuração do número
+  /// Configuresção of the number
   final TupletNumber? numberConfig;
   
   /// Mostrar colchete (deprecated - use bracketConfig)
   @Deprecated('Use bracketConfig.show')
   final bool showBracket;
   
-  /// Mostrar número (deprecated - use numberConfig)
+  /// Mostrar number (deprecated - use numberConfig)
   @Deprecated('Use numberConfig')
   final bool showNumber;
   
-  /// Razão da quiáltera
+  /// Razão of the tuplet
   final TupletRatio ratio;
   
-  /// Se é uma quiáltera aninhada (nested tuplet)
+  /// Se é a tuplet aninhada (nested tuplet)
   final bool isNested;
   
-  /// Quiáltera pai (para nested tuplets)
+  /// Tuplet pai (for nested tuplets)
   final Tuplet? parentTuplet;
   
-  /// TimeSignature de contexto (para validação)
+  /// TimeSignature de contexto (for validação)
   final TimeSignature? timeSignature;
   
   Tuplet({
@@ -79,13 +79,13 @@ class Tuplet extends MusicalElement {
   }) : notes = notes ?? elements.whereType<Note>().toList(),
        ratio = ratio ?? TupletRatio(actualNotes, normalNotes);
   
-  /// Calcula a duração modificada de uma nota dentro da quiáltera
+  /// Calculatestes a duração modificada de a note dentro of the tuplet
   /// 
-  /// Se aninhada, aplica modificadores recursivamente
+  /// Se aninhada, applies modificadores recursivamente
   double getModifiedDuration(double baseDuration) {
     double modifiedDuration = baseDuration * ratio.modifier;
     
-    // Se aninhada, aplicar modificador do pai recursivamente
+    // Se aninhada, Appliesr modificador of the pai recursivamente
     if (isNested && parentTuplet != null) {
       return parentTuplet!.getModifiedDuration(modifiedDuration);
     }
@@ -93,12 +93,12 @@ class Tuplet extends MusicalElement {
     return modifiedDuration;
   }
   
-  /// Calcula a duração total que a quiáltera ocupa
+  /// Calculatestes a duração total that a tuplet ocupa
   double get totalDuration {
     if (elements.isEmpty) return 0.0;
     
-    // Assumir que todas as notas têm a mesma duração base
-    // (isso pode ser expandido para suportar valores mistos)
+    // Assumir that all as notes têm a mesma duração base
+    // (isso pode ser expandido for suportar valores mistos)
     final firstNote = elements.whereType<Note>().firstOrNull;
     if (firstNote == null) return 0.0;
     
@@ -107,7 +107,7 @@ class Tuplet extends MusicalElement {
     return totalBefore * ratio.modifier;
   }
   
-  /// Verifica se deve mostrar o colchete
+  /// Checks se deve mostrar o colchete
   bool get shouldShowBracket {
     if (bracketConfig != null) {
       return bracketConfig!.shouldShow(notes);
@@ -115,7 +115,7 @@ class Tuplet extends MusicalElement {
     return showBracket;
   }
   
-  /// Verifica se deve mostrar a razão completa (ex: 3:2) vs apenas numerador (3)
+  /// Checks se deve mostrar a razão completa (ex: 3:2) vs apenas numerador (3)
   bool get shouldShowRatio {
     if (numberConfig != null) {
       return numberConfig!.showAsRatio;
@@ -123,7 +123,7 @@ class Tuplet extends MusicalElement {
     return TupletNumber.shouldShowRatio(actualNotes, normalNotes, timeSignature);
   }
   
-  /// Texto do número a ser exibido
+  /// Texto of the number a ser exibido
   String get numberText {
     if (numberConfig != null) {
       return numberConfig!.generateText(actualNotes, normalNotes);
@@ -135,7 +135,7 @@ class Tuplet extends MusicalElement {
     return actualNotes.toString();
   }
   
-  /// Atalhos para criar quiálteras comuns
+  /// Atalhos for Createsr tuplets comuns
   
   /// Tercina (3:2)
   factory Tuplet.triplet({
@@ -205,7 +205,7 @@ class Tuplet extends MusicalElement {
     );
   }
   
-  /// Dupleto em tempo composto (2:3)
+  /// Dupleto in tempo composto (2:3)
   factory Tuplet.duplet({
     required List<MusicalElement> elements,
     TupletBracket? bracketConfig,

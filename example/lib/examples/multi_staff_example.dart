@@ -5,7 +5,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 
-/// Example demonstrating multi-staff notation
+/// Example demonstrating multi-staff notetion
 ///
 /// Shows:
 /// 1. Piano (grand staff with brace)
@@ -2096,7 +2096,7 @@ class MultiStaffDemoApp extends StatelessWidget {
 
   Widget _buildGrandStaffSection() {
     return _buildSection(
-      title: 'ðŸŽ¹ Grand Staff (Piano)',
+      title: '🎹 Grand Staff (Piano)',
       description: 'Treble clef (right hand) + bass clef (left hand)',
       children: [
         Container(

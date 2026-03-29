@@ -172,7 +172,7 @@ void main() {
     });
 
     test('Treble 8vb for tenor voice', () {
-      // Tenor voice notation
+      // Tenor voice notetion
       final clef = Clef(clefType: ClefType.treble8vb);
 
       expect(clef.clefType, equals(ClefType.treble8vb));

@@ -1,99 +1,98 @@
 // lib/src/engraving/engraving_rules.dart
 
-/// Regras de Tipografia Musical (Engraving Rules)
+/// Regras de Music engraving (Engraving Rules)
 ///
-/// Esta classe centraliza TODAS as constantes tipográficas usadas
-/// na renderização de partituras musicais.
+/// This class centraliza All as constantes tipográficas used
+/// na Rendersção de partituras musicais.
 ///
-/// Baseado em:
-/// - OpenSheetMusicDisplay (EngravingRules.ts com 1220+ linhas)
+/// Based on:
+/// - OpenSheetMusicDisplay (EngravingRules.ts with 1220+ linhas)
 /// - Verovio (vrvdef.h e constantes C++)
 /// - "Behind Bars" de Elaine Gould
 /// - "The Art of Music Engraving" de Ted Ross
 /// - Especificação SMuFL (w3c.github.io/smufl)
-/// - Metadata da fonte Bravura
+/// - Metadata of the fonte Bravura
 class EngravingRules {
   // ====================
   // UNIDADE BASE
   // ====================
 
-  /// Unidade base: 1.0 = distância entre duas linhas adjacentes do pentagrama
-  /// No SMuFL, esta é chamada de "staff space"
+  /// Unidade base: 1.0 = distância entre duas linhas adjacentes of the staff
+  /// No SMuFL, this é chamada de "staff space"
   static const double unit = 1.0;
 
   // ====================
-  // HASTES (STEMS)
+  // Stems (STEMS)
   // ====================
 
-  /// Comprimento ideal de uma haste (Verovio: 7 half-spaces = 3.5 spaces)
+  /// Comprimento ideal de a stem (Verovio: 7 half-spaces = 3.5 spaces)
   /// OSMD: 3.0 units
-  /// Bravura metadata: stemLength padrão
+  /// Bravura metadata: stemLength default
   double idealStemLength = 3.5;
 
-  /// Offset Y onde a haste toca a borda da cabeça de nota
+  /// Offset Y where a stem toca a borda of the notehead
   /// OSMD: 0.2 units
   double stemNoteHeadBorderYOffset = 0.2;
 
-  /// Largura da haste
+  /// Width of the stem
   /// Bravura metadata: stemThickness = 0.12 staff spaces
-  /// OSMD: 0.15 (mais espesso para web)
-  double stemWidth = 0.13;
+  double stemWidth = 0.12;
 
-  /// Comprimento mínimo permitido para hastes
+  /// Comprimento mínimo permitido for stems
   /// Verovio: Encurtamento máximo de 6 third-units = 2.0 spaces
   double stemMinLength = 2.5;
 
-  /// Comprimento máximo permitido para hastes
+  /// Comprimento máximo permitido for stems
   double stemMaxLength = 4.5;
 
-  /// Margem da haste
+  /// Margem of the stem
   double stemMargin = 0.2;
 
-  /// Altura mínima permitida entre cabeça de nota e linha de feixe
+  /// Height mínima permitida entre notehead e linha de beam
   double stemMinAllowedDistanceBetweenNoteHeadAndBeamLine = 1.0;
 
   // ====================
-  // FEIXES (BEAMS)
+  // Beams (BEAMS)
   // ====================
 
-  /// Espessura de um feixe individual
+  /// Espessura de um beam individual
   /// Bravura metadata: beamThickness = 0.5 staff spaces
   /// OSMD: 0.5 units
   double beamWidth = 0.5;
 
-  /// Espaço entre feixes múltiplos
+  /// Space entre beams múltiplos
   /// Bravura metadata: beamSpacing = 0.25 staff spaces
   /// OSMD: 0.33 units (unit / 3.0)
   /// Verovio: beamThickness * 1.5 = 0.75 na prática
   double beamSpaceWidth = 0.25;
 
-  /// Ângulo máximo de inclinação de feixes em graus
+  /// Ângulo máximo de inclinação de beams in graus
   /// OSMD: 10.0°
   /// Verovio: Mais adaptativo, mas limitado
-  /// Behind Bars: Feixes devem ser sutis, não excessivos
+  /// Behind Bars: Beams devem ser sutis, not excessivos
   double beamSlopeMaxAngle = 10.0;
 
-  /// Comprimento de feixe parcial (broken beam)
+  /// Comprimento de beam parcial (broken beam)
   /// OSMD: 1.25 units
   double beamForwardLength = 1.25;
 
-  /// Usar feixes planos (flat beams) em vez de inclinados
-  /// Útil para estilos alternativos
+  /// Usesr beams planos (flat beams) in vez de inclinados
+  /// Útil for estilos alternativos
   bool flatBeams = false;
 
-  /// Offset de feixes planos
+  /// Offset de beams planos
   double flatBeamOffset = 20.0;
 
-  /// Offset por feixe em feixes planos
+  /// Offset por beam in beams planos
   double flatBeamOffsetPerBeam = 10.0;
 
   // ====================
-  // ESPAÇAMENTO DE NOTAS
+  // Note spacing
   // ====================
 
-  /// Distâncias de espaçamento por duração
-  /// Índice: 0=breve, 1=whole, 2=half, 3=quarter, 4=eighth, 5=16th, 6=32nd, 7=64th
-  /// Valores em staff spaces (units)
+  /// Distâncias de spacing por duração
+  /// Index: 0=breve, 1=whole, 2=half, 3=quarter, 4=eighth, 5=16th, 6=32nd, 7=64th
+  /// Valores in staff spaces (units)
   /// OSMD: [1.0, 1.0, 1.3, 1.6, 2.0, 2.5, 3.0, 4.0]
   List<double> noteDistances = [
     1.0, // Breve
@@ -106,8 +105,8 @@ class EngravingRules {
     4.0, // 64th note
   ];
 
-  /// Fatores de escala para duração (exponencial: 1, 2, 4, 8, 16, ...)
-  /// Usado em cálculos de espaçamento óptico
+  /// Fatores de escala for duração (exponencial: 1, 2, 4, 8, 16, ...)
+  /// used in cálculos de spacing óptico
   List<double> noteDistancesScalingFactors = [
     1.0, // Breve
     2.0, // Whole
@@ -119,47 +118,47 @@ class EngravingRules {
     128.0, // 64th
   ];
 
-  /// Distância mínima entre notas
+  /// Distância mínima entre notes
   /// OSMD: 2.0 units
   /// Verovio: Configurável
   double minNoteDistance = 2.0;
 
-  /// Margem para notas deslocadas (displaced notes em acordes)
+  /// Margem for notes deslocadas (displaced notes in chords)
   double displacedNoteMargin = 0.1;
 
-  /// Multiplicador de espaçamento para VexFlow
+  /// Multiplicador de spacing for VexFlow
   /// OSMD: 0.85
   double voiceSpacingMultiplierVexflow = 0.85;
 
-  /// Valor adicionado ao espaçamento VexFlow
+  /// Value Addsdo ao spacing VexFlow
   /// OSMD: 3.0
   double voiceSpacingAddendVexflow = 3.0;
 
-  /// Fator softmax para suavizar espaçamento (evitar transições abruptas)
+  /// Fator softmax for suavizar spacing (evitar transições abruptas)
   /// OSMD: 15
   double softmaxFactorVexFlow = 15.0;
 
   // ====================
-  // LIGADURAS DE VALOR (TIES)
+  // Ties (TIES)
   // ====================
 
-  /// Altura mínima de tie
-  /// Behind Bars: Ties devem ser discretos, altura mínima ~0.1 SS
+  /// Height mínima de tie
+  /// Behind Bars: Ties devem ser discretos, height mínima ~0.1 SS
   double tieHeightMinimum = 0.1;
 
-  /// Altura máxima de tie
-  /// Behind Bars: Mesmo para ties longos, máximo 0.4 SS
+  /// Height máxima de tie
+  /// Behind Bars: Mesmo for ties longos, máximo 0.4 SS
   double tieHeightMaximum = 0.4;
 
-  /// Constante K para interpolação linear de altura de tie: y = k*x + d
-  /// Reduzido drasticamente para ties mais achatados (Behind Bars)
+  /// Constante K for interpolação linear de height de tie: y = k*x + d
+  /// Reduzido drasticamente for ties mais achatados (Behind Bars)
   double tieHeightInterpolationK = 0.008;
 
-  /// Constante D para interpolação linear de altura de tie: y = k*x + d
-  /// Altura base muito pequena para ties discretos
+  /// Constante D for interpolação linear de height de tie: y = k*x + d
+  /// Height base muito pequena for ties discretos
   double tieHeightInterpolationD = 0.05;
 
-  /// Calcula altura de tie baseado na largura
+  /// Calculatestes height de tie based na width
   /// Fórmula: height = k * width + d, limitado por min/max
   double calculateTieHeight(double width) {
     final height = tieHeightInterpolationK * width + tieHeightInterpolationD;
@@ -167,14 +166,14 @@ class EngravingRules {
   }
 
   // ====================
-  // LIGADURAS DE EXPRESSÃO (SLURS)
+  // Slurs (SLURS)
   // ====================
 
-  /// Offset Y da cabeça de nota para início/fim de slur
+  /// Offset Y of the notehead for início/fim de slur
   /// OSMD: 0.5 staff spaces
   double slurNoteHeadYOffset = 0.5;
 
-  /// Offset X da haste para slurs que começam/terminam em hastes
+  /// Offset X of the stem for slurs that começam/terminam in stems
   /// OSMD: 0.3 staff spaces
   double slurStemXOffset = 0.3;
 
@@ -182,47 +181,47 @@ class EngravingRules {
   /// OSMD: 15.0°
   double slurSlopeMaxAngle = 15.0;
 
-  /// Ângulo mínimo das tangentes da curva de slur
+  /// Ângulo mínimo das tangentes of the curva de slur
   /// OSMD: 30.0°
-  /// Usado no algoritmo de Bézier avançado
+  /// used no algoritmo de Bézier avançado
   double slurTangentMinAngle = 30.0;
 
-  /// Ângulo máximo das tangentes da curva de slur
+  /// Ângulo máximo das tangentes of the curva de slur
   /// OSMD: 80.0°
   double slurTangentMaxAngle = 80.0;
 
-  /// Fator de altura da curva de slur
+  /// Fator de height of the curva de slur
   /// OSMD: 1.0 (100%)
   double slurHeightFactor = 1.0;
 
-  /// Número de passos para discretização de curvas Bézier
+  /// Number de passos for discretização de curvas Bézier
   /// OSMD: 1000
-  /// Usado para pré-calcular curvas
+  /// used for pré-Calculatestesr curvas
   int bezierCurveStepSize = 1000;
 
-  /// Usar posicionamento de slurs do XML (se disponível)
+  /// Usesr posicionamento de slurs of the XML (se disponível)
   bool slurPlacementFromXML = true;
 
-  /// Posicionar slurs nas hastes em vez de nas cabeças
+  /// Posicionar slurs nas stems in vez de nas cabeças
   bool slurPlacementAtStems = false;
 
-  /// Usar skyline/bottomline para posicionamento de slurs
+  /// Usesr skyline/bottomline for posicionamento de slurs
   bool slurPlacementUseSkyBottomLine = false;
 
-  /// Margem mínima de clearance entre slur e notas intermediárias
-  /// Garante que o slur não colida com notas no caminho
+  /// Margem mínima de clearance entre slur e notes intermediárias
+  /// Garante that o slur not colida with notes no caminho
   /// OSMD: 0.5 staff spaces
   double slurClearanceMinimum = 0.5;
 
   // ====================
-  // ACIDENTES (ACCIDENTALS)
+  // Accidentals (ACCIDENTALS)
   // ====================
 
-  /// Distância entre símbolos de armadura de clave
+  /// Distância entre símbolos de armadura de clef
   /// OSMD: 0.2 staff spaces
   double betweenKeySymbolsDistance = 0.2;
 
-  /// Margem direita após armadura de clave
+  /// Margem direita após armadura de clef
   /// OSMD: 0.75 staff spaces
   double keyRightMargin = 0.75;
 
@@ -230,49 +229,49 @@ class EngravingRules {
   /// OSMD: 0.4 staff spaces
   double distanceBetweenNaturalAndSymbolWhenCancelling = 0.4;
 
-  /// Distância de acidente à cabeça de nota
+  /// Distância de accidental à notehead
   /// Behind Bars: 0.16-0.20 staff spaces
   /// SMuFL Positioning Engine: 0.16 staff spaces
   double accidentalToNoteheadDistance = 0.2;
 
-  /// Margem mínima para evitar colisões de acidentes
+  /// Margem mínima for evitar colisões de accidentals
   double accidentalMinimumClearance = 0.08;
 
   // ====================
-  // ARTICULAÇÕES
+  // Articulations
   // ====================
 
-  /// Articulação acima da nota quando haste está para cima
-  /// OSMD: false (articulação fica do lado oposto da haste)
-  /// Behind Bars: Articulações geralmente opostas às hastes
+  /// Articulation acima of the note when stem está for cima
+  /// OSMD: false (articulation fica of the lado oposto of the stem)
+  /// Behind Bars: Articulations Generateslmente opostas às stems
   bool articulationAboveNoteForStemUp = false;
 
-  /// Padding para soft accent wedge
+  /// Padding for soft accent wedge
   double softAccentWedgePadding = 0.4;
 
-  /// Fator de tamanho para soft accent
+  /// Fator de size for soft accent
   double softAccentSizeFactor = 0.6;
 
-  /// Fator de escala para staccato
-  /// OSMD: 0.8 (80% do tamanho)
+  /// Fator de escala for staccato
+  /// OSMD: 0.8 (80% of the size)
   double staccatoScalingFactor = 0.8;
 
   /// Distância entre pontos (ex: staccatissimo duplo)
   double betweenDotsDistance = 0.8;
 
-  /// Distância de articulação à nota
+  /// Distância de articulation à note
   /// SMuFL Positioning Engine: 0.5 staff spaces
   double articulationToNoteDistance = 0.5;
 
   // ====================
-  // ORNAMENTOS
+  // Ornaments
   // ====================
 
-  /// Fator de escala para acidentes em ornamentos (ex: trill com sustenido)
-  /// OSMD: 0.65 (65% do tamanho)
+  /// Fator de escala for accidentals in ornaments (ex: trill with sharp)
+  /// OSMD: 0.65 (65% of the size)
   double ornamentAccidentalScalingFactor = 0.65;
 
-  /// Distância de ornamento à nota
+  /// Distância de ornament à note
   /// SMuFL Positioning Engine: 0.75 staff spaces
   double ornamentToNoteDistance = 0.75;
 
@@ -280,7 +279,7 @@ class EngravingRules {
   // LINHAS SUPLEMENTARES (LEDGER LINES)
   // ====================
 
-  /// Extensão das linhas suplementares além da nota
+  /// Extensão das linhas suplementares além of the note
   /// Bravura metadata: legerLineExtension = 0.4 staff spaces
   double legerLineExtension = 0.4;
 
@@ -292,14 +291,14 @@ class EngravingRules {
   // ESPESSURAS DE LINHA
   // ====================
 
-  /// Espessura das linhas da pauta
+  /// Espessura das linhas of the staff
   /// Bravura metadata: staffLineThickness = 0.13 staff spaces
   /// OSMD: 0.10 (mais fino)
   double staffLineWidth = 0.13;
 
   /// Espessura das linhas suplementares
-  /// OSMD: 1 (pixel absoluto, não staff space)
-  /// Aqui: 0.16 staff spaces (consistente com Bravura)
+  /// OSMD: 1 (pixel absoluto, not staff space)
+  /// Aqui: 0.16 staff spaces (consistente with Bravura)
   double ledgerLineWidth = 0.16;
 
   /// Espessura de linha de wedge (crescendo/diminuendo)
@@ -308,45 +307,45 @@ class EngravingRules {
   /// Espessura de linha de tuplet bracket
   double tupletLineWidth = 0.12;
 
-  /// Espessura de linha fina de sistema (thin barline)
+  /// Espessura de linha fina de system (thin barline)
   /// Bravura metadata: thinBarlineThickness = 0.16 staff spaces
   double systemThinLineWidth = 0.16;
 
-  /// Espessura de linha grossa de sistema (thick barline)
+  /// Espessura de linha grossa de system (thick barline)
   /// Bravura metadata: thickBarlineThickness = 0.5 staff spaces
   double systemBoldLineWidth = 0.5;
 
   // ====================
-  // BARRAS DE COMPASSO (BARLINES)
+  // Barlines (BARLINES)
   // ====================
 
-  /// Espessura de barra de compasso normal
+  /// Espessura de barline normal
   double barlineWidth = 0.16;
 
-  /// Espessura de barra de compasso grossa
+  /// Espessura de barline grossa
   double thickBarlineWidth = 0.5;
 
-  /// Separação entre barras de compasso duplas
+  /// Separação entre barlines duplas
   /// Bravura metadata: barlineSeparation = 0.4 staff spaces
   double barlineSeparation = 0.4;
 
   // ====================
-  // DINÂMICAS
+  // Dynamics
   // ====================
 
-  /// Distância máxima para agrupar expressões dinâmicas para alinhamento
+  /// Distância máxima for agrupar expressões dynamics for alinhamento
   /// OSMD: 4.0 staff spaces
   double dynamicExpressionMaxDistance = 4.0;
 
   // ====================
-  // QUIÁLTERAS (TUPLETS)
+  // Tuplets (TUPLETS)
   // ====================
 
-  /// Altura do bracket de quiáltera acima/abaixo das notas
+  /// Height of the bracket de tuplet acima/abaixo das notes
   /// SMuFL Positioning Engine: 1.0 staff spaces
   double tupletBracketHeight = 1.0;
 
-  /// Distância do número da quiáltera ao bracket
+  /// Distância of the number of the tuplet ao bracket
   /// SMuFL Positioning Engine: 0.5 staff spaces
   double tupletNumberDistance = 0.5;
 
@@ -354,66 +353,66 @@ class EngravingRules {
   // GRACE NOTES
   // ====================
 
-  /// Escala de grace notes em relação a notas normais
+  /// Escala de grace notes in relação a notes normais
   /// SMuFL Positioning Engine: 0.6 (60%)
   /// Verovio: ~0.66 (graceFactor)
   double graceNoteScale = 0.6;
 
-  /// Comprimento de haste de grace note
+  /// Comprimento de stem de grace note
   /// SMuFL Positioning Engine: 2.5 staff spaces
   double graceNoteStemLength = 2.5;
 
-  /// Offset X de grace note antes da nota principal
+  /// Offset X de grace note antes of the note principal
   /// SMuFL Positioning Engine: -1.5 staff spaces
   double graceNoteXOffset = -1.5;
 
-  /// Grace notes devem ter slash através da haste
+  /// Grace notes devem ter slash através of the stem
   bool graceNoteHasSlash = true;
 
-  /// Ângulo do slash em grace notes
+  /// Ângulo of the slash in grace notes
   double graceNoteSlashAngle = 45.0; // graus
 
   // ====================
-  // ESPAÇAMENTO DE SISTEMA
+  // Spacing DE System
   // ====================
 
-  /// Distância entre pentagramas
+  /// Distância entre staffs
   /// OSMD: 7.0 staff spaces
   double staffDistance = 7.0;
 
-  /// Distância adicional entre pentagramas
+  /// Distância added entre staffs
   /// OSMD: 5.0 staff spaces
   double betweenStaffDistance = 5.0;
 
-  /// Distância mínima entre linhas de pauta
+  /// Distância mínima entre staff lines
   /// OSMD: 4.0 staff spaces
   double minimumStaffLineDistance = 4.0;
 
-  /// Distância mínima skyline/bottomline entre pentagramas
+  /// Distância mínima skyline/bottomline entre staffs
   /// OSMD: 1.0 staff spaces
   double minSkyBottomDistBetweenStaves = 1.0;
 
-  /// Distância mínima skyline/bottomline entre sistemas
+  /// Distância mínima skyline/bottomline entre systems
   /// OSMD: 5.0 staff spaces
   double minSkyBottomDistBetweenSystems = 5.0;
 
-  /// Margem do sistema (esquerda/direita)
+  /// Margem of the system (esquerda/direita)
   /// Layout Engine: 2.0 staff spaces
   double systemMargin = 2.0;
 
   // ====================
-  // ESPAÇAMENTO DE COMPASSO
+  // Spacing DE Measure
   // ====================
 
-  /// Largura mínima de compasso
+  /// Width mínima de measure
   /// Layout Engine: 4.0 staff spaces
   double measureMinWidth = 4.0;
 
-  /// Espaçamento mínimo de nota
+  /// Spacing mínimo de note
   /// Layout Engine: 2.0 staff spaces (corrigido de 1.5)
   double noteMinSpacing = 2.0;
 
-  /// Padding ao final do compasso
+  /// Padding ao final of the measure
   /// Layout Engine: 1.0 staff spaces
   double measureEndPadding = 1.0;
 
@@ -421,16 +420,16 @@ class EngravingRules {
   // ESCALA DE FONTES
   // ====================
 
-  /// Escala padrão de fonte de notação VexFlow
+  /// Escala default de fonte de noteção VexFlow
   /// OSMD: 39
-  /// Verovio usa unitsPerEm = 20480 (2048 * 10)
+  /// Verovio Uses unitsPerEm = 20480 (2048 * 10)
   double vexFlowDefaultNotationFontScale = 39.0;
 
-  /// Escala de fonte para tablatura
+  /// Escala de fonte for tablatura
   /// OSMD: 39
   double vexFlowDefaultTabFontScale = 39.0;
 
-  /// Fonte padrão de notação VexFlow
+  /// Fonte default de noteção VexFlow
   /// OSMD: "gonville", mas suporta "bravura", "petaluma"
   String defaultVexFlowNoteFont = "bravura";
 
@@ -442,10 +441,10 @@ class EngravingRules {
   double repeatEndingLineThickness = 0.16;
 
   // ====================
-  // MÉTODOS AUXILIARES
+  // MethodS AUXILIARES
   // ====================
 
-  /// Obtém distância de espaçamento para índice de duração
+  /// Gets distância de spacing for index de duração
   /// @param index 0=breve, 1=whole, 2=half, 3=quarter, 4=eighth, etc.
   double getNoteDistanceByIndex(int index) {
     if (index < 0 || index >= noteDistances.length) {
@@ -454,8 +453,8 @@ class EngravingRules {
     return noteDistances[index];
   }
 
-  /// Converte enum de duração para índice de espaçamento
-  /// Útil para mapear DurationType → noteDistances[]
+  /// Converts enum de duração for index de spacing
+  /// Útil for Map DurationType → noteDistances[]
   static int durationTypeToIndex(String durationType) {
     switch (durationType.toLowerCase()) {
       case 'breve':
@@ -479,8 +478,8 @@ class EngravingRules {
     }
   }
 
-  /// Cria uma cópia com valores modificados
-  /// Útil para temas ou estilos alternativos
+  /// Creates a cópia with valores modificados
+  /// Útil for temas ou estilos alternativos
   EngravingRules copyWith({
     double? idealStemLength,
     double? stemWidth,
@@ -488,7 +487,7 @@ class EngravingRules {
     double? beamSlopeMaxAngle,
     List<double>? noteDistances,
     double? minNoteDistance,
-    // ... adicionar outros parâmetros conforme necessário
+    // ... add outros parameters according to necessário
   }) {
     final copy = EngravingRules();
     copy.idealStemLength = idealStemLength ?? this.idealStemLength;
@@ -501,6 +500,6 @@ class EngravingRules {
     return copy;
   }
 
-  /// Instância singleton padrão
+  /// Instance singleton default
   static final EngravingRules defaultRules = EngravingRules();
 }

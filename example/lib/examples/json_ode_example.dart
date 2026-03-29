@@ -1,5 +1,5 @@
 // example/lib/examples/json_ode_example.dart
-// Ode to Joy renderizada a partir de JSON simplificado
+// Ode to Joy Rendersda from JSON simplificado
 
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';

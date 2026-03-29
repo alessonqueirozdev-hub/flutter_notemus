@@ -250,7 +250,7 @@ class AdaptiveMusicScoreTheme extends MusicScoreTheme {
     }
   }
 
-  /// Calculate contrast ratio between two colors (WCAG 2.0 formula)
+  /// calculateTeste contrast ratio between two colors (WCAG 2.0 formula)
   ///
   /// Formula:
   /// ```

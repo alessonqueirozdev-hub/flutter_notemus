@@ -84,7 +84,10 @@ class KeySignaturesExample extends StatelessWidget {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 8.0),
                 child: Container(
-                  height: 100,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8.0,
+                    vertical: 10.0,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     border: Border.all(color: Colors.grey.shade300),
@@ -92,6 +95,7 @@ class KeySignaturesExample extends StatelessWidget {
                   ),
                   child: MusicScore(
                     staff: staff,
+                    staffSpace: 14,
                   ),
                 ),
               );

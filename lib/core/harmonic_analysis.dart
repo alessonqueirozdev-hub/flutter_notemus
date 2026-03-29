@@ -2,31 +2,31 @@
 
 import 'musical_element.dart';
 
-/// Tipo de intervalo melódico, correspondendo ao atributo `@intm` do MEI v5.
-/// Suporta Código de Parsons, notação diatônica e semitons.
+/// Type de intervalo melódico, correspwherendo ao atributo `@intm` of the MEI v5.
+/// Suporta Código de Parsons, noteção diatônica e semitons.
 enum MelodicIntervalType {
   /// Código de Parsons: repetição (R), ascendente (U), descendente (D)
   parsonsCode,
-  /// Notação diatônica (M2, m3, P5, etc.)
+  /// Noteção diatônica (M2, m3, P5, etc.)
   diatonic,
-  /// Número de semitons (inteiro)
+  /// Number de semitons (inteiro)
   semitones,
 }
 
-/// Função melódica de uma nota (MEI `@mfunc`).
+/// Função melódica de a note (MEI `@mfunc`).
 /// Baseada na sintaxe Humdrum.
 enum MelodicFunction {
-  /// Tom de acorde (chord tone)
+  /// Tom de chord (chord tone)
   chordTone,
-  /// Nota de passagem (passing tone)
+  /// Note de passagem (passing tone)
   passingTone,
-  /// Nota de vizinhança / bordadura (neighbor tone)
+  /// Note de vizinhança / bordadura (neighbor tone)
   neighborTone,
   /// Escapada (escape tone)
   escapeTone,
   /// Appoggiatura
   appoggiatura,
-  /// Nota de antecipação
+  /// Note de antecipação
   anticipation,
   /// Suspensão
   suspension,
@@ -38,17 +38,17 @@ enum MelodicFunction {
   other,
 }
 
-/// Grau da escala com possível alteração cromática (MEI `@deg`).
+/// Grau of the escala with possível alteração cromática (MEI `@deg`).
 ///
 /// ```dart
 /// ScaleDegree(degree: 5)          // V
 /// ScaleDegree(degree: 7, alter: -1) // b7 (sétimo abaixado)
 /// ```
 class ScaleDegree {
-  /// Grau da escala (1–7).
+  /// Grau of the escala (1–7).
   final int degree;
 
-  /// Alteração cromática do grau (-2.0 a +2.0).
+  /// Alteração cromática of the grau (-2.0 a +2.0).
   final double alter;
 
   const ScaleDegree({required this.degree, this.alter = 0.0});
@@ -64,11 +64,11 @@ class ScaleDegree {
   }
 }
 
-/// Intervalo melódico entre duas notas consecutivas (MEI `@intm`).
+/// Intervalo melódico entre duas notes consecutivas (MEI `@intm`).
 ///
 /// ```dart
-/// MelodicInterval.diatonic('M2')   // segunda maior
-/// MelodicInterval.semitones(3)     // 3 semitons (terça menor)
+/// MelodicInterval.diatonic('M2')   // segunda greater
+/// MelodicInterval.semitones(3)     // 3 semitons (terça smaller)
 /// MelodicInterval.parsons('U')     // ascendente (Código de Parsons)
 /// ```
 class MelodicInterval {
@@ -88,7 +88,7 @@ class MelodicInterval {
   factory MelodicInterval.diatonic(String value) =>
       MelodicInterval._(type: MelodicIntervalType.diatonic, diatonicValue: value);
 
-  /// Intervalo em semitons (positivo = ascendente, negativo = descendente).
+  /// Intervalo in semitons (positivo = ascendente, negativo = descendente).
   factory MelodicInterval.semitones(int value) =>
       MelodicInterval._(type: MelodicIntervalType.semitones, semitonesValue: value);
 
@@ -106,14 +106,14 @@ class MelodicInterval {
   String toString() => diatonicValue ?? semitonesValue?.toString() ?? parsonsValue ?? '';
 }
 
-/// Intervalo harmônico entre duas notas simultâneas (MEI `@inth`).
+/// Intervalo harmônico entre duas notes simultâneas (MEI `@inth`).
 ///
-/// Descreve a relação intervalar entre notas de um acorde ou entre vozes.
+/// Descreve a relação intervalar entre notes de um chord ou entre voices.
 class HarmonicInterval {
-  /// Tamanho do intervalo em semitons (0 = uníssono).
+  /// Size of the intervalo in semitons (0 = uníssono).
   final int semitones;
 
-  /// Nome diatônico do intervalo (ex.: 'M3', 'm7', 'P5').
+  /// Name diatônico of the intervalo (ex.: 'M3', 'm7', 'P5').
   final String? diatonicName;
 
   const HarmonicInterval({required this.semitones, this.diatonicName});
@@ -122,18 +122,18 @@ class HarmonicInterval {
   String toString() => diatonicName ?? '$semitones st';
 }
 
-/// Define um membro de um acorde dentro de uma `ChordTable` (MEI `<chordMember>`).
+/// Definess um membro de um chord dentro de a `ChordTable` (MEI `<chordMember>`).
 class ChordMember {
-  /// Nota do membro (pname + octave relativo à fundamental, ou semitom).
+  /// Note of the membro (pname + octave relativo à fundamental, ou semitom).
   final int intervalFromRoot;
 
-  /// Acidente opcional no membro.
+  /// Accidental opcional no membro.
   final double alter;
 
   const ChordMember({required this.intervalFromRoot, this.alter = 0.0});
 }
 
-/// Define um tipo de acorde na tabela de acordes (MEI `<chordDef>`).
+/// Definess um type de chord na tabela de chords (MEI `<chordDef>`).
 ///
 /// ```dart
 /// ChordDefinition(
@@ -143,13 +143,13 @@ class ChordMember {
 /// )
 /// ```
 class ChordDefinition {
-  /// Identificador único do acorde (MEI `xml:id` em `<chordDef>`).
+  /// Identificador único of the chord (MEI `xml:id` in `<chordDef>`).
   final String id;
 
   /// Rótulo descritivo (ex.: 'Major', 'Minor 7th').
   final String label;
 
-  /// Membros do acorde (intervalos em semitons a partir da fundamental).
+  /// Membros of the chord (intervalos in semitons a partir of the fundamental).
   final List<ChordMember> members;
 
   const ChordDefinition({
@@ -159,10 +159,10 @@ class ChordDefinition {
   });
 }
 
-/// Tabela de definições de acordes (MEI `<chordTable>`).
+/// Tabela de definições de chords (MEI `<chordTable>`).
 ///
-/// Permite definir vocabulário harmônico reutilizável para análise de acordes.
-/// Geralmente armazenada no `<meiHead>` ou `<music>`.
+/// Permite Define vocabulário harmônico reutilizável for análise de chords.
+/// Generateslmente armazenada no `<meiHead>` ou `<music>`.
 class ChordTable {
   final List<ChordDefinition> definitions;
 
@@ -177,9 +177,9 @@ class ChordTable {
   }
 }
 
-/// Representa uma análise harmônica de uma nota ou acorde (MEI `<harm>`).
+/// Representa a análise harmônica de a note ou chord (MEI `<harm>`).
 ///
-/// Associado a um evento musical através de [xmlId] do elemento-alvo.
+/// Associado a um evento musical through [xmlId] of the element-alvo.
 ///
 /// ```dart
 /// HarmonicLabel(
@@ -189,22 +189,22 @@ class ChordTable {
 /// )
 /// ```
 class HarmonicLabel extends MusicalElement {
-  /// Símbolo do acorde (ex.: 'Cmaj7', 'G7', 'Am', 'Bdim').
+  /// Símbolo of the chord (ex.: 'Cmaj7', 'G7', 'Am', 'Bdim').
   final String? symbol;
 
-  /// Grau da escala deste acorde no contexto tonal.
+  /// Grau of the escala deste chord no contexto tonal.
   final ScaleDegree? scaleDegree;
 
-  /// Função melódica da nota associada.
+  /// Função melódica of the note associada.
   final MelodicFunction? melodicFunction;
 
-  /// Intervalo melódico desde a nota anterior.
+  /// Intervalo melódico desde a note previous.
   final MelodicInterval? melodicInterval;
 
-  /// Intervalo harmônico em relação a outra voz.
+  /// Intervalo harmônico in relação a outra voice.
   final HarmonicInterval? harmonicInterval;
 
-  /// ID do elemento-alvo desta análise (MEI `@startid`).
+  /// ID of the element-alvo desta análise (MEI `@startid`).
   final String? targetXmlId;
 
   HarmonicLabel({

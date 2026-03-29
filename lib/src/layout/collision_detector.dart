@@ -4,8 +4,8 @@ import 'dart:ui';
 import '../../core/core.dart'; // 🆕 Tipos do core
 import 'layout_engine.dart';
 
-/// Prioridade de colisão para elementos musicais
-/// Elementos com maior prioridade são desenhados primeiro e não movidos
+/// Prioridade de colisão for elementos musicais
+/// Elementos with greater prioridade are desenhados first e not movidos
 enum CollisionPriority {
   veryLow,
   low,
@@ -14,7 +14,7 @@ enum CollisionPriority {
   veryHigh,
 }
 
-/// Categoria de elemento musical para detecção de colisões
+/// Categoria de elemento musical for detecção de colisões
 enum CollisionCategory {
   notehead,
   accidental,
@@ -31,7 +31,7 @@ enum CollisionCategory {
   other,
 }
 
-/// Item registrado no sistema de colisões
+/// Item registrado no system de colisões
 class CollisionItem {
   final String id;
   final Rect bounds;
@@ -49,7 +49,7 @@ class CollisionItem {
   String toString() => 'CollisionItem($id, $category, $priority)';
 }
 
-/// Representa uma região ocupada por um elemento musical
+/// Representa a região ocupada por um elemento musical
 class BoundingBox {
   final Offset position;
   final double width;
@@ -65,7 +65,7 @@ class BoundingBox {
     required this.elementType,
   });
 
-  /// Retorna o retângulo representando esta bounding box
+  /// Returns o retângulo representando this bounding box
   Rect get rect => Rect.fromLTWH(
         position.dx - width / 2,
         position.dy - height / 2,
@@ -73,24 +73,24 @@ class BoundingBox {
         height,
       );
 
-  /// Verifica se esta bounding box intersecta com outra
+  /// Checks se this bounding box intersecta with outra
   bool intersects(BoundingBox other) {
     return rect.overlaps(other.rect);
   }
 
-  /// Retorna a área de intersecção com outra bounding box
+  /// Returns a área de intersecção with outra bounding box
   double intersectionArea(BoundingBox other) {
     final intersection = rect.intersect(other.rect);
     if (intersection.isEmpty) return 0.0;
     return intersection.width * intersection.height;
   }
 
-  /// Calcula a distância vertical entre centros
+  /// Calculatestes a distância vertical entre centros
   double verticalDistanceTo(BoundingBox other) {
     return (position.dy - other.position.dy).abs();
   }
 
-  /// Calcula a distância horizontal entre centros
+  /// Calculatestes a distância horizontal entre centros
   double horizontalDistanceTo(BoundingBox other) {
     return (position.dx - other.position.dx).abs();
   }
@@ -113,7 +113,7 @@ class CollisionStatistics {
     required this.collisionsByCategory,
   });
 
-  /// COMPATIBILIDADE: Getter para API legada
+  /// COMPATIBILIDADE: Getter for API legada
   int get totalCollisions => collisionCount;
 
   /// COMPATIBILIDADE: Taxa de colisão (0.0 a 1.0)
@@ -129,7 +129,7 @@ class CollisionDetector {
   final List<BoundingBox> _occupiedRegions = [];
   final List<CollisionItem> _registeredItems = [];
 
-  // Limites de colisão por tipo de elemento
+  // Limites de colisão por type de elemento
   static const Map<String, double> _minDistances = {
     'notehead': 0.2,
     'accidental': 0.3,
@@ -145,19 +145,19 @@ class CollisionDetector {
     Map<CollisionCategory, double>? categoryMargins, // COMPATIBILIDADE: Parâmetro ignorado
   });
 
-  /// Registra uma região ocupada por um elemento
+  /// Registra a região ocupada por um elemento
   void registerElement(BoundingBox boundingBox) {
     _occupiedRegions.add(boundingBox);
   }
 
-  /// Limpa todas as regiões registradas
+  /// Limpa all as regiões registradas
   void clear() {
     _occupiedRegions.clear();
     _registeredItems.clear();
   }
 
-  /// NOVO: Registra um item no sistema de colisões moderno
-  /// Este método é usado por BaseGlyphRenderer quando trackBounds = true
+  /// New: Registra um item no system de colisões moderno
+  /// This method é used por BaseGlyphRenderer when trackBounds = true
   void register({
     required String id,
     required Rect bounds,
@@ -172,7 +172,7 @@ class CollisionDetector {
     ));
   }
 
-  /// Retorna todos os itens registrados
+  /// Returns all os itens registrados
   List<CollisionItem> get registeredItems => List.unmodifiable(_registeredItems);
 
   /// Detecta colisões entre itens registrados
@@ -194,7 +194,7 @@ class CollisionDetector {
     return collisions;
   }
 
-  /// Verifica se uma posição causaria colisão
+  /// Checks se a position caUsesria colisão
   bool wouldCollide(
     BoundingBox proposedBox,
     List<String> ignoreTypes,
@@ -215,14 +215,14 @@ class CollisionDetector {
     return false;
   }
 
-  /// Encontra uma posição sem colisão próxima à posição preferida
+  /// Encontra a position sem colisão próxima à position preferida
   Offset findNonCollidingPosition(
     BoundingBox proposedBox,
     Offset preferredPosition, {
     List<String> ignoreTypes = const [],
     double maxAdjustment = 2.0,
   }) {
-    // Se não há colisão, retornar posição preferida
+    // Se not há colisão, Returnsr position preferida
     final testBox = BoundingBox(
       position: preferredPosition,
       width: proposedBox.width,
@@ -240,7 +240,7 @@ class CollisionDetector {
     final maxSteps = (maxAdjustment * staffSpace / adjustmentStep).round();
 
     for (int step = 1; step <= maxSteps; step++) {
-      // Tentar para cima
+      // Tentar for cima
       final upPosition = Offset(
         preferredPosition.dx,
         preferredPosition.dy - (step * adjustmentStep),
@@ -257,7 +257,7 @@ class CollisionDetector {
         return upPosition;
       }
 
-      // Tentar para baixo
+      // Tentar for baixo
       final downPosition = Offset(
         preferredPosition.dx,
         preferredPosition.dy + (step * adjustmentStep),
@@ -275,11 +275,11 @@ class CollisionDetector {
       }
     }
 
-    // Se não encontrou posição, retornar a preferida mesmo com colisão
+    // Se not encontrou position, Returnsr a preferida mesmo with colisão
     return preferredPosition;
   }
 
-  /// Encontra todas as colisões para um elemento proposto
+  /// Encontra all as colisões for um elemento proposto
   List<BoundingBox> findCollisions(
     BoundingBox proposedBox, {
     List<String> ignoreTypes = const [],
@@ -297,7 +297,7 @@ class CollisionDetector {
     return collisions;
   }
 
-  /// Retorna a distância mínima entre dois tipos de elementos
+  /// Returns a distância mínima entre dois tipos de elementos
   double _getMinDistance(String type1, String type2) {
     final dist1 = _minDistances[type1] ?? 0.5;
     final dist2 = _minDistances[type2] ?? 0.5;
@@ -312,27 +312,27 @@ class CollisionDetector {
     final optimized = <PositionedElement>[];
 
     for (final element in elements) {
-      // Elementos estruturais não precisam de otimização
+      // Elementos estruturais not precisam de otimização
       if (_isStructuralElement(element.element)) {
         optimized.add(element);
         continue;
       }
 
-      // Criar bounding box para o elemento
+      // Createsr bounding box for o elemento
       final bbox = _createBoundingBox(element);
       if (bbox == null) {
         optimized.add(element);
         continue;
       }
 
-      // Encontrar posição sem colisão
+      // Encontrar position sem colisão
       final newPosition = findNonCollidingPosition(
         bbox,
         element.position,
         ignoreTypes: _getIgnoreTypes(element.element),
       );
 
-      // Adicionar elemento otimizado
+      // add elemento otimizado
       final optimizedElement = PositionedElement(
         element.element,
         newPosition,
@@ -355,7 +355,7 @@ class CollisionDetector {
     return optimized;
   }
 
-  /// Verifica se um elemento é estrutural (não precisa de ajuste de colisão)
+  /// Checks se um elemento é estrutural (not precisa de ajuste de colisão)
   bool _isStructuralElement(MusicalElement element) {
     return element is Clef ||
         element is KeySignature ||
@@ -363,7 +363,7 @@ class CollisionDetector {
         element is Barline;
   }
 
-  /// Cria uma bounding box estimada para um elemento
+  /// Creates a bounding box estimada for um elemento
   BoundingBox? _createBoundingBox(PositionedElement element) {
     double width = staffSpace;
     double height = staffSpace;
@@ -402,7 +402,7 @@ class CollisionDetector {
     );
   }
 
-  /// Retorna tipos de elementos a ignorar na detecção de colisão
+  /// Returns tipos de elementos a ignorar na detecção de colisão
   List<String> _getIgnoreTypes(MusicalElement element) {
     if (element is Dynamic) {
       return ['notehead', 'rest']; // Dinâmicas podem ficar perto de notas
@@ -413,7 +413,7 @@ class CollisionDetector {
     return [];
   }
 
-  /// Estatísticas de colisões detectadas (método legado)
+  /// Estatísticas de colisões detectadas (method legado)
   Map<String, int> getCollisionStatistics() {
     final stats = <String, int>{};
 
@@ -430,7 +430,7 @@ class CollisionDetector {
     return stats;
   }
 
-  /// Retorna estatísticas estruturadas de colisões
+  /// Returns estatísticas estruturadas de colisões
   CollisionStatistics getStatistics() {
     final collisions = detectCollisions();
     final collisionsByCategory = <String, int>{};
@@ -448,9 +448,9 @@ class CollisionDetector {
   }
 }
 
-/// Extensão para facilitar o uso do detector de colisões
+/// Extensão for facilitar o uso of the detector de colisões
 extension CollisionDetectorExtension on LayoutEngine {
-  /// Aplica detecção de colisões ao layout
+  /// applies detecção de colisões ao layout
   List<PositionedElement> layoutWithCollisionDetection() {
     final detector = CollisionDetector(staffSpace: staffSpace);
     final elements = layout();

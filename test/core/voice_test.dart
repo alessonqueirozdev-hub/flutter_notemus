@@ -1,5 +1,5 @@
 // test/core/voice_test.dart
-// Comprehensive tests for Voice and polyphonic notation
+// Comprehensive tests for Voice and polyphonic notetion
 
 import 'package:test/test.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';

@@ -205,19 +205,35 @@ class TempoAgogicsExample extends StatelessWidget {
                 TempoMark(
                   bpm: 120,
                   beatUnit: DurationType.quarter,
-                  text: 'â™© = â™ª',
+                  text: 'Quarter = Eighth',
                 ),
                 Note(
                   pitch: const Pitch(step: 'D', octave: 4),
                   duration: const Duration(DurationType.quarter),
                 ),
+                Note(
+                  pitch: const Pitch(step: 'E', octave: 4),
+                  duration: const Duration(DurationType.quarter),
+                ),
+                Note(
+                  pitch: const Pitch(step: 'F', octave: 4),
+                  duration: const Duration(DurationType.quarter),
+                ),
                 TempoMark(
                   bpm: 126,
                   beatUnit: DurationType.quarter,
-                  text: 'â™© = 120-132',
+                  text: 'Range 120-132',
                 ),
                 Note(
-                  pitch: const Pitch(step: 'E', octave: 4),
+                  pitch: const Pitch(step: 'G', octave: 4),
+                  duration: const Duration(DurationType.quarter),
+                ),
+                Note(
+                  pitch: const Pitch(step: 'A', octave: 4),
+                  duration: const Duration(DurationType.quarter),
+                ),
+                Note(
+                  pitch: const Pitch(step: 'B', octave: 4),
                   duration: const Duration(DurationType.quarter),
                 ),
               ],
@@ -295,7 +311,6 @@ class TempoAgogicsExample extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Container(
-              height: 190,
               decoration: BoxDecoration(
                 color: Colors.white,
                 border: Border.all(color: Colors.grey.shade300),
@@ -303,6 +318,7 @@ class TempoAgogicsExample extends StatelessWidget {
               ),
               child: MusicScore(
                 staff: staff,
+                staffSpace: 14,
               ),
             ),
           ],
@@ -311,4 +327,3 @@ class TempoAgogicsExample extends StatelessWidget {
     );
   }
 }
-

@@ -25,7 +25,7 @@ class BreathRenderer {
   void render(Canvas canvas, Breath breath, Offset position) {
     final glyphName = _getGlyphName(breath.type);
     
-    // Posicionar acima da pauta (como na imagem de referência)
+    // Posicionar acima of the staff (como na imagem reference)
     final yOffset = -coordinates.staffSpace * 2.5;
     final renderPosition = Offset(position.dx, position.dy + yOffset);
     

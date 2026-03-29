@@ -25,23 +25,23 @@ class Measure {
   /// All musical elements in this measure, in order.
   final List<MusicalElement> elements = [];
 
-  /// Controla se as notas devem ser automaticamente agrupadas com beams
-  /// true = auto-beaming ativo (padrão)
-  /// false = usar bandeirolas individuais (flags)
+  /// Controls whether notes should be automatically grouped with beams.
+  /// true = auto-beaming active (default)
+  /// false = use individual flags
   bool autoBeaming;
 
-  /// Estratégia específica de beaming para casos especiais
+  /// Specific beaming strategy for special cases.
   BeamingMode beamingMode;
 
-  /// Grupos manuais de beams - lista de listas de índices de notas a serem agrupadas
-  /// Exemplo: [[0, 1, 2], [3, 4]] = agrupa notas 0,1,2 em um beam e 3,4 em outro
+  /// Manual beam groups — list of note index groups to be beamed together.
+  /// Example: [[0, 1, 2], [3, 4]] groups notes 0,1,2 into one beam and 3,4 into another.
   List<List<int>> manualBeamGroups;
 
-  /// TimeSignature herdado de compasso anterior (usado para validação preventiva)
+  /// Time signature inherited from a previous measure (used for preventive validation).
   TimeSignature? inheritedTimeSignature;
 
-  /// Número do compasso, correspondente ao atributo MEI `<measure @n>`.
-  /// null = numeração automática pelo motor de layout.
+  /// Measure number, corresponding to the MEI `<measure @n>` attribute.
+  /// null = automatic numbering by the layout engine.
   int? number;
 
   /// Creates a new [Measure].
@@ -65,50 +65,49 @@ class Measure {
     this.number,
   });
 
-  /// Adiciona um elemento musical ao compasso.
-  /// 
-  /// **VALIDAÇÃO RIGOROSA**: Se o compasso tiver TimeSignature, valida ANTES
-  /// de adicionar para garantir que não excede a capacidade do compasso.
-  /// 
-  /// Lança [MeasureCapacityException] se tentar adicionar figura que exceda.
+  /// Adds a musical element to the measure.
+  ///
+  /// When a time signature is present, validates capacity before adding to
+  /// ensure the bar's rhythmic value is not exceeded.
+  ///
+  /// Throws [MeasureCapacityException] if the element would exceed the measure capacity.
   void add(MusicalElement element) {
-    // Verificar se é um elemento que ocupa tempo musical
+    // Check if the element occupies musical time
     final elementDuration = _getElementDuration(element);
-    
+
     if (elementDuration > 0) {
-      // Buscar TimeSignature no compasso ou usar o herdado
+      // Retrieve the time signature from the measure or use the inherited one
       final ts = timeSignature ?? inheritedTimeSignature;
-      
+
       if (ts != null) {
-        // Calcular se há espaço
+        // calculateTeste available space
         final currentValue = currentMusicalValue;
         final measureCapacity = ts.measureValue;
         final afterAdding = currentValue + elementDuration;
-        
-        // Tolerância para erros de ponto flutuante
+
+        // Tolerance for floating-point errors
         const tolerance = 0.0001;
-        
+
         if (afterAdding > measureCapacity + tolerance) {
-          // PROIBIDO: Excede capacidade!
           final excess = afterAdding - measureCapacity;
           throw MeasureCapacityException(
-            'Não é possível adicionar ${element.runtimeType} ao compasso!\n'
-            'Compasso ${ts.numerator}/${ts.denominator} (capacidade: $measureCapacity unidades)\n'
-            'Valor atual: $currentValue unidades\n'
-            'Tentando adicionar: $elementDuration unidades\n'
-            'Total seria: $afterAdding unidades\n'
-            'EXCESSO: ${excess.toStringAsFixed(4)} unidades\n'
-            '❌ OPERAÇÃO BLOQUEADA - Remova figuras ou crie novo compasso!'
+            'Cannot add ${element.runtimeType} to the measure!\n'
+            'Measure ${ts.numerator}/${ts.denominator} (capacity: $measureCapacity units)\n'
+            'Current value: $currentValue units\n'
+            'Attempting to add: $elementDuration units\n'
+            'Total would be: $afterAdding units\n'
+            'EXCESS: ${excess.toStringAsFixed(4)} units\n'
+            'OPERATION BLOCKED — Remove elements or create a new measure!'
           );
         }
       }
     }
-    
-    // Adicionar elemento
+
+    // Add the element
     elements.add(element);
   }
 
-  /// Calcula o valor total atual das figuras musicais no compasso.
+  /// calculateTestes the total current rhythmic value of elements in the measure.
   double get currentMusicalValue {
     double total = 0.0;
     for (final element in elements) {
@@ -117,17 +116,17 @@ class Measure {
       } else if (element is Rest) {
         total += element.duration.realValue;
       } else if (element.runtimeType.toString() == 'Chord') {
-        // Usar reflexão para evitar import circular
+        // Use reflection to avoid circular imports
         final dynamic chord = element;
         if (chord.duration != null) {
           total += chord.duration.realValue;
         }
       } else if (element.runtimeType.toString() == 'Tuplet') {
-        // Calcular valor da quiáltera baseado na razão
+        // calculateTeste the tuplet value based on its ratio
         final dynamic tuplet = element;
         double tupletValue = 0.0;
 
-        // Somar duração de todas as notas da quiáltera
+        // Sum the duration of all notes in the tuplet
         for (final tupletElement in tuplet.elements) {
           if (tupletElement is Note) {
             tupletValue += tupletElement.duration.realValue;
@@ -139,7 +138,7 @@ class Measure {
           }
         }
 
-        // Aplicar a razão da quiáltera (normalNotes / actualNotes)
+        // Apply the tuplet ratio (normalNotes / actualNotes)
         if (tuplet.actualNotes > 0) {
           tupletValue = tupletValue * (tuplet.normalNotes / tuplet.actualNotes);
         }
@@ -150,7 +149,7 @@ class Measure {
     return total;
   }
 
-  /// Obtém a fórmula de compasso ativa neste compasso.
+  /// Returns the active time signature for this measure.
   TimeSignature? get timeSignature {
     for (final element in elements) {
       if (element is TimeSignature) {
@@ -160,28 +159,28 @@ class Measure {
     return null;
   }
 
-  /// Verifica se o compasso está corretamente preenchido.
+  /// Returns true if the measure is correctly filled.
   bool get isValidlyFilled {
     final ts = timeSignature;
-    if (ts == null) return true; // Sem fórmula = sem validação
+    if (ts == null) return true; // No time signature = no validation
     return currentMusicalValue == ts.measureValue;
   }
 
-  /// Verifica se ainda há espaço para adicionar uma duração específica.
+  /// Returns true if there is room to add the given duration.
   bool canAddDuration(Duration duration) {
     final ts = timeSignature;
-    if (ts == null) return true; // Sem fórmula = sempre pode adicionar
+    if (ts == null) return true; // No time signature = always can add
     return currentMusicalValue + duration.realValue <= ts.measureValue;
   }
 
-  /// Calcula quanto tempo ainda resta no compasso.
+  /// Returns how much rhythmic time remains in the measure.
   double get remainingValue {
     final ts = timeSignature;
     if (ts == null) return double.infinity;
     return ts.measureValue - currentMusicalValue;
   }
 
-  /// Calcula a duração de um elemento musical (helper privado)
+  /// calculateTestes the duration of a musical element (private helper).
   double _getElementDuration(MusicalElement element) {
     if (element is Note) {
       return element.duration.realValue;
@@ -196,22 +195,22 @@ class Measure {
       for (final tupletElement in tuplet.elements) {
         tupletValue += _getElementDuration(tupletElement);
       }
-      // Aplicar proporção da quiáltera
+      // Apply the tuplet ratio
       if (tuplet.actualNotes > 0) {
         tupletValue = tupletValue * (tuplet.normalNotes / tuplet.actualNotes);
       }
       return tupletValue;
     }
-    return 0.0; // Elementos sem duração (clef, key signature, etc.)
+    return 0.0; // Elements without duration (clef, key signature, etc.)
   }
 }
 
-/// Exceção lançada quando se tenta adicionar figura que excede capacidade do compasso
+/// Exception thrown when trying to add an element that exceeds the measure capacity.
 class MeasureCapacityException implements Exception {
   final String message;
-  
+
   MeasureCapacityException(this.message);
-  
+
   @override
   String toString() => 'MeasureCapacityException: $message';
 }

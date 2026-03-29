@@ -3,7 +3,7 @@
 import 'musical_element.dart';
 import 'pitch.dart';
 
-/// Tipos de ornamentos musicais
+/// Tipos de ornaments musicais
 enum OrnamentType {
   // Básicos
   trill,
@@ -50,7 +50,7 @@ enum OrnamentType {
   arpeggio,
   grace,
 
-  // Ornamentos barrocos e clássicos
+  // Ornaments barrocos e clássicos
   pralltriller,
   mordentWithUpperPrefix,
   slideUp,
@@ -59,7 +59,7 @@ enum OrnamentType {
   tripleTongue,
 }
 
-/// Representa um ornamento musical
+/// Representa um ornament musical
 class Ornament extends MusicalElement {
   final OrnamentType type;
   final bool above;

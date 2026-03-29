@@ -1,36 +1,36 @@
-/// Estruturas de dados para resultados de espaçamento
+/// Estruturas de dados for resultados de spacing
 /// 
-/// Representa as posições calculadas dos símbolos musicais
-/// em diferentes estágios do algoritmo de espaçamento.
+/// Representa as positions Calculatestesdas dos símbolos musicais
+/// in diferentes estágios of the algoritmo de spacing.
 library;
 
 import 'package:flutter_notemus/core/core.dart';
 
-/// Posição de um símbolo ou grupo de símbolos
+/// Position de um símbolo ou grupo de símbolos
 class SymbolPosition {
-  /// Símbolos nesta posição (podem ser múltiplos se simultâneos)
+  /// Símbolos nesta position (podem ser múltiplos se simultâneos)
   final List<MusicalElement> symbols;
 
-  /// Posição X calculada (em pixels)
+  /// X position Calculatestesda (in pixels)
   double xPosition;
 
-  /// Largura total alocada para estes símbolos (em pixels)
+  /// Width total alocada for estes símbolos (in pixels)
   double width;
 
-  /// Tempo musical absoluto (em frações de semibreve)
+  /// Tempo musical absoluto (in frações de semibreve)
   /// 
-  /// Usado para cálculo de espaçamento duracional
+  /// used for cálculo de durational spacing
   final double musicalTime;
 
-  /// Duração até o próximo slice temporal
+  /// Duração até o next slice temporal
   final double durationToNext;
 
-  /// Ponto de âncora para reescalonamento (0.0 - 1.0)
+  /// Ponto de âncora for reescalonamento (0.0 - 1.0)
   /// 
   /// 0.0 = borda esquerda, 0.5 = centro, 1.0 = borda direita
   final double anchorPoint;
 
-  /// Espaço comprimível (diferença entre duracional e textual)
+  /// Space comprimível (diferença entre duracional e textual)
   double compressibleSpace;
 
   SymbolPosition({
@@ -43,9 +43,9 @@ class SymbolPosition {
     this.compressibleSpace = 0.0,
   });
 
-  /// Largura intrínseca dos símbolos (sem espaçamento adicional)
+  /// Width intrínseca dos símbolos (sem spacing added)
   double get intrinsicWidth {
-    // Será calculado pelo motor de espaçamento
+    // Será Calculatestesdo pelo spacing engine
     return width - compressibleSpace;
   }
 
@@ -58,17 +58,17 @@ class SymbolPosition {
   }
 }
 
-/// Resultado de espaçamento textual (anti-colisão)
+/// Resultado de textual spacing (anti-colisão)
 class TextualSpacing {
-  /// Posições calculadas
+  /// Positions Calculatestesdas
   final List<SymbolPosition> positions;
 
-  /// Largura total do espaçamento textual
+  /// Width total of the textual spacing
   final double totalWidth;
 
   TextualSpacing(this.positions, this.totalWidth);
 
-  /// Escalar linearmente para uma nova largura
+  /// Escalar linearmente for a new width
   TextualSpacing scale(double targetWidth) {
     final double scaleFactor = targetWidth / totalWidth;
     final List<SymbolPosition> scaledPositions = [];
@@ -97,15 +97,15 @@ class TextualSpacing {
   }
 }
 
-/// Resultado de espaçamento duracional (proporcional ao tempo)
+/// Resultado de durational spacing (proporcional ao tempo)
 class DurationalSpacing {
-  /// Posições calculadas
+  /// Positions Calculatestesdas
   final List<SymbolPosition> positions;
 
-  /// Largura total do espaçamento duracional
+  /// Width total of the durational spacing
   final double totalWidth;
 
-  /// Duração da nota mais curta usada como referência
+  /// Duração of the note mais curta used como reference
   final double shortestNoteDuration;
 
   DurationalSpacing(
@@ -114,7 +114,7 @@ class DurationalSpacing {
     this.shortestNoteDuration,
   );
 
-  /// Escalar linearmente para uma nova largura
+  /// Escalar linearmente for a new width
   DurationalSpacing scale(double targetWidth) {
     final double scaleFactor = targetWidth / totalWidth;
     final List<SymbolPosition> scaledPositions = [];
@@ -144,30 +144,30 @@ class DurationalSpacing {
   }
 }
 
-/// Resultado final de espaçamento (combinação adaptativa)
+/// Resultado final de spacing (combinação adaptativa)
 class FinalSpacing {
-  /// Posições finais calculadas
+  /// Positions finais Calculatestesdas
   final List<SymbolPosition> positions;
 
-  /// Largura total final
+  /// Width total final
   double get totalWidth {
     if (positions.isEmpty) return 0.0;
     final last = positions.last;
     return last.xPosition + last.width;
   }
 
-  /// Número de colisões detectadas
+  /// Number de colisões detectadas
   int collisionCount;
 
   /// Métrica de consistência (0.0 - 1.0)
   /// 
-  /// 1.0 = perfeito (notas de mesma duração têm espaçamento idêntico)
-  /// 0.0 = caótico (espaçamento totalmente inconsistente)
+  /// 1.0 = perfeito (notes de mesma duração têm spacing idêntico)
+  /// 0.0 = caótico (spacing totalmente inconsistente)
   double consistencyScore;
 
-  /// Aproveitamento de espaço (0.0 - 1.0)
+  /// Aproveitamento de space (0.0 - 1.0)
   /// 
-  /// Razão entre largura usada e largura disponível
+  /// Razão entre width used e width disponível
   double spaceUtilization;
 
   FinalSpacing(
@@ -187,15 +187,15 @@ class FinalSpacing {
   }
 }
 
-/// Slice temporal - símbolos que ocorrem simultaneamente
+/// Slice temporal - símbolos that ocorrem simultaneamente
 class TimeSlice {
   /// Tempo musical absoluto (onset) deste slice
   final double time;
 
-  /// Símbolos em cada pauta neste momento
+  /// Símbolos in each staff neste momento
   final Map<int, List<MusicalElement>> symbolsByStaff;
 
-  /// Duração até o próximo slice
+  /// Duração até o next slice
   double durationToNext;
 
   TimeSlice({
@@ -204,22 +204,22 @@ class TimeSlice {
     this.durationToNext = 0.0,
   });
 
-  /// Todos os símbolos deste slice (todas as pautas)
+  /// All os símbolos deste slice (all as staves)
   List<MusicalElement> get allSymbols {
     return symbolsByStaff.values.expand((list) => list).toList();
   }
 
-  /// Símbolos de uma pauta específica
+  /// Símbolos de a staff específica
   List<MusicalElement> getSymbolsForStaff(int staffIndex) {
     return symbolsByStaff[staffIndex] ?? [];
   }
 
-  /// Largura máxima entre todas as pautas
+  /// Width máxima entre all as staves
   double getMaxWidth() {
     double maxWidth = 0.0;
     for (final symbols in symbolsByStaff.values) {
       double staffWidth = symbols.fold(0.0, (sum, symbol) {
-        // Largura será calculada pelo motor de espaçamento
+        // Width será Calculatestesda pelo spacing engine
         return sum + 1.0; // Placeholder
       });
       if (staffWidth > maxWidth) {
@@ -237,15 +237,15 @@ class TimeSlice {
   }
 }
 
-/// Dados de sistema para processamento de espaçamento
+/// Dados de system for Processesmento de spacing
 class SystemData {
-  /// Compassos do sistema
+  /// Measures of the system
   final List<Measure> measures;
 
-  /// Número de pautas
+  /// Number de staves
   final int staffCount;
 
-  /// Largura alvo do sistema
+  /// Width alvo of the system
   final double targetWidth;
 
   SystemData({
@@ -254,14 +254,14 @@ class SystemData {
     required this.targetWidth,
   });
 
-  /// Obter todos os time slices do sistema
+  /// Get all os time slices of the system
   List<TimeSlice> getTimeSlices() {
-    // Será implementado pelo motor de espaçamento
+    // Será implementado pelo spacing engine
     // Precisa agrupar símbolos por tempo musical
     return [];
   }
 
-  /// Encontrar a duração da nota mais curta no sistema
+  /// Encontrar a duração of the note mais curta no system
   double getShortestNoteDuration() {
     double shortest = 1.0; // Semibreve como máximo inicial
 

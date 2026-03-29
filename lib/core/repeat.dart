@@ -29,7 +29,7 @@ enum RepeatType {
   repeatBoth,
 }
 
-/// Representa uma marca de repetição
+/// Representa a marca de repetição
 class RepeatMark extends MusicalElement {
   final RepeatType type;
   final String? label;

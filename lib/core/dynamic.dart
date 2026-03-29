@@ -2,7 +2,7 @@
 
 import 'musical_element.dart';
 
-/// Tipos de dinâmicas musicais
+/// Tipos de dynamics musicais
 enum DynamicType {
   // Básicas
   pianississimo,
@@ -43,7 +43,7 @@ enum DynamicType {
   diminuendo,
   niente,
 
-  // Dinâmicas especiais
+  // Dynamics especiais
   subito,
   possibile,
   menoMosso,
@@ -51,7 +51,7 @@ enum DynamicType {
   custom,
 }
 
-/// Representa uma indicação dinâmica
+/// Representa a indicação dynamic
 class Dynamic extends MusicalElement {
   final DynamicType type;
   final String? customText;

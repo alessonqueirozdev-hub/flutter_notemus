@@ -3,7 +3,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import '../../../core/core.dart'; // ðŸ†• Tipos do core
+import '../../../core/core.dart'; // 🆕 Tipos do core
 import '../grace_note_geometry.dart';
 import '../../theme/music_score_theme.dart';
 import 'base_glyph_renderer.dart';
@@ -18,7 +18,7 @@ class OrnamentRenderer extends BaseGlyphRenderer {
     required this.theme,
     required super.glyphSize,
     required this.staffLineThickness,
-    super.collisionDetector, // CORREÃ‡ÃƒO: Passar collision detector para BaseGlyphRenderer
+    super.collisionDetector, // CORREÇÃO: Passar collision detector para BaseGlyphRenderer
   });
 
   void renderForNote(
@@ -35,11 +35,13 @@ class OrnamentRenderer extends BaseGlyphRenderer {
 
       if (ornament.type == OrnamentType.arpeggio) {
         final verticalHalfExtent = _noteheadVerticalHalfExtent();
+        final noteStemUp = _resolveStemUp(note, staffPosition, voiceNumber);
         _renderArpeggio(
           canvas,
           notePos,
           notePos.dy + verticalHalfExtent,
           notePos.dy - verticalHalfExtent,
+          stemUp: noteStemUp,
         );
         continue;
       }
@@ -49,12 +51,13 @@ class OrnamentRenderer extends BaseGlyphRenderer {
 
       final isGraceNote = _isGraceNoteOrnament(ornament.type);
       final ornamentSize = isGraceNote ? glyphSize * 0.6 : glyphSize * 0.85;
+      final noteStemUp = _resolveStemUp(note, staffPosition, voiceNumber);
 
       if (isGraceNote) {
         // Grace notes: positioned BEFORE the main note (left X offset)
         // and at the same vertical level as the main note (correct pitch reference)
         final graceGlyphName = resolveGraceGlyphName(note) ?? glyphName;
-        // Evita sobreposiÃ§Ã£o com acidentes da nota principal.
+        final graceStemUp = !graceGlyphName.contains('StemDown');
         final graceOrigin = graceGlyphOriginForNote(
           note,
           notePos,
@@ -70,20 +73,30 @@ class OrnamentRenderer extends BaseGlyphRenderer {
             size: ornamentSize,
           ),
         );
+
+        // Fix: Render mini-slur of the grace note à note principal
+        _renderGraceSlur(
+          canvas,
+          graceOrigin: graceOrigin,
+          mainNotePos: notePos,
+          ornamentSize: ornamentSize,
+          placementAbove: !noteStemUp,
+          graceStemUp: graceStemUp,
+          mainNoteStemUp: noteStemUp,
+        );
       } else {
-        final stemUp = _resolveStemUp(note, staffPosition, voiceNumber);
         final ornamentAbove = _isOrnamentAbove(note, ornament, voiceNumber);
         final ornamentY = _calculateOrnamentY(
           notePos.dy,
           ornamentAbove,
           staffPosition,
-          stemUp: stemUp,
+          stemUp: noteStemUp,
         );
         final ornamentX = _getOrnamentHorizontalPosition(
           note,
           notePos.dx,
           ornamentAbove: ornamentAbove,
-          stemUp: stemUp,
+          stemUp: noteStemUp,
           voiceNumber: voiceNumber,
         );
 
@@ -108,7 +121,9 @@ class OrnamentRenderer extends BaseGlyphRenderer {
     int highestPos,
     int lowestPos, {
     int? voiceNumber,
-    double? leftmostNoteCenterX,
+    double? leadingNoteCenterX,
+    double? arpeggioReferenceCenterX,
+    bool stemUp = true,
   }) {
     if (chord.ornaments.isEmpty) return;
     final highestY =
@@ -120,13 +135,14 @@ class OrnamentRenderer extends BaseGlyphRenderer {
 
     for (final ornament in chord.ornaments) {
       if (ornament.type == OrnamentType.arpeggio) {
-        final arpeggioAnchorX = leftmostNoteCenterX ?? chordPos.dx;
+        final arpeggioAnchorX = arpeggioReferenceCenterX ?? chordPos.dx;
         final verticalHalfExtent = _noteheadVerticalHalfExtent();
         _renderArpeggio(
           canvas,
           Offset(arpeggioAnchorX, chordPos.dy),
           lowestY + verticalHalfExtent,
           highestY - verticalHalfExtent,
+          stemUp: stemUp,
         );
         continue;
       }
@@ -140,10 +156,13 @@ class OrnamentRenderer extends BaseGlyphRenderer {
       if (isGraceNote) {
         final graceGlyphName =
             resolveGraceGlyphNameFromOrnaments(chord.ornaments) ?? glyphName;
+        final graceStemUp = !graceGlyphName.contains('StemDown');
+        final gracePlacementAbove = !stemUp;
+        final graceTargetY = gracePlacementAbove ? highestY : lowestY;
         final graceOrigin = graceGlyphOriginForChord(
           chord,
           chordPos,
-          highestY,
+          graceTargetY,
           coordinates.staffSpace,
         );
 
@@ -155,6 +174,17 @@ class OrnamentRenderer extends BaseGlyphRenderer {
           options: GlyphDrawOptions.ornamentDefault.copyWith(
             size: ornamentSize,
           ),
+        );
+
+        // Fix: Render mini-slur of the grace note ao chord
+        _renderGraceSlur(
+          canvas,
+          graceOrigin: graceOrigin,
+          mainNotePos: Offset(leadingNoteCenterX ?? chordPos.dx, graceTargetY),
+          ornamentSize: ornamentSize,
+          placementAbove: gracePlacementAbove,
+          graceStemUp: graceStemUp,
+          mainNoteStemUp: stemUp,
         );
       } else {
         final effectiveVoice = voiceNumber ?? chord.voice;
@@ -214,47 +244,56 @@ class OrnamentRenderer extends BaseGlyphRenderer {
     Canvas canvas,
     Offset chordPos,
     double bottomY,
-    double topY,
-  ) {
+    double topY, {
+    bool stemUp = true,
+  }) {
     const glyphName = 'wiggleArpeggiatoUp';
 
     // wiggleArpeggiatoUp e um tile HORIZONTAL no Bravura (~1.3 SS x 0.476 SS).
-    // Para arpejo vertical, rotacionamos -90 graus em torno do centro de cada tile.
-    // Apos rotacao: largura original (tileW) → extensao vertical; altura (tileH) → extensao horizontal.
+    // For arpejo vertical, rotacionamos -90 graus in torno of the centro de each tile.
+    // Apos rotacao: width original (tileW) → extensao vertical; height (tileH) → extensao horizontal.
     final bBox = metadata.getGlyphBoundingBox(glyphName);
     if (bBox == null || bBox.width <= 0) return;
 
-    final tileW =
-        bBox.width *
-        coordinates.staffSpace; // extensao horizontal original (~1.3 SS)
-    final tileH =
-        bBox.height *
-        coordinates.staffSpace; // extensao vertical original (~0.476 SS)
+    final tileW = bBox.width * coordinates.staffSpace;
 
     final ornamentColor = theme.ornamentColor ?? theme.noteheadColor;
 
     final noteheadBox = metadata.getGlyphInfo('noteheadBlack')?.boundingBox;
-    final noteheadLeftFromCenter = noteheadBox != null
-        ? (noteheadBox.centerX - noteheadBox.bBoxSwX) * coordinates.staffSpace
-        : coordinates.staffSpace * 0.6;
+    // Use half the notehead width since chordPos.dx is the notehead CENTER X.
+    // This places the arpeggio right edge exactly at the notehead left edge + gap.
+    final noteheadHalfWidth = noteheadBox != null
+        ? (noteheadBox.width * coordinates.staffSpace * 0.5)
+        : coordinates.staffSpace * 0.59;
 
-    // Apos rotacao -90: tileH vira a largura visual do arpejo na tela
-    final gap = coordinates.staffSpace * 0.38;
-    final arpeggioX = chordPos.dx - noteheadLeftFromCenter - tileH - gap;
+    // Standard clearance between arpeggio and noteheads (SMuFL/Behind Bars ≈ 0.15 SS).
+    final gap = coordinates.staffSpace * 0.03;
+
+    // Per engraving convention (Gould "Behind Bars" p.137):
+    // Arpeggios always appear on the side of the noteheads opposite the stem:
+    //   stem-UP  → stem on RIGHT  → arpeggio on LEFT  of noteheads
+    //   stem-DOWN → stem on LEFT  → arpeggio on RIGHT of noteheads
+    final rotatedLeftExtent =
+        (bBox.centerY - bBox.bBoxSwY).abs() * coordinates.staffSpace;
+    final rotatedRightExtent =
+        (bBox.bBoxNeY - bBox.centerY).abs() * coordinates.staffSpace;
+
+    final double tileCenterX;
+    if (stemUp) {
+      tileCenterX = chordPos.dx - noteheadHalfWidth - gap - rotatedRightExtent;
+    } else {
+      tileCenterX = chordPos.dx + noteheadHalfWidth + gap + rotatedLeftExtent;
+    }
 
     final arpeggioTopY =
-        math.min(topY, bottomY) - (coordinates.staffSpace * 0.35);
+        math.min(topY, bottomY) - (coordinates.staffSpace * 0.18);
     final arpeggioBottomY =
-        math.max(topY, bottomY) + (coordinates.staffSpace * 0.35);
+        math.max(topY, bottomY) + (coordinates.staffSpace * 0.18);
 
-    // Apos rotacao: tileW vira a extensao vertical de cada tile na tela
     final tileVertical = tileW;
-    final step = tileVertical * 0.85; // leve sobreposicao para linha continua
+    final step = tileVertical * 0.85;
     final firstCenterY = arpeggioTopY + tileVertical * 0.5;
     final lastCenterY = arpeggioBottomY - tileVertical * 0.5;
-
-    // Centro X visual: metade da largura visual apos rotacao
-    final tileCenterX = arpeggioX + tileH * 0.5;
 
     void drawTile(double centerY) {
       canvas.save();
@@ -268,7 +307,7 @@ class OrnamentRenderer extends BaseGlyphRenderer {
         position: Offset.zero,
         color: ornamentColor,
         options: const GlyphDrawOptions(
-          alignLeft: false,
+          centerHorizontally: true,
           centerVertically: true,
           disableBaselineCorrection: true,
           trackBounds: false,
@@ -309,8 +348,8 @@ class OrnamentRenderer extends BaseGlyphRenderer {
     final stemHeight = coordinates.staffSpace * 3.5;
 
     if (ornamentAbove) {
-      // Regra: altura padrÃ£o fixa acima da pauta (consistÃªncia visual).
-      // SÃ³ acompanha a cabeÃ§a da nota quando hÃ¡ muitas linhas suplementares.
+      // Regra: height default fixa acima of the staff (consistência visual).
+      // Só acompanha a cabeça of the note when há muitas linhas suplementares.
       final standardY =
           coordinates.getStaffLineY(5) - (coordinates.staffSpace * 1.8);
       if (staffPosition > 6) {
@@ -387,11 +426,11 @@ class OrnamentRenderer extends BaseGlyphRenderer {
       OrnamentType.invertedTurn: 'ornamentTurnInverted',
       OrnamentType.turnSlash: 'ornamentTurnSlash',
       OrnamentType.appoggiaturaUp:
-          'graceNoteAppoggiaturaStemUp', // âœ… FIXED: no slash for appoggiatura
+          'graceNoteAppoggiaturaStemUp', // ✅ FIXED: no slash for appoggiatura
       OrnamentType.appoggiaturaDown:
-          'graceNoteAppoggiaturaStemDown', // âœ… FIXED: no slash for appoggiatura
+          'graceNoteAppoggiaturaStemDown', // ✅ FIXED: no slash for appoggiatura
       OrnamentType.acciaccatura:
-          'graceNoteAcciaccaturaStemUp', // âœ“ Correct: with slash for acciaccatura
+          'graceNoteAcciaccaturaStemUp', // ✓ Correct: with slash for acciaccatura
       OrnamentType.fermata: 'fermataAbove',
       OrnamentType.fermataBelow: 'fermataBelow',
       OrnamentType.fermataBelowInverted: 'fermataBelowInverted',
@@ -419,5 +458,177 @@ class OrnamentRenderer extends BaseGlyphRenderer {
         type == OrnamentType.appoggiaturaDown ||
         type == OrnamentType.acciaccatura ||
         type == OrnamentType.grace;
+  }
+
+  /// Renders mini-slur de grace note → note principal with Bézier cúbico
+  /// e espessura variable (fina nas pontas, mais grossa no meio), alinhado
+  /// with o estilo tipográfico Bravura das slurs normais.
+  void _renderGraceSlur(
+    Canvas canvas, {
+    required Offset graceOrigin,
+    required Offset mainNotePos,
+    required double ornamentSize,
+    required bool placementAbove,
+    required bool graceStemUp,
+    required bool mainNoteStemUp,
+  }) {
+    final scaleFactor = ornamentSize / glyphSize;
+    final noteheadBox = metadata.getGlyphBoundingBox('noteheadBlack');
+    final graceNoteheadWidth =
+        (noteheadBox?.width ?? 1.18) * coordinates.staffSpace * scaleFactor;
+    final mainNoteheadWidth =
+        (noteheadBox?.width ?? 1.18) * coordinates.staffSpace;
+    final graceNoteheadHalfHeight =
+        ((noteheadBox?.height ?? 0.88) * coordinates.staffSpace * scaleFactor) *
+        0.5;
+    final mainNoteheadHalfHeight =
+        ((noteheadBox?.height ?? 0.88) * coordinates.staffSpace) * 0.5;
+
+    // Short grace slurs should hug the noteheads without touching the stem side.
+    final graceClearance = math.max(
+      graceNoteheadHalfHeight + coordinates.staffSpace * 0.08,
+      coordinates.staffSpace * 0.22,
+    );
+    final mainClearance = math.max(
+      mainNoteheadHalfHeight + coordinates.staffSpace * 0.08,
+      coordinates.staffSpace * 0.22,
+    );
+
+    final graceCenterX = graceOrigin.dx + (graceNoteheadWidth * 0.5);
+    final startX = _resolveStemSafeAnchorX(
+      centerX: graceCenterX,
+      width: graceNoteheadWidth,
+      stemUp: graceStemUp,
+      placementAbove: placementAbove,
+      isStart: true,
+    );
+    final startY =
+        graceOrigin.dy + (placementAbove ? -graceClearance : graceClearance);
+    final endX = _resolveStemSafeAnchorX(
+      centerX: mainNotePos.dx,
+      width: mainNoteheadWidth,
+      stemUp: mainNoteStemUp,
+      placementAbove: placementAbove,
+      isStart: false,
+    );
+    final endY =
+        mainNotePos.dy + (placementAbove ? -mainClearance : mainClearance);
+
+    // Cubic Bézier: control points angled inward for calligraphic curve.
+    final span = endX - startX;
+    final arch = coordinates.staffSpace * (placementAbove ? -0.55 : 0.55);
+    final cp1 = Offset(startX + span * 0.35, startY + arch);
+    final cp2 = Offset(startX + span * 0.65, endY + arch);
+
+    // Variable-thickness fill path (thin at endpoints, thick at midpoint).
+    final endThicknessPx = coordinates.staffSpace * 0.06;
+    final midThicknessPx = coordinates.staffSpace * 0.14;
+    const steps = 30;
+
+    // Evaluate cubic bezier
+    Offset evalCubic(double t) {
+      final mt = 1 - t;
+      return Offset(
+        mt * mt * mt * startX +
+            3 * mt * mt * t * cp1.dx +
+            3 * mt * t * t * cp2.dx +
+            t * t * t * endX,
+        mt * mt * mt * startY +
+            3 * mt * mt * t * cp1.dy +
+            3 * mt * t * t * cp2.dy +
+            t * t * t * endY,
+      );
+    }
+
+    Offset evalDerivative(double t) {
+      final mt = 1 - t;
+      return Offset(
+        3 *
+            (mt * mt * (cp1.dx - startX) +
+                2 * mt * t * (cp2.dx - cp1.dx) +
+                t * t * (endX - cp2.dx)),
+        3 *
+            (mt * mt * (cp1.dy - startY) +
+                2 * mt * t * (cp2.dy - cp1.dy) +
+                t * t * (endY - cp2.dy)),
+      );
+    }
+
+    final pathTop = Path();
+    final pathBottom = Path();
+    for (int i = 0; i <= steps; i++) {
+      final t = i / steps;
+      final pt = evalCubic(t);
+      final deriv = evalDerivative(t);
+      final angle = math.atan2(deriv.dy, deriv.dx);
+      final perp = angle + math.pi / 2;
+      final tCentered = 2 * t - 1;
+      final halfThick =
+          (endThicknessPx +
+              (midThicknessPx - endThicknessPx) * (1 - tCentered * tCentered)) /
+          2;
+      final dx = math.cos(perp) * halfThick;
+      final dy = math.sin(perp) * halfThick;
+      if (i == 0) {
+        pathTop.moveTo(pt.dx + dx, pt.dy + dy);
+        pathBottom.moveTo(pt.dx - dx, pt.dy - dy);
+      } else {
+        pathTop.lineTo(pt.dx + dx, pt.dy + dy);
+        pathBottom.lineTo(pt.dx - dx, pt.dy - dy);
+      }
+    }
+    // Close the outline: top path forward, bottom path reversed
+    final closedPath = Path()..addPath(pathTop, Offset.zero);
+    for (int i = steps; i >= 0; i--) {
+      final t = i / steps;
+      final pt = evalCubic(t);
+      final deriv = evalDerivative(t);
+      final angle = math.atan2(deriv.dy, deriv.dx);
+      final perp = angle + math.pi / 2;
+      final tCentered = 2 * t - 1;
+      final halfThick =
+          (endThicknessPx +
+              (midThicknessPx - endThicknessPx) * (1 - tCentered * tCentered)) /
+          2;
+      final dx = math.cos(perp) * halfThick;
+      final dy = math.sin(perp) * halfThick;
+      closedPath.lineTo(pt.dx - dx, pt.dy - dy);
+    }
+    closedPath.close();
+
+    canvas.drawPath(
+      closedPath,
+      Paint()
+        ..color = theme.ornamentColor ?? theme.noteheadColor
+        ..style = PaintingStyle.fill,
+    );
+  }
+
+  double _resolveStemSafeAnchorX({
+    required double centerX,
+    required double width,
+    required bool stemUp,
+    required bool placementAbove,
+    required bool isStart,
+  }) {
+    final stemSafeInset = math.min(width * 0.18, coordinates.staffSpace * 0.22);
+    final directionalInset = math.min(
+      width * 0.08,
+      coordinates.staffSpace * 0.12,
+    );
+
+    if (placementAbove && !stemUp) {
+      return centerX + (isStart ? stemSafeInset : directionalInset);
+    }
+
+    if (!placementAbove && stemUp) {
+      return centerX - (isStart ? directionalInset : stemSafeInset);
+    }
+
+    final edgeInset = math.min(width * 0.16, coordinates.staffSpace * 0.12);
+    final halfWidth = width * 0.5;
+    return isStart
+        ? centerX + halfWidth - edgeInset
+        : centerX - halfWidth + edgeInset;
   }
 }

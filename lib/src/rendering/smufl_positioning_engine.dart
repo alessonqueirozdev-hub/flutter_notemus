@@ -1,39 +1,43 @@
 import 'package:flutter/material.dart' show Offset;
 import '../smufl/smufl_metadata_loader.dart';
 
-/// Classe responsável por calcular posicionamentos precisos usando metadados SMuFL
-/// e regras de tipografia musical profissional.
+/// Class responsible for calculateTesting precise positions using SMuFL metadata
+/// and professional music typography rules.
 ///
-/// Baseado em:
-/// - Especificação SMuFL (w3c.github.io/smufl)
-/// - Metadados da fonte Bravura
-/// - "Behind Bars" de Elaine Gould
-/// - "The Art of Music Engraving" de Ted Ross
+/// Based on:
+/// - SMuFL specification (w3c.github.io/smufl)
+/// - Bravura font metadata
+/// - "Behind Bars" by Elaine Gould
+/// - "The Art of Music Engraving" by Ted Ross
 class SMuFLPositioningEngine {
-  // CORREÇÃO CRÍTICA: Referência ao metadata loader (OBRIGATÓRIA)
+  // REMOVED: stemUpXCorrection / stemDownXCorrection (old pixel-based constants).
+  // The offset is now computed dynamically from stemThickness inside
+  // calculateTesteStemAttachmentOffset — see the explanation there.
+
+  // Reference to the metadata loader (required)
   final SmuflMetadata _metadataLoader;
 
-  // CORREÇÃO: Valores carregados dinamicamente do metadata SMuFL
-  // Antes eram constantes estáticas hardcoded, agora são carregados do engravingDefaults
+  // Values loaded dynamically from SMuFL metadata
+  // Previously were hardcoded static constants, now loaded from engravingDefaults
   late final double standardStemLength;
   late final double minimumStemLength;
   late final double stemExtensionPerBeam;
   late final double stemThickness;
 
-  // Espaçamento de acidentes
+  // Accidental spacing
   late final double accidentalToNoteheadDistance;
   late final double accidentalMinimumClearance;
 
-  // Ângulos de feixes (beam angles)
+  // Beam angles
   late final double minimumBeamSlant;
   late final double maximumBeamSlant;
   late final double twoNoteBeamMaxSlant;
 
-  // Ornamentos e articulações
+  // Ornaments and articulations
   late final double articulationToNoteDistance;
   late final double ornamentToNoteDistance;
 
-  // Ligaduras e dinâmica
+  // Slurs and dynamics
   late final double slurEndpointThickness;
   late final double slurMidpointThickness;
   late final double slurHeightFactor;
@@ -42,36 +46,38 @@ class SMuFLPositioningEngine {
   late final double graceNoteScale;
   late final double graceNoteStemLength;
 
-  // Quiálteras (tuplets)
+  // Tuplets
   late final double tupletBracketHeight;
   late final double tupletNumberDistance;
 
-  // CORREÇÃO: Construtor agora REQUER metadata loader
+  // Constructor now REQUIRES metadata loader
   SMuFLPositioningEngine({required SmuflMetadata metadataLoader})
-      : _metadataLoader = metadataLoader {
-    // Carregar valores do metadata SMuFL
+    : _metadataLoader = metadataLoader {
+    // Load values from SMuFL metadata
     standardStemLength = _loadEngravingDefault('stemLength', 3.5);
-    minimumStemLength = 2.5; // Não está em engravingDefaults, mantém valor padrão
-    stemExtensionPerBeam = 0.5; // Calculado baseado em beamSpacing
+    minimumStemLength =
+        2.5; // Not in engravingDefaults, keeps default value
+    stemExtensionPerBeam = 0.5; // Calculated based on beamSpacing
     stemThickness = _loadEngravingDefault('stemThickness', 0.12);
 
-    // Espaçamento - Behind Bars: 0.16-0.20 spaces
-    accidentalToNoteheadDistance = 0.16; // Valor tipográfico profissional
-    accidentalMinimumClearance = 0.08;
+    // Spacing - Behind Bars recommends 0.16-0.25 SS of visual clearance.
+    // Using 0.25 SS to ensure clear separation between the accidental and the notehead.
+    accidentalToNoteheadDistance = 0.25;
+    accidentalMinimumClearance = 0.12;
 
-    // Ângulos de feixes - baseado em Behind Bars (valores conservadores)
-    // Behind Bars recomenda beams relativamente planos
-    minimumBeamSlant = 0.15;  // Ângulo mínimo mais sutil
-    maximumBeamSlant = 0.5;   // Máximo reduzido (era 1.0, muito inclinado!)
-    twoNoteBeamMaxSlant = 0.35; // Para 2 notas, ainda mais conservador
+    // Beam angles - based on Behind Bars (conservative values)
+    // Behind Bars recommends relatively flat beams
+    minimumBeamSlant = 0.15; // More subtle minimum angle
+    maximumBeamSlant = 0.5; // Reduced maximum (was 1.0, too steep!)
+    twoNoteBeamMaxSlant = 0.5; // Behind Bars recommended value for 2-note beams
 
-    // Ornamentos e articulações - valores tipográficos padrão
+    // Ornaments and articulations - standard typographic values
     articulationToNoteDistance = 0.5;
     ornamentToNoteDistance = 0.75;
 
-    // Ligaduras
-    slurEndpointThickness = 0.1;
-    slurMidpointThickness = 0.22;
+    // Slurs - loaded from engravingDefaults
+    slurEndpointThickness = _loadEngravingDefault('slurEndpointThickness', 0.1);
+    slurMidpointThickness = _loadEngravingDefault('slurMidpointThickness', 0.22);
     slurHeightFactor = 0.25;
 
     // Grace notes
@@ -83,109 +89,171 @@ class SMuFLPositioningEngine {
     tupletNumberDistance = 0.5;
   }
 
-  /// Carrega um valor de engravingDefaults com fallback
-  /// Este método elimina hardcoding ao consultar o metadata real
+  /// Loads a value from engravingDefaults with fallback.
+  /// This method eliminates hardcoding by consulting the real metadata.
   double _loadEngravingDefault(String key, double fallback) {
     final value = _metadataLoader.getEngravingDefaultValue(key);
     return value ?? fallback;
   }
 
-  // CORREÇÃO: Método initialize() removido - não mais necessário
-  // Agora o metadata loader é passado no construtor e já está carregado
+  // Method initialize() removed - no longer needed.
+  // The metadata loader is now passed in the constructor and already loaded.
 
-  /// Retorna o ponto de ancoragem stemUpSE para uma cabeça de nota
-  /// (canto inferior direito de onde a haste para cima deve se conectar)
-  /// Retorna coordenadas em STAFF SPACES (unidades SMuFL)
+  /// Returns the stemUpSE anchor point for a notehead
+  /// (lower right corner where the upward stem should connect)
+  /// Returns coordinates in STAFF SPACES (SMuFL units)
   Offset getStemUpAnchor(String noteheadGlyphName) {
-    // CORREÇÃO: Sempre usar metadata loader (agora obrigatório)
+    // Always use metadata loader (now required)
     final anchor = _metadataLoader.getGlyphAnchor(
       noteheadGlyphName,
       'stemUpSE',
     );
     if (anchor != null) {
-      return anchor; // Já em staff spaces
+      return anchor; // Already in staff spaces
     }
 
-    // Fallback final: noteheadBlack padrão do metadata Bravura
-    // stemUpSE para noteheadBlack: [1.18, 0.168] conforme bravura_metadata.json
+    // Final fallback: default noteheadBlack from Bravura metadata
+    // stemUpSE for noteheadBlack: [1.18, 0.168] per bravura_metadata.json
     return const Offset(1.18, 0.168);
   }
 
-  /// Retorna o ponto de ancoragem stemDownNW para uma cabeça de nota
-  /// (canto superior esquerdo de onde a haste para baixo deve se conectar)
-  /// Retorna coordenadas em STAFF SPACES (unidades SMuFL)
+  /// Returns the stemDownNW anchor point for a notehead
+  /// (upper left corner where the downward stem should connect)
+  /// Returns coordinates in STAFF SPACES (SMuFL units)
   Offset getStemDownAnchor(String noteheadGlyphName) {
-    // CORREÇÃO: Sempre usar metadata loader (agora obrigatório)
+    // Always use metadata loader (now required)
     final anchor = _metadataLoader.getGlyphAnchor(
       noteheadGlyphName,
       'stemDownNW',
     );
     if (anchor != null) {
-      return anchor; // Já em staff spaces
+      return anchor; // Already in staff spaces
     }
 
-    // Fallback final: noteheadBlack padrão do metadata Bravura
-    // stemDownNW para noteheadBlack: [0.0, -0.168] conforme bravura_metadata.json
+    // Final fallback: default noteheadBlack from Bravura metadata
+    // stemDownNW for noteheadBlack: [0.0, -0.168] per bravura_metadata.json
     return const Offset(0.0, -0.168);
   }
 
-  /// Retorna o ponto de ancoragem para flags (colcheias, semicolcheias, etc.)
-  /// Flags são registradas com y=0 no final de uma haste de comprimento normal (3.5 spaces)
-  /// Retorna coordenadas em STAFF SPACES (unidades SMuFL)
+  /// Returns the notehead-to-stem attachment offset in pixels.
+  ///
+  /// The returned offset is relative to the notehead drawing origin used by the
+  /// renderers in this package.
+  Offset calculateStemAttachmentOffset({
+    required String noteheadGlyphName,
+    required bool stemUp,
+    required double staffSpace,
+  }) {
+    final stemAnchor = stemUp
+        ? getStemUpAnchor(noteheadGlyphName)
+        : getStemDownAnchor(noteheadGlyphName);
+
+    // SMuFL spec: stemUpSE gives the SE CORNER (right edge) of the stem
+    // rectangle; stemDownNW gives the NW CORNER (left edge).
+    // canvas.drawLine centres the strokeWidth on the coordinate, so we must
+    // offset by half the stem thickness to make the visual edge land exactly
+    // on the anchor position.
+    //
+    // stemUp  → shift LEFT  by halfThickness (right edge stays at anchor.x)
+    // stemDown→ shift RIGHT by halfThickness (left edge stays at anchor.x)
+    final halfStemSS = stemThickness / 2; // in staff spaces
+    final xAdjust = stemUp ? -halfStemSS : halfStemSS;
+
+    return Offset(
+      (stemAnchor.dx + xAdjust) * staffSpace,
+      -stemAnchor.dy * staffSpace, // invert Y for Flutter (Y+ down)
+    );
+  }
+
+  double calculateStemX({
+    required double noteX,
+    required String noteheadGlyphName,
+    required bool stemUp,
+    required double staffSpace,
+  }) {
+    return noteX +
+        calculateStemAttachmentOffset(
+          noteheadGlyphName: noteheadGlyphName,
+          stemUp: stemUp,
+          staffSpace: staffSpace,
+        ).dx;
+  }
+
+  double calculateStemStartY({
+    required double noteY,
+    required String noteheadGlyphName,
+    required bool stemUp,
+    required double staffSpace,
+  }) {
+    final attachmentOffset = calculateStemAttachmentOffset(
+      noteheadGlyphName: noteheadGlyphName,
+      stemUp: stemUp,
+      staffSpace: staffSpace,
+    );
+    final overlapPx = (stemThickness * staffSpace) * 0.5;
+
+    return noteY +
+        attachmentOffset.dy +
+        (stemUp ? overlapPx : -overlapPx);
+  }
+
+  /// Returns the anchor point for flags (eighth notes, sixteenth notes, etc.)
+  /// Flags are registered with y=0 at the end of a standard stem length (3.5 spaces)
+  /// Returns coordinates in STAFF SPACES (SMuFL units)
   Offset getFlagAnchor(String flagGlyphName) {
     String anchorName;
 
-    // Para flags para cima, usar stemUpNW
+    // For upward flags, use stemUpNW
     if (flagGlyphName.contains('Up')) {
       anchorName = 'stemUpNW';
     }
-    // Para flags para baixo, usar stemDownSW
+    // For downward flags, use stemDownSW
     else if (flagGlyphName.contains('Down')) {
       anchorName = 'stemDownSW';
     } else {
       return Offset.zero;
     }
 
-    // CORREÇÃO: Sempre usar metadata loader (agora obrigatório)
+    // Always use metadata loader (now required)
     final anchor = _metadataLoader.getGlyphAnchor(flagGlyphName, anchorName);
     if (anchor != null) {
-      return anchor; // Já em staff spaces
+      return anchor; // Already in staff spaces
     }
 
     return Offset.zero;
   }
 
-  /// Calcula o comprimento da haste baseado na posição da nota no pentagrama
-  /// e no número de feixes
+  /// calculateTestes the stem length based on the note's position in the staff
+  /// and the number of beams
   double calculateStemLength({
     required int staffPosition,
     required bool stemUp,
     required int beamCount,
     bool isBeamed = false,
   }) {
-    // Comprimento base: 3.5 staff spaces (Behind Bars, p.47)
+    // Base length: 3.5 staff spaces (Behind Bars, p.47)
     double length = standardStemLength;
 
     // Behind Bars (p.47): "The stem must reach the middle line of the staff."
-    // Se o comprimento padrão não for suficiente para alcançar a linha do meio,
-    // estender a haste até ela.
+    // If the standard length is not enough to reach the middle line,
+    // extend the stem to reach it.
     //
-    // staffPosition em meios de staff space; distância à linha 3 (staffPos=0):
-    //   distância (em SS) = |staffPosition| * 0.5
+    // staffPosition in half staff spaces; distance to line 3 (staffPos=0):
+    //   distance (in SS) = |staffPosition| * 0.5
     //
-    // Para haste para CIMA (stemUp): se a nota está ABAIXO da linha do meio (staffPos < 0),
-    // a haste deve alcançar a linha do meio.
-    // Para haste para BAIXO (!stemUp): se a nota está ACIMA da linha do meio (staffPos > 0),
-    // a haste deve alcançar a linha do meio.
+    // For stem UP (stemUp): if the note is BELOW the middle line (staffPos < 0),
+    // the stem must reach the middle line.
+    // For stem DOWN (!stemUp): if the note is ABOVE the middle line (staffPos > 0),
+    // the stem must reach the middle line.
     if (stemUp && staffPosition < 0) {
-      final distanceToMiddle = (-staffPosition) * 0.5; // em SS
+      final distanceToMiddle = (-staffPosition) * 0.5; // in SS
       if (distanceToMiddle > length) length = distanceToMiddle;
     } else if (!stemUp && staffPosition > 0) {
       final distanceToMiddle = staffPosition * 0.5;
       if (distanceToMiddle > length) length = distanceToMiddle;
     }
 
-    // Extensão adicional para múltiplos feixes (beams)
+    // Additional extension for multiple beams
     if (!isBeamed && beamCount > 0) {
       length += (beamCount - 1) * stemExtensionPerBeam;
     }
@@ -193,15 +261,15 @@ class SMuFLPositioningEngine {
     return length;
   }
 
-  /// Calcula o comprimento da haste para ACORDES
-  /// CRÍTICO: A haste deve atravessar TODAS as notas do acorde!
-  /// 
-  /// Behind Bars (p. 16): "A haste de um acorde deve conectar a nota mais extrema
-  /// à linha de beam ou ao comprimento padrão, o que for maior."
-  /// 
-  /// [noteStaffPositions] - Posições de todas as notas do acorde
-  /// [stemUp] - Se a haste vai para cima
-  /// [beamCount] - Número de barras (0 para notas sem barra)
+  /// calculateTestes the stem length for CHORDS.
+  /// The stem must span ALL notes in the chord!
+  ///
+  /// Behind Bars (p. 16): "The stem of a chord must connect the most extreme note
+  /// to the beam line or the standard length, whichever is greater."
+  ///
+  /// [noteStaffPositions] - Positions of all notes in the chord
+  /// [stemUp] - Whether the stem goes up
+  /// [beamCount] - Number of beams (0 for unbeamed notes)
   double calculateChordStemLength({
     required List<int> noteStaffPositions,
     required bool stemUp,
@@ -216,65 +284,65 @@ class SMuFLPositioningEngine {
       );
     }
 
-    // Encontrar a extensão (span) do acorde
+    // Find the chord span
     final int highestPos = noteStaffPositions.reduce((a, b) => a > b ? a : b);
     final int lowestPos = noteStaffPositions.reduce((a, b) => a < b ? a : b);
     final int chordSpan = (highestPos - lowestPos).abs();
 
-    // Converter span de staff positions (meios de espaço) para staff spaces
+    // Convert span from staff positions (half spaces) to staff spaces
     final double chordSpanSpaces = chordSpan * 0.5;
 
-    // FÓRMULA: stemLength = chordSpan + standardStemLength
-    // A haste deve ATRAVESSAR todas as notas (span) + comprimento padrão
+    // FORMULA: stemLength = chordSpan + standardStemLength
+    // The stem must SPAN all notes (span) + standard length
     double length = chordSpanSpaces + standardStemLength;
 
-    // Adicionar comprimento extra para múltiplos feixes
+    // Add extra length for multiple beams
     if (beamCount > 0) {
       length += (beamCount - 1) * stemExtensionPerBeam;
     }
 
-    // Garantir comprimento mínimo
+    // Ensure minimum length
     length = length.clamp(minimumStemLength, 6.0);
 
     return length;
   }
 
-  /// Calcula a posição correta de um acidente relativo à cabeça de nota
-  /// Baseado em práticas de tipografia musical profissional
-  /// Behind Bars: 0.16-0.20 staff spaces da cabeça
-  /// Retorna coordenadas em STAFF SPACES (unidades SMuFL)
+  /// calculateTestes the correct position of an accidental relative to the notehead.
+  /// Based on professional music typography practices.
+  /// Behind Bars: 0.16-0.20 staff spaces from the notehead.
+  /// Returns coordinates in STAFF SPACES (SMuFL units)
   Offset calculateAccidentalPosition({
     required String accidentalGlyph,
     required String noteheadGlyph,
     required double staffPosition,
   }) {
-    // CORREÇÃO: Usar metadata loader (agora obrigatório)
+    // Use metadata loader (now required)
     double accidentalWidth = _metadataLoader.getGlyphWidth(accidentalGlyph);
     if (accidentalWidth == 0.0) {
-      // Fallback se não encontrado
+      // Fallback if not found
       accidentalWidth = 1.0;
     }
 
-    // Posição base: acidente à esquerda da nota com espaçamento padrão
+    // Base position: accidental to the left of the note with standard spacing
     double xOffset = -(accidentalWidth + accidentalToNoteheadDistance);
 
-    // CORREÇÃO: Usar cutOutNW da cabeça de nota para espaçamento óptico avançado
-    // Cut-outs permitem posicionar o acidente mais próximo quando há espaço vazio na cabeça
+    // Use cutOutNW of the notehead for advanced optical spacing.
+    // Cut-outs allow positioning the accidental closer when there is empty space in the notehead.
     final cutOutNW = _metadataLoader.getGlyphAnchor(noteheadGlyph, 'cutOutNW');
 
-    if (cutOutNW != null && cutOutNW.dx < 0) {
-      // Há espaço vazio à esquerda da cabeça, podemos aproximar o acidente
-      xOffset = -(accidentalWidth + accidentalToNoteheadDistance + cutOutNW.dx);
+    if (cutOutNW != null && cutOutNW.dx > 0) {
+      // There is empty space to the left of the notehead, we can bring the accidental closer
+      xOffset += cutOutNW.dx;
     }
 
-    // Y alinhado com a posição da nota no pentagrama
+    // Y aligned with the note's staff position
     final double yOffset = 0.0;
 
     return Offset(xOffset, yOffset);
   }
 
-  /// Calcula o ângulo de um feixe (beam) baseado nas posições das notas
-  /// Segue as regras de Ted Ross e Elaine Gould
+  /// calculateTestes the angle of a beam based on note positions.
+  /// Follows the rules of Ted Ross and Elaine Gould.
   double calculateBeamAngle({
     required List<int> noteStaffPositions,
     required bool stemUp,
@@ -285,7 +353,7 @@ class SMuFLPositioningEngine {
     final int lastPos = noteStaffPositions.last;
     final int positionDifference = (lastPos - firstPos).abs();
 
-    // Para apenas duas notas, limite o ângulo
+    // For only two notes, limit the angle
     if (noteStaffPositions.length == 2) {
       final double slant = (positionDifference * 0.5).clamp(
         0.0,
@@ -296,14 +364,14 @@ class SMuFLPositioningEngine {
           : (lastPos > firstPos ? -slant : slant);
     }
 
-    // Para múltiplas notas, calcular ângulo baseado na diferença de posição
+    // For multiple notes, calculateTeste the angle based on position difference
     double slant;
     if (positionDifference <= 1) {
       slant = minimumBeamSlant;
     } else if (positionDifference >= 7) {
       slant = maximumBeamSlant;
     } else {
-      // Interpolação linear entre min e max
+      // Linear interpolation between min and max
       slant =
           minimumBeamSlant +
           (positionDifference - 1) * (maximumBeamSlant - minimumBeamSlant) / 6;
@@ -316,29 +384,29 @@ class SMuFLPositioningEngine {
         : (lastPos > firstPos ? -slant : slant);
   }
 
-  /// Calcula a altura ideal de um feixe na posição da primeira nota
+  /// calculateTestes the ideal beam height at the position of the first note
   double calculateBeamHeight({
     required int staffPosition,
     required bool stemUp,
     required List<int> allStaffPositions,
-    int beamCount = 1, // Número de beams (1, 2, 3, ou 4)
+    int beamCount = 1, // Number of beams (1, 2, 3, or 4)
   }) {
     if (stemUp) {
-      // CORREÇÃO: Encontrar a nota mais AGUDA (maior staffPosition)
-      // Com staffPosition positivo = acima, a nota mais alta tem valor MAIOR
+      // Find the HIGHEST note (largest staffPosition)
+      // With positive staffPosition = above, the highest note has the LARGER value
       final int highestPosition = allStaffPositions.reduce(
         (a, b) => a > b ? a : b,
       );
       double height = standardStemLength;
 
-      // CORREÇÃO: Se a nota mais alta está muito acima da pauta (> 4), extender
+      // If the highest note is far above the staff (> 4), extend
       if (highestPosition > 4) {
         height += (highestPosition - 4) * 0.5;
       }
 
-      // CORREÇÃO CRÍTICA: Comprimento mínimo para múltiplas beams
-      // Behind Bars: Haste deve ter pelo menos espaço para todas as beams + margem
-      // Ajustado empiricamente para comprimento visual adequado
+      // Minimum length for multiple beams.
+      // Behind Bars: stem must have at least enough space for all beams + margin.
+      // Adjusted empirically for adequate visual length.
       if (beamCount > 1) {
         final minHeightForBeams = standardStemLength + ((beamCount - 1) * 0.5);
         height = height > minHeightForBeams ? height : minHeightForBeams;
@@ -346,21 +414,21 @@ class SMuFLPositioningEngine {
 
       return height;
     } else {
-      // CORREÇÃO: Encontrar a nota mais GRAVE (menor staffPosition)
-      // Com staffPosition negativo = abaixo, a nota mais baixa tem valor MENOR
+      // Find the LOWEST note (smallest staffPosition)
+      // With negative staffPosition = below, the lowest note has the SMALLER value
       final int lowestPosition = allStaffPositions.reduce(
         (a, b) => a < b ? a : b,
       );
       double height = standardStemLength;
 
-      // CORREÇÃO: Se a nota mais baixa está muito abaixo da pauta (< -4), extender
+      // If the lowest note is far below the staff (< -4), extend
       if (lowestPosition < -4) {
         height += (-4 - lowestPosition) * 0.5;
       }
 
-      // CORREÇÃO CRÍTICA: Comprimento mínimo para múltiplas beams
-      // Behind Bars: Haste deve ter pelo menos espaço para todas as beams + margem
-      // Ajustado empiricamente para comprimento visual adequado
+      // Minimum length for multiple beams.
+      // Behind Bars: stem must have at least enough space for all beams + margin.
+      // Adjusted empirically for adequate visual length.
       if (beamCount > 1) {
         final minHeightForBeams = standardStemLength + ((beamCount - 1) * 0.5);
         height = height > minHeightForBeams ? height : minHeightForBeams;
@@ -370,7 +438,7 @@ class SMuFLPositioningEngine {
     }
   }
 
-  /// Calcula a posição de um ornamento relativo à nota
+  /// calculateTestes the position of an ornament relative to the note
   Offset calculateOrnamentPosition({
     required String ornamentGlyph,
     required int staffPosition,
@@ -378,16 +446,16 @@ class SMuFLPositioningEngine {
   }) {
     final double ornamentHeight = _getGlyphHeight(ornamentGlyph);
 
-    // Ornamentos vão acima da nota
+    // Ornaments go above the note
     double yOffset = -ornamentToNoteDistance - (ornamentHeight * 0.5);
 
-    // Se há acidente acima (como em trills), adicionar espaço extra
+    // If there is an accidental above (as in trills), add extra space
     if (hasAccidentalAbove) {
       yOffset -= 1.0;
     }
 
-    // CORREÇÃO: Se a nota está muito alta no pentagrama (acima da pauta)
-    // staffPosition > 4 = acima da 5ª linha
+    // If the note is very high in the staff (above the staff)
+    // staffPosition > 4 = above the 5th line
     if (staffPosition > 4) {
       yOffset -= 0.5;
     }
@@ -395,7 +463,7 @@ class SMuFLPositioningEngine {
     return Offset(0.0, yOffset);
   }
 
-  /// Calcula a posição de uma articulação (staccato, accent, etc.)
+  /// calculateTestes the position of an articulation (staccato, accent, etc.)
   Offset calculateArticulationPosition({
     required String articulationGlyph,
     required int staffPosition,
@@ -406,25 +474,25 @@ class SMuFLPositioningEngine {
 
     double yOffset;
     if (stemUp) {
-      // Articulação abaixo da nota
+      // Articulation below the note
       yOffset = articulationToNoteDistance + (articulationHeight * 0.5);
 
-      // CORREÇÃO: Se a nota está na parte inferior do pentagrama (abaixo da pauta)
-      // staffPosition < -4 = abaixo da 1ª linha
+      // If the note is in the lower part of the staff (below the staff)
+      // staffPosition < -4 = below the 1st line
       if (staffPosition < -4) {
         yOffset += 0.5;
       }
     } else {
-      // Articulação acima da nota
+      // Articulation above the note
       yOffset = -(articulationToNoteDistance + (articulationHeight * 0.5));
 
-      // CORREÇÃO: Se a nota está na parte superior do pentagrama (acima da pauta)
-      // staffPosition > 4 = acima da 5ª linha
+      // If the note is in the upper part of the staff (above the staff)
+      // staffPosition > 4 = above the 5th line
       if (staffPosition > 4) {
         yOffset -= 0.5;
       }
 
-      // Se tem feixe, adicionar espaço extra
+      // If there is a beam, add extra space
       if (hasBeam) {
         yOffset -= 1.0;
       }
@@ -433,27 +501,27 @@ class SMuFLPositioningEngine {
     return Offset(0.0, yOffset);
   }
 
-  /// Calcula pontos de controle para uma ligadura (slur) suave
-  /// Retorna [startPoint, controlPoint1, controlPoint2, endPoint] para uma curva cúbica de Bézier
+  /// calculateTestes control points for a smooth slur curve.
+  /// Returns [startPoint, controlPoint1, controlPoint2, endPoint] for a cubic Bézier curve.
   List<Offset> calculateSlurControlPoints({
     required Offset startPosition,
     required Offset endPosition,
     required bool curveUp,
-    required double intensity, // 0.0 a 1.0, quão curvada é a ligadura
+    required double intensity, // 0.0 to 1.0, how curved the slur is
   }) {
     final double dx = endPosition.dx - startPosition.dx;
     final double dy = endPosition.dy - startPosition.dy;
     final double distance = (dx * dx + dy * dy);
 
-    // Altura da curva baseada na distância e intensidade
+    // Curve height based on distance and intensity
     final double curveHeight = (distance * slurHeightFactor * intensity).clamp(
       0.5,
       3.0,
     );
     final int direction = curveUp ? -1 : 1;
 
-    // Pontos de controle para curva de Bézier cúbica
-    // Baseado em práticas de tipografia musical: curvas assimétricas são mais naturais
+    // Control points for cubic Bézier curve.
+    // Based on music typography practices: asymmetric curves are more natural.
     final Offset cp1 = Offset(
       startPosition.dx + dx * 0.25,
       startPosition.dy + dy * 0.25 + direction * curveHeight * 0.7,
@@ -467,7 +535,7 @@ class SMuFLPositioningEngine {
     return [startPosition, cp1, cp2, endPosition];
   }
 
-  /// Calcula a posição e tamanho de uma gracia note (appoggiatura)
+  /// calculateTestes the position and size of a grace note (appoggiatura)
   Map<String, dynamic> calculateGraceNoteLayout({
     required int staffPosition,
     required bool mainNoteStemUp,
@@ -475,16 +543,16 @@ class SMuFLPositioningEngine {
     return {
       'scale': graceNoteScale,
       'stemLength': graceNoteStemLength,
-      // Grace notes geralmente vão antes da nota principal
-      'xOffset': -1.5, // spaces antes da nota principal
+      // Grace notes generally go before the main note
+      'xOffset': -1.5, // spaces before the main note
       'yOffset': 0.0,
-      // Grace notes com slash através da haste
+      // Grace notes with slash through the stem
       'hasSlash': true,
-      'slashAngle': 45.0, // graus
+      'slashAngle': 45.0, // degrees
     };
   }
 
-  /// Calcula a posição e layout de uma quiáltera (tuplet)
+  /// calculateTestes the position and layout of a tuplet
   Map<String, dynamic> calculateTupletLayout({
     required List<Offset> notePositions,
     required bool stemsUp,
@@ -498,7 +566,7 @@ class SMuFLPositioningEngine {
     final double lastX = notePositions.last.dx;
     final double centerX = (firstX + lastX) / 2;
 
-    // Encontrar a nota mais alta/baixa para posicionar o bracket
+    // Find the highest/lowest note to position the bracket
     double extremeY;
     if (stemsUp) {
       extremeY = notePositions.map((p) => p.dy).reduce((a, b) => a < b ? a : b);
@@ -517,90 +585,90 @@ class SMuFLPositioningEngine {
         extremeY + (stemsUp ? -tupletNumberDistance : tupletNumberDistance),
       ),
       'number': tupletNumber,
-      'showBracket': true, // Mostrar bracket se não houver feixe
+      'showBracket': true, // Show bracket if there is no beam
     };
   }
 
-  /// Calcula a largura de um glifo usando metadata loader
+  /// calculateTestes the width of a glyph using the metadata loader
   double getGlyphWidth(String glyphName) {
     return _metadataLoader.getGlyphWidth(glyphName);
   }
 
-  /// Calcula a altura de um glifo baseado em seu bounding box
+  /// calculateTestes the height of a glyph based on its bounding box
   double _getGlyphHeight(String glyphName) {
     return _metadataLoader.getGlyphHeight(glyphName);
   }
 
-  /// Obtém o optical center de um glifo (para centralização precisa)
+  /// Gets the optical center of a glyph (for precise centering)
   Offset? getOpticalCenter(String glyphName) {
-    // CORREÇÃO: Sempre usar metadata loader (agora obrigatório)
+    // Always use metadata loader (now required)
     return _metadataLoader.getGlyphAnchor(glyphName, 'opticalCenter');
   }
 
-  /// Calcula a posição de sinais de repetição (repeat signs)
+  /// calculateTestes the position of repeat signs
   Map<String, dynamic> calculateRepeatSignPosition({
     required String repeatGlyph,
     required double barlineX,
-    required bool isStart, // true para início, false para fim
+    required bool isStart, // true for start, false for end
   }) {
     final double glyphWidth = getGlyphWidth(repeatGlyph);
 
-    // Sinais de repetição são centralizados na barra
+    // Repeat signs are centered on the barline
     final double xOffset = isStart
         ? barlineX +
-              0.3 // Ligeiramente à direita da barra de início
+              0.3 // Slightly to the right of the start barline
         : barlineX -
               glyphWidth -
-              0.3; // Ligeiramente à esquerda da barra de fim
+              0.3; // Slightly to the left of the end barline
 
     return {
       'x': xOffset,
-      'y': 3.0, // Centro do pentagrama (posição 6 = linha central)
-      'scale': 1.0, // Escala normal
+      'y': 3.0, // Center of the staff (position 6 = middle line)
+      'scale': 1.0, // Normal scale
     };
   }
 
-  /// Calcula layout de barras de repetição com voltas (endings)
+  /// calculateTestes the layout of repeat barlines with endings (voltas)
   Map<String, dynamic> calculateEndingLayout({
     required double startX,
     required double endX,
     required int endingNumber,
   }) {
     return {
-      'lineStart': Offset(startX, -2.0), // Acima do pentagrama
+      'lineStart': Offset(startX, -2.0), // Above the staff
       'lineEnd': Offset(endX, -2.0),
-      'hookHeight': 1.0, // Altura do gancho vertical
+      'hookHeight': 1.0, // Height of the vertical hook
       'numberPosition': Offset(startX + 0.5, -2.5),
       'number': endingNumber.toString(),
       'thickness': _loadEngravingDefault('repeatEndingLineThickness', 0.16),
     };
   }
 
-  /// Calcula posicionamento de fórmula de compasso (time signature)
+  /// calculateTestes the positioning of a time signature
   Map<String, dynamic> calculateTimeSignaturePosition({
     required int numerator,
     required int denominator,
     required double xPosition,
   }) {
-    // Fórmulas de compasso são centralizadas no pentagrama
-    // Numerador na linha 2 (espaço superior), denominador na linha 4 (espaço inferior)
+    // Time signatures are centered in the staff.
+    // Numerator on line 2 (upper space), denominator on line 4 (lower space).
     return {
       'numeratorPosition': Offset(xPosition, 2.0),
       'denominatorPosition': Offset(xPosition, 4.0),
       'numerator': numerator,
       'denominator': denominator,
-      'spacing': 0.2, // Espaço horizontal após a fórmula de compasso
+      'spacing': 0.2, // Horizontal space after the time signature
     };
   }
 
-  /// Calcula escala apropriada para sinais de dinâmica (evitar sobreposições)
+  /// calculateTestes the appropriate scale for dynamic markings (to avoid overlaps)
   double calculateDynamicsScale(String dynamicGlyph) {
-    // Dinâmicas geralmente são desenhadas em escala normal
-    // mas podem ser reduzidas se houver sobreposições
+    // Dynamics are generally drawn at normal scale
+    // but can be reduced if there are overlaps
     return 1.0;
   }
 
-  /// Obtém cut-outs de um glifo (para cálculos de espaçamento avançados)
+  /// Gets the cut-outs of a glyph (for advanced spacing calculateTestions)
   Map<String, Offset> getGlyphCutOuts(String glyphName) {
     final Map<String, Offset> cutOuts = {};
 
