@@ -148,7 +148,7 @@ class SMuFLPositioningEngine {
         ? getStemUpAnchor(noteheadGlyphName)
         : getStemDownAnchor(noteheadGlyphName);
 
-    // SMuFL spec: stemUpSE gives the SE CORNER (right edge) of the stem
+    // SMuFL spec: stemUpSE gives the If CORNER (right edge) of the stem
     // rectangle; stemDownNW gives the NW CORNER (left edge).
     // canvas.drawLine centres the strokeWidth on the coordinate, so we must
     // offset by half the stem thickness to make the visual edge land exactly

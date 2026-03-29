@@ -2,8 +2,8 @@
 // Refactored implementation: Usa StaffPositionCalculator
 //
 // MELHORIAS IMPLEMENTADAS (Fase 2):
-// ✅ Uses StaffPositioncalculateTestor unificado (elimina 41 linhas duplicadas)
-// ✅ Corrige possível bug de sinal invertido no cálculo de position
+// ✅ Uses StaffPositioncalculateTestor unificado (elimina 41 lines duplicadas)
+// ✅ Corrige possible bug de sinal invertido no calculation de position
 // ✅ 100% conformidade with system unificado de posicionamento
 
 import 'package:flutter/material.dart';
@@ -83,7 +83,7 @@ class GroupRenderer {
         groupElements.add(element);
         if (element.element is Note) {
           final note = element.element as Note;
-          // MELHORIA: Usesr StaffPositioncalculateTestor unificado
+          // MELHORIA: Use StaffPositioncalculateTestor unificado
           final staffPos = StaffPositionCalculator.calculate(
             note.pitch,
             currentClef,
@@ -139,11 +139,11 @@ class GroupRenderer {
 
     // Fix: VISUAL: Valores ajustados empiricamente
     // Valores teóricos de Behind Bars (0.5 SS thickness, 0.25 SS spacing)
-    // produziam beams muito grossas visualmente no Flutter
+    // produziam beams very grossas visualmente no Flutter
     //
     // Valores calibrados for melhor aparência:
-    // - beamThickness: ~0.35-0.4 SS (mais fino)
-    // - beamSpacing: ~0.35-0.4 SS (mais espaçado)
+    // - beamThickness: ~0.35-0.4 SS (more fino)
+    // - beamSpacing: ~0.35-0.4 SS (more espaçado)
     final beamThickness = coordinates.staffSpace * 0.4; // Mais fino
     final beamSpacing = coordinates.staffSpace * 0.60; // Mais espaçado
 
@@ -160,7 +160,7 @@ class GroupRenderer {
       );
       staffPositions.add(staffPos);
 
-      // Usesr âncora SMuFL for position of the stem
+      // Use âncora SMuFL for position of the stem
       final stemAnchor = stemUp
           ? positioningEngine.getStemUpAnchor(noteGlyph)
           : positioningEngine.getStemDownAnchor(noteGlyph);
@@ -183,7 +183,7 @@ class GroupRenderer {
     );
     final beamHeightPixels = beamHeightSpaces * coordinates.staffSpace;
 
-    // Primeira e última position of the beam
+    // Primeira and última position of the beam
     final firstNoteY = positions.first.dy;
     final lastNoteY = positions.last.dy;
     final avgNoteY = (firstNoteY + lastNoteY) / 2;
@@ -191,7 +191,7 @@ class GroupRenderer {
         ? avgNoteY - beamHeightPixels
         : avgNoteY + beamHeightPixels;
 
-    // Convertsr ângulo de spaces for slope pixel
+    // Convertsr angle de spaces for slope pixel
     final xDistance = stemEndpoints.last.dx - stemEndpoints.first.dx;
     final beamAnglePixels = (beamAngleSpaces * coordinates.staffSpace);
     double beamSlope = xDistance > 0 ? beamAnglePixels / xDistance : 0.0;
@@ -264,7 +264,7 @@ class GroupRenderer {
     }
 
     // Fix: Desenhar cabeças de note
-    // Important: Not use stroke/outline for evitar retângulos
+    // Important: Not use stroke/outline for avoid retângulos
     for (int i = 0; i < positions.length; i++) {
       final noteGlyph = durations[i].glyphName;
       final notePosition = positions[i];
@@ -305,7 +305,7 @@ class GroupRenderer {
     }
   }
 
-  /// Identifica grupos de notes ligadas por ties (público for SlurRenderer)
+  /// Identifica grupos de notes ligadas by ties (público for SlurRenderer)
   Map<int, List<int>> identifyTieGroups(List<PositionedElement> elements) {
     final groups = <int, List<int>>{};
     int groupId = 0;
@@ -352,20 +352,20 @@ class GroupRenderer {
       }
 
       final startNote = startElement.element as Note;
-      // MELHORIA: Usesr StaffPositioncalculateTestor
+      // MELHORIA: Use StaffPositioncalculateTestor
       final startStaffPos = StaffPositionCalculator.calculate(
         startNote.pitch,
         currentClef,
       );
 
-      // Fix: LACERDA: "Ties/slurs ficam of the lado OPOSTO das stem"
-      // Se stem up, tie/slur embaixo; se stem down, tie/slur in cima
+      // Fix: LACERDA: "Ties/slurs are of the lado OPOSTO das stem"
+      // If stem up, tie/slur embaixo; if stem down, tie/slur in top
       final stemUp =
           startStaffPos <=
           0; // Haste para cima quando nota está abaixo/na linha central
       final tieAbove = !stemUp; // Ligadura oposta à haste
 
-      // MELHORIA: Usesr StaffPositioncalculateTestor.toPixelY
+      // MELHORIA: Use StaffPositioncalculateTestor.toPixelY
       final startNoteY = StaffPositionCalculator.toPixelY(
         startStaffPos,
         coordinates.staffSpace,
@@ -382,8 +382,8 @@ class GroupRenderer {
       );
       final noteWidth = coordinates.staffSpace * 1.18;
 
-      // Fix: SMuFL: Tie/slur Not deve tocar as cabeças de note
-      // Distância mínima: 0.25 staff spaces (Behind Bars, p. 180)
+      // Fix: SMuFL: Tie/slur Not must tocar as cabeças de note
+      // Distance mínima: 0.25 staff spaces (Behind Bars, p. 180)
       final clearance = coordinates.staffSpace * 0.25;
 
       final startPoint = Offset(
@@ -402,7 +402,7 @@ class GroupRenderer {
       );
 
       // Fix: SMuFL: Height of the tie/slur baseada in interpolação linear (Behind Bars)
-      // height = k * width + d, limitado por min/max
+      // height = k * width + d, limitado by min/max
       final distance = (endPoint.dx - startPoint.dx).abs();
       final distanceInSpaces = distance / coordinates.staffSpace;
 
@@ -417,7 +417,7 @@ class GroupRenderer {
             (curvatureHeight * (tieAbove ? -1 : 1)),
       );
 
-      // Fix: SMuFL: Espessura of the tie/slur mais fina
+      // Fix: SMuFL: Thickness of the tie/slur more fina
       // EngravingRules: slurEndpointThickness = 0.1, slurMidpointThickness = 0.22
       // Média for stroke: 0.16 staff spaces
       final tiePaint = Paint()
@@ -439,7 +439,7 @@ class GroupRenderer {
     }
   }
 
-  /// Identifica grupos de notes ligadas por slurs (público for SlurRenderer)
+  /// Identifica grupos de notes ligadas by slurs (público for SlurRenderer)
   Map<int, List<int>> identifySlurGroups(List<PositionedElement> elements) {
     final groups = <int, List<int>>{};
     int groupId = 0;
@@ -485,7 +485,7 @@ class GroupRenderer {
       }
       final startNote = startElement.element as Note;
       final endNote = endElement.element as Note;
-      // MELHORIA: Usesr StaffPositioncalculateTestor
+      // MELHORIA: Use StaffPositioncalculateTestor
       final startStaffPos = StaffPositionCalculator.calculate(
         startNote.pitch,
         currentClef,
@@ -495,12 +495,12 @@ class GroupRenderer {
         currentClef,
       );
 
-      // Fix: LACERDA: Tie/slur de expressão segue mesma regra de tie
-      // Oposta à direção das stems
+      // Fix: LACERDA: Tie/slur de expressão segue same regra de tie
+      // Oposta to the direction das stems
       final startStemUp = startStaffPos <= 0;
       final slurAbove = !startStemUp;
 
-      // MELHORIA: Usesr StaffPositioncalculateTestor.toPixelY
+      // MELHORIA: Use StaffPositioncalculateTestor.toPixelY
       final startNoteY = StaffPositionCalculator.toPixelY(
         startStaffPos,
         coordinates.staffSpace,
@@ -514,7 +514,7 @@ class GroupRenderer {
 
       final noteWidth = coordinates.staffSpace * 1.18;
 
-      // Fix: Tie/slur mais próxima das cabeças
+      // Fix: Tie/slur more próxima das cabeças
       final startPoint = Offset(
         startElement.position.dx + noteWidth * 0.3,
         startNoteY + (coordinates.staffSpace * 0.4 * (slurAbove ? -1 : 1)),
@@ -524,12 +524,12 @@ class GroupRenderer {
         endNoteY + (coordinates.staffSpace * 0.4 * (slurAbove ? -1 : 1)),
       );
 
-      // Fix: LACERDA: Height of the arco proporcional à distância
-      // Quanto mais longa, mais alta a curva
+      // Fix: LACERDA: Height of the arco proporcional to the distance
+      // Quanto more longa, more alta a curva
       final distance = (endPoint.dx - startPoint.dx).abs();
       final arcHeight = coordinates.staffSpace * 1.2 + (distance * 0.04);
 
-      // Curva bezier cúbica for forma mais natural
+      // Curva bezier cúbica for forma more natural
       final controlPoint1 = Offset(
         startPoint.dx + (endPoint.dx - startPoint.dx) * 0.3,
         startPoint.dy + (arcHeight * (slurAbove ? -1 : 1)),
@@ -539,7 +539,7 @@ class GroupRenderer {
         endPoint.dy + (arcHeight * (slurAbove ? -1 : 1)),
       );
 
-      // Fix: Espessura default de tie/slur de expressão
+      // Fix: Thickness default de tie/slur de expressão
       final slurPaint = Paint()
         ..color = theme.slurColor ?? theme.noteheadColor
         ..style = PaintingStyle.stroke
@@ -632,6 +632,6 @@ class GroupRenderer {
         left.pitch.alter == right.pitch.alter;
   }
 
-  // REMOVIDO: _calculateTesteStaffPosition duplicado (41 linhas)
+  // REMOVIDO: _calculateTesteStaffPosition duplicado (41 lines)
   // AGORA Uses: StaffPositioncalculateTestor unificado
 }

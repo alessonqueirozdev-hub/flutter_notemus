@@ -1,9 +1,9 @@
 // lib/src/rendering/renderers/note_renderer.dart
-// Refactored implementation: Usa StaffPositionCalculator e BaseGlyphRenderer
+// Refactored implementation: Usa StaffPositionCalculator and BaseGlyphRenderer
 //
 // MELHORIAS IMPLEMENTADAS:
-// ✅ Uses StaffPositioncalculateTestor unificado for cálculo de positions
-// ✅ Uses BaseGlyphRenderer.drawGlyphWithBBox for Rendersção consistente
+// ✅ Uses StaffPositioncalculateTestor unificado for calculation de positions
+// ✅ Uses BaseGlyphRenderer.drawGlyphWithBBox for Rendering consistente
 // ✅ Elimina código duplicado de _calculateTesteStaffPosition
 // ✅ Elimina uso de centerVertically/centerHorizontally inconsistente
 // ✅ Cache de TextPainters for melhor performance
@@ -116,7 +116,7 @@ class NoteRenderer extends BaseGlyphRenderer {
       currentClef,
     );
 
-    // O offset horizontal of the voice já está embutido in basePosition (Appliesdo pelo layout engine).
+    // O offset horizontal of the voice already está embutido in basePosition (Applied pelo layout engine).
     // Not Appliesr offset newmente aqui.
     final noteY = StaffPositionCalculator.toPixelY(
       staffPosition,
@@ -162,7 +162,7 @@ class NoteRenderer extends BaseGlyphRenderer {
     if (!renderOnlyNotehead &&
         note.duration.type != DurationType.whole &&
         note.beam == null) {
-      // Direção of the stem: forçada por voice in contexto polifônico, senão por position
+      // Direction of the stem: forçada by voice in context polifônico, senão by position
       final beamCount = _getBeamCount(note.duration.type);
 
       final stemEnd = stemRenderer.render(
@@ -174,7 +174,7 @@ class NoteRenderer extends BaseGlyphRenderer {
         beamCount,
       );
 
-      // Desenhar bandeirola se necessário
+      // Desenhar bandeirola if required
       if (note.duration.type.value < 0.25) {
         flagRenderer.render(canvas, stemEnd, note.duration.type, stemUp);
       }
@@ -198,7 +198,7 @@ class NoteRenderer extends BaseGlyphRenderer {
       }
     }
 
-    // Rendersr articulations using o CENTRO of the notehead
+    // Rendersr articulations using o Centre of the notehead
     articulationRenderer.render(
       canvas,
       note.articulations,
@@ -206,7 +206,7 @@ class NoteRenderer extends BaseGlyphRenderer {
       stemUp: stemUp,
     );
 
-    // Rendersr ornaments using o CENTRO of the notehead
+    // Rendersr ornaments using o Centre of the notehead
     ornamentRenderer.renderForNote(
       canvas,
       note,
@@ -215,7 +215,7 @@ class NoteRenderer extends BaseGlyphRenderer {
       voiceNumber: voiceNumber,
     );
 
-    // Rendersr dynamics se presente
+    // Rendersr dynamics if presente
     if (note.dynamicElement != null) {
       _renderDynamic(canvas, note.dynamicElement!, basePosition, staffPosition);
     }
@@ -225,13 +225,13 @@ class NoteRenderer extends BaseGlyphRenderer {
       dotRenderer.render(canvas, note, noteCenter, staffPosition);
     }
 
-    // Rendersr syllables/letras abaixo of the staff
+    // Rendersr syllables/lyrics below the staff
     if (note.syllables != null && note.syllables!.isNotEmpty) {
       _renderSyllables(canvas, note.syllables!, noteCenter.dx);
     }
   }
 
-  // 🆕 Method auxiliar: Calculatestesr number de barras
+  // 🆕 Method auxiliar: Calculate number de barras
   int _getBeamCount(DurationType duration) {
     return switch (duration) {
       DurationType.eighth => 1,
@@ -242,7 +242,7 @@ class NoteRenderer extends BaseGlyphRenderer {
     };
   }
 
-  /// Rendersr dynamic associada à note
+  /// Rendersr dynamic associada to the note
   void _renderDynamic(
     Canvas canvas,
     Dynamic dynamic,
@@ -252,23 +252,23 @@ class NoteRenderer extends BaseGlyphRenderer {
     symbolAndTextRenderer.renderDynamic(canvas, dynamic, basePosition);
   }
 
-  /// Renders as syllables de letra abaixo of the staff.
+  /// Renders as syllables de lyric below the staff.
   ///
-  /// Posicionamento: abaixo of the 1ª linha of the staff + 1.5 staff spaces de margem.
-  /// Each verso ocupa a linha vertical separada (spacing = 1.2 * fontSize).
+  /// Posicionamento: below the 1ª staff line + 1.5 staff spaces de margin.
+  /// Each verse ocupa a line vertical separate (spacing = 1.2 * fontSize).
   ///
   /// Convenções tipográficas:
-  /// - [SyllableType.initial] / [SyllableType.middle]: Adds "-" após o texto
-  ///   (o hífen ideal seria centralizado entre as notes, mas requer 2ª passagem)
-  /// - [SyllableType.hyphen]: desenha apenas "-"
-  /// - Melisma: extensão de linha horizontal após o texto (conecta à próxima note)
+  /// - [SyllableType.initial] / [SyllableType.middle]: Adds "-" after o text
+  ///   (o hífen ideal seria centred between as notes, mas requer 2ª passagem)
+  /// - [SyllableType.hyphen]: desenha only "-"
+  /// - Melisma: extension de line horizontal after o text (connects to the próxima note)
   void _renderSyllables(Canvas canvas, List<Syllable> syllables, double noteX) {
-    // Linha 1 (inferior) of the staff: baseline.dy + 2 * staffSpace
+    // Line \1 (lower) of the staff: baseline.dy + 2 * staffSpace
     final staffBottomY =
         coordinates.staffBaseline.dy + 2 * coordinates.staffSpace;
     final fontSize = coordinates.staffSpace * 0.85;
     final lineHeight = fontSize * 1.3;
-    // Clearance entre linha inferior of the staff e primeira linha de letra
+    // Clearance between line lower of the staff and primeira line de lyric
     final firstLineY = staffBottomY + coordinates.staffSpace * 1.5;
 
     for (int verseIndex = 0; verseIndex < syllables.length; verseIndex++) {
@@ -311,18 +311,18 @@ class NoteRenderer extends BaseGlyphRenderer {
       textDirection: TextDirection.ltr,
     )..layout();
 
-    // Centralizar o texto na X position of the note
+    // Centralizar o text na X position of the note
     final textX = noteX - painter.width * 0.5;
     painter.paint(canvas, Offset(textX, y - painter.height * 0.5));
 
-    // For syllables únicas/terminais, desenhar linha de melisma curta se a note
-    // for melismática (texto igual à syllable = vocalização estendida).
-    // A extensão completa requer position of the note seguinte (Rendersda pelo StaffRenderer).
-    // Aqui apenas marcamos o início of the linha with um traço de 1 SS de comprimento.
+    // For syllables únicas/terminais, desenhar line de melisma curta if a note
+    // for melismática (text igual to the syllable = vocalização estendida).
+    // A extension completa requer position of the note seguinte (Rendersda pelo StaffRenderer).
+    // Aqui only marcamos o start of the line with a traço de 1 SS de length.
     if (syllable.type == SyllableType.single ||
         syllable.type == SyllableType.terminal) {
       if (syllable.italic) {
-        // Convenção: itálico sinaliza melisma — traço de extensão inicial
+        // Convenção: italic sinaliza melisma — traço de extension initial
         final lineStartX = textX + painter.width + fontSize * 0.2;
         final lineEndX = lineStartX + coordinates.staffSpace;
         final paint = Paint()
@@ -334,20 +334,20 @@ class NoteRenderer extends BaseGlyphRenderer {
     }
   }
 
-  /// Determina a direção of the stem pela voice (polyphony) ou pela staff position.
+  /// Determina a direction of the stem pela voice (polyphony) or pela staff position.
   ///
-  /// in contexto polifônico (voiceNumber != null):
-  ///   - Voice ímpar (1, 3, ...): stem always for cima
-  ///   - Voice par (2, 4, ...): stem always for baixo
+  /// in context polifônico (voiceNumber != null):
+  ///   - Voice ímpar (1, 3, ...): stem always for top
+  ///   - Voice par (2, 4, ...): stem always for bottom
   ///
-  /// Sem voice: regra tradded — stem up se a note está na linha of the
-  /// meio ou abaixo (staffPosition <= 0).
+  /// Sem voice: regra traditional — stem up if a note está na line of the
+  /// meio or below (staffPosition <= 0).
   bool _getStemDirectionByVoice(
     Note note,
     int staffPosition,
     int? voiceNumber,
   ) {
-    // Voice explícita via parameter (propagada pelo layout engine)
+    // Voice explícita via parameter (propagated pelo layout engine)
     if (voiceNumber != null) {
       return voiceNumber.isOdd; // ímpar = up, par = down
     }

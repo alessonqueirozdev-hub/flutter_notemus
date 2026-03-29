@@ -74,7 +74,7 @@ class OrnamentRenderer extends BaseGlyphRenderer {
           ),
         );
 
-        // Fix: Render mini-slur of the grace note à note principal
+        // Fix: Render mini-slur of the grace note to the note principal
         _renderGraceSlur(
           canvas,
           graceOrigin: graceOrigin,
@@ -176,7 +176,7 @@ class OrnamentRenderer extends BaseGlyphRenderer {
           ),
         );
 
-        // Fix: Render mini-slur of the grace note ao chord
+        // Fix: Render mini-slur of the grace note to the chord
         _renderGraceSlur(
           canvas,
           graceOrigin: graceOrigin,
@@ -249,8 +249,8 @@ class OrnamentRenderer extends BaseGlyphRenderer {
   }) {
     const glyphName = 'wiggleArpeggiatoUp';
 
-    // wiggleArpeggiatoUp e um tile HORIZONTAL no Bravura (~1.3 SS x 0.476 SS).
-    // For arpejo vertical, rotacionamos -90 graus in torno of the centro de each tile.
+    // wiggleArpeggiatoUp and a tile HORIZONTAL no Bravura (~1.3 SS x 0.476 SS).
+    // For arpejo vertical, rotacionamos -90 graus in torno of the centre de each tile.
     // Apos rotacao: width original (tileW) → extensao vertical; height (tileH) → extensao horizontal.
     final bBox = metadata.getGlyphBoundingBox(glyphName);
     if (bBox == null || bBox.width <= 0) return;
@@ -348,8 +348,8 @@ class OrnamentRenderer extends BaseGlyphRenderer {
     final stemHeight = coordinates.staffSpace * 3.5;
 
     if (ornamentAbove) {
-      // Regra: height default fixa acima of the staff (consistência visual).
-      // Só acompanha a cabeça of the note when há muitas linhas suplementares.
+      // Regra: height default fixa above the staff (consistência visual).
+      // Only acompanha a cabeça of the note when há muitas ledger lines.
       final standardY =
           coordinates.getStaffLineY(5) - (coordinates.staffSpace * 1.8);
       if (staffPosition > 6) {
@@ -461,8 +461,8 @@ class OrnamentRenderer extends BaseGlyphRenderer {
   }
 
   /// Renders mini-slur de grace note → note principal with Bézier cúbico
-  /// e espessura variable (fina nas pontas, mais grossa no meio), alinhado
-  /// with o estilo tipográfico Bravura das slurs normais.
+  /// and thickness variable (fina nas pontas, more grossa no meio), aligned
+  /// with o style typographic Bravura das slurs normais.
   void _renderGraceSlur(
     Canvas canvas, {
     required Offset graceOrigin,

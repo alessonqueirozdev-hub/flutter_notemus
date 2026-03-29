@@ -180,14 +180,14 @@ class CompleteArticulationsOrnamentsExample extends StatelessWidget {
     measure.add(Clef(clefType: ClefType.treble));
     measure.add(TimeSignature(numerator: 4, denominator: 4));
 
-    // Arco for cima
+    // Arco for top
     measure.add(Note(
       pitch: const Pitch(step: 'G', octave: 4),
       duration: const Duration(DurationType.quarter),
       articulations: [ArticulationType.upBow],
     ));
 
-    // Arco for baixo
+    // Arco for bottom
     measure.add(Note(
       pitch: const Pitch(step: 'A', octave: 4),
       duration: const Duration(DurationType.quarter),

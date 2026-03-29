@@ -1,17 +1,17 @@
 // lib/core/neume.dart
 //
 // Noteção de Neuma (MEI v5 — Capítulo: Neume Notetion)
-// Suporte a canto gregoriano e noteção litúrgica medieval.
+// Suporte a canto gregoriano and noteção litúrgica medieval.
 
 import 'musical_element.dart';
 
-/// Forma of the componente de neuma (MEI `@nc.form` ou `@form` in `<nc>`).
+/// Forma of the componente de neuma (MEI `@nc.form` or `@form` in `<nc>`).
 ///
-/// Each forma correspwhere a um type específico de neuma simples ou ornamental.
+/// Each forma correspwhere a a type específico de neuma simples or ornamental.
 enum NcForm {
-  /// Ponto simples (punctum)
+  /// Point simples (punctum)
   punctum,
-  /// Virga (ponto with stem ascendente)
+  /// Virga (point with stem ascendente)
   virga,
   /// Quilisma (note oscilante)
   quilisma,
@@ -27,25 +27,25 @@ enum NcForm {
   connected,
 }
 
-/// Intervalo direcional entre neumas consecutivos.
+/// Intervalo direcional between neumas consecutivos.
 enum NeumeInterval {
-  /// Uníssono (mesma height)
+  /// Uníssono (same height)
   unison,
-  /// Passo acima
+  /// Passo above
   stepAbove,
-  /// Passo abaixo
+  /// Passo below
   stepBelow,
-  /// Salto acima (>= terça)
+  /// Salto above (>= terça)
   leapAbove,
-  /// Salto abaixo (>= terça)
+  /// Salto below (>= terça)
   leapBelow,
 }
 
-/// Representa um componente individual de neuma (MEI `<nc>` — neume component).
+/// Representa a componente individual de neuma (MEI `<nc>` — neume component).
 ///
-/// Um neume component é a unidade mínima de a figura de neuma, equivalente
-/// aproximadamente a a note in CMN. Pode ter height (se adiastemático with
-/// linhas guia, ou in noteção quadrada with staff).
+/// A neume component is a unidade mínima de a figure de neuma, equivalente
+/// aproximadamente a a note in CMN. Can ter height (if adiastemático with
+/// lines guia, or in noteção quadrada with staff).
 ///
 /// ```dart
 /// NeumeComponent(
@@ -55,7 +55,7 @@ enum NeumeInterval {
 /// )
 /// ```
 class NeumeComponent {
-  /// Name of the note (C–B), se a noteção é diastema (with height definida).
+  /// Name of the note (C–B), if a noteção is diastema (with height definida).
   final String? pitchName;
 
   /// Oitava of the note.
@@ -64,13 +64,13 @@ class NeumeComponent {
   /// Forma gráfica of the componente.
   final NcForm form;
 
-  /// Direção of the intervalo in relação ao componente previous.
+  /// Direction of the intervalo in relação to the componente previous.
   final NeumeInterval? interval;
 
-  /// Indica se this componente é liquescente.
+  /// Indicates if this componente is liquescente.
   final bool isLiquescent;
 
-  /// Indica conexão with o next componente (ligature graphique).
+  /// Indicates conexão with o next componente (ligature graphique).
   final bool connected;
 
   const NeumeComponent({
@@ -83,7 +83,7 @@ class NeumeComponent {
   });
 }
 
-/// Type de neuma composto, identificando o default rítmico-melódico clássico.
+/// Type de neuma composto, identificando o default rhythmic-melódico clássico.
 enum NeumeType {
   // === Neumas simples ===
   /// Punctum — note única
@@ -135,10 +135,10 @@ enum NeumeType {
   custom,
 }
 
-/// Representa um neuma completo (MEI `<neume>`).
+/// Representa a neuma completo (MEI `<neume>`).
 ///
-/// Um neuma é um grupo de sons (componentes) that formam a unidade rítmico-
-/// melódica na noteção gregoriana. Correspwhere a a ou mais syllables de texto.
+/// A neuma is a grupo de sons (componentes) that formam a unidade rhythmic-
+/// melódica na noteção gregoriana. Correspwhere a a or more syllables de text.
 ///
 /// ```dart
 /// Neume(
@@ -156,10 +156,10 @@ class Neume extends MusicalElement {
   /// Componentes of the neuma, in ordem de performance.
   final List<NeumeComponent> components;
 
-  /// Syllable de texto associada (letra of the canto).
+  /// Syllable de text associada (lyric of the canto).
   final String? syllable;
 
-  /// Indica a tradição de noteção (quadrada, adiastemática, etc.).
+  /// Indicates a tradition de noteção (quadrada, adiastemática, etc.).
   final NeumeNotationStyle notationStyle;
 
   Neume({
@@ -170,24 +170,24 @@ class Neume extends MusicalElement {
   });
 }
 
-/// Estilo de noteção de neuma.
+/// Style de noteção de neuma.
 enum NeumeNotationStyle {
   /// Noteção quadrada (noteção gregoriana with staff, séc. XII in diante)
   square,
-  /// Noteção adiastemática (sans staff, apenas direção melódica)
+  /// Noteção adiastemática (sans staff, only direction melódica)
   adiastematic,
   /// Noteção neumática alemã (Hufnagel)
   hufnagel,
-  /// Noteção aquitana (pontos sobre linha)
+  /// Noteção aquitana (points on/about line)
   aquitanian,
   /// Noteção beneventana
   beneventan,
 }
 
-/// Indica a divisão entre palavras / respiração no canto gregoriano.
-/// Correspwhere ao elemento `<division>` of the MEI v5.
+/// Indicates a divisão between palavras / respiração no canto gregoriano.
+/// Correspwhere to the elemento `<division>` of the MEI v5.
 class NeumeDivision extends MusicalElement {
-  /// Type de divisão (respiração entre syllables).
+  /// Type de divisão (respiração between syllables).
   final NeumeDivisionType type;
 
   NeumeDivision({this.type = NeumeDivisionType.minima});

@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 
-/// 🎼 PROFESSIONAL EXAMPLE OF QUIALTERES
+/// 🎼 PROFESSIONAL Example OF QUIALTERES
 /// Based on Behind Bars (Elaine Gould)
 class TupletsProfessionalExample extends StatelessWidget {
   const TupletsProfessionalExample({super.key});

@@ -21,7 +21,7 @@ enum BarlineType {
   none,
 }
 
-/// Representa a linha de measure.
+/// Representa a measure barline.
 class Barline extends MusicalElement {
   final BarlineType type;
   

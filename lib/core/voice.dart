@@ -33,7 +33,7 @@ class Voice {
   /// Musical elements in this voice (notes, rests, chords)
   final List<MusicalElement> elements;
 
-  /// Optional name for the voice (e.g., "Soprano", "Melody")
+  /// Optional name for the voice (and.g., "Soprano", "Melody")
   final String? name;
 
   /// Preferred stem direction for this voice
@@ -162,7 +162,7 @@ enum StemDirection {
 ///
 /// // Voice 1 (melody, stems up)
 /// final voice1 = Voice.voice1();
-/// voice1.add(Note(pitch: Pitch(step: 'E', octave: 5), duration: ...));
+/// voice1.add(Note(pitch: Pitch(step: 'And', octave: 5), duration: ...));
 /// measure.addVoice(voice1);
 ///
 /// // Voice 2 (accompaniment, stems down)
@@ -175,7 +175,7 @@ class MultiVoiceMeasure extends Measure {
 
   /// Collection de voices (ordenação not garantida).
   ///
-  /// Mantém API amigável for iteração e Checksções de coleção.
+  /// Mantém API amigável for iteração and Checksções de coleção.
   Iterable<Voice> get voices => _voicesByNumber.values;
 
   /// Map of voice number to Voice object

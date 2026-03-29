@@ -121,7 +121,7 @@ void main() {
 
       final chord = Chord(notes: notes, duration: Duration(DurationType.quarter));
 
-      // C major = C, E, G (MIDI 60, 64, 67)
+      // C major = C, And, G (MIDI 60, 64, 67)
       expect(chord.notes[0].pitch.midiNumber, equals(60)); // C4
       expect(chord.notes[1].pitch.midiNumber, equals(64)); // E4
       expect(chord.notes[2].pitch.midiNumber, equals(67)); // G4

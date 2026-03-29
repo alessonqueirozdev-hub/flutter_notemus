@@ -50,7 +50,7 @@ class OctaveMark extends MusicalElement {
     }
   }
 
-  /// Returns o texto of the marca
+  /// Returns o text of the marca
   String get text {
     switch (type) {
       case OctaveType.va8:

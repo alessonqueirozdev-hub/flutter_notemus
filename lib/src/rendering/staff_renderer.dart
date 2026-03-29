@@ -30,35 +30,35 @@ import 'staff_position_calculator.dart';
 class StaffRenderer {
   // CONSTANTES DE AJUSTE MANUAL
 
-  // Margem após Barlines NORMAIS (single, double, dashed, etc)
-  // Controla where as linhas of the staff terminam when o system termina
+  // Margin after Barlines NORMAIS (single, double, dashed, etc)
+  // Controla where as staff lines end when o system ends
   // with a barline normal (not a final barline)
   //
   // Fórmula: endX = bounds.endX + (staffSpace + systemEndMargin)
   //
-  // applies-se a:
+  // applies-if a:
   //   - BarlineType.single (barra simples)
   //   - BarlineType.double (double barline)
   //   - BarlineType.dashed (barra tracejada)
   //   - All os tipos EXCETO BarlineType.final_
   //
   // Valores sugeridos:
-  //   -12.0 = Linhas terminam exatamente na barline
-  //    0.0 = Margem default de 1 staff space
-  //   -3.0 = Linhas terminam um pouco antes of the barra
+  //   -12.0 = Lines end exatamente na barline
+  //    0.0 = Margin default de 1 staff space
+  //   -3.0 = Lines end a pouco before of the barra
   static const double systemEndMargin =
       -12.0; //  Termina exatamente na barra de compasso
 
-  // Margem após Final barline (BarlineType.final_)
-  // Controla where as linhas of the staff terminam when o system termina
-  // with a final barline (linha fina + linha grossa)
+  // Margin after Final barline (BarlineType.final_)
+  // Controla where as staff lines end when o system ends
+  // with a final barline (line fina + line grossa)
   //
-  // applies-se APENAS a:
+  // applies-if Only a:
   //   - BarlineType.final_ (final barline) ✅
   //
   // Valores sugeridos:
-  //   -1.5 = Linhas terminam exatamente na final barline ✅
-  //    0.0 = Margem default de 1 staff space
+  //   -1.5 = Lines end exatamente na final barline ✅
+  //    0.0 = Margin default de 1 staff space
   static const double finalBarlineMargin =
       -1.5; // ✅ Termina exatamente na barra final
 
@@ -93,7 +93,7 @@ class StaffRenderer {
     required this.metadata,
     required this.theme,
   }) {
-    // CORREÃ‡ÃƒO TIPOGRÃFICA: Size correto of the glifo based on SMuFL
+    // CORREÃ‡ÃƒO TIPOGRÃIs: Size correct of the glifo based on SMuFL
     glyphSize = coordinates.staffSpace * 4.0;
 
     // Fix: Use valores corretos of the metadata Bravura
@@ -219,7 +219,7 @@ class StaffRenderer {
     );
   }
 
-  // Set de notes that estão in advanced beam groups
+  // Set de notes that are in advanced beam groups
   final Set<Note> _notesInAdvancedBeams = {};
   final Map<Note, Clef> _noteClefs = {};
 
@@ -234,14 +234,14 @@ class StaffRenderer {
     _notesInAdvancedBeams.clear();
     _noteClefs.clear();
 
-    // Coletar notes that estão in advanced beam groups
+    // Coletar notes that are in advanced beam groups
     if (layoutEngine != null) {
       for (final group in layoutEngine.advancedBeamGroups) {
         _notesInAdvancedBeams.addAll(group.notes);
       }
     }
 
-    // Desenhar linhas of the staff POR System
+    // Desenhar staff lines By System
     _drawStaffLinesBySystem(canvas, elements);
     currentClef = Clef(clefType: ClefType.treble); // Default clef
 
@@ -256,7 +256,7 @@ class StaffRenderer {
       );
     }
 
-    // Segunda passagem: Rendersr ADVANCED BEAMS (se disponível)
+    // Segunda passagem: Rendersr ADVANCED BEAMS (if disponível)
     if (layoutEngine != null && layoutEngine.advancedBeamGroups.isNotEmpty) {
       final noteXPositions = layoutEngine.noteXPositions;
       final noteYPositions = layoutEngine.noteYPositions;
@@ -275,7 +275,7 @@ class StaffRenderer {
     if (currentClef != null) {
       _renderLineOrnaments(canvas, elements);
 
-      // Pular beams simples se temos advanced beams
+      // Pular beams simples if temos advanced beams
       if (layoutEngine == null || layoutEngine.advancedBeamGroups.isEmpty) {
         groupRenderer.renderBeams(canvas, elements, currentClef!);
       }
@@ -315,7 +315,7 @@ class StaffRenderer {
         skylineCalculator: skylineCalc,
       );
 
-      // ✅ UsesR SLURRENDERER PROFISSIONAL ao invés of the GroupRenderer
+      // ✅ Use SLURRENDERER PROFISSIONAL to the invés of the GroupRenderer
       final tieGroups = groupRenderer.identifyTieGroups(elements);
       final slurGroups = groupRenderer.identifySlurGroups(elements);
 
@@ -517,15 +517,15 @@ class StaffRenderer {
     return null;
   }
 
-  /// Desenha linhas of the staff POR System
-  /// Each system tem their linhas terminando na última barline daquele system
+  /// Desenha staff lines By System
+  /// Each system tem their lines ending na última barline daquele system
   void _drawStaffLinesBySystem(
     Canvas canvas,
     List<PositionedElement> elements,
   ) {
     if (elements.isEmpty) return;
 
-    // Agrupar elementos por system e Calculatestesr limites
+    // Agrupar elementos by system and Calculate limites
     final systemBounds = <int, ({double startX, double endX, double y})>{};
     final lastBarlineType =
         <int, BarlineType>{}; // Tipo da última barra de cada sistema
@@ -566,15 +566,15 @@ class StaffRenderer {
         metadata.getEngravingDefault('thickBarlineThickness') *
         coordinates.staffSpace;
 
-    // Desenhar linhas for each system separadamente
+    // Desenhar lines for each system separadamente
     for (final entry in systemBounds.entries) {
       final systemNumber = entry.key;
       final bounds = entry.value;
       final barlineType = lastBarlineType[systemNumber];
 
-      // Usesr margem baseada no Type DE BARRA, not na position of the system
+      // Use margin baseada no Type DE BARRA, not na position of the system
       // Final barline (BarlineType.final_) Uses finalBarlineMargin
-      // Outras barras use systemEndMargin
+      // Other barras use systemEndMargin
       final barlineX = lastBarlineX[systemNumber];
       final contentEndX = bounds.endX + (coordinates.staffSpace * 0.8);
       final barlineEndX = (barlineType != null && barlineX != null)
@@ -587,11 +587,11 @@ class StaffRenderer {
           : contentEndX;
       final endX = math.max(contentEndX, barlineEndX);
 
-      // Desenhar as 5 linhas of the staff for this system
-      // ✅ CORREÇÃO: Usesr coordinates.getStaffLineY() diretamente, that já tem
-      // a Y position correta for this system (baseada in staffBaseline.dy).
-      // Not Usesr bounds.y pois pode ser a Y position de a note (pitch-based)
-      // e not o centro of the staff.
+      // Desenhar as 5 staff lines for this system
+      // ✅ CORREÇÃO: Use coordinates.getStaffLineY() diretamente, that already tem
+      // a Y position correct for this system (baseada in staffBaseline.dy).
+      // Not Use bounds.y pois can be a Y position de a note (pitch-based)
+      // and not o centre of the staff.
       for (int line = 1; line <= 5; line++) {
         final lineY = coordinates.getStaffLineY(line);
 
@@ -686,7 +686,7 @@ class StaffRenderer {
           desiredEndX;
       final markEndX = endAnchorX > basePosition.dx ? endAnchorX : desiredEndX;
 
-      // Encontrar Y mais extremo das notes no span for evitar sobreposicao with linhas suplementares
+      // Encontrar Y more extremo das notes no span for avoid overlap with ledger lines
       final isAboveOctave =
           element.type == OctaveType.va8 ||
           element.type == OctaveType.va15 ||

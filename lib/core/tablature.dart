@@ -7,10 +7,10 @@ import 'duration.dart';
 ///
 /// Correspwhere às informações de afinação in `<staffDef>` no MEI v5.
 class TabString {
-  /// Number of the corda (1 = mais aguda / primeira corda).
+  /// Number of the corda (1 = more aguda / primeira corda).
   final int number;
 
-  /// Name of the note of the corda solta (ex.: 'E', 'A', 'D', 'G', 'B').
+  /// Name of the note of the corda solta (e.g., 'And', 'A', 'D', 'G', 'B').
   final String pitchName;
 
   /// Oitava of the corda solta.
@@ -25,12 +25,12 @@ class TabString {
 
 /// Afinação de instrumento for tablatura.
 ///
-/// Inclui afinações pré-definidas for violão, baixo e outros instrumentos.
+/// Includes afinações pré-definidas for violão, bottom and other instrumentos.
 class TabTuning {
-  /// Name of the afinação (ex.: 'Standard', 'Drop D', 'Open G').
+  /// Name of the afinação (e.g., 'Standard', 'Drop D', 'Open G').
   final String name;
 
-  /// Cordas of the afinação, ordenadas of the mais aguda (1) for a mais grave.
+  /// Cordas of the afinação, ordenadas of the more aguda (1) for a more grave.
   final List<TabString> strings;
 
   const TabTuning({required this.name, required this.strings});
@@ -61,7 +61,7 @@ class TabTuning {
     ],
   );
 
-  /// Afinação default de baixo de 4 cordas (E1-A1-D2-G2).
+  /// Afinação default de bottom de 4 cordas (E1-A1-D2-G2).
   static const TabTuning bassStandard = TabTuning(
     name: 'Bass Standard',
     strings: [
@@ -86,23 +86,23 @@ class TabTuning {
   );
 }
 
-/// Símbolo de duração in tablatura (MEI `<tabDurSym>`).
+/// Symbol de duração in tablatura (MEI `<tabDurSym>`).
 ///
-/// in tablatura, a duração pode ser indicada por um símbolo separado
-/// acima ou abaixo dos numbers de casa. Correspwhere ao elemento
+/// in tablatura, a duração can be indicada by a symbol separate
+/// above or below dos numbers de casa. Correspwhere to the elemento
 /// `<tabDurSym>` of the MEI v5.
 class TabDurSym extends MusicalElement {
-  /// Duração representada por this símbolo.
+  /// Duração representada by this symbol.
   final Duration duration;
 
-  /// Indica se o símbolo é exibido acima (default) ou abaixo das cordas.
+  /// Indicates if o symbol is displayed above (default) or below das cordas.
   final bool above;
 
   TabDurSym({required this.duration, this.above = true});
 }
 
-/// Representa a note in tablatura, correspwherendo ao elemento `<note>`
-/// with atributos `@tab.fret` e `@tab.string` no MEI v5.
+/// Representa a note in tablatura, correspwherendo to the elemento `<note>`
+/// with atributos `@tab.fret` and `@tab.string` no MEI v5.
 ///
 /// ```dart
 /// TabNote(string: 1, fret: 0)   // primeira corda solta
@@ -110,7 +110,7 @@ class TabDurSym extends MusicalElement {
 /// TabNote(string: 6, fret: 5)   // sexta corda, 5ª casa
 /// ```
 class TabNote extends MusicalElement {
-  /// Number of the corda (1 = mais aguda). MEI `@tab.string`.
+  /// Number of the corda (1 = more aguda). MEI `@tab.string`.
   final int string;
 
   /// Casa (fret). 0 = corda solta. MEI `@tab.fret`.
@@ -119,10 +119,10 @@ class TabNote extends MusicalElement {
   /// Duração of the note de tablatura.
   final Duration? duration;
 
-  /// Indica se this note é harmonics (toque levemente a corda).
+  /// Indicates if this note is harmonics (toque levemente a corda).
   final bool isHarmonic;
 
-  /// Indica se há mudo (x) nesta corda.
+  /// Indicates if há mudo (x) nesta corda.
   final bool isMuted;
 
   TabNote({
@@ -136,7 +136,7 @@ class TabNote extends MusicalElement {
 
 /// Grupo de notes simultâneas in tablatura (MEI `<tabGrp>`).
 ///
-/// Equivale a um chord in noteção convencional, mas representado como
+/// Equivale a a chord in noteção convencional, mas representado as
 /// numbers de casa in múltiplas cordas simultaneamente.
 ///
 /// ```dart
@@ -150,7 +150,7 @@ class TabNote extends MusicalElement {
 /// )
 /// ```
 class TabGrp extends MusicalElement {
-  /// Notes of the grupo (a por corda).
+  /// Notes of the grupo (a by corda).
   final List<TabNote> notes;
 
   /// Duração of the grupo.

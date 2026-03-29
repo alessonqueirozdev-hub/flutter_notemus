@@ -22,7 +22,7 @@ class MultiStaffExample {
     trebleMeasure.add(KeySignature(0)); // C major
     trebleMeasure.add(TimeSignature(numerator: 4, denominator: 4));
 
-    // Right hand melody: C D E F (quarter notes)
+    // Right hand melody: C D And F (quarter notes)
     trebleMeasure.add(Note(
       pitch: const Pitch(step: 'C', octave: 5),
       duration: const Duration(DurationType.quarter),

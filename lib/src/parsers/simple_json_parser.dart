@@ -3,7 +3,7 @@
 import 'dart:convert';
 import '../../core/core.dart';
 
-/// Parser for formato JSON simplificado with suporte a letras (lyrics)
+/// Parser for formato JSON simplificado with suporte a lyrics (lyrics)
 /// 
 /// Formato aceito:
 /// ```json
@@ -58,7 +58,7 @@ class SimpleJsonParser {
       
       final noteDuration = note.duration.realValue;
       
-      // Se a note not cabe no current measure, Createsr new measure
+      // If a note not cabe no current measure, Createsr new measure
       if (currentDuration + noteDuration > measureCapacity) {
         if (autoBarlines) {
           currentMeasure.add(Barline(type: BarlineType.single));
@@ -72,7 +72,7 @@ class SimpleJsonParser {
       currentMeasure.add(note);
       currentDuration += noteDuration;
       
-      // Se completou o measure exatamente, iniciar new
+      // If completou o measure exatamente, iniciar new
       if (currentDuration >= measureCapacity) {
         if (autoBarlines) {
           currentMeasure.add(Barline(type: BarlineType.single));
@@ -84,7 +84,7 @@ class SimpleJsonParser {
       }
     }
     
-    // add last measure se tiver notes
+    // add last measure if tiver notes
     if (currentMeasure.elements.isNotEmpty) {
       if (autoBarlines) {
         currentMeasure.add(Barline(type: BarlineType.final_));
@@ -123,11 +123,11 @@ class SimpleJsonParser {
   static Pitch? _parsePitchFromString(String noteString) {
     if (noteString.isEmpty) return null;
     
-    // Extrair step (primeira letra)
+    // Extrair step (primeira lyric)
     final step = noteString[0].toUpperCase();
     if (!'ABCDEFG'.contains(step)) return null;
     
-    // Extrair alteração e oitava
+    // Extrair alteração and oitava
     double alter = 0.0;
     int octave = 4; // Padrão
     
@@ -198,7 +198,7 @@ class SimpleJsonParser {
     return Duration(type);
   }
   
-  /// Renders APENAS um elemento isolado (ex: treble clef)
+  /// Renders Only a elemento isolado (ex: treble clef)
   /// 
   /// Example:
   /// ```dart

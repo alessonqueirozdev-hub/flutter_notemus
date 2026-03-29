@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 
-// Estrutura de dados for organizar each figura
+// Structure de data for organizar each figure
 class RhythmicFigure {
   final String name;
   final DurationType durationType;

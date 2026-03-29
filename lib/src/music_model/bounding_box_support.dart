@@ -4,8 +4,8 @@ import '../layout/bounding_box.dart';
 
 /// Mixin that Adds suporte a Hierarchical BoundingBox for elementos musicais
 ///
-/// This mixin pode ser Appliesdo a any MusicalElement for that it possa
-/// armazenar e gerenciar its Hierarchical BoundingBox.
+/// This mixin can be Applied a any MusicalElement for that it possa
+/// armazenar and gerenciar its Hierarchical BoundingBox.
 ///
 /// Default: Mixin Pattern
 ///
@@ -18,8 +18,8 @@ import '../layout/bounding_box.dart';
 mixin BoundingBoxSupport {
   /// Hierarchical BoundingBox associado a this elemento
   ///
-  /// This é preenchido durante o processo de layout e currentizado
-  /// durante a Rendersção. Pode ser null se o layout still not
+  /// This is preenchido durante o processo de layout and currentizado
+  /// durante a Rendering. Can be null if o layout still not
   /// foi executado.
   BoundingBox? _boundingBox;
 
@@ -29,15 +29,15 @@ mixin BoundingBoxSupport {
   /// Definess o Hierarchical BoundingBox deste elemento
   set boundingBox(BoundingBox? bbox) => _boundingBox = bbox;
 
-  /// Checks se this elemento tem um Hierarchical BoundingBox válido
+  /// Checks if this elemento tem a Hierarchical BoundingBox válido
   bool get hasBoundingBox => _boundingBox != null;
 
-  /// Creates e Returns um new Hierarchical BoundingBox for this elemento
+  /// Creates and Returns a new Hierarchical BoundingBox for this elemento
   ///
-  /// Se já existe um BoundingBox, Returns o existente.
-  /// Caso contrário, Creates um new e o armazena.
+  /// If already existe a BoundingBox, Returns o existente.
+  /// Caso contrário, Creates a new and o armazena.
   ///
-  /// @return Hierarchical BoundingBox (new ou existente)
+  /// @return Hierarchical BoundingBox (new or existente)
   BoundingBox getOrCreateBoundingBox() {
     _boundingBox ??= BoundingBox();
     return _boundingBox!;
@@ -45,7 +45,7 @@ mixin BoundingBoxSupport {
 
   /// Limpa o Hierarchical BoundingBox deste elemento
   ///
-  /// Remove all os filhos e Definess como null.
+  /// Remove all os filhos and Definess as null.
   /// Útil for reCalculatestesr layout of the zero.
   void clearBoundingBox() {
     if (_boundingBox != null) {
@@ -80,7 +80,7 @@ mixin BoundingBoxSupport {
 
   /// ReCalculatestes recursivamente as positions absolutas of the BoundingBox
   ///
-  /// Deve ser chamado após modificar positions relativas na hierarquia.
+  /// Must be chamado after modificar positions relativas na hierarquia.
   void updateBoundingBoxPositions() {
     if (_boundingBox != null) {
       _boundingBox!.calculateAbsolutePosition();
@@ -89,16 +89,16 @@ mixin BoundingBoxSupport {
 
   /// ReCalculatestes recursivamente os bounds of the BoundingBox
   ///
-  /// Deve ser chamado após modificar sizes ou add/remover filhos.
+  /// Must be chamado after modificar sizes or add/remover filhos.
   void updateBoundingBoxBounds() {
     if (_boundingBox != null) {
       _boundingBox!.calculateBoundingBox();
     }
   }
 
-  /// Adds um filho ao Hierarchical BoundingBox deste elemento
+  /// Adds a filho to the Hierarchical BoundingBox deste elemento
   ///
-  /// Útil for construir hierarquia durante Rendersção.
+  /// Útil for construir hierarquia durante Rendering.
   ///
   /// @param childBBox BoundingBox of the element filho
   void addBoundingBoxChild(BoundingBox childBBox) {

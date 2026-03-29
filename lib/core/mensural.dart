@@ -1,7 +1,7 @@
 // lib/core/mensural.dart
 //
 // Noteção Mensural (MEI v5 — Capítulo: Mensural Notetion)
-// Suporte a noteção medieval e renascentista (séc. XIII–XVII).
+// Suporte a noteção medieval and renascentista (séc. XIII–XVII).
 
 import 'musical_element.dart';
 import 'duration.dart';
@@ -12,7 +12,7 @@ enum MensuralHeadShape {
   oblique,
   /// Cabeça romboide (semibreve, mínima)
   diamond,
-  /// Cabeça redonda (estilo tardio)
+  /// Cabeça redonda (style tardio)
   round,
   /// Cabeça quadrada (neuma tardio / ars antiqua)
   square,
@@ -21,7 +21,7 @@ enum MensuralHeadShape {
 /// Orientação of the plica (stem ornamental in noteção mensural).
 enum PlicaDirection { up, down }
 
-/// Value mensural de a note (MEI `dur` in contexto mensural).
+/// Value mensural de a note (MEI `dur` in context mensural).
 enum MensuralDuration {
   /// Maxima (Mx)
   maxima,
@@ -41,7 +41,7 @@ enum MensuralDuration {
   semifusa,
 }
 
-/// Representa a note in noteção mensural (MEI `<note>` in contexto mensural).
+/// Representa a note in noteção mensural (MEI `<note>` in context mensural).
 ///
 /// Notes mensurais têm atributos específicos that not existem no CMN:
 /// - [headShape]: forma of the cabeça of the note
@@ -72,13 +72,13 @@ class MensuralNote extends MusicalElement {
   /// Qualidade of the note (perfeita = ternária, imperfeita = binária, alterada).
   final MensuralNoteQuality quality;
 
-  /// Indica se this note tem plica (ornament de stem diagonal).
+  /// Indicates if this note tem plica (ornament de stem diagonal).
   final PlicaDirection? plica;
 
   /// Alteração cromática (0 = natural, 1 = sharp, -1 = flat).
   final double alter;
 
-  /// Indica se this note é colorada (note de cor) for indicar imperfeição/alteração.
+  /// Indicates if this note is colorada (note de cor) for indicate imperfeição/alteração.
   final bool isColored;
 
   MensuralNote({
@@ -99,7 +99,7 @@ enum MensuralNoteQuality {
   perfecta,
   /// Imperfeita: divisão binária (valem 2 unidades smalleres)
   imperfecta,
-  /// Alterada: dobra o value por alteração mensural (apenas breve e semibreve)
+  /// Alterada: dobra o value by alteração mensural (only breve and semibreve)
   alterata,
 }
 
@@ -113,7 +113,7 @@ class MensuralRest extends MusicalElement {
 
 /// Ligatura mensural (MEI `<ligature>`).
 ///
-/// A ligatura é um grupo de notes escritas ligadas graficamente, comum
+/// A ligatura is a grupo de notes escritas ligadas graficamente, comum
 /// na noteção medieval. A forma gráfica codifica as durações implicitamente.
 ///
 /// ```dart
@@ -141,17 +141,17 @@ enum LigatureForm {
   cumpropriete,
   /// Sine proprietate (sem property)
   sinepropriete,
-  /// Cum opposita proprietate (with property oposta — indica semibreves)
+  /// Cum opposita proprietate (with property oposta — indicates semibreves)
   cumoppositapropriete,
   /// Sine perfectione
   sineperfectione,
 }
 
-/// Definição de mensura (MEI `<mensur>`).
+/// Definition de mensura (MEI `<mensur>`).
 ///
-/// Especifica as relações de divisão entre os valores mensurais:
-/// - [modusgreater]: relação Maxima → Longa (2 ou 3)
-/// - [modusmino]: relação Longa → Breve (2 ou 3)
+/// Especifica as relações de divisão between os valores mensurais:
+/// - [modusgreater]: relação Maxima → Longa (2 or 3)
+/// - [modusmino]: relação Longa → Breve (2 or 3)
 /// - [tempus]: relação Breve → Semibreve (2=binário, 3=ternário)
 /// - [prolatio]: relação Semibreve → Mínima (2=minor, 3=greater)
 ///
@@ -160,25 +160,25 @@ enum LigatureForm {
 /// Mensur(tempus: 2, prolatio: 3)  // Tempus imperfectum, prolatio greater
 /// ```
 class Mensur extends MusicalElement {
-  /// Modus greater (relação Maxima/Longa): 2 ou 3.
+  /// Modus greater (relação Maxima/Longa): 2 or 3.
   final int? modusmaior;
 
-  /// Modus minor (relação Longa/Breve): 2 ou 3.
+  /// Modus minor (relação Longa/Breve): 2 or 3.
   final int? modusmino;
 
-  /// Tempus (relação Breve/Semibreve): 2 ou 3.
+  /// Tempus (relação Breve/Semibreve): 2 or 3.
   final int? tempus;
 
-  /// Prolatio (relação Semibreve/Mínima): 2 ou 3.
+  /// Prolatio (relação Semibreve/Mínima): 2 or 3.
   final int? prolatio;
 
-  /// Sinal visual de mensura (círculo, semicírculo, etc.).
+  /// Sinal visual de mensura (circle, semicírculo, etc.).
   final MensurSign? sign;
 
-  /// Indica mensura with ponto de perfeição.
+  /// Indicates mensura with point de perfeição.
   final bool dot;
 
-  /// Indica mensura with barra de diminuição (alla breve).
+  /// Indicates mensura with barra de diminuição (alla breve).
   final bool slash;
 
   Mensur({
@@ -194,19 +194,19 @@ class Mensur extends MusicalElement {
 
 /// Sinal gráfico de mensura.
 enum MensurSign {
-  /// Círculo (tempus perfectum)
+  /// Circle (tempus perfectum)
   circle,
   /// Semicírculo (tempus imperfectum)
   semicircle,
   /// Semicírculo cortado (alla breve / cut time mensural)
   cut,
-  /// Símbolo C with ponto
+  /// Symbol C with point
   cWithDot,
 }
 
 /// Proporção mensural (MEI `<proport>`).
 ///
-/// Indica a mudança de proporção rítmica (ex.: sesquialtera 3:2,
+/// Indicates a mudança de proporção rhythmic (e.g., sesquialtera 3:2,
 /// dupla proporção 2:1).
 ///
 /// ```dart
@@ -214,10 +214,10 @@ enum MensurSign {
 /// ProportMark(num: 2, numbase: 1)  // Dupla proporção
 /// ```
 class ProportMark extends MusicalElement {
-  /// Numerador of the proporção.
+  /// Numerator of the proporção.
   final int num;
 
-  /// Denominador of the proporção.
+  /// Denominator of the proporção.
   final int numbase;
 
   ProportMark({required this.num, required this.numbase});
@@ -226,8 +226,8 @@ class ProportMark extends MusicalElement {
   double get modifier => numbase / num;
 }
 
-/// Converts a duração mensural for value relativo à semibreve.
-/// Apenas indicativo; o value real depende of the mensura ativa.
+/// Converts a duração mensural for value relativo to the semibreve.
+/// Only indicativo; o value real depende of the mensura ativa.
 double mensuralDurationToValue(MensuralDuration duration) =>
     switch (duration) {
       MensuralDuration.maxima     => 8.0,
@@ -240,7 +240,7 @@ double mensuralDurationToValue(MensuralDuration duration) =>
       MensuralDuration.semifusa   => 0.0625,
     };
 
-/// Returns o [DurationType] moderno mais next de a [MensuralDuration].
+/// Returns o [DurationType] moderno more next de a [MensuralDuration].
 DurationType mensuralToModernDuration(MensuralDuration d) =>
     switch (d) {
       MensuralDuration.maxima     => DurationType.maxima,

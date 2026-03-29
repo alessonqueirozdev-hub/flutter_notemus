@@ -6,7 +6,7 @@ import '../../../theme/music_score_theme.dart';
 import '../../smufl_positioning_engine.dart';
 import '../base_glyph_renderer.dart';
 
-/// Rendersdor especializado APENAS for bandeirolas (flags) de notes.
+/// Renderer especializado Only for bandeirolas (flags) de notes.
 ///
 /// Responsabilidade única: desenhar bandeirolas using
 /// âncoras SMuFL for posicionamento preciso.
@@ -31,7 +31,7 @@ class FlagRenderer extends BaseGlyphRenderer {
   /// [canvas] - Canvas where desenhar
   /// [stemEnd] - Position of the final of the stem
   /// [duration] - Duração of the note
-  /// [stemUp] - Se a stem vai for cima
+  /// [stemUp] - If a stem vai for top
   void render(
     Canvas canvas,
     Offset stemEnd,
@@ -65,7 +65,7 @@ class FlagRenderer extends BaseGlyphRenderer {
     );
   }
 
-  /// Returns o glifo SMuFL correto for a bandeirola.
+  /// Returns o glifo SMuFL correct for a bandeirola.
   String? _getFlagGlyph(DurationType duration, bool stemUp) {
     return switch (duration) {
       DurationType.eighth => stemUp ? 'flag8thUp' : 'flag8thDown',

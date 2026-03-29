@@ -7,7 +7,7 @@ import 'ornament.dart';
 import 'dynamic.dart';
 import '../src/music_model/bounding_box_support.dart';
 
-/// Representa um chord (conjunto de notes tocadas simultaneamente)
+/// Representa a chord (conjunto de notes tocadas simultaneamente)
 class Chord extends MusicalElement with BoundingBoxSupport {
   final List<Note> notes;
   final Duration duration;

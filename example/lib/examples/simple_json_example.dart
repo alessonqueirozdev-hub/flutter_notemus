@@ -10,7 +10,7 @@ class SimpleJsonExample extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 🎵 Its JSON With LETRAS (LYRICS)!
+    // 🎵 Its JSON With Lyrics (LYRICS)!
     const jsonString = '''
     [
       {"note": "C4", "lyric": "Do", "duration": "quarter"},

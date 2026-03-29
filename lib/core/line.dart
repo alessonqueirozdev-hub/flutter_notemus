@@ -2,7 +2,7 @@
 
 import 'musical_element.dart';
 
-/// Tipos de linha
+/// Tipos de line
 enum LineType {
   solid,
   dashed,
@@ -17,7 +17,7 @@ enum LineType {
   voltaBracket,
 }
 
-/// Representa a linha de prolongamento
+/// Representa a extension line
 class Line extends MusicalElement {
   final LineType type;
   final double startX;

@@ -52,7 +52,7 @@ class BeamRenderer {
 
   /// Returns the horizontal X offset applied to the stem anchor, in pixels.
   ///
-  /// Positive for stem-up (SE anchor), negative for stem-down (NW anchor).
+  /// Positive for stem-up (If anchor), negative for stem-down (NW anchor).
   double _stemXOffset(StemDirection direction) =>
       direction == StemDirection.up ? 0.7 : -0.8;
 

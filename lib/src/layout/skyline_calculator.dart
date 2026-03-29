@@ -3,32 +3,32 @@
 import 'dart:math' as math;
 import 'bounding_box.dart';
 
-/// Calculator de Skyline e Bottomline for detecção de colisões
+/// Calculator de Skyline and Bottomline for detecção de colisões
 ///
 /// Based on:
 /// - OpenSheetMusicDisplay (SkyBottomLinecalculateTestor.ts)
 /// - Algoritmo used for posicionamento inteligente de slurs, dynamics, etc.
 ///
 /// Conceito:
-/// - **Skyline**: Array de heights Y máximas (limite superior ocupado)
-/// - **Bottomline**: Array de heights Y mínimas (limite inferior ocupado)
-/// - Resolução: definida por samplingUnit (spacing entre pontos)
+/// - **Skyline**: Array de heights Y máximas (limite upper ocupado)
+/// - **Bottomline**: Array de heights Y mínimas (limite lower ocupado)
+/// - Resolução: definida by samplingUnit (spacing between points)
 ///
 /// Uso:
 /// 1. Initialise with width
 /// 2. Currentizar skyline/bottomline according to elementos are posicionados
 /// 3. Consultar space disponível for news elementos
 class SkyBottomLineCalculator {
-  /// Unidade de amostragem (spacing entre pontos in pixels)
-  /// OSMD Uses 3.0 pixels por default
+  /// Unidade de amostragem (spacing between points in pixels)
+  /// OSMD Uses 3.0 pixels by default
   final double samplingUnit;
 
-  /// Skyline: array de positions Y máximas (limite superior)
-  /// Valores smalleres = mais alto na página
+  /// Skyline: array de positions Y máximas (limite upper)
+  /// Valores smalleres = more alto na página
   List<double> skyLine = [];
 
-  /// Bottomline: array de positions Y mínimas (limite inferior)
-  /// Valores greateres = mais baixo na página
+  /// Bottomline: array de positions Y mínimas (limite lower)
+  /// Valores greateres = more bottom na página
   List<double> bottomLine = [];
 
   /// Width total sendo monitorada
@@ -47,10 +47,10 @@ class SkyBottomLineCalculator {
     _width = width;
     final length = (width / samplingUnit).ceil();
 
-    // Skyline Initialises with infinito (nenhum limite superior)
+    // Skyline Initialises with infinito (nenhum limite upper)
     skyLine = List.filled(length, double.infinity);
 
-    // Bottomline Initialises with infinito negativo (nenhum limite inferior)
+    // Bottomline Initialises with infinito negativo (nenhum limite lower)
     bottomLine = List.filled(length, double.negativeInfinity);
   }
 
@@ -71,14 +71,14 @@ class SkyBottomLineCalculator {
   void updateSkyLine(double x, double y) {
     final index = (x / samplingUnit).floor();
     if (index >= 0 && index < skyLine.length) {
-      // Skyline pega o minimum value (mais alto na página)
+      // Skyline pega o minimum value (more alto na página)
       skyLine[index] = math.min(skyLine[index], y);
     }
   }
 
-  /// Currentiza o skyline for um intervalo [startX, endX]
+  /// Currentiza o skyline for a intervalo [startX, endX]
   ///
-  /// @param startX X position inicial
+  /// @param startX X position initial
   /// @param endX X position final
   /// @param y Y position
   void updateSkyLineRange(double startX, double endX, double y) {
@@ -92,7 +92,7 @@ class SkyBottomLineCalculator {
     }
   }
 
-  /// Currentiza o skyline from um BoundingBox
+  /// Currentiza o skyline from a BoundingBox
   ///
   /// @param box BoundingBox of the element
   void updateSkyLineFromBox(BoundingBox box) {
@@ -110,18 +110,18 @@ class SkyBottomLineCalculator {
   /// Currentiza o bottomline in a position específica
   ///
   /// @param x X position in pixels
-  /// @param y Y position (valores greateres = mais baixo)
+  /// @param y Y position (valores greateres = more bottom)
   void updateBottomLine(double x, double y) {
     final index = (x / samplingUnit).floor();
     if (index >= 0 && index < bottomLine.length) {
-      // Bottomline pega o maximum value (mais baixo na página)
+      // Bottomline pega o maximum value (more bottom na página)
       bottomLine[index] = math.max(bottomLine[index], y);
     }
   }
 
-  /// Currentiza o bottomline for um intervalo [startX, endX]
+  /// Currentiza o bottomline for a intervalo [startX, endX]
   ///
-  /// @param startX X position inicial
+  /// @param startX X position initial
   /// @param endX X position final
   /// @param y Y position
   void updateBottomLineRange(double startX, double endX, double y) {
@@ -135,7 +135,7 @@ class SkyBottomLineCalculator {
     }
   }
 
-  /// Currentiza o bottomline from um BoundingBox
+  /// Currentiza o bottomline from a BoundingBox
   ///
   /// @param box BoundingBox of the element
   void updateBottomLineFromBox(BoundingBox box) {
@@ -153,7 +153,7 @@ class SkyBottomLineCalculator {
   /// Gets o value of the skyline in a X position específica
   ///
   /// @param x X position in pixels
-  /// @return Value Y of the skyline (double.infinity se not defined)
+  /// @return Value Y of the skyline (double.infinity if not defined)
   double getSkyLineAt(double x) {
     final index = (x / samplingUnit).floor();
     if (index >= 0 && index < skyLine.length) {
@@ -165,7 +165,7 @@ class SkyBottomLineCalculator {
   /// Gets o value of the bottomline in a X position específica
   ///
   /// @param x X position in pixels
-  /// @return Value Y of the bottomline (double.negativeInfinity se not defined)
+  /// @return Value Y of the bottomline (double.negativeInfinity if not defined)
   double getBottomLineAt(double x) {
     final index = (x / samplingUnit).floor();
     if (index >= 0 && index < bottomLine.length) {
@@ -174,9 +174,9 @@ class SkyBottomLineCalculator {
     return double.negativeInfinity;
   }
 
-  /// Gets pontos of the skyline entre startX e endX
+  /// Gets points of the skyline between startX and endX
   ///
-  /// @param startX X position inicial
+  /// @param startX X position initial
   /// @param endX X position final
   /// @return List of PointF2D with (x, y) of the skyline
   List<PointF2D> getSkyLinePoints(double startX, double endX) {
@@ -192,9 +192,9 @@ class SkyBottomLineCalculator {
     return points;
   }
 
-  /// Gets pontos of the bottomline entre startX e endX
+  /// Gets points of the bottomline between startX and endX
   ///
-  /// @param startX X position inicial
+  /// @param startX X position initial
   /// @param endX X position final
   /// @return List of PointF2D with (x, y) of the bottomline
   List<PointF2D> getBottomLinePoints(double startX, double endX) {
@@ -214,10 +214,10 @@ class SkyBottomLineCalculator {
   // ANÁLISE DE Space DISPONÍVEL
   // ====================
 
-  /// Calculatestes o space vertical disponível entre skyline e bottomline
+  /// Calculates o space vertical disponível between skyline and bottomline
   ///
   /// @param x X position
-  /// @return Space disponível (positivo), ou negativo se há colisão
+  /// @return Space disponível (positivo), or negativo if há colisão
   double getAvailableSpaceAt(double x) {
     final skyY = getSkyLineAt(x);
     final bottomY = getBottomLineAt(x);
@@ -229,9 +229,9 @@ class SkyBottomLineCalculator {
     return bottomY - skyY; // Espaço entre limite inferior e superior
   }
 
-  /// Calculatestes o space vertical mínimo in um intervalo
+  /// Calculates o space vertical mínimo in a intervalo
   ///
-  /// @param startX X position inicial
+  /// @param startX X position initial
   /// @param endX X position final
   /// @return Smaller space disponível no intervalo
   double getMinimumAvailableSpace(double startX, double endX) {
@@ -252,11 +252,11 @@ class SkyBottomLineCalculator {
     return minSpace;
   }
 
-  /// Checks se um BoundingBox pode ser posicionado sem colisão
+  /// Checks if a BoundingBox can be positioned sem colisão
   ///
-  /// @param box BoundingBox a Checksr
-  /// @param margin Margem de segurança added
-  /// @return true se cabe sem colisão
+  /// @param box BoundingBox a Check
+  /// @param margin Margin de segurança added
+  /// @return true if cabe sem colisão
   bool canFit(BoundingBox box, {double margin = 0.0}) {
     final left = box.absolutePosition.x + box.borderLeft;
     final right = box.absolutePosition.x + box.borderRight;
@@ -268,7 +268,7 @@ class SkyBottomLineCalculator {
 
     for (int i = startIndex; i <= endIndex && i < skyLine.length; i++) {
       if (i >= 0) {
-        // Checksr se o box colide with o skyline ou bottomline
+        // Check if o box colide with o skyline or bottomline
         if (top < skyLine[i] && bottom > bottomLine[i]) {
           continue; // OK, cabe entre skyline e bottomline
         }
@@ -279,13 +279,13 @@ class SkyBottomLineCalculator {
     return true;
   }
 
-  /// Encontra a Y position ótima for um elemento horizontal
+  /// Encontra a Y position ótima for a elemento horizontal
   ///
-  /// @param startX X position inicial
+  /// @param startX X position initial
   /// @param endX X position final
   /// @param height Height of the element
-  /// @param placeAbove if true, posicionar acima of the skyline; if false, below of the bottomline
-  /// @param margin Margem de segurança
+  /// @param placeAbove if true, position above the skyline; if false, below of the bottomline
+  /// @param margin Margin de segurança
   /// @return Y position ótima
   double findOptimalY({
     required double startX,
@@ -295,7 +295,7 @@ class SkyBottomLineCalculator {
     double margin = 0.0,
   }) {
     if (placeAbove) {
-      // Posicionar acima: encontrar skyline mais baixo (value Y máximo) no intervalo
+      // Position above: encontrar skyline more bottom (value Y máximo) no intervalo
       final points = getSkyLinePoints(startX, endX);
       if (points.isEmpty) {
         return 0.0; // Sem restrições, posicionar no topo
@@ -308,10 +308,10 @@ class SkyBottomLineCalculator {
         }
       }
 
-      // Posicionar acima of the skyline with margem
+      // Position above the skyline with margin
       return lowestSkyline - height - margin;
     } else {
-      // Posicionar abaixo: encontrar bottomline mais alto (value Y mínimo) no intervalo
+      // Position below: encontrar bottomline more alto (value Y mínimo) no intervalo
       final points = getBottomLinePoints(startX, endX);
       if (points.isEmpty) {
         return 0.0; // Sem restrições, posicionar no topo
@@ -324,7 +324,7 @@ class SkyBottomLineCalculator {
         }
       }
 
-      // Posicionar abaixo of the bottomline with margem
+      // Position below the bottomline with margin
       return highestBottomline + margin;
     }
   }
@@ -338,7 +338,7 @@ class SkyBottomLineCalculator {
     return (x / samplingUnit).floor();
   }
 
-  /// Returns a X position for um index of the array
+  /// Returns a X position for a index of the array
   double getXForIndex(int index) {
     return index * samplingUnit;
   }
@@ -346,7 +346,7 @@ class SkyBottomLineCalculator {
   /// Width monitorada
   double get width => _width;
 
-  /// Number de pontos de amostragem
+  /// Number de points de amostragem
   int get length => skyLine.length;
 
   @override

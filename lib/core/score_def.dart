@@ -1,8 +1,8 @@
 // lib/core/score_def.dart
 //
-// Definição global de partitura (MEI v5 — scoreDef)
-// Correspwhere ao elemento `<scoreDef>` that agrupa definições de
-// clef, armadura e fórmula de measure de forma centralizada.
+// Definition global de partitura (MEI v5 — scoreDef)
+// Correspwhere to the elemento `<scoreDef>` that agrupa definitions de
+// clef, armadura and fórmula de measure de forma centred.
 
 import 'clef.dart';
 import 'key_signature.dart';
@@ -10,12 +10,12 @@ import 'time_signature.dart';
 import 'dynamic.dart';
 import 'tempo.dart';
 
-/// Definição global de partitura, correspwherendo ao elemento `<scoreDef>`
+/// Definition global de partitura, correspwherendo to the elemento `<scoreDef>`
 /// of the MEI v5.
 ///
-/// `<scoreDef>` centraliza informações that se Appliesm a toda a partitura
-/// no início de um `<section>` ou após a mudança global, evitando repetir
-/// as mesmas definições in each `<staffDef>`.
+/// `<scoreDef>` centraliza informações that if Appliesm a toda a partitura
+/// no start de a `<section>` or after a mudança global, evitando repetir
+/// as same definitions in each `<staffDef>`.
 ///
 /// ```dart
 /// ScoreDefinition(
@@ -26,7 +26,7 @@ import 'tempo.dart';
 /// )
 /// ```
 class ScoreDefinition {
-  /// Clef default for all as staves (pode ser sobreposta por `<staffDef>`).
+  /// Clef default for all as staves (can be sobreposta by `<staffDef>`).
   final Clef? clef;
 
   /// Armadura de clef global.
@@ -38,14 +38,14 @@ class ScoreDefinition {
   /// Indicação de tempo (tempo).
   final TempoMark? tempo;
 
-  /// Dynamic inicial.
+  /// Dynamic initial.
   final Dynamic? dynamic;
 
-  /// Number de linhas default for all as staves (normalmente 5).
+  /// Number de lines default for all as staves (normally 5).
   /// Correspwhere a `@lines` in `<staffDef>`.
   final int defaultStaffLines;
 
-  /// Direção default dos accidentals acima of the staff.
+  /// Direction default dos accidentals above the staff.
   final bool accidentalsAbove;
 
   /// Identificador único MEI (`xml:id`).

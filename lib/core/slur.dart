@@ -2,7 +2,7 @@
 
 import 'musical_element.dart';
 
-/// Direção de a tie/slur
+/// Direction de a tie/slur
 enum SlurDirection { up, down, auto }
 
 /// Representa a slur avançada

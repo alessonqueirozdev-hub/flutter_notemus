@@ -1,8 +1,8 @@
 // lib/src/music_model/duration.dart
 
-/// Definess os tipos de duração rítmica.
+/// Definess os tipos de duração rhythmic.
 ///
-/// Inclui all as durações of the MEI v5: de [maxima] (8 semibreves) a
+/// Includes all as durações of the MEI v5: de [maxima] (8 semibreves) a
 /// [twoThoUsesndFortyEighth] (1/2048 de semibreve).
 enum DurationType {
   // === Durações longas (noteção mensural / histórica) ===
@@ -33,7 +33,7 @@ enum DurationType {
   /// 1/2048 de semibreve (MEI `dur="2048"`)
   twoThousandFortyEighth(0.00048828125, 'noteheadBlack');
 
-  /// O value numérico relativo à semibreve (semibreve = 1.0).
+  /// O value numérico relativo to the semibreve (semibreve = 1.0).
   final double value;
 
   /// O glyph name SMuFL for a cabeça of the note.
@@ -60,20 +60,20 @@ enum DurationType {
     DurationType.twoThousandFortyEighth => 'rest2048th',
   };
 
-  /// Se notes desta duração precisam de stem.
+  /// If notes desta duração need de stem.
   bool get needsStem =>
       this != DurationType.whole &&
       this != DurationType.breve &&
       this != DurationType.long &&
       this != DurationType.maxima;
 
-  /// Se notes desta duração precisam de bandeirola (flag).
+  /// If notes desta duração need de bandeirola (flag).
   bool get needsFlag => value <= DurationType.eighth.value;
 
-  /// Se a cabeça desta note é preenchida (semínima in diante).
+  /// If a cabeça desta note is preenchida (semínima in diante).
   bool get isFilled => value <= DurationType.quarter.value;
 
-  /// Returns o value MEI `dur` como string (ex.: "4", "8", "breve", "long").
+  /// Returns o value MEI `dur` as string (e.g., "4", "8", "breve", "long").
   String get meiDurValue => switch (this) {
     DurationType.maxima => 'maxima',
     DurationType.long => 'long',
@@ -92,7 +92,7 @@ enum DurationType {
     DurationType.twoThousandFortyEighth => '2048',
   };
 
-  /// Constrói um [DurationType] a partir of the value MEI `dur` (string).
+  /// Constrói a [DurationType] a partir of the value MEI `dur` (string).
   static DurationType fromMeiValue(String meiDur) {
     return switch (meiDur) {
       'maxima' => DurationType.maxima,
@@ -115,22 +115,22 @@ enum DurationType {
   }
 }
 
-/// Representa a duração de a note ou paUses.
+/// Representa a duração de a note or paUses.
 class Duration {
   /// O type de duração (semibreve, mínima, etc.).
   final DurationType type;
 
-  /// O number de pontos de aumento.
+  /// O number de points de aumento.
   final int dots;
 
   const Duration(this.type, {this.dots = 0});
 
-  /// Calculatestes a duração real incluindo pontos de aumento.
+  /// Calculates a duração real incluindo points de aumento.
   ///
   /// Alias for [absoluteValue].
   double get realValue => absoluteValue;
 
-  /// Calculatestes a duração real incluindo pontos de aumento.
+  /// Calculates a duração real incluindo points de aumento.
   /// Fórmula: valor_original + (valor_original * 0.5^1) + (valor_original * 0.5^2) + ...
   double get absoluteValue {
     double value = type.value;

@@ -5,7 +5,7 @@ import '../../../theme/music_score_theme.dart';
 import '../../smufl_positioning_engine.dart';
 import '../base_glyph_renderer.dart';
 
-/// Rendersdor especializado APENAS for stems (stems) de notes.
+/// Renderer especializado Only for stems (stems) de notes.
 ///
 /// Responsabilidade única: desenhar stems de notes using
 /// âncoras SMuFL for posicionamento preciso.
@@ -28,7 +28,7 @@ class StemRenderer extends BaseGlyphRenderer {
 
   /// Renders stem de a note.
   ///
-  /// Returns o Offset of the final of the stem (where a bandeirola deve ser desenhada).
+  /// Returns o Offset of the final of the stem (where a bandeirola must be desenhada).
   Offset render(
     Canvas canvas,
     Offset notePosition,

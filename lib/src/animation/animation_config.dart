@@ -77,7 +77,7 @@ class AnimationConfig {
   // ANIMATION PARAMETERS
   // ═══════════════════════════════════════════════════════════════════════
 
-  /// Direction for slide animation (e.g., Offset(-50, 0) for left-to-right)
+  /// Direction for slide animation (and.g., Offset(-50, 0) for left-to-right)
   final Offset slideDirection;
 
   /// Color for highlighted notes during playback

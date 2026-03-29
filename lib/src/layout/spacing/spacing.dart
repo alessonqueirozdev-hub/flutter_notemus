@@ -1,6 +1,6 @@
 /// System de Intelligent spacing
 /// 
-/// Exports all os componentes of the system de spacing tipográfico musical.
+/// Exports all os componentes of the system de spacing typographic musical.
 /// 
 /// **Uso básico:**
 /// ```dart

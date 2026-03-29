@@ -4,21 +4,21 @@ import '../../core/core.dart';
 
 /// Validador de tuplets based on teoria musical
 class TupletValidator {
-  /// Tolerância for comparações de ponto flutuante
+  /// Tolerância for comparações de point flutuante
   static const double epsilon = 0.0001;
   
   /// Valida a razão of the tuplet with base no tempo
   /// 
   /// Regras:
-  /// - Tempo simples: numerador > denominador (tuplets contraentes)
+  /// - Tempo simples: numerator > denominator (tuplets contraentes)
   ///   Exceção: dupletos (2:3) are raros mas válidos
-  /// - Tempo composto: ambos numerador < denominador (expansivas) 
-  ///   e numerador > denominador (contraentes) are válidos
+  /// - Tempo composto: ambos numerator < denominator (expansivas) 
+  ///   and numerator > denominator (contraentes) are válidos
   static bool validateRatio(int numerator, int denominator, TimeSignature? timeSig) {
     if (timeSig == null) return true; // Sem contexto, aceitar
     
     if (timeSig.isSimple) {
-      // Tempo simples: numerador > denominador (exceto dupletos)
+      // Tempo simples: numerator > denominator (exceto dupletos)
       if (numerator == 2 && denominator == 3) return true; // Dupleto raro
       return numerator > denominator;
     } else {
@@ -27,11 +27,11 @@ class TupletValidator {
     }
   }
   
-  /// Calculatestes a duração total that a tuplet ocupa
+  /// Calculates a duração total that a tuplet ocupa
   /// 
   /// Fórmula:
-  /// - Duração de a note × numerador = duração total antes of the modificação
-  /// - Modificador = denominador / numerador
+  /// - Duração de a note × numerator = duração total before of the modificação
+  /// - Modificador = denominator / numerator
   /// - Duração final = duração total × modificador
   static double calculateTotalDuration(
     int numerator,
@@ -43,7 +43,7 @@ class TupletValidator {
     return totalBeforeModification * modifier;
   }
   
-  /// Calculatestes a duração modificada de each note dentro of the tuplet
+  /// Calculates a duração modificada de each note within of the tuplet
   /// 
   /// Example:
   /// - Tercina (3:2) de colcheias in 4/4
@@ -61,15 +61,15 @@ class TupletValidator {
   
   /// Determina o value de note apropriado for a tuplet
   /// 
-  /// Regra Generatesl: Usesr a próxima divisão natural (potência de 2) abaixo of the numerador
+  /// Regra Generatesl: Use a próxima divisão natural (potência de 2) below the numerator
   /// 
-  /// Exceção: Dupletos in tempo composto use value ACIMA
+  /// Exceção: Dupletos in tempo composto use value Above
   /// 
   /// Examples:
-  /// - Tercina (3): Usesr divisão de 2 → colcheias
-  /// - Quintina (5): Usesr divisão de 4 → semicolcheias
-  /// - Septina (7): Usesr divisão de 4 → semicolcheias
-  /// - Nontupleto (9): Usesr divisão de 8 → fUsess
+  /// - Tercina (3): Use divisão de 2 → colcheias
+  /// - Quintina (5): Use divisão de 4 → semicolcheias
+  /// - Septina (7): Use divisão de 4 → semicolcheias
+  /// - Nontupleto (9): Use divisão de 8 → fUsess
   static int determineNoteValue(
     int numerator,
     int denominator,
@@ -77,15 +77,15 @@ class TupletValidator {
   ) {
     // Exceção: Dupleto in tempo composto
     if (isDupletInCompoundMeter(numerator, denominator, timeSig)) {
-      // Usesr value acima (divisão de 3)
+      // Use value above (divisão de 3)
       return 3;
     }
     
-    // Regra Generatesl: Usesr potência de 2 abaixo of the numerador
+    // Regra Generatesl: Use potência de 2 below the numerator
     return getPowerOf2Below(numerator);
   }
   
-  /// Checks se é um dupleto in tempo composto
+  /// Checks if is a dupleto in tempo composto
   static bool isDupletInCompoundMeter(
     int numerator,
     int denominator,
@@ -95,7 +95,7 @@ class TupletValidator {
     return numerator == 2 && denominator == 3 && timeSig.isCompound;
   }
   
-  /// Returns a potência de 2 mais próxima abaixo de n
+  /// Returns a potência de 2 more próxima below de n
   /// 
   /// Examples:
   /// - 3 → 2
@@ -111,13 +111,13 @@ class TupletValidator {
     return 64;
   }
   
-  /// Determina o number de colchetes de beam based no number de notes
+  /// Determina o number de brackets de beam based no number de notes
   /// 
   /// Regra de Gould:
-  /// - Até 3 notes: 1 colchete (colcheias)
-  /// - 4-7 notes: 2 colchetes (semicolcheias)
-  /// - 8-15 notes: 3 colchetes (fUsess)
-  /// - 16-31 notes: 4 colchetes (semifUsess)
+  /// - Until 3 notes: 1 bracket (colcheias)
+  /// - 4-7 notes: 2 brackets (semicolcheias)
+  /// - 8-15 notes: 3 brackets (fUsess)
+  /// - 16-31 notes: 4 brackets (semifUsess)
   static int getBeamCount(int numerator) {
     if (numerator <= 3) return 1;
     if (numerator <= 7) return 2;
@@ -141,8 +141,8 @@ class TupletValidator {
     return duration <= availableTime + epsilon;
   }
   
-  /// Checks se a tuplet é irracional
-  /// (denominador not é potência de 2 ou 3)
+  /// Checks if a tuplet is irracional
+  /// (denominator not is potência de 2 or 3)
   /// 
   /// Examples irracionais: 7:5, 11:7, 5:3
   static bool isIrrational(int denominator) {

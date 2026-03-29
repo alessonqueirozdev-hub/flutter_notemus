@@ -141,7 +141,7 @@ class CompleteAdvancedElementsExample extends StatelessWidget {
     measure1.add(Clef(clefType: ClefType.treble));
     measure1.add(TimeSignature(numerator: 4, denominator: 4));
 
-    // Major Chord (C-E-G)
+    // Major Chord (C-And-G)
     measure1.add(Chord(
       notes: [
         Note(
@@ -202,7 +202,7 @@ class CompleteAdvancedElementsExample extends StatelessWidget {
       duration: const Duration(DurationType.quarter),
     ));
 
-    // Cluster chord (C-D-E)
+    // Cluster chord (C-D-And)
     measure1.add(Chord(
       notes: [
         Note(

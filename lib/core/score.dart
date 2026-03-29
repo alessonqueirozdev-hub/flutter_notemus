@@ -64,11 +64,11 @@ class Score {
   final PageLayout? pageLayout;
 
   /// Cabeçalho MEI estruturado (`<meiHead>`). Opcional; when fornecido,
-  /// permite serialização/Importsção fiel ao default MEI v5.
+  /// permite serialização/Importsção fiel to the default MEI v5.
   final MeiHeader? meiHeader;
 
-  /// Definição global de partitura (`<scoreDef>`). Centraliza clef,
-  /// armadura e fórmula de measure for toda a partitura.
+  /// Definition global de partitura (`<scoreDef>`). Centraliza clef,
+  /// armadura and fórmula de measure for toda a partitura.
   final ScoreDefinition? scoreDefinition;
 
   const Score({

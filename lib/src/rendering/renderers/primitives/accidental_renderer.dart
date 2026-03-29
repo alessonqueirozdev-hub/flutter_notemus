@@ -6,7 +6,7 @@ import '../../../theme/music_score_theme.dart';
 import '../../smufl_positioning_engine.dart';
 import '../base_glyph_renderer.dart';
 
-/// Rendersdor especializado APENAS for accidentals (accidentals).
+/// Renderer especializado Only for accidentals (accidentals).
 ///
 /// Responsabilidade única: desenhar accidentals (sharps, bemóis, etc.)
 /// using posicionamento SMuFL preciso.
@@ -39,7 +39,7 @@ class AccidentalRenderer extends BaseGlyphRenderer {
     final accidentalGlyph = note.pitch.accidentalGlyph!;
     final noteheadGlyph = note.duration.type.glyphName;
 
-    // Calculatestesr position of the accidental using positioning engine
+    // Calculate position of the accidental using positioning engine
     final accidentalPosition = positioningEngine.calculateAccidentalPosition(
       accidentalGlyph: accidentalGlyph,
       noteheadGlyph: noteheadGlyph,

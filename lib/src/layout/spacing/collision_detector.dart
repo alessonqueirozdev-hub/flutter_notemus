@@ -1,13 +1,13 @@
-/// System de detecção de colisões entre símbolos musicais
+/// System de detecção de colisões between symbols musicais
 /// 
 /// Implementa algoritmos eficientes for detectar sobrepositions
-/// e Calculatestesr separações mínimas entre elementos.
+/// and Calculate separações mínimas between elementos.
 library;
 
 import 'dart:math';
 import 'package:flutter/rendering.dart';
 
-/// Ponto de colisão with peso de importância
+/// Point de colisão with peso de importância
 class CollisionPoint {
   final Offset position;
   final double weight; // 0.0 - 1.0 (importância)
@@ -19,34 +19,34 @@ class CollisionPoint {
   }
 }
 
-/// Detector de colisões entre símbolos musicais
+/// Detector de colisões between symbols musicais
 class CollisionDetector {
-  /// Distância mínima de segurança (in pixels)
+  /// Distance mínima de segurança (in pixels)
   final double minSafeDistance;
 
   const CollisionDetector({this.minSafeDistance = 2.0});
 
-  /// Checks se dois retângulos colidem
+  /// Checks if dois retângulos colidem
   bool checkCollision(Rect box1, Rect box2) {
     return box1.overlaps(box2);
   }
 
-  /// Checks colisão with margem de segurança
+  /// Checks colisão with margin de segurança
   bool checkCollisionWithMargin(Rect box1, Rect box2, double margin) {
     final expanded1 = box1.inflate(margin);
     return expanded1.overlaps(box2);
   }
 
-  /// Calculatestes a separação mínima necessária entre dois retângulos
+  /// Calculates a separação mínima required between dois retângulos
   /// 
-  /// Returns 0 se já estão separados suficientemente
+  /// Returns 0 if already are separate suficientemente
   double calculateMinimumSeparation(Rect leftBox, Rect rightBox) {
-    // Se not há sobreposition vertical, not precisam ser separados
+    // If not há sobreposition vertical, not need ser separate
     if (leftBox.bottom < rightBox.top || leftBox.top > rightBox.bottom) {
       return 0.0;
     }
 
-    // Calculatestesr sobreposition horizontal
+    // Calculate sobreposition horizontal
     final double leftEdge = leftBox.right;
     final double rightEdge = rightBox.left;
     final double gap = rightEdge - leftEdge;
@@ -58,7 +58,7 @@ class CollisionDetector {
     return minSafeDistance - gap;
   }
 
-  /// Calculatestes separação mínima using pontos de colisão (mais preciso)
+  /// Calculates separação mínima using points de colisão (more preciso)
   double calculateMinimumSeparationFromPoints(
     List<CollisionPoint> leftPoints,
     List<CollisionPoint> rightPoints,
@@ -69,7 +69,7 @@ class CollisionDetector {
       for (final rightPoint in rightPoints) {
         final gap = rightPoint.position.dx - leftPoint.position.dx;
         
-        // Considerar apenas se há sobreposition vertical
+        // Considerar only if há sobreposition vertical
         final verticalDistance = (rightPoint.position.dy - leftPoint.position.dy).abs();
         if (verticalDistance < 10.0) { // Threshold vertical
           minGap = min(minGap, gap);
@@ -101,7 +101,7 @@ class CollisionDetector {
     return collisions;
   }
 
-  /// Calculatestes a área de sobreposition entre dois retângulos
+  /// Calculates a área de sobreposition between dois retângulos
   double calculateOverlap(Rect box1, Rect box2) {
     final intersection = box1.intersect(box2);
     if (intersection.isEmpty) return 0.0;
@@ -110,24 +110,24 @@ class CollisionDetector {
 
   /// Algoritmo de sweep line for detecção eficiente
   /// 
-  /// Complexidade: O(n log n) ao invés de O(n²)
+  /// Complexidade: O(n log n) to the invés de O(n²)
   List<CollisionPair> detectCollisionsSweepLine(List<SymbolBounds> symbols) {
     final List<CollisionPair> collisions = [];
     
-    // Ordenar por coordenada X inicial
+    // Ordenar by coordenada X initial
     final sorted = List<SymbolBounds>.from(symbols);
     sorted.sort((a, b) => a.bounds.left.compareTo(b.bounds.left));
 
-    // List of símbolos ativos (still podem colidir)
+    // List of symbols ativos (still can colidir)
     final List<SymbolBounds> active = [];
 
     for (int i = 0; i < sorted.length; i++) {
       final current = sorted[i];
 
-      // Remover símbolos that já passaram
+      // Remover symbols that already passaram
       active.removeWhere((symbol) => symbol.bounds.right < current.bounds.left);
 
-      // Checksr colisão with símbolos ativos
+      // Check colisão with symbols ativos
       for (final activeSymbol in active) {
         if (checkCollision(current.bounds, activeSymbol.bounds)) {
           collisions.add(CollisionPair(
@@ -159,7 +159,7 @@ class CollisionPair {
   }
 }
 
-/// Bounds de um símbolo with index
+/// Bounds de a symbol with index
 class SymbolBounds {
   final int index;
   final Rect bounds;

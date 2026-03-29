@@ -102,7 +102,7 @@ class SmuflMetadata {
     final codepoint = glyphData['codepoint'] as String? ?? '';
     final description = glyphData['description'] as String? ?? '';
 
-    // Gets bounding box se disponível
+    // Gets bounding box if disponível
     GlyphBoundingBox? boundingBox;
     if (_glyphBBoxes != null && _glyphBBoxes![glyphName] != null) {
       final bboxData = _glyphBBoxes![glyphName] as Map<String, dynamic>?;
@@ -111,7 +111,7 @@ class SmuflMetadata {
       }
     }
 
-    // Gets anchors se disponível
+    // Gets anchors if disponível
     GlyphAnchors? anchors;
     if (_glyphsWithAnchors != null && _glyphsWithAnchors![glyphName] != null) {
       final anchorsData = _glyphsWithAnchors![glyphName] as Map<String, dynamic>?;
@@ -133,10 +133,10 @@ class SmuflMetadata {
     return glyphInfo;
   }
 
-  /// New: Gets um anchor específico de um glyph
+  /// New: Gets a anchor específico de a glyph
   /// @param glyphName SMuFL glyph name
   /// @param anchorName Anchor name (ex: 'stemUpSE', 'stemDownNW')
-  /// @return Offset in staff spaces, ou null se not encontrado
+  /// @return Offset in staff spaces, or null if not encontrado
   Offset? getGlyphAnchor(String glyphName, String anchorName) {
     if (!_isLoaded || _glyphsWithAnchors == null) {
       return null;
@@ -158,7 +158,7 @@ class SmuflMetadata {
     return null;
   }
 
-  /// New: Gets advance width de um glyph in staff spaces
+  /// New: Gets advance width de a glyph in staff spaces
   double? getGlyphAdvanceWidth(String glyphName) {
     if (!_isLoaded || _glyphAdvanceWidths == null) return null;
 
@@ -170,7 +170,7 @@ class SmuflMetadata {
     return null;
   }
 
-  /// New: Gets um engraving default específico
+  /// New: Gets a engraving default específico
   /// @param key Parameter name (ex: 'stemThickness', 'beamThickness')
   /// @return Value in staff spaces
   double? getEngravingDefaultValue(String key) {
@@ -198,20 +198,20 @@ class SmuflMetadata {
     return defaults;
   }
 
-  /// Gets bounding box de um glifo como object
+  /// Gets bounding box de a glifo as object
   GlyphBoundingBox? getGlyphBoundingBox(String glyphName) {
     return getGlyphInfo(glyphName)?.boundingBox;
   }
 
-  /// Gets anchors de um glifo
+  /// Gets anchors de a glifo
   GlyphAnchors? getGlyphAnchors(String glyphName) {
     return getGlyphInfo(glyphName)?.anchors;
   }
 
-  /// Gets width de um glifo in SMuFL units
-  /// Uses advance width se disponível, senão Uses bounding box width
+  /// Gets width de a glifo in SMuFL units
+  /// Uses advance width if disponível, senão Uses bounding box width
   double getGlyphWidth(String glyphName) {
-    // Preferir advance width (mais preciso for spacing)
+    // Preferir advance width (more preciso for spacing)
     final advanceWidth = getGlyphAdvanceWidth(glyphName);
     if (advanceWidth != null) return advanceWidth;
 
@@ -219,22 +219,22 @@ class SmuflMetadata {
     return getGlyphBoundingBox(glyphName)?.width ?? 0.0;
   }
 
-  /// Gets height de um glifo in SMuFL units
+  /// Gets height de a glifo in SMuFL units
   double getGlyphHeight(String glyphName) {
     return getGlyphBoundingBox(glyphName)?.height ?? 0.0;
   }
 
-  /// Gets width de um glifo in pixels
+  /// Gets width de a glifo in pixels
   double getGlyphWidthInPixels(String glyphName, double staffSpace) {
     return getGlyphBoundingBox(glyphName)?.widthInPixels(staffSpace) ?? 0.0;
   }
 
-  /// Gets height de um glifo in pixels
+  /// Gets height de a glifo in pixels
   double getGlyphHeightInPixels(String glyphName, double staffSpace) {
     return getGlyphBoundingBox(glyphName)?.heightInPixels(staffSpace) ?? 0.0;
   }
 
-  /// Checks se um glifo existe na fonte
+  /// Checks if a glifo existe na fonte
   bool hasGlyph(String glyphName) {
     return _glyphnames?.containsKey(glyphName) ?? false;
   }
@@ -244,26 +244,26 @@ class SmuflMetadata {
     return _glyphnames?.keys.toList() ?? [];
   }
 
-  /// Gets glifos por categoria
+  /// Gets glifos by categoria
   List<String> getGlyphsByCategory(String category) {
     final allGlyphs = getAllGlyphNames();
     return allGlyphs.where((glyph) => glyph.startsWith(category)).toList();
   }
 
-  /// Finds glifos por default
+  /// Finds glifos by default
   List<String> searchGlyphs(String pattern) {
     final allGlyphs = getAllGlyphNames();
     final regex = RegExp(pattern, caseSensitive: false);
     return allGlyphs.where((glyph) => regex.hasMatch(glyph)).toList();
   }
 
-  /// Gets informações de classs de glifos (se disponível nos metadados)
+  /// Gets informações de classs de glifos (if disponível nos metadados)
   Map<String, List<String>>? getGlyphClasses() {
     if (!_isLoaded || _metadata == null) return null;
     return _metadata!['glyphClasses'] as Map<String, List<String>>?;
   }
 
-  /// Gets conjuntos estilísticos (se disponível nos metadados)
+  /// Gets conjuntos estilísticos (if disponível nos metadados)
   Map<String, dynamic>? getStylisticSets() {
     if (!_isLoaded || _metadata == null) return null;
     return _metadata!['stylisticSets'] as Map<String, dynamic>?;

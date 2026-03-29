@@ -1,7 +1,7 @@
 /// Preferences configuráveis de spacing
 ///
 /// Permite aos usuários ajustar o comportamento of the system de spacing
-/// for balancear estética, densidade e legibilidade.
+/// for balancear estética, densidade and legibilidade.
 library;
 
 import 'spacing_model.dart';
@@ -15,22 +15,22 @@ class SpacingPreferences {
   /// 
   /// **Valores recomendados:**
   /// - `SpacingModel.squareRoot` (default): Melhor aproximação of the tabela de Gould
-  /// - `SpacingModel.logarithmic`: For música muito compacta
+  /// - `SpacingModel.logarithmic`: For music very compacta
   /// - `SpacingModel.linear`: For uniformidade visual
   final SpacingModel model;
 
   /// Fator de spacing global (1.0 = normal)
   /// 
   /// **Valores típicos:**
-  /// - `0.8 - 1.0`: Música compacta (livros, pocket scores)
-  /// - `1.0 - 1.5`: Música normal (performance parts)
-  /// - `1.5 - 2.0`: Música espaçada (estudantes, pedagogia)
-  /// - `2.0+`: Música muito espaçada (Createsnças, iniciantes)
+  /// - `0.8 - 1.0`: Music compacta (livros, pocket scores)
+  /// - `1.0 - 1.5`: Music normal (performance parts)
+  /// - `1.5 - 2.0`: Music espaçada (estudantes, pedagogia)
+  /// - `2.0+`: Music very espaçada (Createsnças, iniciantes)
   final double spacingFactor;
 
   /// Preference de densidade (0.0 = apertado, 1.0 = espaçado)
   /// 
-  /// Controla o trade-off entre compactação e clareza:
+  /// Controla o trade-off between compactação and clareza:
   /// - `0.0 - 0.3`: Máxima densidade (economizar papel)
   /// - `0.3 - 0.7`: Balanceado (default: 0.5)
   /// - `0.7 - 1.0`: Máxima clareza (facilitar leitura)
@@ -39,17 +39,17 @@ class SpacingPreferences {
   /// Ativar compensação óptica
   /// 
   /// Ajusta spacing based on:
-  /// - Direção de stems
+  /// - Direction de stems
   /// - Transições de duração
   /// - Proximidade de accidentals
   /// 
   /// **Recomendado: true** for aparência profissional
   final bool enableOpticalSpacing;
 
-  /// Spacing mínimo entre símbolos (in staff spaces)
+  /// Spacing mínimo between symbols (in staff spaces)
   /// 
   /// **Valores típicos:**
-  /// - `0.15 - 0.20`: Música muito compacta
+  /// - `0.15 - 0.20`: Music very compacta
   /// - `0.25 - 0.30`: Normal (default: 0.25)
   /// - `0.35 - 0.50`: Espaçada
   final double minGap;
@@ -58,7 +58,7 @@ class SpacingPreferences {
   /// 
   /// - `0.0`: Máxima compactação (minimizar width)
   /// - `0.5`: Balanceado
-  /// - `1.0`: Máxima uniformidade (notes de mesma duração always iguais)
+  /// - `1.0`: Máxima uniformidade (notes de same duração always iguais)
   /// 
   /// **Recomendado: 0.7** for qualidade profissional
   final double consistencyWeight;
@@ -70,9 +70,9 @@ class SpacingPreferences {
   /// **Default: 0.8**
   final double restSpacingRatio;
 
-  /// Permitir sobreposition de símbolos in casos extremos
+  /// Permitir sobreposition de symbols in casos extremos
   /// 
-  /// When false, forçará spacing mínimo mesmo that afete proporções
+  /// When false, forçará spacing mínimo same that afete proporções
   /// When true, permitirá leve sobreposition for manter proporções
   /// 
   /// **Default: false** (segurança in first lugar)
@@ -80,11 +80,11 @@ class SpacingPreferences {
 
   /// Ajuste de spacing for measures compostos (6/8, 9/8, 12/8)
   /// 
-  /// Adds space extra entre pulsos ternários for clareza visual
+  /// Adds space extra between pulsos ternários for clareza visual
   /// 
   /// **Valores típicos:**
   /// - `0.0`: Sem ajuste
-  /// - `0.1 - 0.15`: Sutil (default: 0.15)
+  /// - `0.1 - 0.15`: Subtle (default: 0.15)
   /// - `0.2 - 0.3`: Pronunciado
   final double compoundMeterPulseSpacing;
 
@@ -100,7 +100,7 @@ class SpacingPreferences {
     this.compoundMeterPulseSpacing = 0.15,
   });
 
-  /// Preferences for música compacta (economizar space)
+  /// Preferences for music compacta (economizar space)
   static const SpacingPreferences compact = SpacingPreferences(
     spacingFactor: 1.0,
     densityPreference: 0.2,
@@ -108,7 +108,7 @@ class SpacingPreferences {
     consistencyWeight: 0.5,
   );
 
-  /// Preferences for música normal (balanceada)
+  /// Preferences for music normal (balanceada)
   static const SpacingPreferences normal = SpacingPreferences(
     spacingFactor: 1.5,
     densityPreference: 0.5,
@@ -116,7 +116,7 @@ class SpacingPreferences {
     consistencyWeight: 0.7,
   );
 
-  /// Preferences for música espaçada (máxima legibilidade)
+  /// Preferences for music espaçada (máxima legibilidade)
   static const SpacingPreferences spacious = SpacingPreferences(
     spacingFactor: 2.0,
     densityPreference: 0.8,
@@ -159,67 +159,67 @@ class SpacingPreferences {
   }
 }
 
-/// Constantes de spacing baseadas in SMuFL e práticas profissionais
+/// Constantes de spacing baseadas in SMuFL and práticas profissionais
 class SpacingConstants {
-  /// Tolerância for comparações de ponto flutuante
+  /// Tolerância for comparações de point flutuante
   static const double epsilon = 0.0001;
 
-  /// Spacing de accidentals in música normal (staff spaces)
+  /// Spacing de accidentals in music normal (staff spaces)
   static const double accidentalSpacingNormal = 0.5;
 
-  /// Spacing de accidentals in música compacta (staff spaces)
+  /// Spacing de accidentals in music compacta (staff spaces)
   static const double accidentalSpacingCompact = 0.25;
 
-  /// Spacing antes de barline (staff spaces)
+  /// Spacing before de barline (staff spaces)
   static const double barlineSpaceBefore = 0.75;
 
-  /// Spacing depois de barline (staff spaces)
+  /// Spacing after de barline (staff spaces)
   static const double barlineSpaceAfter = 0.5;
 
-  /// Spacing de barras duplas (antes)
+  /// Spacing de barras duplas (before)
   static const double doubleBarSpaceBefore = 1.0;
 
-  /// Spacing de barras duplas (depois)
+  /// Spacing de barras duplas (after)
   static const double doubleBarSpaceAfter = 0.75;
 
-  /// Spacing de barras de repetição (antes)
+  /// Spacing de barras de repetição (before)
   static const double repeatBarSpaceBefore = 1.25;
 
-  /// Spacing de barras de repetição (depois)
+  /// Spacing de barras de repetição (after)
   static const double repeatBarSpaceAfter = 1.0;
 
-  /// Spacing antes de mudança de clef
+  /// Spacing before de mudança de clef
   static const double clefChangeSpaceBefore = 0.5;
 
-  /// Spacing depois de mudança de clef
+  /// Spacing after de mudança de clef
   static const double clefChangeSpaceAfter = 0.75;
 
-  /// Inclinação máxima de colchete de tuplet (staff spaces)
+  /// Slope máxima de bracket de tuplet (staff spaces)
   static const double maxTupletBracketSlope = 0.5;
 
-  /// Gap entre notes e colchete de tuplet (staff spaces)
+  /// Gap between notes and bracket de tuplet (staff spaces)
   static const double tupletBracketGap = 0.75;
 
-  /// Height dos ganchos of the colchete de tuplet (staff spaces)
+  /// Height dos ganchos of the bracket de tuplet (staff spaces)
   static const double tupletBracketHookHeight = 0.5;
 
-  /// Offset of the extremidade direita of the colchete (staff spaces)
+  /// Offset of the extremidade right of the bracket (staff spaces)
   static const double tupletRightEdgeOffset = 0.25;
 
-  /// Checks se dois valores are quase iguais (dentro of the tolerância)
+  /// Checks if dois valores are quase iguais (within of the tolerância)
   static bool almostEqual(double a, double b) {
     return (a - b).abs() < epsilon;
   }
 
   /// Arredonda value for múltiplos de 1/4 staff space
   /// 
-  /// Garante alinhamento visual with a grade of the staff
+  /// Ensures alinhamento visual with a grade of the staff
   static double roundToQuarterStaffSpace(double value, double staffSpace) {
     final double quarterSpace = staffSpace * 0.25;
     return (value / quarterSpace).round() * quarterSpace;
   }
 
-  /// Interpola linearmente entre dois valores
+  /// Interpola linearmente between dois valores
   static double lerp(double a, double b, double t) {
     return a + (b - a) * t.clamp(0.0, 1.0);
   }

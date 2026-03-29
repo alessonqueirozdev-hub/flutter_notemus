@@ -5,10 +5,10 @@ import '../../../theme/music_score_theme.dart';
 import '../../staff_position_calculator.dart';
 import '../base_glyph_renderer.dart';
 
-/// Rendersdor especializado APENAS for linhas suplementares (ledger lines).
+/// Renderer especializado Only for ledger lines (ledger lines).
 ///
-/// Responsabilidade única: desenhar linhas suplementares for notes
-/// fora of the staff.
+/// Responsabilidade única: desenhar ledger lines for notes
+/// outside of the staff.
 class LedgerLineRenderer extends BaseGlyphRenderer {
   final MusicScoreTheme theme;
   final double staffLineThickness;
@@ -21,12 +21,12 @@ class LedgerLineRenderer extends BaseGlyphRenderer {
     required this.staffLineThickness,
   });
 
-  /// Renders linhas suplementares for a note.
+  /// Renders ledger lines for a note.
   ///
   /// [canvas] - Canvas where desenhar
-  /// [notePosition] - X position of the note (borda ESQUERDA of the glifo)
+  /// [notePosition] - X position of the note (borda Left of the glifo)
   /// [staffPosition] - Position of the note na staff
-  /// [noteheadGlyph] - Glifo of the cabeça of the note (for Calculatestesr width)
+  /// [noteheadGlyph] - Glifo of the cabeça of the note (for Calculate width)
   void render(
     Canvas canvas,
     double notePosition,
@@ -35,20 +35,20 @@ class LedgerLineRenderer extends BaseGlyphRenderer {
   ) {
     if (!theme.showLedgerLines) return;
 
-    // Checksr se a note precisa de linhas suplementares
+    // Check if a note needs de ledger lines
     if (!StaffPositionCalculator.needsLedgerLines(staffPosition)) return;
 
     final paint = Paint()
       ..color = theme.staffLineColor
       ..strokeWidth = staffLineThickness;
 
-    // Fix: CRÍTICA: Calculate centro horizontal CORRETO of the note
-    // notePosition é a borda ESQUERDA of the glifo (according to drawGlyphWithBBox)
-    // Precisamos add a distância até o centro
+    // Fix: CRÍTICA: Calculate centre horizontal Correct of the note
+    // notePosition is a borda Left of the glifo (according to drawGlyphWithBBox)
+    // Precisamos add a distance until o centre
     final noteheadInfo = metadata.getGlyphInfo(noteheadGlyph);
     final bbox = noteheadInfo?.boundingBox;
 
-    // Centro relativo ao início of the glyph (in staff spaces)
+    // Centre relativo to the start of the glyph (in staff spaces)
     final centerOffsetSS = bbox != null
         ? (bbox.bBoxSwX + bbox.bBoxNeX) / 2
         : 1.18 / 2; // Fallback: noteheadBlack tem largura ~1.18
@@ -56,10 +56,10 @@ class LedgerLineRenderer extends BaseGlyphRenderer {
     // Fix: Convert for pixels CORRETAMENTE
     final centerOffsetPixels = centerOffsetSS * coordinates.staffSpace;
     
-    // X position of the centro of the note
+    // X position of the centre of the note
     final noteCenterX = notePosition + centerOffsetPixels;
 
-    // Calculatestesr width of the linha baseada no glifo real + extensão SMuFL
+    // Calculate width of the line baseada no glifo real + extension SMuFL
     final noteWidth =
         bbox?.widthInPixels(coordinates.staffSpace) ??
         (coordinates.staffSpace * 1.18);
@@ -68,12 +68,12 @@ class LedgerLineRenderer extends BaseGlyphRenderer {
     final extension = coordinates.staffSpace * 0.4;
     final totalWidth = noteWidth + (2 * extension);
 
-    // Get positions das linhas suplementares
+    // Get positions das ledger lines
     final ledgerPositions = StaffPositionCalculator.getLedgerLinePositions(
       staffPosition,
     );
 
-    // Desenhar each linha suplementar CENTRALIZADA na notehead
+    // Desenhar each ledger line Centred na notehead
     for (final pos in ledgerPositions) {
       final y = StaffPositionCalculator.toPixelY(
         pos,
@@ -81,7 +81,7 @@ class LedgerLineRenderer extends BaseGlyphRenderer {
         coordinates.staffBaseline.dy,
       );
 
-      // Fix: Use noteCenterX como reference for centralização
+      // Fix: Use noteCenterX as reference for centralização
       final lineStartX = noteCenterX - (totalWidth / 2);
       final lineEndX = noteCenterX + (totalWidth / 2);
 

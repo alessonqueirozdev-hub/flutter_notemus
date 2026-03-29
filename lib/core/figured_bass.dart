@@ -2,13 +2,13 @@
 
 import 'musical_element.dart';
 
-/// Sufixo de figura de baixo cifrado.
+/// Sufixo de figure de bottom cifrado.
 ///
-/// Correspwhere ao atributo `@ext` of the element `<f>` no MEI v5.
+/// Correspwhere to the atributo `@ext` of the element `<f>` no MEI v5.
 enum FigureSuffix {
   /// Nenhum sufixo
   none,
-  /// Extensão horizontal (linha de prolongamento)
+  /// Extension horizontal (extension line)
   extender,
   /// Barra diagonal descendente (crossing)
   slash,
@@ -16,9 +16,9 @@ enum FigureSuffix {
   tick,
 }
 
-/// Sinal de alteração de a figura de baixo cifrado.
+/// Sinal de alteração de a figure de bottom cifrado.
 ///
-/// Correspwhere ao atributo `@accid` of the element `<f>` no MEI v5.
+/// Correspwhere to the atributo `@accid` of the element `<f>` no MEI v5.
 enum FigureAccidental {
   none,
   sharp,
@@ -28,22 +28,22 @@ enum FigureAccidental {
   doubleFlat,
 }
 
-/// Representa a única figura of the baixo cifrado, correspwherendo ao
-/// elemento `<f>` (figure) dentro de `<fb>` no MEI v5.
+/// Representa a única figure of the bottom cifrado, correspwherendo to the
+/// elemento `<f>` (figure) within de `<fb>` no MEI v5.
 ///
 /// ```dart
 /// FigureElement(numeral: '6', accidental: FigureAccidental.sharp)
 /// FigureElement(numeral: '4', suffix: FigureSuffix.slash)
 /// ```
 class FigureElement {
-  /// Numeral of the figura (ex.: "2", "4", "6", "7", "9"). Pode ser null for
-  /// figuras with apenas accidental.
+  /// Numeral of the figure (e.g., "2", "4", "6", "7", "9"). Can be null for
+  /// figures with only accidental.
   final String? numeral;
 
-  /// Alteração Appliesda à figura.
+  /// Alteração Applied to the figure.
   final FigureAccidental accidental;
 
-  /// Sufixo of the figura (extensão, barra, etc.).
+  /// Sufixo of the figure (extension, barra, etc.).
   final FigureSuffix suffix;
 
   const FigureElement({
@@ -53,11 +53,11 @@ class FigureElement {
   });
 }
 
-/// Representa a indicação de baixo cifrado (thoroughbass / figured bass),
-/// correspwherendo ao elemento `<fb>` (figured bass) of the MEI v5.
+/// Representa a indicação de bottom cifrado (thoroughbass / figured bass),
+/// correspwherendo to the elemento `<fb>` (figured bass) of the MEI v5.
 ///
-/// O baixo cifrado é a convenção de noteção barroca where numbers e accidentals
-/// acima ou abaixo de a note de baixo indicam quais harmonias devem ser
+/// O bottom cifrado is a convenção de noteção barroca where numbers and accidentals
+/// above or below de a note de bottom indicate quais harmonias must be
 /// realizadas pelo instrumentista.
 ///
 /// ```dart
@@ -69,10 +69,10 @@ class FigureElement {
 /// )
 /// ```
 class FiguredBass extends MusicalElement {
-  /// Figuras of the baixo cifrado, de cima for baixo.
+  /// Figures of the bottom cifrado, de top for bottom.
   final List<FigureElement> figures;
 
-  /// Indica se a realização deve ser exibida acima of the note (default = abaixo).
+  /// Indicates if a realização must be displayed above the note (default = below).
   final bool above;
 
   FiguredBass({

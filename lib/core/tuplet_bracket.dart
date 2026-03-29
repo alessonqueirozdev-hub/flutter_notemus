@@ -2,37 +2,37 @@
 
 import 'note.dart';  // ✅ Import needed for Note type
 
-/// Lado of the colchete de tuplet
+/// Lado of the bracket de tuplet
 enum BracketSide {
   /// Lado of the stem (default)
   stem,
 
-  /// Lado of the cabeça of the note (used in música vocal)
+  /// Lado of the cabeça of the note (used in music vocal)
   notehead,
 }
 
-/// Configuresção of the colchete de tuplet
+/// Configuresção of the bracket de tuplet
 class TupletBracket {
-  /// Espessura of the linha of the colchete (0.125 staff spaces por default)
+  /// Thickness of the line of the bracket (0.125 staff spaces by default)
   final double thickness;
 
-  /// Comprimento dos ganchos nas extremidades
+  /// Length dos ganchos nas extremidades
   final double hookLength;
 
-  /// Mostrar colchete
+  /// Mostrar bracket
   final bool show;
 
-  /// Lado where o colchete aparece
+  /// Lado where o bracket aparece
   final BracketSide side;
 
-  /// Inclinação of the colchete (0 = horizontal)
+  /// Slope of the bracket (0 = horizontal)
   /// Máximo recomendado: 1.75 staff spaces de diferença vertical
   final double slope;
 
-  /// Distância mínima of the colchete às notes (0.75 staff spaces)
+  /// Distance mínima of the bracket às notes (0.75 staff spaces)
   final double minDistanceFromNotes;
 
-  /// Máxima inclinação permitida (1.75 staff spaces)
+  /// Máxima slope permitida (1.75 staff spaces)
   static const double maxSlope = 1.75;
 
   const TupletBracket({
@@ -44,37 +44,37 @@ class TupletBracket {
     this.minDistanceFromNotes = 0.75,
   });
 
-  /// Determina se o colchete deve ser mostrado with base nas notes
+  /// Determina if o bracket must be mostrado with base nas notes
   ///
   /// Regras (Behind Bars standard):
-  /// - Not mostrar se all as notes estão beamed juntas
-  /// - MOSTRAR se está of the lado of the cabeça (música vocal)
-  /// - MOSTRAR se notes not têm beams ou há rests
-  /// - MOSTRAR se show=false (força escwherer)
+  /// - Not mostrar if all as notes are beamed juntas
+  /// - MOSTRAR if está of the lado of the cabeça (music vocal)
+  /// - MOSTRAR if notes not têm beams or há rests
+  /// - MOSTRAR if show=false (força escwherer)
   bool shouldShow(List<dynamic> notes) {
-    // Se está of the lado of the cabeça, always mostrar
+    // If está of the lado of the cabeça, always mostrar
     if (side == BracketSide.notehead) return true;
 
-    // Se show=false, forçar escwherer
+    // If show=false, forçar escwherer
     if (!show) return false;
 
-    // ✅ CORREÇÃO P9: Checksr se all as notes têm beam
-    // Se sim, escwherer bracket (Behind Bars standard)
-    // Se not (rests, unbeamed notes), mostrar bracket
+    // ✅ CORREÇÃO P9: Check if all as notes têm beam
+    // If sim, escwherer bracket (Behind Bars standard)
+    // If not (rests, unbeamed notes), mostrar bracket
 
-    // Filtrar apenas Notes (ignorar rests)
+    // Filtrar only Notes (ignorar rests)
     final actualNotes = notes.whereType<Note>().toList();
 
-    // Se not há notes, ou há rests misturados, mostrar bracket
+    // If not há notes, or há rests misturados, mostrar bracket
     if (actualNotes.isEmpty || actualNotes.length < notes.length) {
       return true;
     }
 
-    // Checksr se All as notes têm beam defined
+    // Check if All as notes têm beam defined
     final allNotesBeamed = actualNotes.every((note) => note.beam != null);
 
-    // Se all têm beam, escwherer bracket (apenas mostrar number)
-    // Se alguma not tem beam, mostrar bracket
+    // If all têm beam, escwherer bracket (only mostrar number)
+    // If some not tem beam, mostrar bracket
     return !allNotesBeamed;
   }
 }

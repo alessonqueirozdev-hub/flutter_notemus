@@ -32,7 +32,7 @@ class MusicScoreTheme {
   final Color? caesuraColor;
   final Color? metronomeColor;
 
-  // Estilos de texto
+  // Styles de text
   final TextStyle? textStyle;
   final TextStyle? dynamicTextStyle;
   final TextStyle? tupletTextStyle;
@@ -42,12 +42,12 @@ class MusicScoreTheme {
   final TextStyle? chordTextStyle;
   final TextStyle? rehearsalTextStyle;
 
-  // News estilos de texto
+  // News styles de text
   final TextStyle? repeatTextStyle;
   final TextStyle? octaveTextStyle;
   final TextStyle? metronomeTextStyle;
 
-  // Configuresções de Rendersção
+  // Configuresções de Rendering
   final double? defaultStaffSpace;
   final double? defaultFontSize;
   final bool showLedgerLines;
@@ -66,7 +66,7 @@ class MusicScoreTheme {
     this.restColor = Colors.black,
     this.articulationColor = Colors.black,
 
-    // Cores avançadas (null = Usesr cor default)
+    // Cores avançadas (null = Use cor default)
     this.ornamentColor,
     this.dynamicColor,
     this.tupletColor,
@@ -85,7 +85,7 @@ class MusicScoreTheme {
     this.caesuraColor,
     this.metronomeColor,
 
-    // Estilos de texto
+    // Styles de text
     this.textStyle,
     this.dynamicTextStyle,
     this.tupletTextStyle,
@@ -95,7 +95,7 @@ class MusicScoreTheme {
     this.chordTextStyle,
     this.rehearsalTextStyle,
 
-    // News estilos de texto
+    // News styles de text
     this.repeatTextStyle,
     this.octaveTextStyle,
     this.metronomeTextStyle,
@@ -108,12 +108,12 @@ class MusicScoreTheme {
     this.strokeWidth = 1.0,
   });
 
-  /// Creates um tema default
+  /// Creates a tema default
   factory MusicScoreTheme.standard() {
     return const MusicScoreTheme();
   }
 
-  /// Creates um tema escuro
+  /// Creates a tema escuro
   factory MusicScoreTheme.dark() {
     const darkColor = Color(0xFFE0E0E0);
     return MusicScoreTheme(
@@ -155,7 +155,7 @@ class MusicScoreTheme {
     );
   }
 
-  /// Creates um tema colorido
+  /// Creates a tema colorido
   factory MusicScoreTheme.colorful() {
     return const MusicScoreTheme(
       staffLineColor: Colors.black,

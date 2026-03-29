@@ -2,13 +2,13 @@
 
 import 'musical_element.dart';
 
-/// Um grupo aditivo dentro de a fórmula de measure aditiva.
+/// A grupo aditivo within de a fórmula de measure aditiva.
 ///
-/// Fórmulas como (3+2+2)/8 are representadas como a list of
-/// [AdditiveMeterGroup] where each grupo tem um [numerator] e compartilha
-/// o mesmo [denominator] of the [TimeSignature] pai.
+/// Fórmulas as (3+2+2)/8 are representadas as a list of
+/// [AdditiveMeterGroup] where each grupo tem a [numerator] and compartilha
+/// o same [denominator] of the [TimeSignature] pai.
 ///
-/// Correspwhere ao elemento `<meterSigGrp>` of the MEI v5 when Appliesdo
+/// Correspwhere to the elemento `<meterSigGrp>` of the MEI v5 when Applied
 /// a fórmulas aditivas.
 class AdditiveMeterGroup {
   final int numerator;
@@ -27,11 +27,11 @@ class TimeSignature extends MusicalElement {
   final int numerator;
   final int denominator;
 
-  /// Indica tempo livre (senza misura). When `true`, a fórmula é exibida
-  /// como "X" ou omitida. Correspwhere à ausência de `<meterSig>` no MEI v5.
+  /// Indicates tempo livre (senza misura). When `true`, a fórmula is displayed
+  /// as "X" or omitida. Correspwhere to the ausência de `<meterSig>` no MEI v5.
   final bool isFreeTime;
 
-  /// Grupos aditivos for fórmulas como (3+2+2)/8.
+  /// Grupos aditivos for fórmulas as (3+2+2)/8.
   /// When not null, overrides [numerator] as the beat grouping.
   /// Correspwhere a `<meterSigGrp>` no MEI v5.
   final List<AdditiveMeterGroup>? additiveGroups;
@@ -47,7 +47,7 @@ class TimeSignature extends MusicalElement {
   factory TimeSignature.free() =>
       TimeSignature(numerator: 0, denominator: 4, isFreeTime: true);
 
-  /// Creates a fórmula aditiva, ex.: (3+2+2)/8.
+  /// Creates a fórmula aditiva, e.g., (3+2+2)/8.
   ///
   /// ```dart
   /// TimeSignature.additive(groups: [3, 2, 2], denominator: 8)
@@ -64,14 +64,14 @@ class TimeSignature extends MusicalElement {
     );
   }
 
-  /// Calculatestes o value total permitido no measure.
+  /// Calculates o value total permitido no measure.
   /// Fórmula: numerator × (1 / denominator). Returns infinito for tempo livre.
   double get measureValue {
     if (isFreeTime) return double.infinity;
     return numerator * (1.0 / denominator);
   }
 
-  /// Checks se é um tempo simples.
+  /// Checks if is a tempo simples.
   /// Examples: 2/4, 3/4, 4/4, 5/4, 7/8
   bool get isSimple {
     if (isFreeTime) return false;
@@ -79,10 +79,10 @@ class TimeSignature extends MusicalElement {
     return numerator % 3 != 0;
   }
 
-  /// Checks se é um tempo composto.
+  /// Checks if is a tempo composto.
   /// Examples: 6/8, 9/8, 12/8
   bool get isCompound => !isFreeTime && !isSimple && numerator > 3;
 
-  /// Checks se é a fórmula aditiva.
+  /// Checks if is a fórmula aditiva.
   bool get isAdditive => additiveGroups != null && additiveGroups!.isNotEmpty;
 }

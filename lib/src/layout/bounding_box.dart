@@ -3,7 +3,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
-/// Ponto 2D for posicionamento
+/// Point 2D for posicionamento
 class PointF2D {
   double x;
   double y;
@@ -14,7 +14,7 @@ class PointF2D {
       : x = 0.0,
         y = 0.0;
 
-  /// Creates cópia of the ponto
+  /// Creates cópia of the point
   PointF2D copy() => PointF2D(x, y);
 
   /// Converts for Offset
@@ -23,23 +23,23 @@ class PointF2D {
   /// Creates from Offset
   factory PointF2D.fromOffset(Offset offset) => PointF2D(offset.dx, offset.dy);
 
-  /// Adds outro ponto
+  /// Adds other point
   PointF2D operator +(PointF2D other) => PointF2D(x + other.x, y + other.y);
 
-  /// Subtrai outro ponto
+  /// Subtrai other point
   PointF2D operator -(PointF2D other) => PointF2D(x - other.x, y - other.y);
 
-  /// Multiplica por escalar
+  /// Multiplica by escalar
   PointF2D operator *(double scalar) => PointF2D(x * scalar, y * scalar);
 
-  /// Distância até outro ponto
+  /// Distance until other point
   double distanceTo(PointF2D other) {
     final dx = x - other.x;
     final dy = y - other.y;
     return math.sqrt(dx * dx + dy * dy);
   }
 
-  /// Magnitude (distância of the origem)
+  /// Magnitude (distance of the origem)
   double get magnitude => math.sqrt(x * x + y * y);
 
   @override
@@ -96,60 +96,60 @@ class SizeF2D {
 ///
 /// Based on:
 /// - OpenSheetMusicDisplay (BoundingBox.ts)
-/// - Verovio (BoundingBox class with SelfBB e ContentBB)
+/// - Verovio (BoundingBox class with SelfBB and ContentBB)
 ///
 /// Suporta:
 /// - Hierarquia pai-filho
-/// - Cálculo recursivo de position absoluta
+/// - Calculation recursivo de position absoluta
 /// - Detecção de colisões
-/// - Bordas with margem
+/// - Bordas with margin
 class BoundingBox {
   // ====================
   // POSICIONAMENTO
   // ====================
 
-  /// Position absoluta (Calculatestesda recursivamente a partir of the pai)
+  /// Position absoluta (Calculated recursivamente a partir of the pai)
   PointF2D absolutePosition = PointF2D.zero();
 
-  /// Position relativa ao pai
+  /// Position relativa to the pai
   PointF2D relativePosition = PointF2D.zero();
 
-  /// Size of the conteúdo
+  /// Size of the content
   SizeF2D size = SizeF2D.zero();
 
-  /// Size of the margem
+  /// Size of the margin
   SizeF2D marginSize = SizeF2D.zero();
 
   // ====================
-  // BORDAS INTERNAS (CONTEÚDO)
+  // BORDAS INTERNAS (Content)
   // ====================
 
-  /// Borda esquerda of the conteúdo (relativa à position)
+  /// Borda left of the content (relativa to the position)
   double borderLeft = 0.0;
 
-  /// Borda direita of the conteúdo (relativa à position)
+  /// Borda right of the content (relativa to the position)
   double borderRight = 0.0;
 
-  /// Borda superior of the conteúdo (relativa à position)
+  /// Borda upper of the content (relativa to the position)
   double borderTop = 0.0;
 
-  /// Borda inferior of the conteúdo (relativa à position)
+  /// Borda lower of the content (relativa to the position)
   double borderBottom = 0.0;
 
   // ====================
-  // BORDAS EXTERNAS (MARGEM)
+  // BORDAS EXTERNAS (Margin)
   // ====================
 
-  /// Borda esquerda of the margem (relativa à position)
+  /// Borda left of the margin (relativa to the position)
   double borderMarginLeft = 0.0;
 
-  /// Borda direita of the margem (relativa à position)
+  /// Borda right of the margin (relativa to the position)
   double borderMarginRight = 0.0;
 
-  /// Borda superior of the margem (relativa à position)
+  /// Borda upper of the margin (relativa to the position)
   double borderMarginTop = 0.0;
 
-  /// Borda inferior of the margem (relativa à position)
+  /// Borda lower of the margin (relativa to the position)
   double borderMarginBottom = 0.0;
 
   // ====================
@@ -184,13 +184,13 @@ class BoundingBox {
   // MethodS DE HIERARQUIA
   // ====================
 
-  /// Adds um elemento filho
+  /// Adds a elemento filho
   void addChild(BoundingBox child) {
     childElements.add(child);
     child.parent = this;
   }
 
-  /// Remove um elemento filho
+  /// Remove a elemento filho
   void removeChild(BoundingBox child) {
     childElements.remove(child);
     child.parent = null;
@@ -205,12 +205,12 @@ class BoundingBox {
   }
 
   // ====================
-  // CÁLCULO DE Position
+  // Calculation DE Position
   // ====================
 
-  /// Calculatestes a position absoluta recursivamente a partir dos pais
+  /// Calculates a position absoluta recursivamente a partir dos pais
   ///
-  /// Deve ser chamado após modificar positions relativas for currentizar
+  /// Must be chamado after modificar positions relativas for currentizar
   /// a position absoluta de all os elementos na hierarquia
   void calculateAbsolutePosition() {
     absolutePosition.x = relativePosition.x;
@@ -223,23 +223,23 @@ class BoundingBox {
       currentParent = currentParent.parent;
     }
 
-    // Calculatestesr recursivamente for all os filhos
+    // Calculate recursivamente for all os filhos
     for (final child in childElements) {
       child.calculateAbsolutePosition();
     }
   }
 
   // ====================
-  // CÁLCULO DE BOUNDING BOX
+  // Calculation DE BOUNDING BOX
   // ====================
 
-  /// Calculatestes o bounding box envolvendo all os filhos
+  /// Calculates o bounding box envolvendo all os filhos
   ///
   /// Currentiza borderLeft, borderRight, borderTop, borderBottom
   /// for englobar all os elementos filhos
   void calculateBoundingBox() {
     if (childElements.isEmpty) {
-      // Sem filhos: Usesr size defined
+      // Sem filhos: Use size defined
       if (size.width > 0 || size.height > 0) {
         borderLeft = 0;
         borderRight = size.width;
@@ -249,7 +249,7 @@ class BoundingBox {
       return;
     }
 
-    // First, Calculatestesr bounding box de all os filhos
+    // First, Calculate bounding box de all os filhos
     for (final child in childElements) {
       child.calculateBoundingBox();
     }
@@ -260,7 +260,7 @@ class BoundingBox {
     borderTop = double.infinity;
     borderBottom = double.negativeInfinity;
 
-    // Calculatestesr envelope de all os filhos
+    // Calculate envelope de all os filhos
     for (final child in childElements) {
       final childLeft = child.borderLeft + child.relativePosition.x;
       final childRight = child.borderRight + child.relativePosition.x;
@@ -277,7 +277,7 @@ class BoundingBox {
     size.width = borderRight - borderLeft;
     size.height = borderBottom - borderTop;
 
-    // Calculatestesr bordas de margem (add margem às bordas)
+    // Calculate bordas de margin (add margin às bordas)
     borderMarginLeft = borderLeft - marginSize.width;
     borderMarginRight = borderRight + marginSize.width;
     borderMarginTop = borderTop - marginSize.height;
@@ -288,11 +288,11 @@ class BoundingBox {
   // DETECÇÃO DE COLISÃO
   // ====================
 
-  /// Checks se há sobreposition horizontal with The other BoundingBox
+  /// Checks if há sobreposition horizontal with The other BoundingBox
   ///
   /// @param other The other BoundingBox
   /// @param margin Margin added for the collision check
-  /// @return true se houver sobreposition
+  /// @return true if houver sobreposition
   bool horizontalOverlap(BoundingBox other, {double margin = 0.0}) {
     final thisLeft = absolutePosition.x + borderLeft - margin;
     final thisRight = absolutePosition.x + borderRight + margin;
@@ -302,11 +302,11 @@ class BoundingBox {
     return !(thisRight < otherLeft || thisLeft > otherRight);
   }
 
-  /// Checks se há sobreposition vertical with The other BoundingBox
+  /// Checks if há sobreposition vertical with The other BoundingBox
   ///
   /// @param other The other BoundingBox
   /// @param margin Margin added for the collision check
-  /// @return true se houver sobreposition
+  /// @return true if houver sobreposition
   bool verticalOverlap(BoundingBox other, {double margin = 0.0}) {
     final thisTop = absolutePosition.y + borderTop - margin;
     final thisBottom = absolutePosition.y + borderBottom + margin;
@@ -316,21 +316,21 @@ class BoundingBox {
     return !(thisBottom < otherTop || thisTop > otherBottom);
   }
 
-  /// Checks se há colisão (sobreposition horizontal E vertical)
+  /// Checks if há colisão (sobreposition horizontal And vertical)
   ///
   /// @param other The other BoundingBox
   /// @param margin Margin added for the collision check
-  /// @return true se houver colisão
+  /// @return true if houver colisão
   bool collidesWith(BoundingBox other, {double margin = 0.0}) {
     return horizontalOverlap(other, margin: margin) &&
         verticalOverlap(other, margin: margin);
   }
 
-  /// Checks se há sobreposition horizontal with margem
+  /// Checks if há sobreposition horizontal with margin
   ///
   /// @param other The other BoundingBox
-  /// @param margin Margem added
-  /// @return true se houver sobreposition considerando margem
+  /// @param margin Margin added
+  /// @return true if houver sobreposition considerando margin
   bool horizontalMarginOverlap(BoundingBox other, {double margin = 0.0}) {
     final thisLeft = absolutePosition.x + borderMarginLeft - margin;
     final thisRight = absolutePosition.x + borderMarginRight + margin;
@@ -340,11 +340,11 @@ class BoundingBox {
     return !(thisRight < otherLeft || thisLeft > otherRight);
   }
 
-  /// Checks se há sobreposition vertical with margem
+  /// Checks if há sobreposition vertical with margin
   ///
   /// @param other The other BoundingBox
-  /// @param margin Margem added
-  /// @return true se houver sobreposition considerando margem
+  /// @param margin Margin added
+  /// @return true if houver sobreposition considerando margin
   bool verticalMarginOverlap(BoundingBox other, {double margin = 0.0}) {
     final thisTop = absolutePosition.y + borderMarginTop - margin;
     final thisBottom = absolutePosition.y + borderMarginBottom + margin;
@@ -354,16 +354,16 @@ class BoundingBox {
     return !(thisBottom < otherTop || thisTop > otherBottom);
   }
 
-  /// Calculatestes distância horizontal até The other BoundingBox
+  /// Calculates distance horizontal until The other BoundingBox
   ///
   /// @param other The other BoundingBox
-  /// @return Distância horizontal (negativa se sobreposto)
+  /// @return Distance horizontal (negativa if overlapping)
   double horizontalDistanceTo(BoundingBox other) {
     final thisRight = absolutePosition.x + borderRight;
     final otherLeft = other.absolutePosition.x + other.borderLeft;
 
     if (horizontalOverlap(other)) {
-      // Sobreposto: Returnsr distância negativa
+      // Overlapping: Returnsr distance negativa
       final thisLeft = absolutePosition.x + borderLeft;
       final otherRight = other.absolutePosition.x + other.borderRight;
       return math.max(thisLeft - otherRight, otherLeft - thisRight);
@@ -372,16 +372,16 @@ class BoundingBox {
     return otherLeft - thisRight;
   }
 
-  /// Calculatestes distância vertical até The other BoundingBox
+  /// Calculates distance vertical until The other BoundingBox
   ///
   /// @param other The other BoundingBox
-  /// @return Distância vertical (negativa se sobreposto)
+  /// @return Distance vertical (negativa if overlapping)
   double verticalDistanceTo(BoundingBox other) {
     final thisBottom = absolutePosition.y + borderBottom;
     final otherTop = other.absolutePosition.y + other.borderTop;
 
     if (verticalOverlap(other)) {
-      // Sobreposto: Returnsr distância negativa
+      // Overlapping: Returnsr distance negativa
       final thisTop = absolutePosition.y + borderTop;
       final otherBottom = other.absolutePosition.y + other.borderBottom;
       return math.max(thisTop - otherBottom, otherTop - thisBottom);
@@ -391,28 +391,28 @@ class BoundingBox {
   }
 
   // ====================
-  // PropertyS CalculatestesDAS
+  // PropertyS Calculated
   // ====================
 
-  /// Width total of the conteúdo
+  /// Width total of the content
   double get width => borderRight - borderLeft;
 
-  /// Height total of the conteúdo
+  /// Height total of the content
   double get height => borderBottom - borderTop;
 
-  /// Width total with margem
+  /// Width total with margin
   double get widthWithMargin => borderMarginRight - borderMarginLeft;
 
-  /// Height total with margem
+  /// Height total with margin
   double get heightWithMargin => borderMarginBottom - borderMarginTop;
 
-  /// Centro X (relativo)
+  /// Centre X (relativo)
   double get centerX => (borderLeft + borderRight) / 2;
 
-  /// Centro Y (relativo)
+  /// Centre Y (relativo)
   double get centerY => (borderTop + borderBottom) / 2;
 
-  /// Centro absoluto
+  /// Centre absoluto
   PointF2D get absoluteCenter => PointF2D(
         absolutePosition.x + centerX,
         absolutePosition.y + centerY,
@@ -428,7 +428,7 @@ class BoundingBox {
     );
   }
 
-  /// Converts for Rect with margem (absoluto)
+  /// Converts for Rect with margin (absoluto)
   Rect toRectWithMargin() {
     return Rect.fromLTRB(
       absolutePosition.x + borderMarginLeft,
@@ -442,7 +442,7 @@ class BoundingBox {
   // UTILITÁRIOS
   // ====================
 
-  /// Definess o bounding box from um Rect
+  /// Definess o bounding box from a Rect
   void setFromRect(Rect rect) {
     borderLeft = rect.left;
     borderRight = rect.right;
@@ -452,7 +452,7 @@ class BoundingBox {
     size.height = rect.height;
   }
 
-  /// Definess margem uniforme
+  /// Definess margin uniforme
   void setUniformMargin(double margin) {
     marginSize.width = margin;
     marginSize.height = margin;

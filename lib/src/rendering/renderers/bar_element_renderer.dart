@@ -62,7 +62,7 @@ class BarElementRenderer {
     );
 
     // Fix: Not desenhar indicação de oitava manual
-    // Os glyphs SMuFL como 'gClef8va' já contêm o "8" embutido
+    // Os glyphs SMuFL as 'gClef8va' already contain o "8" embutido
   }
 
   void renderKeySignature(
@@ -224,7 +224,7 @@ class BarElementRenderer {
     bool centerVertically = false,
     bool centerHorizontally = false,
     // A2 FIX: when true, position.y is treated as the SMuFL y=0 baseline
-    // (e.g. G-line for gClef, F-line for fClef) and the glyph is anchored
+    // (and.g. G-line for gClef, F-line for fClef) and the glyph is anchored
     // to the font's alphabetic baseline rather than the layout-box centre.
     bool useBaseline = false,
   }) {

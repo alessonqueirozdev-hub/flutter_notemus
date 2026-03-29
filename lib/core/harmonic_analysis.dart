@@ -2,8 +2,8 @@
 
 import 'musical_element.dart';
 
-/// Type de intervalo melódico, correspwherendo ao atributo `@intm` of the MEI v5.
-/// Suporta Código de Parsons, noteção diatônica e semitons.
+/// Type de intervalo melódico, correspwherendo to the atributo `@intm` of the MEI v5.
+/// Suporta Código de Parsons, noteção diatônica and semitons.
 enum MelodicIntervalType {
   /// Código de Parsons: repetição (R), ascendente (U), descendente (D)
   parsonsCode,
@@ -34,11 +34,11 @@ enum MelodicFunction {
   retardation,
   /// Pedal
   pedal,
-  /// Outro / indefinido
+  /// Other / indefinido
   other,
 }
 
-/// Grau of the escala with possível alteração cromática (MEI `@deg`).
+/// Grau of the escala with possible alteração cromática (MEI `@deg`).
 ///
 /// ```dart
 /// ScaleDegree(degree: 5)          // V
@@ -64,7 +64,7 @@ class ScaleDegree {
   }
 }
 
-/// Intervalo melódico entre duas notes consecutivas (MEI `@intm`).
+/// Intervalo melódico between duas notes consecutivas (MEI `@intm`).
 ///
 /// ```dart
 /// MelodicInterval.diatonic('M2')   // segunda greater
@@ -84,7 +84,7 @@ class MelodicInterval {
     this.parsonsValue,
   });
 
-  /// Intervalo diatônico (ex.: 'M2', 'm3', 'P4', 'P5', 'M6', 'm7', 'P8').
+  /// Intervalo diatônico (e.g., 'M2', 'm3', 'P4', 'P5', 'M6', 'm7', 'P8').
   factory MelodicInterval.diatonic(String value) =>
       MelodicInterval._(type: MelodicIntervalType.diatonic, diatonicValue: value);
 
@@ -106,14 +106,14 @@ class MelodicInterval {
   String toString() => diatonicValue ?? semitonesValue?.toString() ?? parsonsValue ?? '';
 }
 
-/// Intervalo harmônico entre duas notes simultâneas (MEI `@inth`).
+/// Intervalo harmônico between duas notes simultâneas (MEI `@inth`).
 ///
-/// Descreve a relação intervalar entre notes de um chord ou entre voices.
+/// Descreve a relação intervalar between notes de a chord or between voices.
 class HarmonicInterval {
   /// Size of the intervalo in semitons (0 = uníssono).
   final int semitones;
 
-  /// Name diatônico of the intervalo (ex.: 'M3', 'm7', 'P5').
+  /// Name diatônico of the intervalo (e.g., 'M3', 'm7', 'P5').
   final String? diatonicName;
 
   const HarmonicInterval({required this.semitones, this.diatonicName});
@@ -122,9 +122,9 @@ class HarmonicInterval {
   String toString() => diatonicName ?? '$semitones st';
 }
 
-/// Definess um membro de um chord dentro de a `ChordTable` (MEI `<chordMember>`).
+/// Definess a membro de a chord within de a `ChordTable` (MEI `<chordMember>`).
 class ChordMember {
-  /// Note of the membro (pname + octave relativo à fundamental, ou semitom).
+  /// Note of the membro (pname + octave relativo to the fundamental, or semitom).
   final int intervalFromRoot;
 
   /// Accidental opcional no membro.
@@ -133,7 +133,7 @@ class ChordMember {
   const ChordMember({required this.intervalFromRoot, this.alter = 0.0});
 }
 
-/// Definess um type de chord na tabela de chords (MEI `<chordDef>`).
+/// Definess a type de chord na tabela de chords (MEI `<chordDef>`).
 ///
 /// ```dart
 /// ChordDefinition(
@@ -146,7 +146,7 @@ class ChordDefinition {
   /// Identificador único of the chord (MEI `xml:id` in `<chordDef>`).
   final String id;
 
-  /// Rótulo descritivo (ex.: 'Major', 'Minor 7th').
+  /// Rótulo descritivo (e.g., 'Major', 'Minor 7th').
   final String label;
 
   /// Membros of the chord (intervalos in semitons a partir of the fundamental).
@@ -159,10 +159,10 @@ class ChordDefinition {
   });
 }
 
-/// Tabela de definições de chords (MEI `<chordTable>`).
+/// Tabela de definitions de chords (MEI `<chordTable>`).
 ///
 /// Permite Define vocabulário harmônico reutilizável for análise de chords.
-/// Generateslmente armazenada no `<meiHead>` ou `<music>`.
+/// Generateslmente armazenada no `<meiHead>` or `<music>`.
 class ChordTable {
   final List<ChordDefinition> definitions;
 
@@ -177,9 +177,9 @@ class ChordTable {
   }
 }
 
-/// Representa a análise harmônica de a note ou chord (MEI `<harm>`).
+/// Representa a análise harmônica de a note or chord (MEI `<harm>`).
 ///
-/// Associado a um evento musical through [xmlId] of the element-alvo.
+/// Associado a a evento musical through [xmlId] of the element-alvo.
 ///
 /// ```dart
 /// HarmonicLabel(
@@ -189,19 +189,19 @@ class ChordTable {
 /// )
 /// ```
 class HarmonicLabel extends MusicalElement {
-  /// Símbolo of the chord (ex.: 'Cmaj7', 'G7', 'Am', 'Bdim').
+  /// Symbol of the chord (e.g., 'Cmaj7', 'G7', 'Am', 'Bdim').
   final String? symbol;
 
-  /// Grau of the escala deste chord no contexto tonal.
+  /// Grau of the escala deste chord no context tonal.
   final ScaleDegree? scaleDegree;
 
   /// Função melódica of the note associada.
   final MelodicFunction? melodicFunction;
 
-  /// Intervalo melódico desde a note previous.
+  /// Intervalo melódico since a note previous.
   final MelodicInterval? melodicInterval;
 
-  /// Intervalo harmônico in relação a outra voice.
+  /// Intervalo harmônico in relação a other voice.
   final HarmonicInterval? harmonicInterval;
 
   /// ID of the element-alvo desta análise (MEI `@startid`).

@@ -3,14 +3,14 @@
 import 'package:flutter/material.dart';
 import '../../smufl/smufl_metadata_loader.dart';
 
-/// Rendersdor centralizado for glyphs SMuFL e texto
-/// Elimina duplicação de código entre all os renderers
+/// Renderer centred for glyphs SMuFL and text
+/// Elimina duplicação de código between all os renderers
 class GlyphRenderer {
   final SmuflMetadata metadata;
 
   GlyphRenderer({required this.metadata});
 
-  /// Desenha um glyph SMuFL with opções de centralização
+  /// Desenha a glyph SMuFL with opções de centralização
   void drawGlyph(
     Canvas canvas, {
     required String glyphName,
@@ -47,7 +47,7 @@ class GlyphRenderer {
     );
   }
 
-  /// Desenha texto with estilo customizado
+  /// Desenha text with style customizado
   void drawText(
     Canvas canvas, {
     required String text,

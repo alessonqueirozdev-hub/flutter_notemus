@@ -236,7 +236,7 @@ class SmuflGlyphCategories {
     'tupletColon': 'Dois pontos (quiáltera)',
   };
 
-  // === REPETIÇÕES E CODAS ===
+  // === REPETIÇÕES And CODAS ===
   static const Map<String, String> repeats = {
     'segno': 'Segno',
     'coda': 'Coda',
@@ -254,7 +254,7 @@ class SmuflGlyphCategories {
     'percent': 'Repetição porcentagem',
   };
 
-  // === RESPIRAÇÕES E CAESURAS ===
+  // === RESPIRAÇÕES And CAESURAS ===
   static const Map<String, String> breaths = {
     'breathMarkComma': 'Vírgula de respiração',
     'breathMarkTick': 'Tick de respiração',
@@ -292,7 +292,7 @@ class SmuflGlyphCategories {
     'brassMuteClosed': 'Som fechado (sopros)',
   };
 
-  // === SÍMBOLOS MICROTONAIS ===
+  // === Symbols MICROTONAIS ===
   static const Map<String, String> microtonals = {
     'accidentalQuarterToneSharpStein': 'Quarto de tom sustenido',
     'accidentalQuarterToneFlatStein': 'Quarto de tom bemol',
@@ -331,7 +331,7 @@ class SmuflGlyphCategories {
     };
   }
 
-  /// Finds um glifo por name in all as categorias
+  /// Finds a glifo by name in all as categorias
   static String? findGlyphDescription(String glyphName) {
     final allCategories = getAllCategories();
     for (final category in allCategories.values) {
@@ -342,7 +342,7 @@ class SmuflGlyphCategories {
     return null;
   }
 
-  /// Returns a categoria de um glifo
+  /// Returns a categoria de a glifo
   static String? findGlyphCategory(String glyphName) {
     final allCategories = getAllCategories();
     for (final entry in allCategories.entries) {

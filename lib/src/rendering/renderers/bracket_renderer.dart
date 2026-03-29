@@ -208,7 +208,7 @@ class BracketRenderer {
   /// Render simple vertical line |
   ///
   /// Used for multiple instances of the same instrument
-  /// (e.g., Violin I & II)
+  /// (and.g., Violin I & II)
   void _renderLine(
     Canvas canvas,
     double x,

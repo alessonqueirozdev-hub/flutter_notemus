@@ -4,7 +4,7 @@
 import 'package:flutter/foundation.dart';
 import '../../core/core.dart';
 
-/// Resultado detalhado of the validação de um measure
+/// Result detalhado of the validação de a measure
 class MeasureValidationResult {
   final bool isValid;
   final double expectedCapacity;
@@ -74,10 +74,10 @@ class MeasureValidationResult {
 
 /// Validador rigoroso de measures based on teoria musical
 class MeasureValidator {
-  // Tolerância for erros de ponto flutuante (0.0001 unidades)
+  // Tolerância for erros de point flutuante (0.0001 unidades)
   static const double tolerance = 0.0001;
 
-  /// Valida um measure completo
+  /// Valida a measure completo
   static MeasureValidationResult validate(
     Measure measure, {
     bool allowAnacrusis = false,
@@ -97,13 +97,13 @@ class MeasureValidator {
       );
     }
 
-    // Calculatestesr capacidade total of the measure
+    // Calculate capacidade total of the measure
     final expectedCapacity = _calculateMeasureCapacity(
       timeSignature.numerator,
       timeSignature.denominator,
     );
 
-    // Processesr all os elementos e Calculatestesr duração total
+    // Processesr all os elementos and Calculate duração total
     final elementBreakdown = <String, double>{};
     final warnings = <String>[];
     double actualDuration = 0.0;
@@ -126,7 +126,7 @@ class MeasureValidator {
         elementBreakdown['Acorde ${elementIndex + 1} (${element.duration.type.name})'] = duration;
         elementIndex++;
       } else if (element is Tuplet) {
-        // Critical: Validar notes DENTRO de tuplets!
+        // Critical: Validar notes Within de tuplets!
         final tupletDuration = _calculateTupletDuration(element, warnings);
         actualDuration += tupletDuration;
         elementBreakdown['Tuplet ${elementIndex + 1} (${element.actualNotes}:${element.normalNotes})'] = tupletDuration;
@@ -134,11 +134,11 @@ class MeasureValidator {
       }
     }
 
-    // Calculatestesr diferença
+    // Calculate diferença
     final difference = actualDuration - expectedCapacity;
     final isValid = difference.abs() < tolerance;
 
-    // Generatesr erros se inválido
+    // Generatesr erros if inválido
     final errors = <String>[];
     if (!isValid && !allowAnacrusis) {
       if (difference > 0) {
@@ -185,9 +185,9 @@ class MeasureValidator {
     return null;
   }
 
-  /// Calculatestes a capacidade total of the measure based na fórmula
+  /// Calculates a capacidade total of the measure based na fórmula
   /// 
-  /// Fórmula: Capacidade = Numerador × (1 ÷ Denominador)
+  /// Fórmula: Capacidade = Numerator × (1 ÷ Denominator)
   /// 
   /// Examples:
   /// - 4/4: 4 × (1/4) = 1.0 semibreve
@@ -197,7 +197,7 @@ class MeasureValidator {
     return numerator / denominator;
   }
 
-  /// Calculatestes o value base de a figura rítmica
+  /// Calculates o value base de a figure rhythmic
   /// 
   /// Hierarquia de Valores (base = semibreve = 1.0):
   /// - Semibreve: 1.0
@@ -228,7 +228,7 @@ class MeasureValidator {
     }
   }
 
-  /// applies modificadores de duração (pontos, tuplets)
+  /// applies modificadores de duração (points, tuplets)
   static double _applyModifiers(
     double baseValue,
     Duration duration,
@@ -236,20 +236,20 @@ class MeasureValidator {
   ) {
     double modifiedValue = baseValue;
 
-    // Appliesr pontos de aumento
+    // Appliesr points de aumento
     if (duration.dots > 0) {
       if (duration.dots == 1) {
-        // Ponto simples: Adds 50% of the value
+        // Point simples: Adds 50% of the value
         modifiedValue = baseValue * 1.5;
       } else if (duration.dots == 2) {
-        // Duplo ponto: Adds 75% of the value (50% + 25%)
+        // Duplo point: Adds 75% of the value (50% + 25%)
         modifiedValue = baseValue * 1.75;
       } else {
         warnings.add(
           'Figura com ${duration.dots} pontos é incomum. '
           'Verifique a notação.',
         );
-        // Fórmula Generatesl for n pontos: 1 + 0.5 + 0.25 + ... + 0.5^n
+        // Fórmula Generatesl for n points: 1 + 0.5 + 0.25 + ... + 0.5^n
         double multiplier = 1.0;
         for (int i = 1; i <= duration.dots; i++) {
           multiplier += 1.0 / (1 << i); // 2^i
@@ -266,25 +266,25 @@ class MeasureValidator {
     return modifiedValue;
   }
 
-  /// Calculatestes duração de a note
+  /// Calculates duração de a note
   static double _calculateNoteDuration(Note note, List<String> warnings) {
     final baseValue = _calculateBaseValue(note.duration.type);
     return _applyModifiers(baseValue, note.duration, warnings);
   }
 
-  /// Calculatestes duração de a paUses (mesmo value that note)
+  /// Calculates duração de a paUses (same value that note)
   static double _calculateRestDuration(Rest rest, List<String> warnings) {
     final baseValue = _calculateBaseValue(rest.duration.type);
     return _applyModifiers(baseValue, rest.duration, warnings);
   }
 
-  /// Calculatestes duração de um chord (all as notes têm mesma duração)
+  /// Calculates duração de a chord (all as notes têm same duração)
   static double _calculateChordDuration(Chord chord, List<String> warnings) {
     final baseValue = _calculateBaseValue(chord.duration.type);
     return _applyModifiers(baseValue, chord.duration, warnings);
   }
 
-  /// Calculatestes duração de um tuplet (tuplet)
+  /// Calculates duração de a tuplet (tuplet)
   /// 
   /// Fórmula: Duração = (Soma das notes internas) × (normalNotes / actualNotes)
   /// 
@@ -292,7 +292,7 @@ class MeasureValidator {
   /// - Tercina (3:2): 3 colcheias no tempo de 2 → each a vale 2/3 of the value original
   /// - Quintina (5:4): 5 semicolcheias no tempo de 4 → each a vale 4/5 of the value original
   static double _calculateTupletDuration(Tuplet tuplet, List<String> warnings) {
-    // Somar duração de all os elementos dentro of the tuplet
+    // Somar duração de all os elementos within of the tuplet
     double totalInternalDuration = 0.0;
     
     for (final element in tuplet.elements) {
@@ -317,7 +317,7 @@ class MeasureValidator {
     final tupletRatio = tuplet.normalNotes / tuplet.actualNotes;
     final actualTupletDuration = totalInternalDuration * tupletRatio;
     
-    // add warning se tuplet tiver proporção incomum
+    // add warning if tuplet tiver proporção incomum
     if (tuplet.actualNotes > 7) {
       warnings.add(
         'Tuplet com ${tuplet.actualNotes} notas é incomum. '
@@ -353,7 +353,7 @@ class MeasureValidator {
       );
     }
 
-    // Detectar excesso de figuras pequenas
+    // Detectar excesso de figures pequenas
     int smallNotesCount = 0;
     for (final element in measure.elements) {
       if (element is Note || element is Rest || element is Chord) {
@@ -379,7 +379,7 @@ class MeasureValidator {
     }
   }
 
-  /// Valida a sequência de measures (with herança de TimeSignature)
+  /// Valida a sequência de measures (with inheritance de TimeSignature)
   static List<MeasureValidationResult> validateStaff(
     Staff staff, {
     bool allowAnacrusis = false,
@@ -394,12 +394,12 @@ class MeasureValidator {
       // Procurar TimeSignature neste measure
       TimeSignature? measureTimeSignature = _findTimeSignature(measure);
       
-      // Se encontrou, currentizar o TimeSignature corrente
+      // If encontrou, currentizar o TimeSignature corrente
       if (measureTimeSignature != null) {
         currentTimeSignature = measureTimeSignature;
       }
       
-      // Validar with TimeSignature herdado
+      // Validar with TimeSignature inherited
       final result = validateWithTimeSignature(
         measure,
         currentTimeSignature,
@@ -412,7 +412,7 @@ class MeasureValidator {
     return results;
   }
   
-  /// Validation: with TimeSignature explícito (útil for herança)
+  /// Validation: with TimeSignature explícito (útil for inheritance)
   static MeasureValidationResult validateWithTimeSignature(
     Measure measure,
     TimeSignature? timeSignature, {
@@ -430,13 +430,13 @@ class MeasureValidator {
       );
     }
 
-    // Calculatestesr capacidade total of the measure
+    // Calculate capacidade total of the measure
     final expectedCapacity = _calculateMeasureCapacity(
       timeSignature.numerator,
       timeSignature.denominator,
     );
 
-    // Processesr all os elementos e Calculatestesr duração total
+    // Processesr all os elementos and Calculate duração total
     final elementBreakdown = <String, double>{};
     final warnings = <String>[];
     double actualDuration = 0.0;
@@ -459,7 +459,7 @@ class MeasureValidator {
         elementBreakdown['Acorde ${elementIndex + 1} (${element.duration.type.name})'] = duration;
         elementIndex++;
       } else if (element is Tuplet) {
-        // Critical: Validar notes DENTRO de tuplets!
+        // Critical: Validar notes Within de tuplets!
         final tupletDuration = _calculateTupletDuration(element, warnings);
         actualDuration += tupletDuration;
         elementBreakdown['Tuplet ${elementIndex + 1} (${element.actualNotes}:${element.normalNotes})'] = tupletDuration;
@@ -467,11 +467,11 @@ class MeasureValidator {
       }
     }
 
-    // Calculatestesr diferença
+    // Calculate diferença
     final difference = actualDuration - expectedCapacity;
     final isValid = difference.abs() < tolerance;
 
-    // Generatesr erros se inválido
+    // Generatesr erros if inválido
     final errors = <String>[];
     if (!isValid && !allowAnacrusis) {
       if (difference > 0) {

@@ -182,7 +182,7 @@ class SlurCalculator {
       height = staffSpace * 4.0;
       center = pos;
     } else {
-      // Add other elements that can be obstacles here (e.g. accidentals, ornaments)
+      // Add other elements that can be obstacles here (and.g. accidentals, ornaments)
       return null;
     }
 

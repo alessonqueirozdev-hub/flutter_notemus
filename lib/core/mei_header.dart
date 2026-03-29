@@ -4,7 +4,7 @@
 // Implementa o modelo bibliográfico completo of the MEI v5, incluindo
 // FRBR (Functional Requirements for Bibliographic Records).
 
-/// Função de um responsável bibliográfico.
+/// Função de a responsável bibliográfico.
 enum ResponsibilityRole {
   composer,
   arranger,
@@ -19,13 +19,13 @@ enum ResponsibilityRole {
   other,
 }
 
-/// Representa a pessoa ou organização responsável pela obra ou codificação.
-/// Correspwhere a `<persName>` / `<corpName>` dentro de `<respStmt>` no MEI v5.
+/// Representa a pessoa or organização responsável pela obra or codificação.
+/// Correspwhere a `<persName>` / `<corpName>` within de `<respStmt>` no MEI v5.
 class Contributor {
   final String name;
   final ResponsibilityRole role;
 
-  /// Identificador externo (ex.: VIAF URI, ISNI).
+  /// Identificador externo (e.g., VIAF URI, ISNI).
   final String? identifier;
 
   const Contributor({
@@ -36,7 +36,7 @@ class Contributor {
 }
 
 /// Descreve a publicação / distribuição of the arquivo codificado.
-/// Correspwhere a `<pubStmt>` dentro de `<fileDesc>` no MEI v5.
+/// Correspwhere a `<pubStmt>` within de `<fileDesc>` no MEI v5.
 class PublicationStatement {
   final String? publisher;
   final String? date;
@@ -51,8 +51,8 @@ class PublicationStatement {
   });
 }
 
-/// Identifica a music font of the qual a codificação foi derivada.
-/// Correspwhere a `<source>` dentro de `<sourceDesc>` no MEI v5.
+/// Identifica a music font from which a codificação foi derivada.
+/// Correspwhere a `<source>` within de `<sourceDesc>` no MEI v5.
 class SourceDescription {
   final String? title;
   final String? composer;
@@ -70,14 +70,14 @@ class SourceDescription {
 }
 
 /// Descrição bibliográfica of the arquivo codificado.
-/// Correspwhere ao elemento `<fileDesc>` no MEI v5.
+/// Correspwhere to the elemento `<fileDesc>` no MEI v5.
 ///
-/// `<fileDesc>` é o único filho obrigatório de `<meiHead>`.
+/// `<fileDesc>` is o único filho required de `<meiHead>`.
 class FileDescription {
   /// Título principal of the arquivo.
   final String title;
 
-  /// Subtítulo (ex.: number de opus, tonalidade).
+  /// Subtítulo (e.g., number de opus, tonalidade).
   final String? subtitle;
 
   /// Responsáveis (compositor, arranjador, editor, etc.).
@@ -98,13 +98,13 @@ class FileDescription {
   });
 }
 
-/// Princípios e methods de codificação.
+/// Princípios and methods de codificação.
 /// Correspwhere a `<encodingDesc>` no MEI v5.
 class EncodingDescription {
   /// Descrição textual dos princípios editoriais.
   final String? editorialPrinciples;
 
-  /// Versão of the MEI used na codificação.
+  /// Version of the MEI used na codificação.
   final String meiVersion;
 
   /// Appliesções used for Generatesr a codificação.
@@ -117,8 +117,8 @@ class EncodingDescription {
   });
 }
 
-/// Informações musicais sobre a obra (FRBR Work level).
-/// Correspwhere a `<work>` dentro de `<workList>` no MEI v5.
+/// Informações musicais on/about a obra (FRBR Work level).
+/// Correspwhere a `<work>` within de `<workList>` no MEI v5.
 class WorkInfo {
   final String? title;
   final String? composer;
@@ -150,7 +150,7 @@ class WorkList {
 }
 
 /// Nível FRBR: Manifestação — fonte física that encarna a obra.
-/// Correspwhere a `<manifestation>` dentro de `<manifestationList>` no MEI v5.
+/// Correspwhere a `<manifestation>` within de `<manifestationList>` no MEI v5.
 class Manifestation {
   final String? title;
   final String? type;
@@ -179,8 +179,8 @@ class ManifestationList {
   const ManifestationList({required this.manifestations});
 }
 
-/// Entrada no histórico de revisões of the arquivo.
-/// Correspwhere a `<change>` dentro de `<revisiwheresc>` no MEI v5.
+/// Input no histórico de revisões of the arquivo.
+/// Correspwhere a `<change>` within de `<revisiwheresc>` no MEI v5.
 class RevisionEntry {
   final String date;
   final String? author;
@@ -203,7 +203,7 @@ class RevisionDescription {
   const RevisionDescription({required this.entries});
 }
 
-/// Cabeçalho MEI completo, correspwherendo ao elemento `<meiHead>` of the MEI v5.
+/// Cabeçalho MEI completo, correspwherendo to the elemento `<meiHead>` of the MEI v5.
 ///
 /// Implementa o modelo bibliográfico completo incluindo os quatro níveis FRBR:
 /// Work, Expression, Manifestation, Item.
@@ -221,10 +221,10 @@ class RevisionDescription {
 /// );
 /// ```
 class MeiHeader {
-  /// Descrição bibliográfica of the arquivo (obrigatório no MEI v5).
+  /// Descrição bibliográfica of the arquivo (required no MEI v5).
   final FileDescription fileDescription;
 
-  /// Descrição of the codificação (princípios, Appliesções, versão MEI).
+  /// Descrição of the codificação (princípios, Appliesções, version MEI).
   final EncodingDescription? encodingDescription;
 
   /// List of obras representadas no arquivo.

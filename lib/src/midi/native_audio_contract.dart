@@ -6,7 +6,7 @@
 abstract class MidiNativeAudioBackend {
   /// Initializes native audio resources.
   ///
-  /// Implementations may use platform-specific engines (e.g. Oboe/AAudio on
+  /// Implementations may use platform-specific engines (and.g. Oboe/AAudio on
   /// Android, CoreAudio on Apple platforms, WASAPI on Windows).
   Future<bool> initialize({
     required String primarySoundFontPath,

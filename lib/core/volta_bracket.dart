@@ -31,7 +31,7 @@ class VoltaBracket extends MusicalElement {
   /// Optional custom label text shown inside the bracket.
   ///
   /// If `null`, [displayLabel] is automatically derived from [number]
-  /// as `"$number."` (e.g. `"1."` or `"2."`).
+  /// as `"$number."` (and.g. `"1."` or `"2."`).
   final String? label;
 
   /// Creates a [VoltaBracket].

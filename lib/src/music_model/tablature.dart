@@ -38,7 +38,7 @@ class Tablature {
     );
   }
 
-  /// Creates a tablatura default for baixo
+  /// Creates a tablatura default for bottom
   factory Tablature.bass() {
     return Tablature(
       staffs: [],
@@ -59,7 +59,7 @@ class TabStaff {
   void add(TabMeasure measure) => measures.add(measure);
 }
 
-/// Representa um measure de tablatura
+/// Representa a measure de tablatura
 class TabMeasure {
   final List<TabElement> elements = [];
 
@@ -83,19 +83,19 @@ class TabNote extends TabElement {
     this.techniques = const [],
   });
 
-  /// Calculatestes a height of the note based na afinação
+  /// Calculates a height of the note based na afinação
   Pitch getPitch(List<String> tuning) {
     if (string < 1 || string > tuning.length) {
       throw ArgumentError('String number out of range');
     }
 
-    // Aqui seria necessário implementar a conversão de string for Pitch
-    // e add os semitons of the traste
+    // Aqui seria required implementar a conversão de string for Pitch
+    // and add os semitons of the traste
     return const Pitch(step: 'C', octave: 4); // Placeholder
   }
 }
 
-/// Representa um chord na tablatura
+/// Representa a chord na tablatura
 class TabChord extends TabElement {
   final List<TabNote> notes;
   final Duration duration;
@@ -119,7 +119,7 @@ enum TabTechnique {
   vibrato, // Vibrato
   trill, // Trill
 
-  // Técnicas de mão direita
+  // Técnicas de mão right
   palm, // Palm mute
   harmonics, // Harmônicos
   pinch, // Pinch harmonics
@@ -303,7 +303,7 @@ class TremoloPicking extends TabElement {
   });
 }
 
-/// Representação de ritmo/groove
+/// Representação de rhythm/groove
 class RhythmSlash extends TabElement {
   final Duration duration;
   final bool accent;
@@ -331,16 +331,16 @@ class TabUtils {
   ) {
     final positions = <TabPosition>[];
 
-    // Implementação simplificada
-    // Na realidade, seria necessário Calculatestesr all as positions possíveis
+    // Implementation simplificada
+    // Na realidade, seria required Calculate all as positions possible
     // for a determinada height in diferentes cordas
 
     return positions;
   }
 
-  /// Checks se a position é fisicamente possível
+  /// Checks if a position is fisicamente possible
   static bool isPositionPlayable(List<TabNote> notes) {
-    // Checks se as positions are fisicamente alcançáveis
+    // Checks if as positions are fisicamente alcançáveis
     // considerando o stretch máximo dos dedos
     return true; // Placeholder
   }
@@ -381,6 +381,6 @@ class ChordTemplate {
 
   /// Biblioteca de chords comuns
   static const Map<String, ChordTemplate> commonChords = {
-    // Será implementado with chords mais comuns
+    // Será implementado with chords more comuns
   };
 }

@@ -157,7 +157,7 @@ class ChordRenderer extends BaseGlyphRenderer {
 
     // ── Draw accidentals ──
     // All accidentals are positioned relative to basePosition.dx (the chord's
-    // musical x), NOT the individual note cluster offsets. This ensures all
+    // musical x), Not the individual note cluster offsets. This ensures all
     // accidentals stay to the LEFT of ALL noteheads regardless of clustering.
     for (final entry in accidentalColumns.entries) {
       final i = entry.key;

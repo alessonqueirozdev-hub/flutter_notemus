@@ -2,7 +2,7 @@
 
 import 'musical_element.dart';
 
-/// Tipos de respiração e cesura
+/// Tipos de respiração and cesura
 enum BreathType {
   comma,
   tick,

@@ -50,7 +50,7 @@ enum OrnamentType {
   arpeggio,
   grace,
 
-  // Ornaments barrocos e clássicos
+  // Ornaments barrocos and clássicos
   pralltriller,
   mordentWithUpperPrefix,
   slideUp,
@@ -59,7 +59,7 @@ enum OrnamentType {
   tripleTongue,
 }
 
-/// Representa um ornament musical
+/// Representa a ornament musical
 class Ornament extends MusicalElement {
   final OrnamentType type;
   final bool above;

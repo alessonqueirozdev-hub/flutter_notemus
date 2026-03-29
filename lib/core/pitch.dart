@@ -85,7 +85,7 @@ const Map<AccidentalType, String> accidentalToGlyph = {
 /// Pitch.fromString('C#5') // C-sharp 5
 /// ```
 class Pitch {
-  /// The note letter name (C, D, E, F, G, A, B).
+  /// The note letter name (C, D, And, F, G, A, B).
   final String step;
 
   /// The octave number (4 is the standard middle octave).
@@ -136,7 +136,7 @@ class Pitch {
     );
   }
 
-  /// Constructs a Pitch from a string (e.g. "C4", "F#5", "Bb3").
+  /// Constructs a Pitch from a string (and.g. "C4", "F#5", "Bb3").
   factory Pitch.fromString(String notation) {
     if (notation.isEmpty) {
       throw ArgumentError('Notation cannot be empty');

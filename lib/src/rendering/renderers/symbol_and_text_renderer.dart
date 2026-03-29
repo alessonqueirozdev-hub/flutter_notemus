@@ -81,12 +81,12 @@ class SymbolAndTextRenderer {
       return;
     }
 
-    // Position depende of the família of the símbolo:
-    // - navegação (segno/coda): acima of the staff
+    // Position depende of the família of the symbol:
+    // - navegação (segno/coda): above the staff
     // - repeats/simile/percent: centralizados na staff
     final signY = _getRepeatMarkY(repeatMark.type);
 
-    // Fix: SMuFL: Use opticalCenter anchor se disponível
+    // Fix: SMuFL: Use opticalCenter anchor if disponível
     _drawGlyph(
       canvas,
       glyphName: glyphName,
@@ -291,8 +291,8 @@ class SymbolAndTextRenderer {
     }
 
     final glyphName = _getDynamicGlyph(dynamic.type);
-    // CORREÃ‡ÃƒO TIPOGRÃFICA SMuFL: DinÃ¢micas devem ficar 2.5 staff spaces abaixo of the Ãºltima linha
-    // Fix: LACERDA: Add verticalOffset for evitar sobreposição
+    // CORREÃ‡ÃƒO TIPOGRÃIs SMuFL: DinÃ¢micas must be placed 2.5 staff spaces below the Ãºltima line
+    // Fix: LACERDA: Add verticalOffset for avoid overlap
     final dynamicY =
         coordinates.getStaffLineY(1) +
         (coordinates.staffSpace * 2.5) +
@@ -300,7 +300,7 @@ class SymbolAndTextRenderer {
 
     if (glyphName != null) {
       // Fix: SMuFL: Escala de dynamic not deveria ser hardcoded (0.9)
-      // Usesr size base e deixar a fonte SMuFL Define proporções
+      // Use size base and deixar a fonte SMuFL Define proporções
       _drawGlyph(
         canvas,
         glyphName: glyphName,
@@ -327,16 +327,16 @@ class SymbolAndTextRenderer {
     double verticalOffset = 0.0,
   }) {
     final length = dynamic.length ?? coordinates.staffSpace * 6;
-    // Fix: Use mesma Y position that dynamic
-    // Fix: LACERDA: Add verticalOffset for evitar sobreposição
+    // Fix: Use same Y position that dynamic
+    // Fix: LACERDA: Add verticalOffset for avoid overlap
     final hairpinY =
         coordinates.getStaffLineY(1) +
         (coordinates.staffSpace * 2.5) +
         verticalOffset;
-    // CORREÃ‡ÃƒO TIPOGRÃFICA SMuFL: Height recomendada de 0.75-1.0 staff spaces
+    // CORREÃ‡ÃƒO TIPOGRÃIs SMuFL: Height recomendada de 0.75-1.0 staff spaces
     final height = coordinates.staffSpace * 0.5;
 
-    // CORREÃ‡ÃƒO CRÃTICA SMuFL: Usesr hairpinThickness ao invÃ©s de thinBarlineThickness
+    // CORREÃ‡ÃƒO CRÃTICA SMuFL: Use hairpinThickness to the invÃ©s de thinBarlineThickness
     final hairpinThickness = metadata.getEngravingDefault('hairpinThickness');
     final paint = Paint()
       ..color = theme.dynamicColor ?? theme.noteheadColor
@@ -646,8 +646,8 @@ class SymbolAndTextRenderer {
 
   void renderBreath(Canvas canvas, Breath breath, Offset basePosition) {
     final glyphName = 'breathMarkComma';
-    // Fix: MUSICOLÓGICA: Respiração deve ficar ACIMA of the staff, not na 4ª linha
-    // Position correta: acima of the 5ª linha (linha superior)
+    // Fix: MUSICOLÓGICA: Respiração must be placed Above the staff, not na 4ª line
+    // Position correct: above the 5ª line (line upper)
     _drawGlyph(
       canvas,
       glyphName: glyphName,
@@ -663,8 +663,8 @@ class SymbolAndTextRenderer {
   }
 
   void renderCaesura(Canvas canvas, Caesura caesura, Offset basePosition) {
-    // Fix: MUSICOLÓGICA: Cesura deve atravessar toda a staff
-    // Usesr linha central (3ª linha/baseline) como reference, not a 5ª linha
+    // Fix: MUSICOLÓGICA: Cesura must atravessar toda a staff
+    // Use middle line (3ª line/baseline) as reference, not a 5ª line
     _drawGlyph(
       canvas,
       glyphName: caesura.glyphName,
@@ -694,7 +694,7 @@ class SymbolAndTextRenderer {
         ? coordinates.getStaffLineY(5) - (coordinates.staffSpace * 1.8)
         : coordinates.getStaffLineY(1) + (coordinates.staffSpace * 1.8);
 
-    // Ajusta Y dinamicamente se notes in linhas suplementares conflitam with a marcacao
+    // Ajusta Y dinamicamente if notes in ledger lines conflitam with a marcacao
     final double yPosition;
     if (referenceNoteY != null) {
       if (isAbove) {

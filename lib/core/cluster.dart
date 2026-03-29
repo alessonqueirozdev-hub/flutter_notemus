@@ -10,7 +10,7 @@ enum ClusterType {
   pentatonic,   // Cluster pentatônico
 }
 
-/// Representa um cluster (grupo de notes adjacentes tocadas simultaneamente)
+/// Representa a cluster (grupo de notes adjacentes tocadas simultaneamente)
 class Cluster extends MusicalElement {
   final Pitch lowestPitch;
   final Pitch highestPitch;

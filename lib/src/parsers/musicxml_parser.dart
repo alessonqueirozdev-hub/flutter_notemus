@@ -3,14 +3,14 @@ import 'package:xml/xml.dart';
 import '../../core/core.dart';
 import 'parser_support.dart';
 
-/// Parser e utilidades for MusicXML.
+/// Parser and utilidades for MusicXML.
 class MusicXMLParser {
-  /// Converts MusicXML for um [Staff].
+  /// Converts MusicXML for a [Staff].
   static Staff parseMusicXML(String xmlString, {int partIndex = 0}) {
     return parseMusicXmlStaff(xmlString, partIndex: partIndex);
   }
 
-  /// Converts um [Staff] for MusicXML partwise.
+  /// Converts a [Staff] for MusicXML partwise.
   static String staffToMusicXML(Staff staff) {
     final builder = XmlBuilder();
     builder.processing('xml', 'version="1.0" encoding="UTF-8"');

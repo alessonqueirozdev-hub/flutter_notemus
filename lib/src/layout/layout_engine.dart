@@ -1,5 +1,5 @@
 // lib/src/layout/layout_engine.dart
-// Corrected implementation: Spacing melhorado e beaming corrigido
+// Corrected implementation: Spacing melhorado and beaming corrigido
 // Suporte a Hierarchical BoundingBox added
 // Refactoring pass: Using tipos of the core/
 
@@ -19,7 +19,7 @@ class PositionedElement {
   final Offset position;
   final int system;
 
-  /// Number of the voice (1, 2, ...) in contextos polifônicos. Null = voice única.
+  /// Number of the voice (1, 2, ...) in context polifônicos. Null = voice única.
   final int? voiceNumber;
 
   PositionedElement(
@@ -127,7 +127,7 @@ class LayoutCursor {
     advance(LayoutEngine.barlineSeparation * staffSpace);
   }
 
-  /// Adds double barline final (fim of the peça)
+  /// Adds double barline final (end of the peça)
   void addDoubleBarline(List<PositionedElement> elements) {
     elements.add(
       PositionedElement(
@@ -141,7 +141,7 @@ class LayoutCursor {
 
   void endMeasure() {
     _isFirstMeasureInSystem = false;
-    // Padding agora Appliesdo ANTES of the barline no layout principal
+    // Padding agora Applied Before of the barline no layout principal
   }
 
   void addElement(
@@ -226,7 +226,7 @@ class LayoutEngine {
       {}; // ✅ NOVO: Y absoluto em pixels
   final List<AdvancedBeamGroup> _advancedBeamGroups = [];
 
-  // Configuresção de validação (silenciosa por default)
+  // Configuresção de validação (silenciosa by default)
   final bool verboseValidation;
 
   // Fix: SMuFL: Larguras agora consultadas dinamicamente of the metadata
@@ -263,7 +263,7 @@ class LayoutEngine {
     _spacingEngine.initializeOpticalCompensator(staffSpace);
 
     // Initialise positioning engine for beaming
-    // Validation: metadata pode ser null in alguns contextos
+    // Validation: metadata can be null in some context
     if (metadata == null) {
       throw ArgumentError(
         'metadata é obrigatório para beaming avançado',
@@ -279,7 +279,7 @@ class LayoutEngine {
     );
   }
 
-  /// Gets width de glifo dinamicamente of the metadata ou Returns fallback
+  /// Gets width de glifo dinamicamente of the metadata or Returns fallback
   double _getGlyphWidth(String glyphName, double fallback) {
     if (metadata != null && metadata!.hasGlyph(glyphName)) {
       return metadata!.getGlyphWidth(glyphName);
@@ -312,10 +312,10 @@ class LayoutEngine {
   List<AdvancedBeamGroup> get advancedBeamGroups =>
       List.unmodifiable(_advancedBeamGroups);
 
-  /// ✅ Expor positions X das notes for Rendersção precisa
+  /// ✅ Expor positions X das notes for Rendering needs
   Map<Note, double> get noteXPositions => Map.unmodifiable(_noteXPositions);
 
-  /// ✅ Expor positions Y das notes for Rendersção de stems
+  /// ✅ Expor positions Y das notes for Rendering de stems
   Map<Note, double> get noteYPositions => Map.unmodifiable(_noteYPositions);
 
   List<PositionedElement> layout() {
@@ -348,14 +348,14 @@ class LayoutEngine {
 
     final List<PositionedElement> positionedElements = [];
 
-    // Armazenar measures por system for justificação
+    // Armazenar measures by system for justificação
     final systemMeasures = <int, List<int>>{};
     final measureStartIndices = <int, int>{};
 
-    // System de herança de TimeSignature
+    // System de inheritance de TimeSignature
     TimeSignature? currentTimeSignature;
 
-    // Contador de validação (apenas for estatísticas)
+    // Contador de validação (only for estatísticas)
     int validMeasures = 0;
     int invalidMeasures = 0;
 
@@ -363,7 +363,7 @@ class LayoutEngine {
       final measure = staff.measures[i];
       final isFirst = cursor.isFirstMeasureInSystem;
       final isLast = i == staff.measures.length - 1;
-      // HERANÇA DE TIME SIGNATURE: Procurar no current measure
+      // Inheritance DE TIME SIGNATURE: Procurar no current measure
       TimeSignature? measureTimeSignature;
       for (final element in measure.elements) {
         if (element is TimeSignature) {
@@ -373,15 +373,15 @@ class LayoutEngine {
         }
       }
 
-      // Se not encontrou, Usesr o TimeSignature herdado
+      // If not encontrou, Use o TimeSignature inherited
       final timeSignatureToUse = measureTimeSignature ?? currentTimeSignature;
 
-      // Define TimeSignature herdado no Measure for validação preventiva
+      // Define TimeSignature inherited no Measure for validação preventiva
       if (timeSignatureToUse != null && measureTimeSignature == null) {
         measure.inheritedTimeSignature = timeSignatureToUse;
       }
 
-      // ✅ Validação de measure (silenciosa - apenas estatísticas)
+      // ✅ Validação de measure (silenciosa - only estatísticas)
       if (timeSignatureToUse != null) {
         final validation = MeasureValidator.validateWithTimeSignature(
           measure,
@@ -397,7 +397,7 @@ class LayoutEngine {
 
       final measureWidth = _calculateMeasureWidthCursor(measure, isFirst);
 
-      // QUEBRA INTELIGENTE: A each N measures OU se not couber
+      // QUEBRA INTELIGENTE: A each N measures Or if not couber
       if (!isFirst && cursor.needsSystemBreak(measureWidth)) {
         final measureStartsWithBarline =
             measure.elements.isNotEmpty && measure.elements.first is Barline;
@@ -414,7 +414,7 @@ class LayoutEngine {
         cursor.startNewSystem();
       }
 
-      // Guardar index inicial of the measure for justificação
+      // Guardar index initial of the measure for justificação
       final measureStartIndex = positionedElements.length;
       measureStartIndices[i] = measureStartIndex;
 
@@ -430,11 +430,11 @@ class LayoutEngine {
         cursor.isFirstMeasureInSystem,
       );
 
-      // Checksr se current measure termina with barline
+      // Check if current measure ends with barline
       final currentMeasureEndsWithBarline =
           measure.elements.isNotEmpty && measure.elements.last is Barline;
 
-      // Checksr se Next measure começa with barline (ex: repeat)
+      // Check if Next measure começa with barline (ex: repeat)
       final nextMeasure = (i < staff.measures.length - 1)
           ? staff.measures[i + 1]
           : null;
@@ -443,28 +443,28 @@ class LayoutEngine {
           nextMeasure.elements.isNotEmpty &&
           nextMeasure.elements.first is Barline;
 
-      // add barline apropriada SOMENTE se:
+      // add barline apropriada SOMENTE if:
       // 1. Next measure not começar with a
       // 2. Current measure not terminar with a
       if (!nextMeasureStartsWithBarline && !currentMeasureEndsWithBarline) {
         if (isLast) {
-          // Double barline FINAL
+          // Double barline Final
           cursor.advance(measureEndPadding * staffSpace);
           cursor.addDoubleBarline(positionedElements);
         } else {
-          // BARLINE NORMAL entre measures
+          // BARLINE NORMAL between measures
           cursor.advance(measureEndPadding * staffSpace);
           cursor.addBarline(positionedElements);
         }
       } else {
-        // Measure termina with barline OU next começa with barline - apenas add padding
+        // Measure ends with barline Or next começa with barline - only add padding
         cursor.advance(measureEndPadding * staffSpace);
       }
 
       cursor.endMeasure();
     }
 
-    // Relatório resumido (apenas se verbose)
+    // Relatório resumido (only if verbose)
     if (verboseValidation && (validMeasures + invalidMeasures) > 0) {}
 
     // JUSTIFICAÇÃO HORIZONTAL: Esticar measures for preencher width
@@ -472,7 +472,7 @@ class LayoutEngine {
 
     // Sincronizar _noteXPositions with as positions pós-justificação.
     // _justifyHorizontally modifica positionedElements mas not _noteXPositions,
-    // causing desalinhamento entre beams (that use _noteXPositions) e noteheads.
+    // causing desalinhamento between beams (that use _noteXPositions) and noteheads.
     for (final positioned in positionedElements) {
       if (positioned.element is Note) {
         final note = positioned.element as Note;
@@ -488,8 +488,8 @@ class LayoutEngine {
     return positionedElements;
   }
 
-  /// Analisa beam groups e Creates AdvancedBeamGroups for Rendersção
-  /// ✅ CORREÇÃO: Usesr notes ProcessesDAS de positionedElements, not de measure.elements
+  /// Analisa beam groups and Creates AdvancedBeamGroups for Rendering
+  /// ✅ CORREÇÃO: Use notes ProcessesDAS de positionedElements, not de measure.elements
   void _analyzeBeamGroups(
     TimeSignature? timeSignature,
     List<PositionedElement> positionedElements,
@@ -509,9 +509,9 @@ class LayoutEngine {
       return;
     }
 
-    // Usesr beam types já atribuídos por _processBeamsWithAnacrusis for identificar grupos.
+    // Use beam types already atribuídos by _processBeamsWithAnacrusis for identificar grupos.
     // Not chamar BeamGrouper newmente, pois it Processes all as notes in conjunto
-    // sem respeitar limites de measure, causing agrupamentos incorretos entre measures.
+    // sem respeitar limites de measure, causing agrupamentos incorretos between measures.
     List<Note>? currentGroup;
     for (final note in processedNotes) {
       switch (note.beam) {
@@ -557,7 +557,7 @@ class LayoutEngine {
 
       if (measures.isEmpty) continue;
 
-      // Encontrar X mínimo e máximo dos elementos neste system
+      // Encontrar X mínimo and máximo dos elementos neste system
       double minX = double.infinity;
       double maxX = 0;
 
@@ -571,14 +571,14 @@ class LayoutEngine {
       final usedWidth = maxX - minX;
       final extraSpace = usableWidth - usedWidth;
 
-      // Se há space extra, distribuir proporcionalmente
+      // If há space extra, distribuir proporcionalmente
       if (extraSpace > 0 && measures.length > 1) {
-        // Ajustar positions dos elementos após each measure
+        // Ajustar positions dos elementos after each measure
         for (int i = 0; i < elements.length; i++) {
           final positioned = elements[i];
           if (positioned.system != system) continue;
 
-          // Calculatestesr proporção de position no system (simplificado)
+          // Calculate proporção de position no system (simplificado)
           final positionRatio = (maxX - minX) > 0
               ? (positioned.position.dx - minX) / (maxX - minX)
               : 0.0;
@@ -673,7 +673,7 @@ class LayoutEngine {
           final previousElement = elementsToRender[i - 1];
           cursor.advance(_calculateRhythmicSpacing(element, previousElement));
         } else if (i > 0 && !isLeadVoice && leadTimelineAnchors.isEmpty) {
-          // Fallback se not houver âncoras of the voice principal.
+          // Fallback if not houver âncoras of the voice principal.
           final previousElement = elementsToRender[i - 1];
           cursor.advance(_calculateRhythmicSpacing(element, previousElement));
         }
@@ -705,7 +705,7 @@ class LayoutEngine {
           cursor.setX(alignedX);
         }
 
-        // Appliesr offset horizontal of the voice à X position
+        // Appliesr offset horizontal of the voice to the X position
         final savedX = cursor.currentX;
         cursor.addElement(
           element,
@@ -849,7 +849,7 @@ class LayoutEngine {
     }
 
     // FLOATING ELEMENTS (tempo marks, segno/coda, dynamics, expression texts,
-    // octave marks, etc.) must NOT advance the cursor. They are co-positioned
+    // octave marks, etc.) must Not advance the cursor. They are co-positioned
     // with the rhythmic element that follows them (or the last element in the
     // measure if they trail at the end). This prevents extra-staff symbols from
     // widening the inter-note spacing inside the staff.
@@ -896,7 +896,7 @@ class LayoutEngine {
   }
 
   /// Returns true for elements that render above or below the staff and must
-  /// NOT affect the horizontal spacing between notes inside the staff.
+  /// Not affect the horizontal spacing between notes inside the staff.
   ///
   /// These elements are "co-positioned" with their associated rhythmic element
   /// (the one that immediately follows in the measure) instead of advancing
@@ -953,20 +953,20 @@ class LayoutEngine {
     bool hasTimeSignature = systemElements.any((e) => e is TimeSignature);
 
     if (hasClef && hasTimeSignature) {
-      // Se tem clef E fórmula de measure, reduzir still mais
+      // If tem clef And fórmula de measure, reduzir still more
       baseSpacing = staffSpace * 1.0; // MÃƒÂNIMO!
     } else if (hasClef) {
       baseSpacing = staffSpace * 1.2;
     }
 
-    // Armadura with muitos accidentals precisa de um pouco mais
+    // Armadura with muitos accidentals needs de a pouco more
     for (final element in systemElements) {
       if (element is KeySignature && element.count.abs() >= 4) {
         baseSpacing += staffSpace * 0.3; // Pequeno incremento
       }
     }
 
-    // CORREÃƒâ€¡ÃƒÆ’O: Checksr se primeira note tem accidental EXPLÃƒÂCITO
+    // CORREÃƒâ€¡ÃƒÆ’O: Check if primeira note tem accidental EXPLÃƒÂCITO
     if (musicalElements.isNotEmpty) {
       final firstMusicalElement = musicalElements.first;
 
@@ -1029,7 +1029,7 @@ class LayoutEngine {
     if (element is Note) {
       double width = noteheadBlackWidth * staffSpace;
       if (element.pitch.accidentalGlyph != null) {
-        // Fix: SMuFL: Detecção mais robusta e uso de valores corretos
+        // Fix: SMuFL: Detecção more robusta and uso de valores corretos
         final glyphName = element.pitch.accidentalGlyph!;
         double accWidth = accidentalSharpWidth; // Default
 
@@ -1045,7 +1045,7 @@ class LayoutEngine {
           accWidth = 1.5; // Largura de dobrado bemol
         }
 
-        // CORRIGIDO: Spacing recomendado SMuFL é 0.25-0.3 staff spaces
+        // CORRIGIDO: Spacing recomendado SMuFL is 0.25-0.3 staff spaces
         width += (accWidth + 0.3) * staffSpace;
       }
       return width;
@@ -1061,7 +1061,7 @@ class LayoutEngine {
 
       for (final note in element.notes) {
         if (note.pitch.accidentalGlyph != null) {
-          // Fix: Use mesma lógica robusta de detecção that Note
+          // Fix: Use same lógica robusta de detecção that Note
           final glyphName = note.pitch.accidentalGlyph!;
           double accWidth = accidentalSharpWidth;
 
@@ -1099,7 +1099,7 @@ class LayoutEngine {
     if (element is Ornament) return 1.0 * staffSpace;
 
     if (element is Tuplet) {
-      // CRÃƒÂTICO: Calculatestesr width baseada nas notes INTERNAS of the tuplet
+      // CRÃƒÂTICO: Calculate width baseada nas notes INTERNAS of the tuplet
       final numElements = element.elements.length;
       final elementSpacing = staffSpace * 2.5; // Mesma do TupletRenderer
       final totalWidth = numElements * elementSpacing;
@@ -1400,7 +1400,7 @@ class LayoutEngine {
 
   /// Fix: calculates rhythmic spacing based on note duration
   ///
-  /// Implementa spacing proporcional à duração das notes according to
+  /// Implementa spacing proporcional to the duração das notes according to
   /// práticas profissionais de music engraving (Behind Bars, Ted Ross)
   ///
   /// @param currentElement Elemento current
@@ -1410,11 +1410,11 @@ class LayoutEngine {
     MusicalElement currentElement,
     MusicalElement? previousElement,
   ) {
-    // Base: spacing mínimo entre notes (semínima como reference)
+    // Base: spacing mínimo between notes (semínima as reference)
     const double baseSpacing = noteMinSpacing;
 
-    // Fatores de spacing PROPORCIONAIS (modelo √2 aproximado)
-    // Progressão geométrica suave for proporção visual correta
+    // Fatores de spacing PROPORCIONAIS (modelo √2 approximate)
+    // Progressão geométrica smooth for proporção visual correct
     final durationFactors = {
       DurationType.whole: 2.0, // Semibreve: 2x
       DurationType.half: 1.5, // Mínima: 1.5x (√2 ≈ 1.41)
@@ -1435,7 +1435,7 @@ class LayoutEngine {
       currentDuration = currentElement.duration.type;
     }
 
-    // Se not for elemento musical rítmico, Usesr spacing base
+    // If not for elemento musical rhythmic, Use spacing base
     if (currentDuration == null) {
       return baseSpacing * staffSpace;
     }
@@ -1449,7 +1449,7 @@ class LayoutEngine {
       spacing *= 1.15; // Pausas têm pouco mais ar
     }
 
-    // AJUSTE: Spacing added se elemento previous tem ponto de aumentação
+    // AJUSTE: Spacing added if elemento previous tem point de aumentação
     if (previousElement is Note && previousElement.duration.dots > 0) {
       spacing +=
           staffSpace * 0.2 * previousElement.duration.dots; // REDUZIDO de 0.3
@@ -1458,7 +1458,7 @@ class LayoutEngine {
           staffSpace * 0.2 * previousElement.duration.dots; // REDUZIDO de 0.3
     }
 
-    // AJUSTE: Mais spacing se elemento previous tem accidental
+    // AJUSTE: More spacing if elemento previous tem accidental
     if (previousElement is Note &&
         previousElement.pitch.accidentalGlyph != null) {
       spacing += staffSpace * 0.15; // REDUZIDO de 0.2
@@ -1487,7 +1487,7 @@ class LayoutEngine {
     final notes = elements.whereType<Note>().toList();
     if (notes.isEmpty) return elements;
 
-    // Calculatestesr position inicial no measure (for detectar anacrusis)
+    // Calculate position initial no measure (for detectar anacrusis)
     for (final element in elements) {
       if (element is Note || element is Rest) {
         break;

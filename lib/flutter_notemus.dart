@@ -583,25 +583,25 @@ class MusicScorePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (metadata.isNotLoaded || positionedElements.isEmpty) return;
 
-    // Optimisation: Clip canvas ao viewport
+    // Optimisation: Clip canvas to the viewport
     canvas.clipRect(Rect.fromLTWH(0, 0, size.width, size.height));
 
     // Optimisation: Calculate system visíveis
     final systemHeight = staffSpace * 10;
     final visibleSystemRange = _calculateVisibleSystems(systemHeight);
 
-    // Agrupar elementos por system
+    // Agrupar elementos by system
     final Map<int, List<PositionedElement>> systemGroups = {};
 
     for (final element in positionedElements) {
       systemGroups.putIfAbsent(element.system, () => []).add(element);
     }
 
-    // Optimisation: Render APENAS system visíveis
+    // Optimisation: Render Only system visíveis
     for (final entry in systemGroups.entries) {
       final systemIndex = entry.key;
 
-      // Skip systems fora of the viewport
+      // Skip systems outside of the viewport
       if (!visibleSystemRange.contains(systemIndex)) {
         continue;
       }
@@ -632,19 +632,19 @@ class MusicScorePainter extends CustomPainter {
     // debugPrint('Canvas Clipping: Rendersdos=$rendered, Pulados=$skipped');
   }
 
-  /// Calculatestes quais systems estão visíveis no viewport current
+  /// Calculates quais systems are visíveis no viewport current
   ///
-  /// Returns um range (Set) de indexs de systems that intersectam o viewport.
-  /// Adds margem de 1 system acima e abaixo for suavidade no scroll.
+  /// Returns a range (Set) de indexs de systems that intersectam o viewport.
+  /// Adds margin de 1 system above and below for suavidade no scroll.
   Set<int> _calculateVisibleSystems(double systemHeight) {
-    // Validation: Prevenir divisão por zero e valores inválidos
+    // Validation: Prevenir divisão by zero and valores inválidos
     if (systemHeight <= 0 || !systemHeight.isFinite) {
-      // Fallback: Rendersr apenas system 0
+      // Fallback: Rendersr only system 0
       return {0};
     }
 
     if (!viewportSize.height.isFinite || viewportSize.height <= 0) {
-      // Fallback: Rendersr apenas system 0
+      // Fallback: Rendersr only system 0
       return {0};
     }
 
@@ -653,20 +653,20 @@ class MusicScorePainter extends CustomPainter {
         : 0.0;
 
     if (!scrollOffsetY.isFinite) {
-      // Fallback: Rendersr apenas system 0
+      // Fallback: Rendersr only system 0
       return {0};
     }
 
-    // Viewport Y range (with margem)
+    // Viewport Y range (with margin)
     final margin = systemHeight; // 1 sistema de margem
     final viewportTop = scrollOffsetY - margin;
     final viewportBottom = scrollOffsetY + viewportSize.height + margin;
 
-    // Calculatestesr systems visíveis with proteção contra Infinity
+    // Calculate systems visíveis with proteção contra Infinity
     final firstSystemRaw = (viewportTop / systemHeight).floor();
     final lastSystemRaw = (viewportBottom / systemHeight).ceil();
 
-    // Validar that os valores are finitos antes de fazer clamp
+    // Validar that os valores are finitos before de fazer clamp
     if (!firstSystemRaw.isFinite || !lastSystemRaw.isFinite) {
       return {0};
     }
@@ -679,7 +679,7 @@ class MusicScorePainter extends CustomPainter {
       return {0};
     }
 
-    // Returnsr range como Set
+    // Returnsr range as Set
     return Set<int>.from(
       List<int>.generate(lastSystem - firstSystem + 1, (i) => firstSystem + i),
     );

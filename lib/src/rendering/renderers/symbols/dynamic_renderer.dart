@@ -5,7 +5,7 @@ import '../../../../core/core.dart';
 import '../../../theme/music_score_theme.dart';
 import '../base_glyph_renderer.dart';
 
-/// Rendersdor especializado APENAS for dynamics musicais (p, f, mf, crescendo, etc).
+/// Renderer especializado Only for dynamics musicais (p, f, mf, crescendo, etc).
 ///
 /// Responsabilidade única: desenhar indicações de dynamic.
 class DynamicRenderer extends BaseGlyphRenderer {
@@ -69,8 +69,8 @@ class DynamicRenderer extends BaseGlyphRenderer {
     Offset basePosition, {
     double verticalOffset = 0.0,
   }) {
-    // Fix: Comprimento proporcional ao number de notes abrangidas
-    // Se length not especificado, Usesr comprimento default de 4 staff spaces por note
+    // Fix: Length proporcional to the number de notes abrangidas
+    // If length not especificado, Use length default de 4 staff spaces by note
     // Mas permitir override via dynamic.length
     final defaultLength = coordinates.staffSpace * 6.0; // Aumentado de 4.0 para 6.0
     final length = dynamic.length ?? defaultLength;
@@ -90,7 +90,7 @@ class DynamicRenderer extends BaseGlyphRenderer {
       ..strokeCap = StrokeCap.butt; // CORREÇÃO: Pontas quadradas (não arredondadas)
 
     if (dynamic.type == DynamicType.crescendo) {
-      // Crescendo: ponta à esquerda, abre à direita (<)
+      // Crescendo: ponta to the left, abre to the right (<)
       canvas.drawLine(
         Offset(basePosition.dx, hairpinY),
         Offset(basePosition.dx + length, hairpinY - height),
@@ -102,7 +102,7 @@ class DynamicRenderer extends BaseGlyphRenderer {
         paint,
       );
     } else if (dynamic.type == DynamicType.diminuendo) {
-      // Diminuendo: aberto à esquerda, ponta à direita (>)
+      // Diminuendo: aberto to the left, ponta to the right (>)
       canvas.drawLine(
         Offset(basePosition.dx, hairpinY - height),
         Offset(basePosition.dx + length, hairpinY),
@@ -116,7 +116,7 @@ class DynamicRenderer extends BaseGlyphRenderer {
     }
   }
 
-  /// Desenha texto de dynamic customizado.
+  /// Desenha text de dynamic customizado.
   void _drawCustomDynamicText(Canvas canvas, String text, double x, double y) {
     final textStyle =
         theme.dynamicTextStyle ??

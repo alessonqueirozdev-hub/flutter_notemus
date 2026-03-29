@@ -2,7 +2,7 @@
 /// 
 /// Applies visual adjustments based on context to improve
 /// a aparência percebida of the spacing, following princípios
-/// de Sibelius, LilyPond e Behind Bars.
+/// de Sibelius, LilyPond and Behind Bars.
 library;
 
 /// Tipos de elementos musicais for compensação
@@ -20,7 +20,7 @@ enum SymbolType {
   ornament,
 }
 
-/// Contexto for cálculo de compensação óptica
+/// Context for calculation de compensação óptica
 class OpticalContext {
   final SymbolType type;
   final bool? stemUp; // null se não aplicável
@@ -38,7 +38,7 @@ class OpticalContext {
     this.beamCount,
   });
 
-  /// Createsr contexto for note
+  /// Createsr context for note
   factory OpticalContext.note({
     required bool stemUp,
     required double duration,
@@ -56,7 +56,7 @@ class OpticalContext {
     );
   }
 
-  /// Createsr contexto for paUses
+  /// Createsr context for paUses
   factory OpticalContext.rest({required double duration}) {
     return OpticalContext(
       type: SymbolType.rest,
@@ -64,7 +64,7 @@ class OpticalContext {
     );
   }
 
-  /// Createsr contexto for chord
+  /// Createsr context for chord
   factory OpticalContext.chord({
     required bool stemUp,
     required double duration,
@@ -82,7 +82,7 @@ class OpticalContext {
 /// Calculatora de compensação óptica
 /// 
 /// Implementa as regras de ajuste visual baseadas in:
-/// - Direção de stems
+/// - Direction de stems
 /// - Transições de duração
 /// - Proximidade de accidentals
 /// - Densidade local
@@ -105,7 +105,7 @@ class OpticalCompensator {
     this.intensity = 1.0,
   });
 
-  /// Calculatestes compensação total entre dois símbolos
+  /// Calculates compensação total between dois symbols
   /// 
   /// **Returns:** Ajuste in pixels (positivo = afastar, negativo = aproximar)
   double calculateCompensation(
@@ -129,7 +129,7 @@ class OpticalCompensator {
     // Regra 4: Accidentals
     totalCompensation += _compensateForAccidental(current, localDensity);
 
-    // Regra 5: Pontos de aumento
+    // Regra 5: Points de aumento
     totalCompensation += _compensateForDots(previous, current);
 
     // Regra 6: Beams (barras de ligação)
@@ -140,7 +140,7 @@ class OpticalCompensator {
 
   /// Regra 1: Compensação for stems alternadas
   /// 
-  /// Medir entre stems (not cabeças) for parecer uniforme
+  /// Medir between stems (not cabeças) for parecer uniforme
   double _compensateForAlternatingStem(
     OpticalContext prev,
     OpticalContext curr,
@@ -174,7 +174,7 @@ class OpticalCompensator {
 
   /// Regra 3: Transição de duração
   /// 
-  /// Note curta após note longa: leve aproximação
+  /// Note curta after note longa: leve aproximação
   double _compensateForDurationTransition(
     OpticalContext prev,
     OpticalContext curr,
@@ -197,28 +197,28 @@ class OpticalCompensator {
   ) {
     if (!curr.hasAccidental) return 0.0;
 
-    // Interpolar entre spacing ideal (0.5 SS) e mínimo (0.25 SS)
+    // Interpolar between spacing ideal (0.5 SS) and mínimo (0.25 SS)
     final double idealSpace = 0.5 * staffSpace;
     final double minSpace = 0.25 * staffSpace;
 
     return _lerp(idealSpace, minSpace, density);
   }
 
-  /// Regra 5: Compensação for pontos de aumento
+  /// Regra 5: Compensação for points de aumento
   /// 
-  /// Notes pontuadas precisam de space extra à direita
+  /// Notes pontuadas need de space extra to the right
   double _compensateForDots(
     OpticalContext prev,
     OpticalContext curr,
   ) {
     double compensation = 0.0;
 
-    // Se o previous é pontuado, add space
+    // If o previous is pontuado, add space
     if (prev.isDotted) {
       compensation += 0.12 * staffSpace;
     }
 
-    // Se o current é pontuado, Checksr se há space suficiente
+    // If o current is pontuado, Check if há space suficiente
     if (curr.isDotted) {
       compensation += 0.05 * staffSpace;
     }
@@ -228,12 +228,12 @@ class OpticalCompensator {
 
   /// Regra 6: Compensação for beams (barras de ligação)
   /// 
-  /// Notes with beams podem ser aproximadas
+  /// Notes with beams can be aproximadas
   double _compensateForBeams(
     OpticalContext prev,
     OpticalContext curr,
   ) {
-    // Se ambas estão in beams, podem ser ligeiramente mais próximas
+    // If ambas are in beams, can be ligeiramente more próximas
     if (prev.beamCount != null &&
         curr.beamCount != null &&
         prev.beamCount! > 0 &&
@@ -249,7 +249,7 @@ class OpticalCompensator {
     return a + (b - a) * t.clamp(0.0, 1.0);
   }
 
-  /// Calculatestes densidade local baseada in number de elementos
+  /// Calculates densidade local baseada in number de elementos
   /// 
   /// **Parameters:**
   /// - `elementCount`: Number de elementos in a janela
@@ -259,16 +259,16 @@ class OpticalCompensator {
   double calculateLocalDensity(int elementCount, double windowWidth) {
     if (windowWidth <= 0) return 0.5;
 
-    // Densidade = elementos por staff space
+    // Densidade = elementos by staff space
     final double density = elementCount / (windowWidth / staffSpace);
 
-    // Normalizar (assumindo 1-5 elementos por SS como range típico)
+    // Normalizar (assumindo 1-5 elementos by SS as range típico)
     return ((density - 1.0) / 4.0).clamp(0.0, 1.0);
   }
 
-  /// Calculatestes compensação for measures compostos
+  /// Calculates compensação for measures compostos
   /// 
-  /// Adds space entre pulsos ternários (6/8, 9/8, 12/8)
+  /// Adds space between pulsos ternários (6/8, 9/8, 12/8)
   double compensateForCompoundMeterPulse({
     required bool isStartOfPulse,
     required double pulseSpacing,
@@ -278,7 +278,7 @@ class OpticalCompensator {
     return pulseSpacing * staffSpace * intensity;
   }
 
-  /// Calculatestes compensação for barlines
+  /// Calculates compensação for barlines
   /// 
   /// Returns [spaceBefore, spaceAfter] in pixels
   List<double> compensateForBarline({
@@ -314,7 +314,7 @@ class OpticalCompensator {
     return [before * intensity, after * intensity];
   }
 
-  /// Calculatestes compensação for mudança de clef
+  /// Calculates compensação for mudança de clef
   /// 
   /// Returns [spaceBefore, spaceAfter] in pixels
   List<double> compensateForClefChange({
