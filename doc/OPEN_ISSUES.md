@@ -62,6 +62,17 @@ shared `NoteRenderer.renderSyllables`).
 18. Support real-time interactive score state and live playback feedback
     - Issue: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/19
 
+## Alternative notation systems
+
+19. Jianpu (numbered notation) rendering — GB/T 46845-2025 conformance epic
+    - Epic: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/24
+    - Request: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/21
+    - Current state: not supported. Architecture is feasible — a new
+      `JianpuRenderer`/`JianpuScore` parallel to the SMuFL staff path, reusing
+      the existing notation-agnostic music model. Tracked section-by-section
+      against GB/T 46845-2025 in epic #24 (phased: §6 MVP, §5 structure, §7
+      auxiliary). The SMuFL staff path stays untouched.
+
 ## Update policy
 
 - Every pending feature or bug must have a GitHub issue.
