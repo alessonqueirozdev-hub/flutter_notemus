@@ -13,6 +13,7 @@ import 'examples/complete_music_piece.dart';
 import 'examples/dots_and_ledgers_example.dart';
 import 'examples/dynamics_example.dart';
 import 'examples/grace_notes_example.dart';
+import 'examples/jianpu_example.dart';
 import 'examples/key_signatures_example.dart';
 import 'examples/lyrics_text_example.dart';
 import 'examples/multi_staff_example.dart';
@@ -443,6 +444,14 @@ class _MainScreenState extends State<MainScreen> {
       icon: CupertinoIcons.doc_text,
       accentColor: const Color(0xFF1D4ED8),
       builder: () => const ProfessionalJsonExample(),
+    ),
+    _ExampleEntry(
+      category: 'Notation Systems',
+      title: 'Jianpu (Numbered Notation)',
+      subtitle: 'GB/T 46845-2025 numbered notation rendered from the model.',
+      icon: CupertinoIcons.number,
+      accentColor: const Color(0xFFB91C1C),
+      builder: () => const JianpuExample(),
     ),
   ];
 
