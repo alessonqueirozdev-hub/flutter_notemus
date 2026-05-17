@@ -1,12 +1,12 @@
 // Coverage for the Jianpu pitch mapper (issue #24, GB/T 46845-2025 §6.2):
-// movable-do numerals, octave dots, accidentals and key tonic.
+// movable-do numerals, octave dots, diatonic accidental spelling.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 
 void main() {
   group('JianpuPitchMapper — C major (1=C)', () {
-    const mapper = JianpuPitchMapper(0);
+    final mapper = JianpuPitchMapper(0);
 
     test('diatonic scale C4..B4 maps to 1..7 with no octave dots', () {
       final expected = {
@@ -32,10 +32,10 @@ void main() {
       expect(mapper.map(const Pitch(step: 'C', octave: 6)).octaveDots, 2);
     });
 
-    test('chromatic F# is spelled #4 (sharp of the lower degree)', () {
+    test('chromatic F# is spelled ♯4 (raised 4th degree)', () {
       final j = mapper.map(const Pitch(step: 'F', octave: 4, alter: 1.0));
       expect(j.numeral, '4');
-      expect(j.accidental, '#');
+      expect(j.accidental, '♯');
     });
   });
 
@@ -51,14 +51,27 @@ void main() {
       expect(mapper.map(const Pitch(step: 'A', octave: 4)).numeral, '5');
     });
 
-    test('Eb major (3 flats): tonic Eb maps to 1, flat spelling, name "Eb"',
-        () {
+    test('Eb major (3 flats): tonic Eb maps to 1, name "Eb"', () {
       final mapper = JianpuPitchMapper.fromKeySignature(KeySignature(-3));
       expect(mapper.tonicName, 'Eb');
-      expect(mapper.preferFlats, isTrue);
       final j = mapper.map(const Pitch(step: 'E', octave: 4, alter: -1.0));
       expect(j.numeral, '1');
+      expect(j.accidental, '');
       expect(j.octaveDots, 0);
+    });
+
+    test('G major: a natural F cancels the key sharp → ♮7', () {
+      final mapper = JianpuPitchMapper.fromKeySignature(KeySignature(1));
+      expect(mapper.tonicName, 'G');
+      // F# is diatonic in G (leading tone, degree 7, no accidental).
+      final fSharp =
+          mapper.map(const Pitch(step: 'F', octave: 4, alter: 1.0));
+      expect(fSharp.numeral, '7');
+      expect(fSharp.accidental, '');
+      // F natural lowers the leading tone → natural sign on degree 7.
+      final fNatural = mapper.map(const Pitch(step: 'F', octave: 4));
+      expect(fNatural.numeral, '7');
+      expect(fNatural.accidental, '♮');
     });
   });
 }

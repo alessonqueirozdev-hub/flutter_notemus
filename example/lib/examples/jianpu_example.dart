@@ -3,7 +3,7 @@ import 'package:flutter_notemus/flutter_notemus.dart';
 
 import '../widgets/showcase_shell.dart';
 
-/// Jianpu (numbered notation) demo — GB/T 46845-2025 MVP (epic #24).
+/// Jianpu (numbered notation) demo — GB/T 46845-2025 (epic #24).
 ///
 /// Uses [JianpuScore] (sibling of `MusicScore`) to render the same
 /// notation-agnostic music model as numbered notation.
@@ -21,48 +21,69 @@ class JianpuExample extends StatelessWidget {
     return ExampleShowcasePage(
       title: 'Jianpu (Numbered Notation)',
       subtitle:
-          'Numbered notation per GB/T 46845-2025 (MVP): movable-do numerals, '
-          'octave dots, accidentals, duration lines/dashes/dots, rests, ties, '
-          'and the 1=key header. The SMuFL staff path is untouched.',
+          'Numbered notation per GB/T 46845-2025: movable-do numerals, octave '
+          'dots, diatonic accidentals, beat-grouped underlines, augmentation '
+          'dashes/dots, lyrics, ties, tuplets, repeats and the 1=key header. '
+          'The SMuFL staff path is untouched.',
       accentColor: _accent,
       children: [
         ExampleSectionCard(
-          title: 'C major melody (1=C)',
+          title: 'A song with lyrics (1=C)',
           description:
-              'Diatonic numerals 1–7 with an eighth-note pair (减时线 '
-              'underline), a half note (增时线 dash) and a rest (0).',
+              '“Twinkle, Twinkle” — numerals 1–7, half notes as 增时线 dashes, '
+              'and a syllable centered under each numeral.',
           accentColor: _accent,
           child: _frame(
             _staff(0, 4, 4, [
+              [_l('C', 4, 'q', 'Twin'), _l('C', 4, 'q', 'kle'),
+                _l('G', 4, 'q', 'twin'), _l('G', 4, 'q', 'kle')],
+              [_l('A', 4, 'q', 'lit'), _l('A', 4, 'q', 'tle'),
+                _l('G', 4, 'h', 'star')],
+              [_l('F', 4, 'q', 'How'), _l('F', 4, 'q', 'I'),
+                _l('E', 4, 'q', 'won'), _l('E', 4, 'q', 'der')],
+              [_l('D', 4, 'q', 'what'), _l('D', 4, 'q', 'you'),
+                _l('C', 4, 'h', 'are')],
+            ]),
+          ),
+        ),
+        ExampleSectionCard(
+          title: 'Beamed eighths, tie & repeat (1=G)',
+          description:
+              'Two-sharp key renders as 1=G. Eighths in the same beat share a '
+              'continuous 减时线 underline; the opening pair is tied; the '
+              'phrase is wrapped in repeat barlines.',
+          accentColor: _accent,
+          child: _frame(
+            _staffRaw(1, 4, 4, [
               [
-                _n('C', 4, DurationType.quarter),
-                _n('D', 4, DurationType.quarter),
-                _n('E', 4, DurationType.eighth),
-                _n('F', 4, DurationType.eighth),
-                _n('G', 4, DurationType.quarter),
-              ],
-              [
-                _n('A', 4, DurationType.quarter),
-                Rest(duration: const Duration(DurationType.quarter)),
-                _n('E', 4, DurationType.half),
+                Barline(type: BarlineType.repeatForward),
+                _n('G', 4, 'q', tie: TieType.start),
+                _n('G', 4, 'q', tie: TieType.end),
+                _n('A', 4, 'e'), _n('B', 4, 'e'),
+                _n('A', 4, 'e'), _n('G', 4, 'e'),
+                Barline(type: BarlineType.repeatBackward),
               ],
             ]),
           ),
         ),
         ExampleSectionCard(
-          title: 'Key 1=G, octave dot and tie',
+          title: 'Triplet (连音符) and octave dots',
           description:
-              'A two-sharp key signature renders as 1=G; a high D shows an '
-              'upper octave dot, and the opening pair is tied.',
+              'A 3:2 eighth-note triplet draws a bracket with the ratio number; '
+              'the high D shows an upper octave dot.',
           accentColor: _accent,
           child: _frame(
-            _staff(1, 4, 4, [
+            _staffRaw(0, 4, 4, [
               [
-                _n('G', 4, DurationType.quarter, tie: TieType.start),
-                _n('G', 4, DurationType.quarter, tie: TieType.end),
-                _n('A', 4, DurationType.eighth),
-                _n('B', 4, DurationType.eighth),
-                _n('D', 5, DurationType.quarter),
+                Tuplet.triplet(
+                  elements: [
+                    _n('C', 5, 'e'),
+                    _n('D', 5, 'e'),
+                    _n('E', 5, 'e'),
+                  ],
+                ),
+                _n('G', 4, 'q'),
+                _n('E', 4, 'h'),
               ],
             ]),
           ),
@@ -71,20 +92,26 @@ class JianpuExample extends StatelessWidget {
     );
   }
 
-  static Note _n(
-    String step,
-    int octave,
-    DurationType type, {
-    TieType? tie,
-  }) =>
-      Note(
+  static Duration _d(String t) => switch (t) {
+        'h' => const Duration(DurationType.half),
+        'e' => const Duration(DurationType.eighth),
+        _ => const Duration(DurationType.quarter),
+      };
+
+  static Note _n(String step, int octave, String t, {TieType? tie}) => Note(
         pitch: Pitch(step: step, octave: octave),
-        duration: Duration(type),
+        duration: _d(t),
         tie: tie,
       );
 
+  static Note _l(String step, int octave, String t, String syllable) => Note(
+        pitch: Pitch(step: step, octave: octave),
+        duration: _d(t),
+        syllables: [Syllable(text: syllable, type: SyllableType.single)],
+      );
+
   Widget _frame(Staff staff) => Container(
-        height: 220,
+        height: 230,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: const Color(0xFFFFFFFF),
@@ -95,6 +122,19 @@ class JianpuExample extends StatelessWidget {
       );
 
   Staff _staff(
+    int fifths,
+    int numerator,
+    int denominator,
+    List<List<Note>> measures,
+  ) =>
+      _staffRaw(
+        fifths,
+        numerator,
+        denominator,
+        measures.map((m) => m.cast<MusicalElement>()).toList(),
+      );
+
+  Staff _staffRaw(
     int fifths,
     int numerator,
     int denominator,
