@@ -13,10 +13,10 @@ import '../base_glyph_renderer.dart';
 class FlagRenderer extends BaseGlyphRenderer {
   final MusicScoreTheme theme;
   final SMuFLPositioningEngine positioningEngine;
-  static const double flagUpXOffset = 0.7;
-  static const double flagUpYOffset = 0;
-  static const double flagDownXOffset = 0.7;
-  static const double flagDownYOffset = 0.5;
+
+  /// Small downward optical nudge for the down-flag, in staff spaces.
+  /// (~0.5 px at the documented default staffSpace of 12, now proportional.)
+  static const double flagDownYNudgeSS = 0.0417;
 
   FlagRenderer({
     required super.metadata,
@@ -49,11 +49,15 @@ class FlagRenderer extends BaseGlyphRenderer {
       -flagAnchor.dy * coordinates.staffSpace,
     );
 
-    final xOffset = stemUp ? flagUpXOffset : flagDownXOffset;
-    final yOffset = stemUp ? flagUpYOffset : flagDownYOffset;
+    // Align the flag to the stem edge using half the stem thickness (a SMuFL
+    // engraving default), scaled by staffSpace — consistent with how the stem
+    // itself attaches. The down-flag keeps a tiny proportional vertical nudge.
+    final halfStemPx =
+        (positioningEngine.stemThickness / 2) * coordinates.staffSpace;
+    final yNudge = stemUp ? 0.0 : flagDownYNudgeSS * coordinates.staffSpace;
 
-    final flagX = stemEnd.dx - flagAnchorPixels.dx - xOffset;
-    final flagY = stemEnd.dy - flagAnchorPixels.dy - yOffset;
+    final flagX = stemEnd.dx - flagAnchorPixels.dx - halfStemPx;
+    final flagY = stemEnd.dy - flagAnchorPixels.dy - yNudge;
 
     // Desenhar bandeirola
     drawGlyphWithBBox(

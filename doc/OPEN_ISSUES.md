@@ -25,34 +25,28 @@ https://github.com/alessonqueirozdev-hub/flutter_notemus/issues
 
 ## Engraving and layout follow-up
 
-5. Staff group brace still uses a custom path instead of SMuFL brace workflow
-   - Issue: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/3
+5. Slur/tie inter-note lyric hyphen centering still needs a second layout pass
+   - Issue: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/14
+   - Current state: hyphen is glued to the syllable; centering between
+     consecutive syllable X positions requires a post-layout pass.
 
-6. Stem and flag primitives still need full engraving-default parameterization
-   - Issue: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/4
-
-7. `repeatBoth` still needs a robust fallback independent of a combined glyph
-   - Issue: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/5
-
-8. `MeasureValidator` must apply tuplet ratios when validating beat capacity
-   - Issue: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/8
-
-9. `SpacingResult` still needs width calculation for `Chord` and `Tuplet`
-   - Issue: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/9
-
-10. Slur/tie inter-note lyric hyphen centering still needs a second layout pass
-    - Issue: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/14
+Resolved in 2.6.0 (closed): #3 (SMuFL brace glyph workflow), #4 (stem/flag
+engraving-default parameterization), #5 (robust `repeatBoth` fallback),
+#8 (tuplet ratios in `MeasureValidator` — verified + tested; dead TODO removed),
+#9 (`SpacingResult` `Chord`/`Tuplet` width & shortest-duration).
 
 ## Examples, text, and content quality
 
 11. `multi_staff_example` still depends on missing `MultiStaffRenderer` support
     - Issue: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/7
 
-13. `Chord` elements still do not render `Note.syllables`
-    - Issue: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/12
-
-14. Melisma extension lines still need multi-note context
+12. Melisma extension lines still need multi-note context
     - Issue: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/13
+    - Current state: a fixed 1-SS stub is drawn; the full extension to the
+      next note's onset requires a post-layout pass (shared with #14).
+
+Resolved in 2.6.0 (closed): #12 (`Chord` now renders `Note.syllables` via the
+shared `NoteRenderer.renderSyllables`).
 
 ## Styling, editing, and interactivity roadmap
 

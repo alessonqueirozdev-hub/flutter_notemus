@@ -4,6 +4,53 @@ All notable changes to Flutter Notemus are documented in this file.
 
 The format is based on Keep a Changelog and this project follows Semantic Versioning.
 
+## [2.6.0] - 2026-05-17
+
+This release closes a cluster of engraving and typographic correctness issues
+and removes misleading dead code, with new regression coverage for each fix.
+
+### Added
+
+- SMuFL `brace` glyph workflow for staff-group braces: `BracketRenderer` now
+  renders the scalable `brace` glyph (vertically stretched to the group height)
+  when SMuFL metadata is available, with the previous custom cubic path kept as
+  an automatic fallback (Issue #3).
+- Robust `repeatBoth` barline rendering: uses the combined `repeatLeftRight`
+  glyph when present, otherwise composes `repeatRight` + `repeatLeft` using
+  SMuFL advance metrics and the `barlineSeparation` engraving default (Issue #5).
+- `NoteRenderer.renderSyllables` is now public and reused by `ChordRenderer`, so
+  chords render `Note.syllables` with the same typography as single notes; new
+  `ChordRenderer.lyricNoteFor` selects the chord's lyric note (Issue #12).
+- Regression suites for spacing/duration of chords & tuplets, tuplet measure
+  validation, stem/flag scaling, repeat barlines, brace glyph, and chord lyrics.
+
+### Changed
+
+- Stem and flag attachment is now derived from the SMuFL stem anchor plus half
+  the `stemThickness` engraving default, scaled by `staffSpace`. The hardcoded
+  raw-pixel offset constants (`stemUpXOffset`/`stemDownXOffset` and the four
+  flag offsets) were removed; single-note stems now use the same
+  `SMuFLPositioningEngine` path as chords, so appearance stays proportional at
+  any `staffSpace` (Issue #4).
+
+### Fixed
+
+- `SystemData.getShortestNoteDuration` now accounts for `Chord` and `Tuplet`
+  elements (applying the tuplet ratio, recursively for nested tuplets), and
+  `TimeSlice.getMaxWidth` no longer returns a constant placeholder width
+  (Issue #9).
+- Removed a misleading dead `// TODO` in `MeasureValidator` that referenced a
+  `Duration.tuplet` field which never existed; tuplet ratios are (and were)
+  correctly applied at the `Tuplet`-element level in `_calculateTupletDuration`,
+  now proven by regression tests (Issue #8).
+
+### Known limitations
+
+- Inter-note hyphen centering (Issue #14) and melisma extension lines
+  (Issue #13) remain open: both require relocating syllable rendering into a
+  post-layout pass, deferred to avoid regressing currently-working lyric
+  rendering.
+
 ## [2.5.1] - 2026-03-29
 
 This release finishes the pub.dev polish pass for engraving quality, showcase coverage, release documentation, and codebase hygiene.

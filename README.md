@@ -186,11 +186,21 @@ For a full conformance audit see [`doc/MEI_V5_AUDIT.md`](doc/MEI_V5_AUDIT.md).
 
 ## Current Status
 
-- Current package release target: `2.5.1`
+- Current package release target: `2.6.0`
 - Previous pub.dev baseline before the new generation: `0.1.0`
 - Core notation rendering is production-ready.
 - MIDI mapping and `.mid` export are available in the package.
 - Android native audio backend is active; other native targets are configured and tracked as pending.
+
+### What's New in 2.6.0
+
+- Engraving/typographic correctness pass closing issues [#3](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/3), [#4](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/4), [#5](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/5), [#8](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/8), [#9](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/9), and [#12](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/12).
+- Staff-group braces now use the scalable SMuFL `brace` glyph (vertically stretched to the group height) with the legacy custom path kept as an automatic fallback.
+- `repeatBoth` barlines render reliably even when the combined `repeatLeftRight` glyph is missing, by composing `repeatRight` + `repeatLeft` from SMuFL advance metrics.
+- Stem/flag attachment is derived from the SMuFL stem anchor + half `stemThickness`, scaled by `staffSpace`; the hardcoded raw-pixel offset constants were removed so primitives stay proportional at every score size.
+- `Chord` elements now render `Note.syllables` with the same typography as single notes (`NoteRenderer.renderSyllables` is now public; `ChordRenderer.lyricNoteFor` selects the lyric note).
+- `SpacingResult` (`getShortestNoteDuration`/`getMaxWidth`) accounts for `Chord` and `Tuplet` (ratio-aware, recursive for nested tuplets); a misleading dead `Duration.tuplet` TODO in `MeasureValidator` was removed.
+- New regression suites for spacing/validation of chords & tuplets, stem/flag scaling, repeat barlines, the brace glyph, and chord lyrics.
 
 ### What's New in 2.5.1
 
@@ -211,8 +221,8 @@ For a full conformance audit see [`doc/MEI_V5_AUDIT.md`](doc/MEI_V5_AUDIT.md).
 All pending work is tracked as GitHub issues, with the local index mirrored in [`doc/OPEN_ISSUES.md`](doc/OPEN_ISSUES.md).
 
 - Audio, export, and playback roadmap: [#1](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/1), [#2](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/2), [#15](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/15), [#20](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/20)
-- Engraving and layout follow-up: [#3](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/3), [#4](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/4), [#5](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/5), [#8](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/8), [#9](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/9), [#14](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/14)
-- Content and text rendering follow-up: [#12](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/12), [#13](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/13)
+- Engraving and layout follow-up: [#14](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/14) (inter-note hyphen centering — needs post-layout pass)
+- Content and text rendering follow-up: [#13](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/13) (melisma extension lines — needs post-layout pass)
 - Editor and interactivity roadmap: [#16](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/16), [#17](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/17), [#18](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/18), [#19](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/19)
 - Remaining example/system integration work: [#7](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/7)
 

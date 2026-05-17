@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import '../../../core/staff_group.dart';
+import '../../smufl/smufl_metadata_loader.dart';
 import '../staff_coordinate_system.dart';
 import '../../theme/music_score_theme.dart';
 
@@ -19,9 +20,14 @@ class BracketRenderer {
   final StaffCoordinateSystem coordinates;
   final MusicScoreTheme theme;
 
+  /// SMuFL metadata used to render the `brace` glyph. When null (or the glyph
+  /// is unavailable), brace rendering degrades to a custom-path fallback.
+  final SmuflMetadata? metadata;
+
   BracketRenderer({
     required this.coordinates,
     required this.theme,
+    this.metadata,
   });
 
   /// Render bracket/brace for a staff group
@@ -112,20 +118,84 @@ class BracketRenderer {
   // PRIVATE RENDERING METHODS
   // ═══════════════════════════════════════════════════════════════════════
 
-  /// Render curly brace { using SMuFL glyph
+  /// Render curly brace `{` spanning a staff group.
   ///
-  /// SMuFL provides scalable brace glyphs that can be stretched
-  /// to span multiple staves.
+  /// Prefers the SMuFL `brace` glyph (U+E000), which is designed to be
+  /// stretched vertically to span any number of staves. Falls back to a
+  /// custom cubic path when SMuFL metadata or the glyph is unavailable.
   void _renderBrace(
     Canvas canvas,
     double x,
     double topY,
     double height,
   ) {
-    // SMuFL brace glyph names (different sizes available)
-    // For now, we'll draw a custom brace path
-    // TODO: Integrate SMuFL brace glyphs when metadata supports them
+    if (_renderBraceGlyph(canvas, x, topY, height)) {
+      return;
+    }
+    _renderBraceFallbackPath(canvas, x, topY, height);
+  }
 
+  /// Draws the SMuFL `brace` glyph stretched vertically to [height].
+  ///
+  /// The glyph is anchored at its right edge against [x] (so the brace tips
+  /// face the staves) and non-uniformly scaled on Y to span the group while
+  /// keeping its designed horizontal thickness. Returns false when the glyph
+  /// cannot be drawn so the caller can fall back.
+  bool _renderBraceGlyph(
+    Canvas canvas,
+    double x,
+    double topY,
+    double height,
+  ) {
+    final md = metadata;
+    if (md == null || !md.hasGlyph('brace')) return false;
+
+    final character = md.getCodepoint('brace');
+    if (character.isEmpty) return false;
+
+    final bbox = md.getGlyphBoundingBox('brace');
+    if (bbox == null || bbox.height <= 0) return false;
+
+    // SMuFL fonts use 1 em == 4 staff spaces; rendering at that font size makes
+    // metadata staff-space metrics map to staffSpace px directly.
+    final double fontSize = coordinates.staffSpace * 4.0;
+    final double naturalHeightPx = bbox.heightInPixels(coordinates.staffSpace);
+    final double naturalWidthPx = bbox.widthInPixels(coordinates.staffSpace);
+    if (naturalHeightPx <= 0) return false;
+
+    final double scaleY = height / naturalHeightPx;
+
+    final painter = TextPainter(
+      text: TextSpan(
+        text: character,
+        style: TextStyle(
+          fontFamily: 'Bravura',
+          fontSize: fontSize,
+          color: theme.barlineColor,
+          height: 1.0,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    canvas.save();
+    // Place the glyph's right edge at x, top at topY, then stretch on Y only.
+    canvas.translate(x - naturalWidthPx, topY);
+    canvas.scale(1.0, scaleY);
+    // Compensate the glyph's own top bearing so it starts exactly at topY.
+    final double topBearingPx = bbox.bBoxNeY * coordinates.staffSpace;
+    painter.paint(canvas, Offset(0, -topBearingPx - painter.height * 0.5));
+    canvas.restore();
+    return true;
+  }
+
+  /// Custom cubic-path brace used when the SMuFL glyph is unavailable.
+  void _renderBraceFallbackPath(
+    Canvas canvas,
+    double x,
+    double topY,
+    double height,
+  ) {
     final paint = Paint()
       ..color = theme.barlineColor
       ..style = PaintingStyle.stroke

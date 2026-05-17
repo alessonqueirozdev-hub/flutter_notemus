@@ -14,9 +14,6 @@ class StemRenderer extends BaseGlyphRenderer {
   final double stemThickness;
   final SMuFLPositioningEngine positioningEngine;
 
-  static const double stemUpXOffset = 0.7;
-  static const double stemDownXOffset = -0.8;
-
   StemRenderer({
     required super.metadata,
     required this.theme,
@@ -38,17 +35,19 @@ class StemRenderer extends BaseGlyphRenderer {
     int beamCount, {
     bool isBeamed = false,
   }) {
-    final stemAnchor = stemUp
-        ? positioningEngine.getStemUpAnchor(noteheadGlyph)
-        : positioningEngine.getStemDownAnchor(noteheadGlyph);
-
-    final xOffset = stemUp ? stemUpXOffset : stemDownXOffset;
-    final stemAnchorPixels = Offset(
-      stemAnchor.dx * coordinates.staffSpace - xOffset,
-      -stemAnchor.dy * coordinates.staffSpace,
+    // Attachment offset comes from the SMuFL stem anchor of the notehead plus
+    // a half-stem-thickness inset (stemThickness is a SMuFL engraving default),
+    // all expressed in staff spaces and scaled by staffSpace. This replaces the
+    // former raw-pixel nudge constants so stems stay proportional at any
+    // staffSpace, and keeps single notes consistent with ChordRenderer (which
+    // already uses this positioning engine path).
+    final attachment = positioningEngine.calculateStemAttachmentOffset(
+      noteheadGlyphName: noteheadGlyph,
+      stemUp: stemUp,
+      staffSpace: coordinates.staffSpace,
     );
-    final stemX = notePosition.dx + stemAnchorPixels.dx;
-    final stemStartY = notePosition.dy + stemAnchorPixels.dy;
+    final stemX = notePosition.dx + attachment.dx;
+    final stemStartY = notePosition.dy + attachment.dy;
 
     final stemLength =
         positioningEngine.calculateStemLength(

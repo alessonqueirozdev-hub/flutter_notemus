@@ -214,19 +214,56 @@ class TimeSlice {
     return symbolsByStaff[staffIndex] ?? [];
   }
 
-  /// Width máxima between all as staves
+  /// Maximum coarse width (in staff spaces) across all staves of this slice.
+  ///
+  /// This is a pre-layout estimate per element kind. The precise per-glyph
+  /// width is resolved later by the spacing engine using SMuFL metadata; here
+  /// we only need a proportional, non-zero advance for each element type so
+  /// that chords and tuplets are not under-allocated relative to plain notes.
   double getMaxWidth() {
     double maxWidth = 0.0;
     for (final symbols in symbolsByStaff.values) {
-      double staffWidth = symbols.fold(0.0, (sum, symbol) {
-        // Width será Calculated pelo spacing engine
-        return sum + 1.0; // Placeholder
-      });
+      final double staffWidth = symbols.fold(
+        0.0,
+        (sum, symbol) => sum + estimateAdvanceWidthInStaffSpaces(symbol),
+      );
       if (staffWidth > maxWidth) {
         maxWidth = staffWidth;
       }
     }
     return maxWidth;
+  }
+
+  /// Coarse nominal advance width of a single element, in staff spaces.
+  ///
+  /// Notehead reference is ~1.18 SS (Bravura `noteheadBlack`); accidentals add
+  /// roughly one notehead; a chord is as wide as a single notehead plus its
+  /// widest accidental; a tuplet is the sum of its visible children.
+  static double estimateAdvanceWidthInStaffSpaces(MusicalElement element) {
+    const double noteheadWidth = 1.18;
+    const double accidentalWidth = 0.9;
+
+    if (element is Note) {
+      final double accidental =
+          element.pitch.accidentalGlyph != null ? accidentalWidth : 0.0;
+      return noteheadWidth + accidental;
+    }
+    if (element is Rest) {
+      return 1.0;
+    }
+    if (element is Chord) {
+      final bool hasAccidental =
+          element.notes.any((n) => n.pitch.accidentalGlyph != null);
+      return noteheadWidth + (hasAccidental ? accidentalWidth : 0.0);
+    }
+    if (element is Tuplet) {
+      double sum = 0.0;
+      for (final child in element.elements) {
+        sum += estimateAdvanceWidthInStaffSpaces(child);
+      }
+      return sum;
+    }
+    return noteheadWidth;
   }
 
   @override
@@ -261,26 +298,53 @@ class SystemData {
     return [];
   }
 
-  /// Encontrar a duração of the note more curta no system
+  /// Shortest *sounding* note value in the system (in fractions of a whole
+  /// note). Drives the durational-spacing reference.
+  ///
+  /// Chords contribute their own duration. For tuplets the sounding value of
+  /// each child is its written value scaled by the tuplet ratio (e.g. an
+  /// eighth inside a 3:2 triplet sounds as 1/12, not 1/8), applied recursively
+  /// for nested tuplets via [Tuplet.getModifiedDuration].
   double getShortestNoteDuration() {
-    double shortest = 1.0; // Semibreve como máximo inicial
+    double shortest = 1.0; // Whole note as the initial maximum.
 
     for (final measure in measures) {
       for (final element in measure.elements) {
-        if (element is Note) {
-          if (element.duration.realValue < shortest) {
-            shortest = element.duration.realValue;
-          }
-        } else if (element is Rest) {
-          if (element.duration.realValue < shortest) {
-            shortest = element.duration.realValue;
-          }
-        }
-        // TODO: Chord, Tuplet
+        shortest = _shortestSoundingDuration(element, shortest);
       }
     }
 
     return shortest;
+  }
+
+  static double _shortestSoundingDuration(
+    MusicalElement element,
+    double current, [
+    Tuplet? enclosingTuplet,
+  ]) {
+    double sounding(double written) =>
+        enclosingTuplet?.getModifiedDuration(written) ?? written;
+
+    if (element is Note) {
+      final v = sounding(element.duration.realValue);
+      return v < current ? v : current;
+    }
+    if (element is Rest) {
+      final v = sounding(element.duration.realValue);
+      return v < current ? v : current;
+    }
+    if (element is Chord) {
+      final v = sounding(element.duration.realValue);
+      return v < current ? v : current;
+    }
+    if (element is Tuplet) {
+      double shortest = current;
+      for (final child in element.elements) {
+        shortest = _shortestSoundingDuration(child, shortest, element);
+      }
+      return shortest;
+    }
+    return current;
   }
 
   @override

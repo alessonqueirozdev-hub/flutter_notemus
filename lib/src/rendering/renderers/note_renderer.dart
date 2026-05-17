@@ -262,6 +262,17 @@ class NoteRenderer extends BaseGlyphRenderer {
   ///   (o hífen ideal seria centred between as notes, mas requer 2ª passagem)
   /// - [SyllableType.hyphen]: desenha only "-"
   /// - Melisma: extension de line horizontal after o text (connects to the próxima note)
+  /// Renders lyric syllables centered at [centerX]. Public so that
+  /// ChordRenderer can render `Note.syllables` for chords (issue #12),
+  /// reusing the same typographic rules as single notes.
+  void renderSyllables(
+    Canvas canvas,
+    List<Syllable> syllables,
+    double centerX,
+  ) {
+    _renderSyllables(canvas, syllables, centerX);
+  }
+
   void _renderSyllables(Canvas canvas, List<Syllable> syllables, double noteX) {
     // Line \1 (lower) of the staff: baseline.dy + 2 * staffSpace
     final staffBottomY =

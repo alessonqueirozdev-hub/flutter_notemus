@@ -258,11 +258,9 @@ class MeasureValidator {
       }
     }
 
-    // TODO: Appliesr tuplets when implementadas
-    // if (duration.tuplet != null) {
-    //   modifiedValue = _applyTuplet(modifiedValue, duration.tuplet, warnings);
-    // }
-
+    // Tuplet scaling is not a per-Duration property in this model: tuplets are
+    // modeled as Tuplet elements wrapping their children, and the ratio is
+    // applied in _calculateTupletDuration when summing the measure.
     return modifiedValue;
   }
 

@@ -61,6 +61,19 @@ class ChordRenderer extends BaseGlyphRenderer {
     return offsets;
   }
 
+  /// Selects which note in a chord carries the lyric line (issue #12).
+  ///
+  /// A chord shows a single lyric line, so the first note that has non-empty
+  /// syllables wins; returns null when no note in the chord has lyrics.
+  static Note? lyricNoteFor(Chord chord) {
+    for (final note in chord.notes) {
+      if (note.syllables != null && note.syllables!.isNotEmpty) {
+        return note;
+      }
+    }
+    return null;
+  }
+
   static bool resolveStemDirection({
     required Chord chord,
     required List<int> positions,
@@ -301,6 +314,17 @@ class ChordRenderer extends BaseGlyphRenderer {
         canvas,
         chord.dynamic!,
         Offset(chordCenter.dx, basePosition.dy),
+      );
+    }
+
+    // Lyric syllables for the chord (issue #12), centered under the chord and
+    // reusing NoteRenderer's syllable typography.
+    final lyricNote = lyricNoteFor(chord);
+    if (lyricNote != null) {
+      noteRenderer.renderSyllables(
+        canvas,
+        lyricNote.syllables!,
+        chordCenter.dx,
       );
     }
   }
