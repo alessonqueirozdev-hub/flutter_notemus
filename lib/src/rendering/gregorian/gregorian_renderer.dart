@@ -71,7 +71,7 @@ int _diatonic(String step, int octave) {
 }
 
 /// A positioned draw operation within a neume.
-enum _OpKind { note, ascLine, descLig }
+enum _OpKind { note, ascLine, descLig, episema, ictus, mora }
 
 class _Op {
   final _OpKind kind;
@@ -267,6 +267,29 @@ _NeumeBox _emitNeume(Neume e, List<int> steps, double sp) {
       }
       width = (steps.length <= 1) ? noteW : cx - noteW * 0.9 + noteW;
   }
+
+  // Rhythmic / expressive marks (Solesmes): episema, ictus, mora (augmentum).
+  // Attach each component's marks to the corresponding notehead op (in order).
+  final noteOps = ops.where((o) => o.kind == _OpKind.note).toList();
+  for (var i = 0; i < e.components.length && i < noteOps.length; i++) {
+    final c = e.components[i];
+    final no = noteOps[i];
+    if (c.episema) {
+      ops.add(_Op(_OpKind.episema, 'chantEpisema', no.step, no.dx));
+    }
+    if (c.ictus) {
+      ops.add(_Op(_OpKind.ictus,
+          c.ictusAbove ? 'chantIctusAbove' : 'chantIctusBelow', no.step, no.dx));
+    }
+    for (var d = 0; d < c.morae; d++) {
+      ops.add(_Op(_OpKind.mora, 'chantAugmentum', no.step,
+          no.dx + noteW + d * noteW * 0.5));
+    }
+  }
+  // Reserve a little extra width when the last note carries mora dots.
+  final lastMorae = e.components.isNotEmpty ? e.components.last.morae : 0;
+  if (lastMorae > 0) width += noteW * (0.6 * lastMorae);
+
   return _NeumeBox(ops, width, e.syllable);
 }
 
@@ -462,6 +485,24 @@ class GregorianPainter extends CustomPainter {
       for (final op in box.ops) {
         if (op.kind == _OpKind.note) {
           _glyph(canvas, op.glyph, box.startX + op.dx, _stepY(op.step));
+        }
+      }
+      // Rhythmic / expressive marks on top of the noteheads.
+      for (final op in box.ops) {
+        switch (op.kind) {
+          case _OpKind.episema:
+            // Horizontal bar just above the notehead.
+            _glyph(canvas, op.glyph, box.startX + op.dx,
+                _stepY(op.step) - sp * 0.55);
+          case _OpKind.ictus:
+            // Vertical episema below (or above) the notehead.
+            final dy = op.glyph == 'chantIctusAbove' ? -sp * 0.7 : sp * 0.7;
+            _glyph(canvas, op.glyph, box.startX + op.dx, _stepY(op.step) + dy);
+          case _OpKind.mora:
+            // Augmentum dot to the right, at note height.
+            _glyph(canvas, op.glyph, box.startX + op.dx, _stepY(op.step));
+          default:
+            break;
         }
       }
       if (box.syllable != null && box.syllable!.isNotEmpty) {

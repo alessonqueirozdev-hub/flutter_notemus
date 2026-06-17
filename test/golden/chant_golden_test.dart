@@ -43,11 +43,24 @@ void main() {
         components: [nc('D', 4), nc('F', 4), nc('A', 4)],
         syllable: 'i',
       ),
-      // quilisma group + final divisio
+      // quilisma group
       Neume(
         type: NeumeType.quilismaGroup,
         components: [nc('F', 4, NcForm.quilisma), nc('G', 4)],
         syllable: 'son',
+      ),
+      // rhythmic marks: episema + ictus on one note, mora dot on the next
+      Neume(
+        type: NeumeType.punctum,
+        components: [
+          NeumeComponent(pitchName: 'G', octave: 4, episema: true, ictus: true),
+        ],
+        syllable: 'A',
+      ),
+      Neume(
+        type: NeumeType.punctum,
+        components: [NeumeComponent(pitchName: 'F', octave: 4, morae: 1)],
+        syllable: 'men',
       ),
       NeumeDivision(type: NeumeDivisionType.finalis),
     ];

@@ -73,6 +73,19 @@ class NeumeComponent {
   /// Indicates conexão with o next componente (ligature graphique).
   final bool connected;
 
+  /// Horizontal episema (small bar over/under the note — slight broadening).
+  final bool episema;
+
+  /// Vertical episema / ictus (rhythmic touch-point). When true, drawn below
+  /// by default unless [ictusAbove] is set.
+  final bool ictus;
+
+  /// Whether the ictus is drawn above the note (default: below).
+  final bool ictusAbove;
+
+  /// Number of mora (augmentum) dots after the note — the lengthening dot(s).
+  final int morae;
+
   const NeumeComponent({
     this.pitchName,
     this.octave,
@@ -80,6 +93,10 @@ class NeumeComponent {
     this.interval,
     this.isLiquescent = false,
     this.connected = false,
+    this.episema = false,
+    this.ictus = false,
+    this.ictusAbove = false,
+    this.morae = 0,
   });
 }
 
