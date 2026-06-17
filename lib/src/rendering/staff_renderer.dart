@@ -274,6 +274,7 @@ class StaffRenderer {
     // Terceira passagem: Rendersr elementos de grupo (beams simples, ties, slurs)
     if (currentClef != null) {
       _renderLineOrnaments(canvas, elements);
+      _renderLyricHyphens(canvas, elements);
 
       // Pular beams simples if temos advanced beams
       if (layoutEngine == null || layoutEngine.advancedBeamGroups.isEmpty) {
@@ -334,6 +335,78 @@ class StaffRenderer {
         currentClef: currentClef!,
         color: theme.slurColor ?? theme.noteheadColor,
       );
+    }
+  }
+
+  /// Post-layout pass (#14): draws the connecting hyphen CENTERED between
+  /// consecutive syllables of a hyphenated word, instead of gluing it to the
+  /// syllable text. Operates per verse line, within a single system (this method
+  /// only sees the current system's elements).
+  void _renderLyricHyphens(Canvas canvas, List<PositionedElement> elements) {
+    final lyricNotes = <({Note note, double x})>[];
+    for (final pe in elements) {
+      final el = pe.element;
+      if (el is Note && el.syllables != null && el.syllables!.isNotEmpty) {
+        lyricNotes.add((note: el, x: pe.position.dx));
+      }
+    }
+    if (lyricNotes.length < 2) return;
+
+    final fontSize = coordinates.staffSpace * 0.85;
+    final lineHeight = fontSize * 1.3;
+    final staffBottomY =
+        coordinates.staffBaseline.dy + 2 * coordinates.staffSpace;
+    final firstLineY = staffBottomY + coordinates.staffSpace * 1.5;
+    final color = theme.noteheadColor.withValues(alpha: 0.85);
+
+    TextStyle styleFor(bool italic) {
+      final base = theme.lyricTextStyle ?? const TextStyle();
+      return base.copyWith(
+        fontSize: base.fontSize ?? fontSize,
+        color: base.color ?? color,
+        fontStyle:
+            italic ? FontStyle.italic : (base.fontStyle ?? FontStyle.normal),
+        height: 1.0,
+      );
+    }
+
+    double measure(String text, bool italic) {
+      final tp = TextPainter(
+        text: TextSpan(text: text, style: styleFor(italic)),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      return tp.width;
+    }
+
+    for (int verse = 0; verse < 32; verse++) {
+      var anyAtVerse = false;
+      ({Note note, double x})? prev;
+      for (final ln in lyricNotes) {
+        final syls = ln.note.syllables!;
+        if (verse >= syls.length) continue;
+        anyAtVerse = true;
+        final syl = syls[verse];
+        if (prev != null) {
+          final prevSyl = prev.note.syllables![verse];
+          if (prevSyl.type == SyllableType.initial ||
+              prevSyl.type == SyllableType.middle) {
+            final prevRight = prev.x + measure(prevSyl.text, prevSyl.italic) / 2;
+            final curLeft = ln.x - measure(syl.text, syl.italic) / 2;
+            final midX = (prevRight + curLeft) / 2;
+            final lyricY = firstLineY + verse * lineHeight;
+            final hp = TextPainter(
+              text: TextSpan(text: '-', style: styleFor(prevSyl.italic)),
+              textDirection: TextDirection.ltr,
+            )..layout();
+            hp.paint(
+              canvas,
+              Offset(midX - hp.width / 2, lyricY - hp.height / 2),
+            );
+          }
+        }
+        prev = ln;
+      }
+      if (!anyAtVerse) break;
     }
   }
 

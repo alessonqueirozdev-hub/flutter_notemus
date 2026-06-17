@@ -302,7 +302,10 @@ class NoteRenderer extends BaseGlyphRenderer {
     switch (syllable.type) {
       case SyllableType.initial:
       case SyllableType.middle:
-        displayText = '${syllable.text}-';
+        // The connecting hyphen is drawn CENTERED between this syllable and the
+        // next by StaffRenderer's post-layout lyric-hyphen pass (#14), not glued
+        // to the syllable text.
+        displayText = syllable.text;
       case SyllableType.hyphen:
         displayText = '-';
       case SyllableType.single:
