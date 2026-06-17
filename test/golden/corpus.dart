@@ -280,6 +280,36 @@ Staff _dynamics() {
   ]);
 }
 
+Staff _lyrics() {
+  Note lyr(
+    String step,
+    int oct,
+    String text,
+    SyllableType type, {
+    DurationType dur = DurationType.quarter,
+  }) =>
+      Note(
+        pitch: Pitch(step: step, octave: oct),
+        duration: Duration(dur),
+        syllables: [Syllable(text: text, type: type)],
+      );
+  return _staff([
+    _measure([
+      Clef(clefType: ClefType.treble),
+      TimeSignature(numerator: 4, denominator: 4),
+      lyr('C', 5, 'Twin', SyllableType.initial),
+      lyr('C', 5, 'kle', SyllableType.terminal),
+      lyr('G', 5, 'twin', SyllableType.initial),
+      lyr('G', 5, 'kle', SyllableType.terminal),
+    ]),
+    _measure([
+      lyr('A', 5, 'lit', SyllableType.initial),
+      lyr('A', 5, 'tle', SyllableType.terminal),
+      lyr('G', 5, 'star', SyllableType.single, dur: DurationType.half),
+    ]),
+  ]);
+}
+
 Staff _dynamicsSpectrum() {
   // One dynamic before each note (co-positioned with the following note),
   // covering full-word spellings, abbreviations, special accents, and a
@@ -492,6 +522,14 @@ final List<CorpusCase> corpus = [
     exercises: 'complete DynamicType -> glyph mapping (V2)',
     build: _dynamicsSpectrum,
     size: const Size(1000, 240),
+  ),
+  CorpusCase(
+    id: 'm11_lyrics',
+    title: 'Lyrics with syllabification (hyphenated)',
+    tier: 'intermediate',
+    exercises: 'syllable text, hyphen on initial/middle syllables',
+    build: _lyrics,
+    size: const Size(900, 280),
   ),
   CorpusCase(
     id: 'm08_two_voice',

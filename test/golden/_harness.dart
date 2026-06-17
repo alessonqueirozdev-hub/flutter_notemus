@@ -120,7 +120,14 @@ Future<Finder> pumpCase(WidgetTester tester, CorpusCase c) async {
                 // so the golden is stable across surface sizes.
                 enableResponsiveLayout: false,
                 preventVerticalOverflow: false,
-                theme: const MusicScoreTheme(),
+                // Give text-bearing marks (lyrics, word dynamics) a real font
+                // family so they render glyphs instead of Ahem boxes in tests.
+                theme: textFontAvailable
+                    ? const MusicScoreTheme(
+                        lyricTextStyle: TextStyle(fontFamily: kTextFontFamily),
+                        dynamicTextStyle: TextStyle(fontFamily: kTextFontFamily),
+                      )
+                    : const MusicScoreTheme(),
               ),
             ),
           ),

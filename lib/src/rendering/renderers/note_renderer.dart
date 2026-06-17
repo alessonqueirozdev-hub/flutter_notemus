@@ -310,10 +310,15 @@ class NoteRenderer extends BaseGlyphRenderer {
         displayText = syllable.text;
     }
 
-    final textStyle = TextStyle(
-      fontSize: fontSize,
-      color: color,
-      fontStyle: syllable.italic ? FontStyle.italic : FontStyle.normal,
+    // Respect theme.lyricTextStyle (font family/weight/etc.) when provided,
+    // falling back to size-aware defaults. Previously this field was ignored.
+    final base = theme.lyricTextStyle ?? const TextStyle();
+    final textStyle = base.copyWith(
+      fontSize: base.fontSize ?? fontSize,
+      color: base.color ?? color,
+      fontStyle: syllable.italic
+          ? FontStyle.italic
+          : (base.fontStyle ?? FontStyle.normal),
       height: 1.0,
     );
 
