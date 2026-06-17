@@ -280,6 +280,38 @@ Staff _dynamics() {
   ]);
 }
 
+Staff _dynamicsSpectrum() {
+  // One dynamic before each note (co-positioned with the following note),
+  // covering full-word spellings, abbreviations, special accents, and a
+  // word-based dynamic rendered as text.
+  Note q(String s, int o) =>
+      Note(pitch: Pitch(step: s, octave: o), duration: const Duration(DurationType.quarter));
+  Dynamic d(DynamicType t, {bool hairpin = false}) =>
+      Dynamic(type: t, isHairpin: hairpin);
+  return _staff([
+    _measure([
+      Clef(clefType: ClefType.treble),
+      TimeSignature(numerator: 4, denominator: 4),
+      d(DynamicType.pianissimo), q('C', 5),
+      d(DynamicType.piano), q('D', 5),
+      d(DynamicType.mezzoPiano), q('E', 5),
+      d(DynamicType.mezzoForte), q('F', 5),
+    ]),
+    _measure([
+      d(DynamicType.forte), q('E', 5),
+      d(DynamicType.fortissimo), q('D', 5),
+      d(DynamicType.fortePiano), q('C', 5),
+      d(DynamicType.sforzando), q('D', 5),
+    ]),
+    _measure([
+      d(DynamicType.niente), q('E', 5),
+      d(DynamicType.rinforzando), q('F', 5),
+      d(DynamicType.fff), q('G', 5),
+      q('A', 5),
+    ]),
+  ]);
+}
+
 Staff _twoVoice() {
   final m = MultiVoiceMeasure();
   m.addVoice(Voice.voice1(elements: [
@@ -447,6 +479,14 @@ final List<CorpusCase> corpus = [
     tier: 'intermediate',
     exercises: 'dynamics glyph placement below staff',
     build: _dynamics,
+  ),
+  CorpusCase(
+    id: 'm07b_dynamics_spectrum',
+    title: 'Dynamics spectrum (pp…fff, fp, sf, n, rfz)',
+    tier: 'intermediate',
+    exercises: 'complete DynamicType -> glyph mapping (V2)',
+    build: _dynamicsSpectrum,
+    size: const Size(1000, 240),
   ),
   CorpusCase(
     id: 'm08_two_voice',

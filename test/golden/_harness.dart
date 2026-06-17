@@ -26,8 +26,25 @@ const ValueKey<String> kGoldenBoundaryKey = ValueKey('golden-boundary');
 
 bool _fontsLoaded = false;
 
-/// Loads Bravura (from the package asset on disk) and SMuFL metadata exactly
-/// once. Safe to call from every `setUpAll`.
+/// Family name under which a real text font is registered (when available), so
+/// lyrics, tempo marks, and word-based dynamics render as text instead of
+/// `flutter test`'s Ahem boxes. Applied via [ThemeData.fontFamily] in [pumpCase].
+const String kTextFontFamily = 'Roboto';
+
+/// Candidate text fonts across platforms (best-effort, first match wins).
+const List<String> _textFontCandidates = [
+  r'C:\Windows\Fonts\arial.ttf',
+  r'C:\Windows\Fonts\segoeui.ttf',
+  '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+  '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',
+  '/Library/Fonts/Arial.ttf',
+  '/System/Library/Fonts/Supplemental/Arial.ttf',
+];
+
+bool textFontAvailable = false;
+
+/// Loads Bravura (from the package asset on disk), a best-effort text font, and
+/// SMuFL metadata exactly once. Safe to call from every `setUpAll`.
 Future<void> loadNotemusFonts() async {
   if (!_fontsLoaded) {
     final file = File('assets/smufl/Bravura.otf');
@@ -46,6 +63,32 @@ Future<void> loadNotemusFonts() async {
         ..addFont(Future.value(ByteData.view(bytes.buffer)));
       await loader.load();
     }
+
+    // Best-effort real text font (for lyrics / tempo / word dynamics). Without
+    // it those render as Ahem boxes under `flutter test`. Degrades gracefully.
+    // Registered under the theme family AND every name in the renderers'
+    // `smuflTextFontFallback` chain (Academico, Century Schoolbook, Edwin,
+    // serif), since text styles resolve via that fallback rather than the theme.
+    for (final path in _textFontCandidates) {
+      final f = File(path);
+      if (f.existsSync()) {
+        final tb = await f.readAsBytes();
+        for (final family in const [
+          kTextFontFamily,
+          'Academico',
+          'Century Schoolbook',
+          'Edwin',
+          'serif',
+        ]) {
+          final loader = FontLoader(family)
+            ..addFont(Future.value(ByteData.view(tb.buffer)));
+          await loader.load();
+        }
+        textFontAvailable = true;
+        break;
+      }
+    }
+
     _fontsLoaded = true;
   }
   await SmuflMetadata().load();
@@ -60,6 +103,7 @@ Future<Finder> pumpCase(WidgetTester tester, CorpusCase c) async {
   await tester.pumpWidget(
     MaterialApp(
       debugShowCheckedModeBanner: false,
+      theme: textFontAvailable ? ThemeData(fontFamily: kTextFontFamily) : null,
       home: Scaffold(
         backgroundColor: Colors.white,
         body: Center(
