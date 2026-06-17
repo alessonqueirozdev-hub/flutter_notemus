@@ -204,6 +204,13 @@ Clave, armadura (sustenidos/bemóis), fórmula (C/comum), cabeças, hastes, feix
 | `fix(rendering):` R4 | **R4 ✅** | Referência da fonte unificada para `package:'flutter_notemus'` em todos os renderers — fonte resolve sem registro manual | 15 goldens byte-idênticos sob registro só-do-pacote |
 | `feat(parsers):` letras | **H2 (import) ✅** | Import de letras MusicXML `<lyric>` e MEI `<verse>/<syl>` → `Note.syllables` (antes ignorado silenciosamente) | `lyrics_import_test.dart` (6) |
 | `feat(lyrics):` render | **lyrics render ✅** | `_renderSyllable` agora respeita `theme.lyricTextStyle` (campo antes ignorado); harness ganhou fonte de texto real | golden `m11_lyrics` |
+| `fix(lyrics):` #14 | **#14 ✅** | Hífen entre sílabas **centralizado** (passe pós-layout), antes colado | golden `m11_lyrics` |
+| `fix(lyrics):` #13 | **#13 ✅** | Linha de melisma estende até o fim real (passe pós-layout), antes stub fixo de 1 SS | golden `m12_melisma` |
+| `fix(beaming):` V4 | **V4 ✅** | Feixe por meia-barra no 4/4 (grupos de 4) / por beat nos demais; antes a barra inteira virava 1 feixe | `beam_grouping_test.dart` (4) + goldens s01, c01 |
+
+**Verificado como NÃO-defeito:** **V5** — o colchete da quiáltera já fica do lado correto (lado da haste/feixe); estilo válido, sem ação.
+
+**Follow-ups restantes (menor impacto):** V3b (layout reservar largura p/ acidentes quando o acorde inicia o compasso), I2 (`divisions` MusicXML — só afeta arquivos sem `<type>`), I4 (microtons no import).
 
 **Follow-ups abertos (não-bloqueantes):**
 - **V3b (layout):** quando o acorde é o 1º elemento, os acidentes ficam espremidos junto à clave — o layout não reserva largura p/ as colunas de acidentes. (espaçamento, risco médio)
