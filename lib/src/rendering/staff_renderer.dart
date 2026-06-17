@@ -275,6 +275,7 @@ class StaffRenderer {
     if (currentClef != null) {
       _renderLineOrnaments(canvas, elements);
       _renderLyricHyphens(canvas, elements);
+      _renderMelismaLines(canvas, elements);
 
       // Pular beams simples if temos advanced beams
       if (layoutEngine == null || layoutEngine.advancedBeamGroups.isEmpty) {
@@ -407,6 +408,94 @@ class StaffRenderer {
         prev = ln;
       }
       if (!anyAtVerse) break;
+    }
+  }
+
+  /// Post-layout pass (#13): draws melisma extension lines. A single/terminal
+  /// syllable (end of a word) sung over subsequent note(s) that carry no
+  /// syllable extends a horizontal line from the syllable to the last melisma
+  /// note. The melisma ends at the next syllable, a rest, or the system end.
+  void _renderMelismaLines(Canvas canvas, List<PositionedElement> elements) {
+    var maxVerses = 0;
+    for (final pe in elements) {
+      final el = pe.element;
+      if (el is Note && el.syllables != null) {
+        if (el.syllables!.length > maxVerses) maxVerses = el.syllables!.length;
+      }
+    }
+    if (maxVerses == 0) return;
+
+    final fontSize = coordinates.staffSpace * 0.85;
+    final lineHeight = fontSize * 1.3;
+    final staffBottomY =
+        coordinates.staffBaseline.dy + 2 * coordinates.staffSpace;
+    final firstLineY = staffBottomY + coordinates.staffSpace * 1.5;
+    final color = theme.noteheadColor.withValues(alpha: 0.85);
+    final noteHalfWidth =
+        ((metadata.getGlyphInfo('noteheadBlack')?.boundingBox?.width ?? 1.18) *
+            coordinates.staffSpace) *
+        0.5;
+
+    double measure(String text, bool italic) {
+      final base = theme.lyricTextStyle ?? const TextStyle();
+      final tp = TextPainter(
+        text: TextSpan(
+          text: text,
+          style: base.copyWith(
+            fontSize: base.fontSize ?? fontSize,
+            fontStyle:
+                italic ? FontStyle.italic : (base.fontStyle ?? FontStyle.normal),
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      return tp.width;
+    }
+
+    for (int verse = 0; verse < maxVerses; verse++) {
+      double? startX; // right edge of the held syllable text
+      double? endX; // right edge of the last melisma note
+      final y = firstLineY + verse * lineHeight + fontSize * 0.28;
+
+      void flush() {
+        if (startX != null &&
+            endX != null &&
+            endX! - startX! > coordinates.staffSpace * 0.6) {
+          final paint = Paint()
+            ..color = color
+            ..strokeWidth = coordinates.staffSpace * 0.1
+            ..strokeCap = StrokeCap.round
+            ..style = PaintingStyle.stroke;
+          canvas.drawLine(Offset(startX!, y), Offset(endX!, y), paint);
+        }
+        startX = null;
+        endX = null;
+      }
+
+      for (final pe in elements) {
+        final el = pe.element;
+        if (el is Note) {
+          final syls = el.syllables;
+          final hasSyl =
+              syls != null && verse < syls.length && syls[verse].text.isNotEmpty;
+          if (hasSyl) {
+            flush();
+            final syl = syls[verse];
+            if (syl.type == SyllableType.single ||
+                syl.type == SyllableType.terminal) {
+              startX = pe.position.dx +
+                  measure(syl.text, syl.italic) / 2 +
+                  coordinates.staffSpace * 0.35;
+              endX = null;
+            }
+          } else if (startX != null) {
+            endX = pe.position.dx + noteHalfWidth;
+          }
+        } else if (el is Rest) {
+          flush();
+        }
+      }
+      flush();
     }
   }
 

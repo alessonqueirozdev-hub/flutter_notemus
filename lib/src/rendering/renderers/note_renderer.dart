@@ -334,23 +334,9 @@ class NoteRenderer extends BaseGlyphRenderer {
     final textX = noteX - painter.width * 0.5;
     painter.paint(canvas, Offset(textX, y - painter.height * 0.5));
 
-    // For syllables únicas/terminais, desenhar line de melisma curta if a note
-    // for melismática (text igual to the syllable = vocalização estendida).
-    // A extension completa requer position of the note seguinte (Rendersda pelo StaffRenderer).
-    // Aqui only marcamos o start of the line with a traço de 1 SS de length.
-    if (syllable.type == SyllableType.single ||
-        syllable.type == SyllableType.terminal) {
-      if (syllable.italic) {
-        // Convenção: italic sinaliza melisma — traço de extension initial
-        final lineStartX = textX + painter.width + fontSize * 0.2;
-        final lineEndX = lineStartX + coordinates.staffSpace;
-        final paint = Paint()
-          ..color = color
-          ..strokeWidth = 0.8
-          ..style = PaintingStyle.stroke;
-        canvas.drawLine(Offset(lineStartX, y), Offset(lineEndX, y), paint);
-      }
-    }
+    // Melisma extension lines are drawn by StaffRenderer's post-layout pass
+    // (_renderMelismaLines, #13), which has the X of the following notes and can
+    // extend the line to the actual end of the melisma instead of a fixed stub.
   }
 
   /// Determina a direction of the stem pela voice (polyphony) or pela staff position.

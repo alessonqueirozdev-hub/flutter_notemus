@@ -310,6 +310,30 @@ Staff _lyrics() {
   ]);
 }
 
+Staff _melisma() {
+  Note lyr(String s, int o, String text, SyllableType type,
+          {DurationType dur = DurationType.quarter}) =>
+      Note(
+        pitch: Pitch(step: s, octave: o),
+        duration: Duration(dur),
+        syllables: [Syllable(text: text, type: type)],
+      );
+  return _staff([
+    _measure([
+      Clef(clefType: ClefType.treble),
+      TimeSignature(numerator: 4, denominator: 4),
+      lyr('C', 5, 'Sing', SyllableType.single), // held over the next 3 notes
+      _n('D', 5),
+      _n('E', 5),
+      _n('F', 5),
+    ]),
+    _measure([
+      lyr('G', 5, 'song', SyllableType.single, dur: DurationType.half),
+      _r(DurationType.half), // rest ends any melisma
+    ]),
+  ]);
+}
+
 Staff _dynamicsSpectrum() {
   // One dynamic before each note (co-positioned with the following note),
   // covering full-word spellings, abbreviations, special accents, and a
@@ -529,6 +553,14 @@ final List<CorpusCase> corpus = [
     tier: 'intermediate',
     exercises: 'syllable text, hyphen on initial/middle syllables',
     build: _lyrics,
+    size: const Size(900, 280),
+  ),
+  CorpusCase(
+    id: 'm12_melisma',
+    title: 'Melisma extension line',
+    tier: 'intermediate',
+    exercises: 'melisma line from a syllable over note-less notes (#13)',
+    build: _melisma,
     size: const Size(900, 280),
   ),
   CorpusCase(
