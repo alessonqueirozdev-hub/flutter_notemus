@@ -193,4 +193,18 @@ Clave, armadura (sustenidos/bemóis), fórmula (C/comum), cabeças, hastes, feix
 
 ## Registro de mudanças do sprint
 
-_(vazio — nenhuma correção de código aplicada ainda; apenas reconhecimento)_
+| Commit | Item | O quê | Evidência |
+|---|---|---|---|
+| `docs:` PROGRESS | Fase 0 | Reconhecimento + inventário | — |
+| `test(golden):` harness | Fase 1 | Harness headless + corpus (14) + baselines | 14 goldens |
+| `fix(smufl):` R1 | **R1 ✅** | `getEngravingDefault` null-safe (não quebra mais com chave/seção ausente) | `test/smufl/engraving_default_test.dart` (3 testes) |
+| `fix(rendering):` V2 | **V2 ✅** | Mapa completo `DynamicType→glifo` + fallback de texto; antes só ~7 abreviações renderizavam | golden `m07_dynamics` + `m07b_dynamics_spectrum` (11 dinâmicas) |
+
+**Pendências de harness conhecidas:** texto via `_dynamicTextStyle` usa apenas `fontFamilyFallback` (sem família primária), que no `flutter test` não resolve fontes do `FontLoader` de forma confiável → dinâmicas-palavra (cresc./dim.) e possivelmente letras renderizam como caixas no harness. **A resolver no início da Onda B (letras)**, onde isso é crítico.
+
+### Próximos (ordem)
+- **V1** (slur quebrada) — investigar `slur_renderer`/`slur_calculator`.
+- **V3** (empilhamento de acidentes em acordes) — `chord_renderer.dart:146-169`.
+- **R4** (unificar referência de fonte Bravura) — remove a fragilidade dos 2 nomes.
+- **V4** (agrupamento de feixe em 4/4) — `beam_grouper`/`beat_position_calculator`.
+- **Onda B** (letras MusicXML/MEI) — exige resolver render de texto no harness.
