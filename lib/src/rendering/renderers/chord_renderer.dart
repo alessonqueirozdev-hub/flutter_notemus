@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../../core/core.dart';
@@ -93,6 +95,45 @@ class ChordRenderer extends BaseGlyphRenderer {
     return mostExtremePos > 0;
   }
 
+  /// Assigns chord accidentals to columns (0 = closest to the chord) by greedy
+  /// top-to-bottom first-fit: each accidental is placed in the rightmost column
+  /// where it clears every accidental already there by the corresponding entry
+  /// in [clearancesHalfSpaces] (the glyph height + gap, in half staff spaces).
+  ///
+  /// [staffPositionsTopToBottom] and [clearancesHalfSpaces] are parallel and
+  /// must be ordered top -> bottom (descending staff position). Returns the
+  /// column index per input accidental. Pure/static so it can be unit-tested.
+  static List<int> assignAccidentalColumns(
+    List<int> staffPositionsTopToBottom,
+    List<double> clearancesHalfSpaces,
+  ) {
+    final columns = List<int>.filled(staffPositionsTopToBottom.length, 0);
+    final members = <int, List<int>>{};
+    for (var i = 0; i < staffPositionsTopToBottom.length; i++) {
+      final clearance = clearancesHalfSpaces[i];
+      var column = 0;
+      while (true) {
+        final ms = members[column];
+        var collides = false;
+        if (ms != null) {
+          for (final k in ms) {
+            if ((staffPositionsTopToBottom[i] - staffPositionsTopToBottom[k])
+                    .abs() <
+                clearance) {
+              collides = true;
+              break;
+            }
+          }
+        }
+        if (!collides) break;
+        column++;
+      }
+      columns[i] = column;
+      (members[column] ??= <int>[]).add(i);
+    }
+    return columns;
+  }
+
   void render(
     Canvas canvas,
     Chord chord,
@@ -138,71 +179,90 @@ class ChordRenderer extends BaseGlyphRenderer {
     );
     final noteCenters = <Offset>[];
 
-    // ── Pre-compute accidental columns BEFORE drawing anything ──
-    // All accidentals are placed to the LEFT of the leftmost notehead.
-    // Each accidental gets a column: 0 = closest to notes, higher = further left.
-    // Two accidentals collide vertically if within 6 staff positions (SMuFL standard).
-    final accidentalColumns = <int, int>{};
-    const accidentalCollisionDistance = 6;
-
-    for (int i = 0; i < sortedNotes.length; i++) {
-      if (sortedNotes[i].pitch.accidentalGlyph == null) continue;
-
-      int column = 0;
-      for (int c = 0; c < sortedNotes.length; c++) {
-        bool collision = false;
-        for (final entry in accidentalColumns.entries) {
-          if (entry.value == c &&
-              (positions[i] - positions[entry.key]).abs() <=
-                  accidentalCollisionDistance) {
-            collision = true;
-            break;
-          }
-        }
-        if (!collision) {
-          column = c;
-          break;
-        }
-        column = c + 1;
-      }
-      accidentalColumns[i] = column;
+    // ── Accidental column packing (Behind Bars / Gould) ──
+    // sortedNotes is already top -> bottom. Each accidental is placed in the
+    // rightmost column (0 = closest to the chord) where it does NOT vertically
+    // overlap an accidental already in that column. Both the vertical clearance
+    // and the column width come from each glyph's real SMuFL bounding box, so
+    // accidentals neither overlap vertically nor horizontally (the previous
+    // version used a fixed 6-half-space threshold and the advance width — which
+    // is narrower than the glyph — so columns collided).
+    double accWidthSpaces(String glyph) {
+      final box = metadata.getGlyphInfo(glyph)?.boundingBox;
+      final w = box?.width ?? metadata.getGlyphWidth(glyph);
+      return w > 0 ? w : 1.0;
     }
 
-    // ── Draw accidentals ──
-    // All accidentals are positioned relative to basePosition.dx (the chord's
-    // musical x), Not the individual note cluster offsets. This ensures all
-    // accidentals stay to the LEFT of ALL noteheads regardless of clustering.
-    for (final entry in accidentalColumns.entries) {
-      final i = entry.key;
-      final column = entry.value;
-      final note = sortedNotes[i];
-      final accidentalGlyph = note.pitch.accidentalGlyph!;
-      final rawWidth = metadata.getGlyphWidth(accidentalGlyph);
-      final accidentalWidth = rawWidth > 0 ? rawWidth : 1.0;
+    // Vertical clearance (in staff positions = half-spaces) needed between two
+    // accidentals sharing a column: the glyph height + a small gap.
+    double accClearanceHalfSpaces(String glyph) {
+      final box = metadata.getGlyphInfo(glyph)?.boundingBox;
+      final heightSpaces = box?.height ?? 2.7;
+      return (heightSpaces * 2.0) + 0.5;
+    }
 
-      const accidentalClearance = 0.25;
-      final baseOffset =
-          (accidentalWidth + accidentalClearance) * coordinates.staffSpace;
-      final columnSpacing =
-          (accidentalWidth + accidentalClearance) * coordinates.staffSpace;
+    // Notes carrying an accidental, already ordered top -> bottom.
+    final accIdx = <int>[
+      for (int i = 0; i < sortedNotes.length; i++)
+        if (sortedNotes[i].pitch.accidentalGlyph != null) i,
+    ];
+    final assignedColumns = assignAccidentalColumns(
+      [for (final i in accIdx) positions[i]],
+      [
+        for (final i in accIdx)
+          accClearanceHalfSpaces(sortedNotes[i].pitch.accidentalGlyph!),
+      ],
+    );
 
-      final staffPosition = positions[i];
-      final noteY = StaffPositionCalculator.toPixelY(
-        staffPosition,
-        coordinates.staffSpace,
-        coordinates.staffBaseline.dy,
+    final accidentalColumns = <int, int>{}; // note index -> column
+    final columnMembers = <int, List<int>>{}; // column -> note indices
+    final columnWidthSpaces = <int, double>{}; // column -> max glyph width (SS)
+
+    for (int n = 0; n < accIdx.length; n++) {
+      final i = accIdx[n];
+      final column = assignedColumns[n];
+      accidentalColumns[i] = column;
+      (columnMembers[column] ??= <int>[]).add(i);
+      columnWidthSpaces[column] = math.max(
+        columnWidthSpaces[column] ?? 0.0,
+        accWidthSpaces(sortedNotes[i].pitch.accidentalGlyph!),
       );
+    }
 
-      final accidentalX =
-          basePosition.dx - baseOffset - (column * columnSpacing);
+    // Resolve each column's left X. Column 0 sits a small gap to the LEFT of the
+    // leftmost notehead edge (accounts for left-shifted second-cluster notes);
+    // each further column is offset left by the previous column's glyph width.
+    if (accidentalColumns.isNotEmpty) {
+      const columnGapSpaces = 0.22;
+      final leftmostNoteDx =
+          basePosition.dx + clusterOffsets.reduce(math.min);
+      final maxColumn = columnMembers.keys.reduce(math.max);
+      final columnLeftX = <int, double>{};
+      var cursorRightEdge =
+          leftmostNoteDx - columnGapSpaces * coordinates.staffSpace;
+      for (int c = 0; c <= maxColumn; c++) {
+        final widthPx = (columnWidthSpaces[c] ?? 1.0) * coordinates.staffSpace;
+        columnLeftX[c] = cursorRightEdge - widthPx;
+        cursorRightEdge =
+            columnLeftX[c]! - columnGapSpaces * coordinates.staffSpace;
+      }
 
-      drawGlyphWithBBox(
-        canvas,
-        glyphName: accidentalGlyph,
-        position: Offset(accidentalX, noteY),
-        color: theme.accidentalColor ?? theme.noteheadColor,
-        options: const GlyphDrawOptions(trackBounds: true),
-      );
+      for (final entry in accidentalColumns.entries) {
+        final i = entry.key;
+        final accidentalGlyph = sortedNotes[i].pitch.accidentalGlyph!;
+        final noteY = StaffPositionCalculator.toPixelY(
+          positions[i],
+          coordinates.staffSpace,
+          coordinates.staffBaseline.dy,
+        );
+        drawGlyphWithBBox(
+          canvas,
+          glyphName: accidentalGlyph,
+          position: Offset(columnLeftX[entry.value]!, noteY),
+          color: theme.accidentalColor ?? theme.noteheadColor,
+          options: const GlyphDrawOptions(trackBounds: true),
+        );
+      }
     }
 
     // ── Draw noteheads and ledger lines ──

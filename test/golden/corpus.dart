@@ -392,22 +392,27 @@ Staff _mixedPhrase() {
 }
 
 Staff _chromaticChords() {
-  // Stress test for accidental stacking on adjacent staff lines (E1).
+  // Stress test for accidental stacking on adjacent staff lines (V3).
+  // A leading quarter note gives each chord horizontal room so the accidental
+  // column packing is visible (not crammed against the clef).
+  Chord halfChord(List<Note> notes) =>
+      Chord(notes: notes, duration: const Duration(DurationType.half));
+  Note h(String s, int o, double a) => Note(
+        pitch: Pitch(step: s, octave: o, alter: a),
+        duration: const Duration(DurationType.half),
+      );
   return _staff([
     _measure([
       Clef(clefType: ClefType.treble),
       TimeSignature(numerator: 4, denominator: 4),
-      Chord(notes: [
-        Note(pitch: const Pitch(step: 'D', octave: 4, alter: 1.0), duration: const Duration(DurationType.half)),
-        Note(pitch: const Pitch(step: 'F', octave: 4, alter: 1.0), duration: const Duration(DurationType.half)),
-        Note(pitch: const Pitch(step: 'A', octave: 4, alter: -1.0), duration: const Duration(DurationType.half)),
-        Note(pitch: const Pitch(step: 'C', octave: 5, alter: 1.0), duration: const Duration(DurationType.half)),
-      ], duration: const Duration(DurationType.half)),
-      Chord(notes: [
-        Note(pitch: const Pitch(step: 'E', octave: 4, alter: -1.0), duration: const Duration(DurationType.half)),
-        Note(pitch: const Pitch(step: 'G', octave: 4, alter: 1.0), duration: const Duration(DurationType.half)),
-        Note(pitch: const Pitch(step: 'B', octave: 4, alter: -1.0), duration: const Duration(DurationType.half)),
-      ], duration: const Duration(DurationType.half)),
+      _n('C', 5, dur: DurationType.quarter),
+      _r(DurationType.quarter),
+      halfChord([h('D', 4, 1.0), h('F', 4, 1.0), h('A', 4, -1.0), h('C', 5, 1.0)]),
+    ]),
+    _measure([
+      _n('C', 5, dur: DurationType.quarter),
+      _r(DurationType.quarter),
+      halfChord([h('E', 4, -1.0), h('G', 4, 1.0), h('B', 4, -1.0)]),
     ]),
   ]);
 }
