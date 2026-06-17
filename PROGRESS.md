@@ -51,6 +51,34 @@ Pipeline: `Staff/Score → LayoutEngine → List<PositionedElement> → MusicSco
 
 ---
 
+## Fase 1 — Harness visual + corpus + inventário visual (CONCLUÍDA — infra)
+
+### Harness golden headless (CONFIRMADO funcionando)
+- `test/golden/_harness.dart` + `corpus.dart` + `corpus_golden_test.dart`.
+- Renderiza o widget público real `MusicScore` headless e captura via `matchesGoldenFile` → serve como **gerador de figuras** (`--update-goldens`) **e** suíte de regressão.
+- **2 armadilhas resolvidas no caminho** (ambas documentadas no harness):
+  1. `pumpAndSettle` **trava 9+ min** no `CircularProgressIndicator` do `FutureBuilder` de metadados → usar `pump()`.
+  2. **Fonte sob 2 nomes**: `base_glyph_renderer` usa `'Bravura'`; `bar_element_renderer` usa `'Bravura'`+`package:'flutter_notemus'` (→ `packages/flutter_notemus/Bravura`). Sem registrar ambos no teste, **clave/armadura/fórmula viram caixas**. _(Isto é uma inconsistência real da lib — ver R4.)_
+- **14 casos** gerados (simple→complex), incluindo a Ode à Alegria com os **mesmos dados da figura do artigo**.
+
+### Inventário VISUAL (confirmado por inspeção dos PNGs gerados)
+
+| ID | Severidade | Defeito visual | Caso golden |
+|---|---|---|---|
+| **V1** ★ | ALTA | **Ligadura (slur) multi-nota renderiza quebrada em ~2 segmentos** em vez de um arco contínuo | `m05_slurs_ties` |
+| **V2** ★ | ALTA | **Dinâmicas não renderizam** para nomes longos. Causa-raiz: `_getDynamicGlyph` (symbol_and_text_renderer.dart:404) só mapeia abreviações (`p/f/mf/pp/ff/mp/sforzando`); `DynamicType.piano/.forte/.mezzoForte/.fff/.ppp/...` → `null` → nada desenhado. **Os próprios exemplos do README não renderizam.** | `m07_dynamics` |
+| **V3** ★ | MÉDIA-ALTA | **Acidentes em acordes amontoados/sobrepostos** — sem algoritmo de colunas (Behind Bars/Gould) | `c02_chromatic_chords`, `m02_accidentals` |
+| **V4** | MÉDIA | **8 colcheias em 4/4 unidas num único feixe** — deveria quebrar em 2 grupos de 4 (na metade do compasso) | `s01_c_major_scale` |
+| **V5** | BAIXA-MÉDIA | **Colchete de quiáltera posicionado longe, do lado oposto ao feixe** (estilo discutível; brackets horizontais são aceitáveis) | `m04_triplets` |
+
+### Renderiza BEM (confirmado visualmente — não mexer)
+Clave, armadura (sustenidos/bemóis), fórmula (C/comum), cabeças, hastes, feixe simples, bandeirolas, barras de compasso, linhas suplementares, notas pontuadas, pausas (semínima/compasso), **acidentes simples**, articulações (staccato/acento/tenuto/marcato), **polifonia a 2 vozes** (direção de haste por voz + alinhamento temporal), tríades, **ties**, quebra de sistema, import JSON (Ode).
+
+### Baseline Verovio (Fase 1, item 3)
+- Verovio 6.2.1 instalado. Comparação lado a lado pendente (próximo passo): exige versões MusicXML do corpus (a lib não exporta MusicXML; gerar à mão p/ casos-chave, a começar pela Ode).
+
+---
+
 ## ⚠️ Lacunas entre documentação e código → **fechar no código** (decisão do autor)
 
 > **Decisão (2026-06-17):** o autor optou por **NÃO rebaixar a documentação**, e sim **elevar o código** para cumprir/superar o que está documentado ("não devemos ter perdas"). Portanto cada item abaixo deixa de ser "corrigir o texto" e passa a ser **uma meta de implementação**. A honestidade permanece no rastreio interno: nunca marcar como "pronto" o que está parcial; provar cada ganho com teste/golden.
@@ -110,6 +138,7 @@ Pipeline: `Staff/Score → LayoutEngine → List<PositionedElement> → MusicSco
 | R1 ★ | MÉDIA | `getEngravingDefault()` **quebra com null** (sem null-check); existe variante segura `getEngravingDefaultValue()` | `smufl_metadata_loader.dart:68-71` | baixíssimo |
 | R2 | BAIXA | Tolerância de capacidade de compasso fixa (0.0001) pode acumular erro em pontos/quiálteras | `measure.dart:89-91` | baixo |
 | R3 | BAIXA | `Tuplet.getModifiedDuration()` não valida soma das durações vs. ratio | `tuplet.dart:82-94` | baixo |
+| R4 ★ | MÉDIA | **Referência de fonte inconsistente**: `'Bravura'` (sem package) nos primitivos vs. `'Bravura'`+`package` em clave/armadura/fórmula. Apps que carregam só um dos nomes veem metade dos glifos como caixas. Unificar. | base_glyph_renderer.dart:106 vs bar_element_renderer.dart:236-238 (CONFIRMADO) | baixo-médio |
 
 ### Importação (Fase 3)
 

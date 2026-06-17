@@ -1,0 +1,95 @@
+// Headless golden-rendering harness for the engraving quality sprint.
+//
+// Responsibilities:
+//   * load the Bravura SMuFL font + metadata once per test run, so real glyphs
+//     rasterize under `flutter test` (otherwise text renders as boxes);
+//   * pump a [CorpusCase] into the real public [MusicScore] widget at a fixed
+//     size with deterministic layout (no responsive/adaptive scaling), wrapped
+//     in a keyed [RepaintBoundary] for `matchesGoldenFile`.
+//
+// Generate / refresh PNGs:   flutter test --update-goldens test/golden
+// Check against committed:    flutter test test/golden
+
+import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_test/flutter_test.dart';
+// Hide the music `Duration` so `const Duration(milliseconds: …)` resolves to
+// the dart:core time Duration used by tester.pump().
+import 'package:flutter_notemus/flutter_notemus.dart' hide Duration;
+
+import 'corpus.dart';
+
+/// Key identifying the capture boundary used by [matchesGoldenFile].
+const ValueKey<String> kGoldenBoundaryKey = ValueKey('golden-boundary');
+
+bool _fontsLoaded = false;
+
+/// Loads Bravura (from the package asset on disk) and SMuFL metadata exactly
+/// once. Safe to call from every `setUpAll`.
+Future<void> loadNotemusFonts() async {
+  if (!_fontsLoaded) {
+    final file = File('assets/smufl/Bravura.otf');
+    if (!file.existsSync()) {
+      throw StateError('Bravura.otf not found at ${file.path}');
+    }
+    final bytes = await file.readAsBytes();
+    // The renderers reference the font under TWO different family names:
+    //   * base_glyph_renderer.dart -> 'Bravura' (noteheads, accidentals, rests…)
+    //   * bar_element_renderer.dart -> package-qualified
+    //     'packages/flutter_notemus/Bravura' (clef, key sig, time sig).
+    // Package fonts are not auto-registered under `flutter test`, so register
+    // both names or clefs/time signatures render as .notdef boxes.
+    for (final family in const ['Bravura', 'packages/flutter_notemus/Bravura']) {
+      final loader = FontLoader(family)
+        ..addFont(Future.value(ByteData.view(bytes.buffer)));
+      await loader.load();
+    }
+    _fontsLoaded = true;
+  }
+  await SmuflMetadata().load();
+}
+
+/// Pumps [c] into a deterministic, fixed-size widget tree and returns the
+/// [Finder] for the capture boundary.
+Future<Finder> pumpCase(WidgetTester tester, CorpusCase c) async {
+  await tester.binding.setSurfaceSize(c.size);
+  addTearDown(() => tester.binding.setSurfaceSize(null));
+
+  await tester.pumpWidget(
+    MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(
+          child: RepaintBoundary(
+            key: kGoldenBoundaryKey,
+            child: Container(
+              width: c.size.width,
+              height: c.size.height,
+              color: Colors.white,
+              child: MusicScore(
+                staff: c.build(),
+                staffSpace: c.staffSpace,
+                // Deterministic layout: disable responsive + adaptive scaling
+                // so the golden is stable across surface sizes.
+                enableResponsiveLayout: false,
+                preventVerticalOverflow: false,
+                theme: const MusicScoreTheme(),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+  // NOTE: never pumpAndSettle here — MusicScore briefly shows a
+  // CircularProgressIndicator (infinite animation) while its FutureBuilder
+  // resolves SMuFL metadata, which makes pumpAndSettle hang. Metadata is
+  // already loaded in setUpAll, so a couple of explicit pumps transition the
+  // FutureBuilder to its `done` state and lay out the score.
+  await tester.pump(); // resolve the (already-complete) metadata future
+  await tester.pump(const Duration(milliseconds: 50)); // flush layout
+  return find.byKey(kGoldenBoundaryKey);
+}
