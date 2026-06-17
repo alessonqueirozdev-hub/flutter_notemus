@@ -1300,6 +1300,7 @@ class _MusicXmlImportParser {
         ornaments: _musicXmlOrnaments(noteElement),
         voice: voiceNumber,
         isGraceNote: isGrace,
+        syllables: _parseMusicXmlLyrics(noteElement),
       );
       if (isChordTone) {
         if (!accumulator.mergeChordNote(note)) {
@@ -1487,6 +1488,44 @@ RepeatMark? _meiRepeatMark(XmlElement element) {
     type: type,
     label: label == null || label.trim().isEmpty ? null : label.trim(),
   );
+}
+
+/// Parses MusicXML `<lyric number="N">` children of a note into one [Syllable]
+/// per verse (ordered by `@number`). `<syllabic>` (single/begin/middle/end)
+/// maps to the syllable connection type; the text comes from `<text>`.
+List<Syllable>? _parseMusicXmlLyrics(XmlElement noteElement) {
+  final lyrics = noteElement.findElements('lyric').toList();
+  if (lyrics.isEmpty) return null;
+  lyrics.sort((a, b) {
+    final na = int.tryParse(a.getAttribute('number') ?? '') ?? 0;
+    final nb = int.tryParse(b.getAttribute('number') ?? '') ?? 0;
+    return na.compareTo(nb);
+  });
+  final result = <Syllable>[];
+  for (final lyric in lyrics) {
+    final text = _childText(lyric, 'text');
+    if (text == null || text.trim().isEmpty) continue;
+    result.add(
+      Syllable(
+        text: text.trim(),
+        type: _musicXmlSyllabicType(_childText(lyric, 'syllabic')),
+      ),
+    );
+  }
+  return result.isEmpty ? null : result;
+}
+
+SyllableType _musicXmlSyllabicType(String? syllabic) {
+  switch (syllabic) {
+    case 'begin':
+      return SyllableType.initial;
+    case 'middle':
+      return SyllableType.middle;
+    case 'end':
+      return SyllableType.terminal;
+    default:
+      return SyllableType.single;
+  }
 }
 
 Pitch? _musicXmlPitch(XmlElement noteElement) {
@@ -2132,7 +2171,47 @@ Note? _meiNote(XmlElement noteElement, {required int voiceNumber}) {
     ornaments: _parseOrnamentList(noteElement.getAttribute('ornam')),
     voice: voiceNumber,
     isGraceNote: noteElement.getAttribute('grace') != null,
+    syllables: _parseMeiVerses(noteElement),
   );
+}
+
+/// Parses MEI `<verse n="N"><syl>…</syl></verse>` lyrics attached to a note into
+/// one [Syllable] per verse (ordered by `@n`). Word position comes from
+/// `@wordpos` (i/m/t) or the connector `@con` (i/m/t/d), else `single`.
+List<Syllable>? _parseMeiVerses(XmlElement noteElement) {
+  final verses = noteElement.findElements('verse').toList();
+  if (verses.isEmpty) return null;
+  verses.sort(
+    (a, b) => (_asInt(a.getAttribute('n')) ?? 0).compareTo(
+      _asInt(b.getAttribute('n')) ?? 0,
+    ),
+  );
+  final result = <Syllable>[];
+  for (final verse in verses) {
+    final syls = verse.findElements('syl');
+    if (syls.isEmpty) continue;
+    final syl = syls.first;
+    final text = syl.innerText.trim();
+    if (text.isEmpty) continue;
+    final pos = syl.getAttribute('wordpos') ?? syl.getAttribute('con');
+    result.add(Syllable(text: text, type: _meiSyllableType(pos)));
+  }
+  return result.isEmpty ? null : result;
+}
+
+SyllableType _meiSyllableType(String? pos) {
+  switch (pos) {
+    case 'i':
+      return SyllableType.initial;
+    case 'm':
+      return SyllableType.middle;
+    case 't':
+      return SyllableType.terminal;
+    case 'd':
+      return SyllableType.hyphen;
+    default:
+      return SyllableType.single;
+  }
 }
 
 Rest _meiRest(XmlElement restElement) {
