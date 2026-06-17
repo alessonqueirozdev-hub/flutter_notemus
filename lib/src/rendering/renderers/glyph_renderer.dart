@@ -28,6 +28,7 @@ class GlyphRenderer {
         text: character,
         style: TextStyle(
           fontFamily: 'Bravura',
+          package: 'flutter_notemus',
           fontSize: size,
           color: color,
           height: 1.0,

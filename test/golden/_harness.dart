@@ -52,14 +52,14 @@ Future<void> loadNotemusFonts() async {
       throw StateError('Bravura.otf not found at ${file.path}');
     }
     final bytes = await file.readAsBytes();
-    // The renderers reference the font under TWO different family names:
-    //   * base_glyph_renderer.dart -> 'Bravura' (noteheads, accidentals, rests…)
-    //   * bar_element_renderer.dart -> package-qualified
-    //     'packages/flutter_notemus/Bravura' (clef, key sig, time sig).
-    // Package fonts are not auto-registered under `flutter test`, so register
-    // both names or clefs/time signatures render as .notdef boxes.
-    for (final family in const ['Bravura', 'packages/flutter_notemus/Bravura']) {
-      final loader = FontLoader(family)
+    // Every renderer now references the font under the package-qualified family
+    // `packages/flutter_notemus/Bravura` (auto-registered from the package
+    // pubspec in real apps; registered explicitly here since package fonts are
+    // not auto-loaded under `flutter test`). Registering ONLY this name doubles
+    // as a guard for R4: if any renderer still used a bare 'Bravura', its glyphs
+    // would render as .notdef boxes in the goldens.
+    {
+      final loader = FontLoader('packages/flutter_notemus/Bravura')
         ..addFont(Future.value(ByteData.view(bytes.buffer)));
       await loader.load();
     }

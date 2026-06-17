@@ -170,6 +170,7 @@ class BracketRenderer {
         text: character,
         style: TextStyle(
           fontFamily: 'Bravura',
+          package: 'flutter_notemus',
           fontSize: fontSize,
           color: theme.barlineColor,
           height: 1.0,

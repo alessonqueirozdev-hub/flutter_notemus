@@ -104,6 +104,7 @@ abstract class BaseGlyphRenderer {
           text: character,
           style: TextStyle(
             fontFamily: 'Bravura',
+            package: 'flutter_notemus',
             fontSize: options.size ?? glyphSize,
             color: color,
             height: 1.0,

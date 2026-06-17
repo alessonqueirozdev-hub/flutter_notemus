@@ -276,6 +276,7 @@ class GroupRenderer {
             text: character,
             style: TextStyle(
               fontFamily: 'Bravura',
+              package: 'flutter_notemus',
               fontSize: glyphSize,
               color: theme.noteheadColor,
               height: 1.0,
