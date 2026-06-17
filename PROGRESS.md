@@ -202,6 +202,8 @@ Clave, armadura (sustenidos/bemóis), fórmula (C/comum), cabeças, hastes, feix
 | `fix(slur):` V1 | **V1 ✅** | Slur multi-nota agora é **um arco contínuo** (pontos de controle perpendiculares à corda + altura em staff-spaces); antes dobrava em 2 segmentos | `slur_shape_test.dart` (3) + goldens m05, c01 |
 | `fix(chord):` V3 | **V3 ✅** | Empilhamento de acidentes em colunas sem sobreposição (clareamento por altura/largura reais do glifo); algoritmo extraído p/ `ChordRenderer.assignAccidentalColumns` | `accidental_columns_test.dart` (4) + goldens m02, c02 |
 | `fix(rendering):` R4 | **R4 ✅** | Referência da fonte unificada para `package:'flutter_notemus'` em todos os renderers — fonte resolve sem registro manual | 15 goldens byte-idênticos sob registro só-do-pacote |
+| `feat(parsers):` letras | **H2 (import) ✅** | Import de letras MusicXML `<lyric>` e MEI `<verse>/<syl>` → `Note.syllables` (antes ignorado silenciosamente) | `lyrics_import_test.dart` (6) |
+| `feat(lyrics):` render | **lyrics render ✅** | `_renderSyllable` agora respeita `theme.lyricTextStyle` (campo antes ignorado); harness ganhou fonte de texto real | golden `m11_lyrics` |
 
 **Follow-ups abertos (não-bloqueantes):**
 - **V3b (layout):** quando o acorde é o 1º elemento, os acidentes ficam espremidos junto à clave — o layout não reserva largura p/ as colunas de acidentes. (espaçamento, risco médio)
