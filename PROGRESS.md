@@ -199,6 +199,14 @@ Clave, armadura (sustenidos/bemóis), fórmula (C/comum), cabeças, hastes, feix
 | `test(golden):` harness | Fase 1 | Harness headless + corpus (14) + baselines | 14 goldens |
 | `fix(smufl):` R1 | **R1 ✅** | `getEngravingDefault` null-safe (não quebra mais com chave/seção ausente) | `test/smufl/engraving_default_test.dart` (3 testes) |
 | `fix(rendering):` V2 | **V2 ✅** | Mapa completo `DynamicType→glifo` + fallback de texto; antes só ~7 abreviações renderizavam | golden `m07_dynamics` + `m07b_dynamics_spectrum` (11 dinâmicas) |
+| `fix(slur):` V1 | **V1 ✅** | Slur multi-nota agora é **um arco contínuo** (pontos de controle perpendiculares à corda + altura em staff-spaces); antes dobrava em 2 segmentos | `slur_shape_test.dart` (3) + goldens m05, c01 |
+| `fix(chord):` V3 | **V3 ✅** | Empilhamento de acidentes em colunas sem sobreposição (clareamento por altura/largura reais do glifo); algoritmo extraído p/ `ChordRenderer.assignAccidentalColumns` | `accidental_columns_test.dart` (4) + goldens m02, c02 |
+| `fix(rendering):` R4 | **R4 ✅** | Referência da fonte unificada para `package:'flutter_notemus'` em todos os renderers — fonte resolve sem registro manual | 15 goldens byte-idênticos sob registro só-do-pacote |
+
+**Follow-ups abertos (não-bloqueantes):**
+- **V3b (layout):** quando o acorde é o 1º elemento, os acidentes ficam espremidos junto à clave — o layout não reserva largura p/ as colunas de acidentes. (espaçamento, risco médio)
+- **Texto no harness:** `_dynamicTextStyle`/letras usam só `fontFamilyFallback` (sem família primária) → não resolve fontes do `FontLoader` no `flutter test`. Resolver no início da renderização de letras (Onda B).
+- **V4** (agrupamento de feixe em 4/4), **V5** (posição do colchete de quiáltera).
 
 **Pendências de harness conhecidas:** texto via `_dynamicTextStyle` usa apenas `fontFamilyFallback` (sem família primária), que no `flutter test` não resolve fontes do `FontLoader` de forma confiável → dinâmicas-palavra (cresc./dim.) e possivelmente letras renderizam como caixas no harness. **A resolver no início da Onda B (letras)**, onde isso é crítico.
 
