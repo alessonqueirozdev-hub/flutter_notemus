@@ -61,13 +61,19 @@ model, does not touch the SMuFL/CMN staff path):
       connecting-line X registration is approximate.
 
 ### Tier A+ — engraving correctness
-- [ ] Proper clivis via fused ligatura; torculus (asc join + desc ligatura at apex);
-      porrectus (desc ligatura + asc join at valley); pressus, salicus, virga strata.
-- [ ] Liquescence (cephalicus/epiphonus via deminutum; auctum/ascending/descending).
-- [ ] Rhythmic/expressive marks: horizontal episema, ictus (vertical episema),
-      mora (augmentum) dots, accentus/circulus/semicirculus.
-- [ ] Multi-line wrapping with an **end-of-line custos** showing the next note's pitch.
+- [x] Type-aware neume engine (per `NeumeType`): **fused clivis ligatura**, pes
+      (stacked + connecting line), scandicus, climacus, torculus, porrectus;
+      graceful fallback for unknown/compound forms.
+- [x] Rhythmic/expressive marks: horizontal **episema**, **ictus** (vertical
+      episema), **mora** (augmentum) dots — model fields + render.
+- [x] **Multi-line wrapping** with per-system clef repetition + **end-of-line
+      custos** showing the next system's first pitch.
+- [ ] Liquescence (cephalicus/epiphonus via deminutum; auctum/asc/desc) — model
+      has `isLiquescent`; needs glyph selection (deminutum/auctum) per neume.
+- [ ] Refine geometry: fused-ligatura vertical registration, connecting-line X,
+      torculus/porrectus apex/valley joins, clef vertical fit.
 - [ ] Accidentals (movable Bb): flat/natural local-until-divisio; clef-flat.
+- [ ] accentus/circulus/semicirculus marks; bivirga/trivirga spacing.
 
 ### Tier B — GABC import (Gregorio format)
 - [ ] Parse the GABC header (`field: value;` … `%%`), then `syllable(notes)` stream.
