@@ -65,9 +65,15 @@ class SmuflMetadata {
   }
 
   // Functions to retrieve drawing data
-  double getEngravingDefault(String key) {
-    if (!_isLoaded || _metadata == null) return 0.0;
-    return (_metadata!['engravingDefaults'][key] as num).toDouble();
+  //
+  // Null-safe: returns [fallback] when metadata is not loaded, the
+  // `engravingDefaults` section is absent, or the key is missing/non-numeric.
+  // Previously this threw on a missing section/key (unchecked `as num` on null).
+  double getEngravingDefault(String key, [double fallback = 0.0]) {
+    if (!_isLoaded) return fallback;
+    final value = _engravingDefaults?[key];
+    if (value is num) return value.toDouble();
+    return fallback;
   }
 
   // Missing getter added
