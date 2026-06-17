@@ -65,7 +65,9 @@ void main() {
       NeumeDivision(type: NeumeDivisionType.finalis),
     ];
 
-    await tester.binding.setSurfaceSize(const Size(720, 260));
+    // Narrow width forces wrapping to two systems, exercising the end-of-line
+    // custos and per-row clef repetition.
+    await tester.binding.setSurfaceSize(const Size(360, 470));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(
@@ -78,8 +80,8 @@ void main() {
             child: RepaintBoundary(
               key: kGoldenBoundaryKey,
               child: Container(
-                width: 720,
-                height: 260,
+                width: 360,
+                height: 470,
                 color: Colors.white,
                 child: ChantScore(
                   elements: elements,

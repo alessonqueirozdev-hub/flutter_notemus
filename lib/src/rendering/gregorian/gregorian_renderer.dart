@@ -88,8 +88,9 @@ class _NeumeBox {
   final List<_Op> ops;
   final double width;
   final String? syllable;
+  final int firstStep; // staff step of the first note (for the custos)
   double startX = 0;
-  _NeumeBox(this.ops, this.width, this.syllable);
+  _NeumeBox(this.ops, this.width, this.syllable, this.firstStep);
   double get endX => startX + width;
 }
 
@@ -154,7 +155,8 @@ _NeumeBox _emitNeume(Neume e, List<int> steps, double sp) {
   // Single-component neumes (or any type with one note) render as one glyph.
   if (steps.length == 1) {
     final glyph = e.type == NeumeType.virga ? 'chantPunctumVirga' : first();
-    return _NeumeBox([_Op(_OpKind.note, glyph, steps[0], 0)], noteW, e.syllable);
+    return _NeumeBox(
+        [_Op(_OpKind.note, glyph, steps[0], 0)], noteW, e.syllable, steps[0]);
   }
 
   // Types needing exactly three notes degrade to the generic walk otherwise.
@@ -290,33 +292,41 @@ _NeumeBox _emitNeume(Neume e, List<int> steps, double sp) {
   final lastMorae = e.components.isNotEmpty ? e.components.last.morae : 0;
   if (lastMorae > 0) width += noteW * (0.6 * lastMorae);
 
-  return _NeumeBox(ops, width, e.syllable);
+  return _NeumeBox(ops, width, e.syllable, steps.first);
 }
 
-/// Builds and lays out a chant line (Tier A: a single horizontal flow).
+/// One staff line (system) of chant: its neumes/divisiones (with row-relative
+/// X already assigned) plus an optional end-of-line custos.
+class _Row {
+  final List<_NeumeBox> neumes = [];
+  final List<_Divisio> divisiones = [];
+  int? custosStep; // step of the next row's first note; null on the last row
+}
+
+/// Builds and lays out chant as rows (systems) wrapped to a maximum width.
 class GregorianLayout {
-  final List<_NeumeBox> _neumes;
-  final List<_Divisio> _divisiones;
+  final List<_Row> _rows;
   final ChantClef clef;
   final double clefX;
-  final double contentWidth;
+  final double width; // canvas width
   final double staffSpace;
   final bool hasSyllables;
 
+  int get rowCount => _rows.length;
+
   GregorianLayout._({
-    required List<_NeumeBox> neumes,
-    required List<_Divisio> divisiones,
+    required List<_Row> rows,
     required this.clef,
     required this.clefX,
-    required this.contentWidth,
+    required this.width,
     required this.staffSpace,
     required this.hasSyllables,
-  })  : _neumes = neumes,
-        _divisiones = divisiones;
+  }) : _rows = rows;
 
   factory GregorianLayout.build(
     List<MusicalElement> elements,
     ChantClef clef,
+    double maxWidth,
     GregorianTheme theme,
   ) {
     final sp = theme.staffSpace;
@@ -336,11 +346,8 @@ class GregorianLayout {
     dis.sort();
     final referenceDi = dis.isEmpty ? 0 : dis[dis.length ~/ 2];
 
-    final neumes = <_NeumeBox>[];
-    final divisiones = <_Divisio>[];
-    final ordered = <Object>[];
+    final ordered = <Object>[]; // _NeumeBox | _Divisio
     var hasSyllables = false;
-
     for (final e in elements) {
       if (e is Neume) {
         final steps = e.components.map((c) {
@@ -351,49 +358,71 @@ class GregorianLayout {
         }).toList();
         if (steps.isEmpty) continue;
         final box = _emitNeume(e, steps, sp);
-        if (box.syllable != null && box.syllable!.isNotEmpty) {
-          hasSyllables = true;
-        }
-        neumes.add(box);
+        if (box.syllable != null && box.syllable!.isNotEmpty) hasSyllables = true;
         ordered.add(box);
       } else if (e is NeumeDivision) {
-        final d = _Divisio(_divisioGlyph(e.type));
-        divisiones.add(d);
-        ordered.add(d);
+        ordered.add(_Divisio(_divisioGlyph(e.type)));
       }
     }
 
-    // Horizontal layout: clef, then neumes/divisiones left to right.
+    // Each row repeats the clef; reserve room at the right for the custos.
     final clefX = sp * 0.4;
-    var cursor = clefX + sp * 1.7;
+    final notesStartX = clefX + sp * 1.7;
     final neumeGap = sp * 1.0;
     final divisioGap = sp * 0.85;
+    final rightPad = sp * 1.6; // custos space
+    final hardWidth = maxWidth.isFinite && maxWidth > sp * 12 ? maxWidth : 0.0;
+
+    final rows = <_Row>[];
+    var row = _Row();
+    var cursor = notesStartX;
+    var maxCursor = notesStartX;
     for (final o in ordered) {
+      final w = o is _NeumeBox ? o.width + neumeGap : divisioGap;
+      final hasContent = row.neumes.isNotEmpty || row.divisiones.isNotEmpty;
+      if (hardWidth > 0 && hasContent && cursor + w > hardWidth - rightPad) {
+        rows.add(row);
+        row = _Row();
+        cursor = notesStartX;
+      }
       if (o is _NeumeBox) {
         o.startX = cursor;
+        row.neumes.add(o);
         cursor += o.width + neumeGap;
       } else if (o is _Divisio) {
         o.x = cursor;
+        row.divisiones.add(o);
         cursor += divisioGap;
+      }
+      if (cursor > maxCursor) maxCursor = cursor;
+    }
+    if (row.neumes.isNotEmpty || row.divisiones.isNotEmpty) rows.add(row);
+
+    // Custos: end of each row (except the last) shows the next row's first pitch.
+    for (var i = 0; i < rows.length - 1; i++) {
+      if (rows[i + 1].neumes.isNotEmpty) {
+        rows[i].custosStep = rows[i + 1].neumes.first.firstStep;
       }
     }
 
+    final width = hardWidth > 0 ? hardWidth : maxCursor + rightPad;
     return GregorianLayout._(
-      neumes: neumes,
-      divisiones: divisiones,
+      rows: rows,
       clef: clef,
       clefX: clefX,
-      contentWidth: cursor + sp * 1.2,
+      width: width,
       staffSpace: sp,
       hasSyllables: hasSyllables,
     );
   }
 
-  double totalHeight() {
+  double rowHeight() {
     final sp = staffSpace;
     final lyric = hasSyllables ? sp * 2.2 : 0.0;
-    return sp * 7.0 + lyric;
+    return sp * 6.0 + lyric;
   }
+
+  double totalHeight() => _rows.length * rowHeight() + staffSpace * 1.2;
 }
 
 /// Paints a [GregorianLayout] using the bundled Bravura chant glyphs.
@@ -408,15 +437,14 @@ class GregorianPainter extends CustomPainter {
     required this.metadata,
   });
 
-  double get _staffCenterY => theme.staffSpace * 3.4;
+  /// Canvas Y of staff line [line] (1 = bottom .. 4 = top) for a row whose staff
+  /// center is at [centerY].
+  double _lineY(double centerY, int line) =>
+      centerY + (_staffHalfHeight - (line - 1) * _lineGap) * theme.staffSpace;
 
-  /// Canvas Y of staff line [line] (1 = bottom .. 4 = top).
-  double _lineY(int line) =>
-      _staffCenterY +
-      (_staffHalfHeight - (line - 1) * _lineGap) * theme.staffSpace;
-
-  /// Canvas Y of a note at diatonic [step] (median centered on staff middle).
-  double _stepY(int step) => _staffCenterY - step * _halfStep * theme.staffSpace;
+  /// Canvas Y of a note at diatonic [step] within a row centered at [centerY].
+  double _stepY(double centerY, int step) =>
+      centerY - step * _halfStep * theme.staffSpace;
 
   /// Draws a chant glyph so its SMuFL origin (baseline, x=0) lands at (x, y).
   void _glyph(Canvas canvas, String glyphName, double x, double y) {
@@ -458,60 +486,70 @@ class GregorianPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (metadata.isNotLoaded) return;
     final sp = theme.staffSpace;
+    final rowHeight = layout.rowHeight();
 
-    // Staff: tile chantStaff across the content width.
-    var sx = 0.0;
-    while (sx < layout.contentWidth) {
-      _glyph(canvas, 'chantStaff', sx, _staffCenterY);
-      sx += _staffAdvance * sp;
-    }
+    for (var r = 0; r < layout._rows.length; r++) {
+      final row = layout._rows[r];
+      final centerY = r * rowHeight + sp * 3.0;
+      final lyricTop = _lineY(centerY, 1) + sp * 1.4;
 
-    // Clef on its line.
-    _glyph(canvas, layout.clef.glyphName, layout.clefX, _lineY(layout.clef.line));
+      // Staff: tile chantStaff across the row width.
+      var sx = 0.0;
+      while (sx < layout.width) {
+        _glyph(canvas, 'chantStaff', sx, centerY);
+        sx += _staffAdvance * sp;
+      }
 
-    final lyricTop = _lineY(1) + sp * 1.4;
+      // Clef (repeated each row).
+      _glyph(canvas, layout.clef.glyphName, layout.clefX,
+          _lineY(centerY, layout.clef.line));
 
-    for (final box in layout._neumes) {
-      // Connecting lines / ligaturas first, then noteheads on top.
-      for (final op in box.ops) {
-        if (op.kind == _OpKind.ascLine) {
-          final y = (_stepY(op.step) + _stepY(op.step2)) / 2;
-          _glyph(canvas, op.glyph, box.startX + op.dx, y);
-        } else if (op.kind == _OpKind.descLig) {
-          // Fused descending pair, registered near the top (starting) note.
-          _glyph(canvas, op.glyph, box.startX + op.dx, _stepY(op.step));
+      for (final box in row.neumes) {
+        // Connecting lines / ligaturas first, then noteheads on top.
+        for (final op in box.ops) {
+          if (op.kind == _OpKind.ascLine) {
+            final y = (_stepY(centerY, op.step) + _stepY(centerY, op.step2)) / 2;
+            _glyph(canvas, op.glyph, box.startX + op.dx, y);
+          } else if (op.kind == _OpKind.descLig) {
+            _glyph(canvas, op.glyph, box.startX + op.dx, _stepY(centerY, op.step));
+          }
+        }
+        for (final op in box.ops) {
+          if (op.kind == _OpKind.note) {
+            _glyph(canvas, op.glyph, box.startX + op.dx, _stepY(centerY, op.step));
+          }
+        }
+        // Rhythmic / expressive marks on top of the noteheads.
+        for (final op in box.ops) {
+          switch (op.kind) {
+            case _OpKind.episema:
+              _glyph(canvas, op.glyph, box.startX + op.dx,
+                  _stepY(centerY, op.step) - sp * 0.55);
+            case _OpKind.ictus:
+              final dy = op.glyph == 'chantIctusAbove' ? -sp * 0.7 : sp * 0.7;
+              _glyph(canvas, op.glyph, box.startX + op.dx,
+                  _stepY(centerY, op.step) + dy);
+            case _OpKind.mora:
+              _glyph(canvas, op.glyph, box.startX + op.dx,
+                  _stepY(centerY, op.step));
+            default:
+              break;
+          }
+        }
+        if (box.syllable != null && box.syllable!.isNotEmpty) {
+          _lyric(canvas, box.syllable!, (box.startX + box.endX) / 2, lyricTop);
         }
       }
-      for (final op in box.ops) {
-        if (op.kind == _OpKind.note) {
-          _glyph(canvas, op.glyph, box.startX + op.dx, _stepY(op.step));
-        }
-      }
-      // Rhythmic / expressive marks on top of the noteheads.
-      for (final op in box.ops) {
-        switch (op.kind) {
-          case _OpKind.episema:
-            // Horizontal bar just above the notehead.
-            _glyph(canvas, op.glyph, box.startX + op.dx,
-                _stepY(op.step) - sp * 0.55);
-          case _OpKind.ictus:
-            // Vertical episema below (or above) the notehead.
-            final dy = op.glyph == 'chantIctusAbove' ? -sp * 0.7 : sp * 0.7;
-            _glyph(canvas, op.glyph, box.startX + op.dx, _stepY(op.step) + dy);
-          case _OpKind.mora:
-            // Augmentum dot to the right, at note height.
-            _glyph(canvas, op.glyph, box.startX + op.dx, _stepY(op.step));
-          default:
-            break;
-        }
-      }
-      if (box.syllable != null && box.syllable!.isNotEmpty) {
-        _lyric(canvas, box.syllable!, (box.startX + box.endX) / 2, lyricTop);
-      }
-    }
 
-    for (final d in layout._divisiones) {
-      _glyph(canvas, d.glyphName, d.x, _staffCenterY);
+      for (final d in row.divisiones) {
+        _glyph(canvas, d.glyphName, d.x, centerY);
+      }
+
+      // End-of-line custos pointing at the next row's first pitch.
+      if (row.custosStep != null) {
+        _glyph(canvas, 'chantCustosStemUpPosMiddle', layout.width - sp * 1.3,
+            _stepY(centerY, row.custosStep!));
+      }
     }
   }
 

@@ -49,21 +49,27 @@ class _ChantScoreState extends State<ChantScore> {
         if (snapshot.connectionState != ConnectionState.done) {
           return const SizedBox.shrink();
         }
-        final layout = GregorianLayout.build(
-          widget.elements,
-          widget.clef,
-          widget.theme,
-        );
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: CustomPaint(
-            size: Size(layout.contentWidth, layout.totalHeight()),
-            painter: GregorianPainter(
-              layout: layout,
-              theme: widget.theme,
-              metadata: _metadata,
-            ),
-          ),
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final maxWidth =
+                constraints.maxWidth.isFinite ? constraints.maxWidth : 600.0;
+            final layout = GregorianLayout.build(
+              widget.elements,
+              widget.clef,
+              maxWidth,
+              widget.theme,
+            );
+            return SingleChildScrollView(
+              child: CustomPaint(
+                size: Size(layout.width, layout.totalHeight()),
+                painter: GregorianPainter(
+                  layout: layout,
+                  theme: widget.theme,
+                  metadata: _metadata,
+                ),
+              ),
+            );
+          },
         );
       },
     );
