@@ -391,7 +391,34 @@ class _TrackEventBuilder {
     required int voiceNumber,
     required double tupletMultiplier,
   }) {
-    if (note.isGraceNote && !options.playGraceNotes) {
+    if (note.isGraceNote) {
+      if (!options.playGraceNotes) return 0;
+      // A grace note STEALS time rather than adding it: play it just before the
+      // beat (borrowing from the preceding note) and do NOT advance the cursor,
+      // so the main note stays on time and the measure does not overflow.
+      final graceTicks = _durationToTicks(
+        duration: note.duration,
+        tupletMultiplier: tupletMultiplier,
+        isGraceNote: true,
+        options: options,
+      );
+      // Borrow from the preceding note when there is room, otherwise crush at
+      // the beat. Either way the cursor does not advance (no overflow).
+      final graceStart = startTick >= graceTicks ? startTick - graceTicks : startTick;
+      final graceEnd =
+          startTick >= graceTicks ? startTick : startTick + graceTicks;
+      final graceMidi = note.pitch.midiNumber.clamp(0, 127);
+      final graceVel = (note.dynamicElement != null
+              ? velocityFromDynamic(note.dynamicElement!.type)
+              : (_voiceVelocity[voiceNumber] ?? baseVelocity))
+          .clamp(1, 127);
+      events.add(MidiEvent.noteOn(
+          tick: graceStart,
+          channel: channel,
+          note: graceMidi,
+          velocity: graceVel));
+      events.add(
+          MidiEvent.noteOff(tick: graceEnd, channel: channel, note: graceMidi));
       return 0;
     }
 

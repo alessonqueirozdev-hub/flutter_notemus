@@ -241,6 +241,31 @@ void main() {
           greaterThan(vel(const [ArticulationType.accent])));
     });
 
+    test('grace note steals time: it sounds before the beat and does not '
+        'delay the main note', () {
+      final measure = Measure()
+        ..add(Note(
+            pitch: const Pitch(step: 'C', octave: 5),
+            duration: const Duration(DurationType.eighth),
+            isGraceNote: true))
+        ..add(Note(
+            pitch: const Pitch(step: 'D', octave: 5),
+            duration: const Duration(DurationType.quarter)));
+      final track = MidiMapper.fromStaff(Staff(measures: [measure]))
+          .tracks
+          .firstWhere((t) => t.name == 'Staff 1');
+      final ons =
+          track.events.where((e) => e.type == MidiEventType.noteOn).toList();
+      // Grace at tick 0, main note still at tick 0 (not pushed later)...
+      final main = ons.firstWhere((e) => e.note == 74); // D5
+      expect(main.tick, 0);
+      // ...and the measure length is the single quarter (960), no overflow.
+      expect(track.events
+          .where((e) => e.type == MidiEventType.noteOff)
+          .map((e) => e.tick)
+          .reduce((a, b) => a > b ? a : b), 960);
+    });
+
     test('half-note metronome mark scales to per-quarter MIDI tempo', () {
       final measure = Measure()
         ..add(TempoMark(beatUnit: DurationType.half, bpm: 80))
