@@ -38,7 +38,16 @@ class ChantClef {
 
   /// Staff line the clef sits on, 1 (bottom) .. 4 (top). Default: top line.
   final int line;
-  const ChantClef({this.type = ChantClefType.doClef, this.line = 4});
+
+  /// Clef-flat (GABC `cb`/`fb`): a soft B-flat in force like a key signature
+  /// (every si is flat until cancelled by a natural). Drawn just after the clef.
+  final bool flat;
+
+  const ChantClef({
+    this.type = ChantClefType.doClef,
+    this.line = 4,
+    this.flat = false,
+  });
 
   String get glyphName => type == ChantClefType.doClef ? 'CClef' : 'FClef';
 }

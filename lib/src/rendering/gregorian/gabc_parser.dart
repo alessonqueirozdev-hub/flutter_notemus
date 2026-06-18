@@ -55,33 +55,60 @@ class GabcParser {
       }
     }
 
-    // 2. Walk `text(notes)` tokens.
+    // 2. Walk `text(notes)` tokens. Pitch is resolved RELATIVE to the active
+    // clef (which may change mid-score); GabcResult carries the FIRST clef for
+    // the renderer's initial registration.
     var clef = const ChantClef();
+    var firstClef = clef;
+    var sawClef = false;
     final elements = <MusicalElement>[];
     final token = RegExp(r'([^()\s]*)\(([^)]*)\)');
     for (final m in token.allMatches(body)) {
       final text = _cleanText(m.group(1) ?? '');
       final notes = (m.group(2) ?? '').trim();
 
-      final clefMatch = RegExp(r'^([cf])b?([1-4])$').firstMatch(notes);
-      if (clefMatch != null && _isPureClef(notes)) {
+      final clefMatch = RegExp(r'^([cf])(b?)([1-4])$').firstMatch(notes);
+      if (clefMatch != null) {
         clef = ChantClef(
           type: clefMatch.group(1) == 'c'
               ? ChantClefType.doClef
               : ChantClefType.faClef,
-          line: int.parse(clefMatch.group(2)!),
+          line: int.parse(clefMatch.group(3)!),
+          flat: clefMatch.group(2) == 'b',
         );
+        if (!sawClef) {
+          firstClef = clef;
+          sawClef = true;
+        }
         continue;
       }
 
-      _parseSyllable(notes, text, elements);
+      _parseSyllable(notes, text, elements, clef);
     }
 
-    return GabcResult(clef, elements, headers);
+    return GabcResult(sawClef ? firstClef : clef, elements, headers);
   }
 
-  static bool _isPureClef(String s) =>
-      RegExp(r'^[cf]b?[1-4]$').hasMatch(s);
+  /// Maps a GABC staff slot (a=0 .. m=12, the vertical position) to a real
+  /// diatonic pitch under [clef]. The note letters are positions RELATIVE to the
+  /// clef, not absolute names: a do-clef makes its line "do" (C), an fa-clef
+  /// makes its line "fa" (F); the natural diatonic scale is then walked so the
+  /// E-F and B-C semitones land on the correct lines for that clef.
+  ///
+  /// Convention (documented; chant has no fixed pitch, so the octave is only a
+  /// default register adjustable downstream): the 4 staff lines sit at slots
+  /// {3,5,7,9} (clefSlot = 2*line+1), centring the a..m range on the staff, and
+  /// the clef line is anchored at octave 4.
+  static ({String step, int octave}) _slotToPitch(int slot, ChantClef clef) {
+    const anchorOctave = 4;
+    final clefSlot = 2 * clef.line + 1;
+    final degree = slot - clefSlot; // diatonic steps above the clef line
+    final base = clef.type == ChantClefType.doClef ? 0 : 3; // C or F index
+    final diatonicNumber = anchorOctave * 7 + base + degree;
+    final stepIndex = diatonicNumber % 7; // Dart % is non-negative here
+    final octave = (diatonicNumber - stepIndex) ~/ 7;
+    return (step: 'CDEFGAB'[stepIndex], octave: octave);
+  }
 
   /// Strips GABC text-layer markup (`<i>..</i>`, `<sp>..</sp>`, `*`, etc.).
   static String _cleanText(String t) => t
@@ -94,6 +121,7 @@ class GabcParser {
     String notes,
     String syllable,
     List<MusicalElement> out,
+    ChantClef clef,
   ) {
     if (notes.isEmpty) return;
 
@@ -106,7 +134,7 @@ class GabcParser {
       final s = segment.toString();
       segment.clear();
       if (s.trim().isEmpty) return;
-      final elems = _buildNeume(s, assignedSyllable ? null : syllable);
+      final elems = _buildNeume(s, assignedSyllable ? null : syllable, clef);
       if (elems.isNotEmpty) {
         out.addAll(elems);
         assignedSyllable = true;
@@ -151,7 +179,8 @@ class GabcParser {
   /// (pitch + `x`/`y`/`#`) with note neumes: each accidental is emitted as its
   /// own standalone element (no notehead), flushing any pending notes first so
   /// the sign precedes the notes it governs.
-  static List<MusicalElement> _buildNeume(String seg, String? syllable) {
+  static List<MusicalElement> _buildNeume(
+      String seg, String? syllable, ChantClef clef) {
     final result = <MusicalElement>[];
     var comps = <NeumeComponent>[];
     var steps = <int>[];
@@ -181,9 +210,8 @@ class GabcParser {
         i++;
         continue;
       }
-      final idx = code - 0x61; // 0..12
-      final octave = 3 + idx ~/ 7;
-      final step = 'CDEFGAB'[idx % 7];
+      final idx = code - 0x61; // 0..12 (staff slot, a lowest)
+      final (step: step, octave: octave) = _slotToPitch(idx, clef);
       final upper = ch != lower; // uppercase = punctum inclinatum
 
       var form = NcForm.punctum;

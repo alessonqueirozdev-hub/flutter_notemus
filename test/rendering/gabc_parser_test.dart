@@ -101,6 +101,32 @@ mode: 1;
       expect(neumes[1].type, NeumeType.custom); // two puncta, same pitch
     });
 
+    test('resolves absolute pitch relative to the clef (do-clef line = C)', () {
+      NeumeComponent single(String gabc) => GabcParser.parse(gabc)
+          .elements
+          .whereType<Neume>()
+          .first
+          .components
+          .single;
+      // c4: line 4 = do = C; slot 'j' sits on line 4.
+      final c4 = single('(c4) a(j)');
+      expect(c4.pitchName, 'C');
+      expect(c4.octave, 4);
+      // Re-clefing to c3 maps the same letter to a different pitch (the clef
+      // shifts where do — and the semitones — fall).
+      final c3 = single('(c3) a(j)');
+      expect(c3.pitchName, 'E');
+    });
+
+    test('fa-clef line resolves to F, and clef-flat (cb/fb) is recorded', () {
+      final r = GabcParser.parse('(fb3) a(h)');
+      expect(r.clef.type, ChantClefType.faClef);
+      expect(r.clef.line, 3);
+      expect(r.clef.flat, isTrue);
+      final n = r.elements.whereType<Neume>().first.components.single;
+      expect(n.pitchName, 'F'); // slot 'h' is on line 3 = fa = F
+    });
+
     test('fa clef and pitch contour are relative to the clef', () {
       const gabc = '(f3) a(g)b(h)';
       final r = GabcParser.parse(gabc);
