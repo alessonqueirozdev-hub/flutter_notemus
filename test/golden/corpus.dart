@@ -471,6 +471,24 @@ Staff _chromaticChords() {
   ]);
 }
 
+/// Articulations beyond the basics — portato, snap pizzicato, brass stopped/
+/// open/half-stopped, thumb — which previously rendered nothing.
+Staff _extendedArticulations() {
+  Note a(String s, int o, ArticulationType art) => _n(s, o, artic: [art]);
+  return _staff([
+    _measure([
+      Clef(clefType: ClefType.treble),
+      TimeSignature(numerator: 6, denominator: 4),
+      a('E', 5, ArticulationType.portato),
+      a('E', 5, ArticulationType.snap),
+      a('E', 5, ArticulationType.stopped),
+      a('E', 5, ArticulationType.open),
+      a('E', 5, ArticulationType.halfStopped),
+      a('E', 5, ArticulationType.thumb),
+    ]),
+  ]);
+}
+
 /// Compound + multi-digit meters: 12/8 (two-digit numerator) and 6/8, to
 /// verify multi-digit time-signature rendering and width reservation.
 Staff _compoundMeter() {
@@ -547,6 +565,13 @@ final List<CorpusCase> corpus = [
     tier: 'intermediate',
     exercises: 'multi-digit time signature digits + width reservation',
     build: _compoundMeter,
+  ),
+  CorpusCase(
+    id: 'm04c_articulations_extended',
+    title: 'Extended articulations (portato, snap, brass mutes, thumb)',
+    tier: 'intermediate',
+    exercises: 'articulation glyph coverage beyond the basics',
+    build: _extendedArticulations,
   ),
   CorpusCase(
     id: 'm05_slurs_ties',

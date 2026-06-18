@@ -65,7 +65,16 @@ class ArticulationRenderer extends BaseGlyphRenderer {
       ArticulationType.downBow => 'stringsDownBow',
       ArticulationType.harmonics => 'stringsHarmonic',
       ArticulationType.pizzicato => 'pluckedPizzicato',
-      _ => null,
+      ArticulationType.portato =>
+        above ? 'articTenutoStaccatoAbove' : 'articTenutoStaccatoBelow',
+      ArticulationType.snap =>
+        above ? 'pluckedSnapPizzicatoAbove' : 'pluckedSnapPizzicatoBelow',
+      ArticulationType.thumb => 'stringsThumbPosition',
+      ArticulationType.stopped => 'brassMuteClosed',
+      ArticulationType.open => 'brassMuteOpen',
+      ArticulationType.halfStopped => 'brassMuteHalfClosed',
+      // legato is rendered as a slur, not an articulation glyph.
+      ArticulationType.legato => null,
     };
   }
 
