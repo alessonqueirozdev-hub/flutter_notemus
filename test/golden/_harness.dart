@@ -18,6 +18,7 @@ import 'package:flutter_test/flutter_test.dart';
 // Hide the music `Duration` so `const Duration(milliseconds: …)` resolves to
 // the dart:core time Duration used by tester.pump().
 import 'package:flutter_notemus/flutter_notemus.dart' hide Duration;
+import 'package:flutter_notemus/src/rendering/gregorian/greciliae_font.dart';
 
 import 'corpus.dart';
 
@@ -102,6 +103,18 @@ Future<void> loadNotemusFonts() async {
       }
     }
 
+    // Greciliae chant font (Gregorian neumes), under both the bare and
+    // package-qualified family names used by the renderer.
+    final greciliae = File('assets/gregorian/greciliae.ttf');
+    if (greciliae.existsSync()) {
+      final gb = await greciliae.readAsBytes();
+      for (final family in const ['Greciliae', 'packages/flutter_notemus/Greciliae']) {
+        final loader = FontLoader(family)
+          ..addFont(Future.value(ByteData.view(gb.buffer)));
+        await loader.load();
+      }
+    }
+
     // Serif font for chant lyrics (registered under the serif family names).
     for (final path in _serifFontCandidates) {
       final f = File(path);
@@ -125,6 +138,9 @@ Future<void> loadNotemusFonts() async {
     _fontsLoaded = true;
   }
   await SmuflMetadata().load();
+  // Pre-load the Greciliae glyph map so ChantScore's FutureBuilder resolves
+  // immediately under pump() (no pumpAndSettle).
+  await GreciliaeFont().load();
 }
 
 /// Pumps [c] into a deterministic, fixed-size widget tree and returns the

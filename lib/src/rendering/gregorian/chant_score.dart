@@ -1,13 +1,13 @@
 // ChantScore — widget that renders Gregorian (square-notation) chant.
 //
-// Sibling of `MusicScore`/`JianpuScore`. Like `MusicScore` it draws SMuFL chant
-// glyphs, so it loads the Bravura metadata before painting.
+// Sibling of `MusicScore`/`JianpuScore`. Renders precomposed neume glyphs from
+// the Greciliae chant font, so it loads the Greciliae glyph map before painting.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/core/core.dart';
 
-import '../../smufl/smufl_metadata_loader.dart';
 import 'gabc_parser.dart';
+import 'greciliae_font.dart';
 import 'gregorian_renderer.dart';
 
 /// Renders a sequence of [Neume]/[NeumeDivision] elements as Gregorian chant
@@ -48,19 +48,19 @@ class ChantScore extends StatefulWidget {
 }
 
 class _ChantScoreState extends State<ChantScore> {
-  late final Future<void> _metadataFuture;
-  final SmuflMetadata _metadata = SmuflMetadata();
+  late final Future<void> _fontFuture;
+  final GreciliaeFont _font = GreciliaeFont();
 
   @override
   void initState() {
     super.initState();
-    _metadataFuture = _metadata.load();
+    _fontFuture = _font.load();
   }
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<void>(
-      future: _metadataFuture,
+      future: _fontFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
           return const SizedBox.shrink();
@@ -74,6 +74,7 @@ class _ChantScoreState extends State<ChantScore> {
               widget.clef,
               maxWidth,
               widget.theme,
+              _font,
             );
             return SingleChildScrollView(
               child: CustomPaint(
@@ -81,7 +82,7 @@ class _ChantScoreState extends State<ChantScore> {
                 painter: GregorianPainter(
                   layout: layout,
                   theme: widget.theme,
-                  metadata: _metadata,
+                  font: _font,
                 ),
               ),
             );

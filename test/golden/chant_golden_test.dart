@@ -67,7 +67,7 @@ void main() {
 
     // Narrow width forces wrapping to two systems, exercising the end-of-line
     // custos and per-row clef repetition.
-    await tester.binding.setSurfaceSize(const Size(360, 470));
+    await tester.binding.setSurfaceSize(const Size(540, 430));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(
@@ -80,8 +80,8 @@ void main() {
             child: RepaintBoundary(
               key: kGoldenBoundaryKey,
               child: Container(
-                width: 360,
-                height: 470,
+                width: 540,
+                height: 430,
                 color: Colors.white,
                 child: ChantScore(
                   elements: elements,
@@ -134,7 +134,7 @@ mi(g)se(f)ri(gh)cór(g)di(f)ae(f) (::)
               key: kGoldenBoundaryKey,
               child: Container(
                 width: 520,
-                height: 470,
+                height: 430,
                 color: Colors.white,
                 child: ChantScore.fromGabc(
                   gabc,

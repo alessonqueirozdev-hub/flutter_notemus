@@ -1,34 +1,26 @@
-// Gregorian (square-notation / neume) renderer — Vatican/Solesmes style.
+// Gregorian (square-notation) renderer using the Greciliae chant font.
 //
-// Sibling of `MusicScore`/`JianpuScore` for plainchant. Renders clean, uniform
-// SQUARE notation on a precise 4-line staff:
-//   * the 4 staff lines are drawn as primitives on an exact grid, and every
-//     glyph is registered by its SMuFL bounding box so noteheads sit EXACTLY on
-//     a line or in a space (one diatonic step = half the inter-line gap);
-//   * neumes are built from the uniform square punctum (and the diamond punctum
-//     inclinatum for climacus tails), joined by simple geometric strokes — NOT
-//     the calligraphic fused-ligatura glyphs, which clash with the square style;
-//   * do/fa clef, divisiones, end-of-line custos, multi-system wrapping, and
-//     serif syllable text.
-// Pitch is RELATIVE to the clef line (chant has no fixed pitch); the melodic
-// contour is centered on the staff. Absolute pitch/audio is deferred.
+// Greciliae (SIL OFL, from the Gregorio project) ships PRECOMPOSED neume glyphs
+// designed by chant typographers — one glyph for a pes/clivis(flexus)/torculus/
+// porrectus/scandicus of a given ambitus. We pick the glyph by NAME from the
+// neume contour (the ambitus = diatonic step interval), place ONE glyph per
+// neume at its first note, and assemble only the descending climacus from
+// Punctum + PunctumInclinatum. Pitch is RELATIVE to the clef line (chant has no
+// fixed pitch); the melodic contour is centered on the staff.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/core/core.dart';
 
-import '../../smufl/smufl_metadata_loader.dart';
+import 'greciliae_font.dart';
 
 /// Visual configuration for the Gregorian renderer.
 class GregorianTheme {
   final Color color;
 
-  /// Pixels per staff space. The SMuFL em is 4 staff spaces.
+  /// Pixels per staff space (≈ the inter-line gap).
   final double staffSpace;
 
-  /// Lyric (syllable) font size in pixels.
   final double lyricSize;
-
-  /// Optional font family for syllable text (defaults to a serif fallback).
   final String? lyricTextFamily;
 
   const GregorianTheme({
@@ -39,7 +31,6 @@ class GregorianTheme {
   });
 }
 
-/// Chant clef: a do (ut) or fa clef anchored on a staff line (1 = bottom).
 enum ChantClefType { doClef, faClef }
 
 class ChantClef {
@@ -47,18 +38,19 @@ class ChantClef {
 
   /// Staff line the clef sits on, 1 (bottom) .. 4 (top). Default: top line.
   final int line;
-
   const ChantClef({this.type = ChantClefType.doClef, this.line = 4});
 
-  String get glyphName =>
-      type == ChantClefType.doClef ? 'chantCclef' : 'chantFclef';
+  String get glyphName => type == ChantClefType.doClef ? 'CClef' : 'FClef';
 }
 
-// Inter-line gap in staff-space units (from the SMuFL chantStaff: 4 lines over
-// 3.064 sp). Drawing our own lines on this grid keeps clef/divisio glyphs — all
-// designed for this gap — consistent with the noteheads.
-const double _lineGapU = 3.064 / 3; // ≈ 1.021
-const double _halfStepU = _lineGapU / 2; // one diatonic step ≈ 0.511 sp
+// ── Greciliae geometry calibration (font units; unitsPerEm = 1000) ──
+// Glyphs scale with fontSize = staffSpace * _fontScale. One diatonic step is
+// _unitsPerStep font units (measured from PesOne..PesThree ambitus increments).
+// _firstNoteAnchor is the font-y of the first/reference note's center above the
+// glyph origin (used to seat the note on its staff line/space).
+const double _fontScale = 3.4; // -> inter-line gap ≈ staffSpace
+const double _unitsPerStep = 147.0;
+const double _firstNoteAnchor = 70.0;
 
 int _diatonic(String step, int octave) {
   const order = 'CDEFGAB';
@@ -66,164 +58,130 @@ int _diatonic(String step, int octave) {
   return octave * 7 + (i < 0 ? 0 : i);
 }
 
-enum _OpKind { note, stroke, episema, ictus, mora }
+const _words = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven'];
+String? _word(int n) => (n >= 1 && n < _words.length) ? _words[n] : null;
 
-class _Op {
-  final _OpKind kind;
-  final String glyph; // note: glyph name; mora/ictus/episema: glyph name
-  final int step; // note step / stroke top step
-  final int step2; // stroke bottom step (else == step)
-  final double dx; // x offset within the neume (px)
-  _Op(this.kind, this.glyph, this.step, this.dx, [int? step2])
-      : step2 = step2 ?? step;
+/// A single positioned glyph within a neume (placed so its first-note anchor
+/// lands at staff [step], at x offset [dx]).
+class _GlyphOp {
+  final String name;
+  final int step;
+  final double dx;
+  _GlyphOp(this.name, this.step, this.dx);
 }
 
 class _NeumeBox {
-  final List<_Op> ops;
+  final List<_GlyphOp> glyphs;
   final double width;
   final String? syllable;
   final int firstStep;
   double startX = 0;
-  _NeumeBox(this.ops, this.width, this.syllable, this.firstStep);
+  _NeumeBox(this.glyphs, this.width, this.syllable, this.firstStep);
   double get endX => startX + width;
 }
 
 class _Divisio {
-  final String glyphName;
+  final NeumeDivisionType type;
   double x = 0;
-  _Divisio(this.glyphName);
+  _Divisio(this.type);
 }
 
 class _Row {
-  final List<Object> items = []; // _NeumeBox | _Divisio, in reading order
+  final List<Object> items = []; // _NeumeBox | _Divisio
   int? custosStep;
-  double lineEnd = 0; // x where this system's staff lines stop
+  double lineEnd = 0;
 }
 
-String _divisioGlyph(NeumeDivisionType t) => switch (t) {
-      NeumeDivisionType.minima => 'chantDivisioMinima',
-      NeumeDivisionType.minor => 'chantDivisioMaior',
-      NeumeDivisionType.maior => 'chantDivisioMaior',
-      NeumeDivisionType.finalis => 'chantDivisioFinalis',
+/// Single-note glyph name by form.
+String _singleGlyph(NcForm form) => switch (form) {
+      NcForm.virga => 'Virga',
+      NcForm.quilisma => 'Quilisma',
+      NcForm.oriscus => 'AscendensOriscus',
+      NcForm.stropha => 'Stropha',
+      _ => 'Punctum',
     };
 
-/// Glyph for a single square note by its form.
-String _noteGlyph(NcForm form) => switch (form) {
-      NcForm.virga => 'chantPunctumVirga',
-      NcForm.quilisma => 'chantQuilisma',
-      NcForm.oriscus => 'chantOriscusAscending',
-      NcForm.stropha => 'chantStrophicus',
-      _ => 'chantPunctum',
-    };
+/// Picks the precomposed Greciliae glyph name for a neume, or null if it must be
+/// assembled from components.
+String? _neumeGlyphName(NeumeType type, List<int> steps, List<NcForm> forms) {
+  int up(int i, int j) => steps[j] - steps[i];
+  int dn(int i, int j) => steps[i] - steps[j];
+  switch (type) {
+    case NeumeType.pes:
+      final a = _word(up(0, 1));
+      return a == null ? null : 'Pes${a}Nothing';
+    case NeumeType.clivis:
+      final a = _word(dn(0, 1));
+      return a == null ? null : 'Flexus${a}Nothing';
+    case NeumeType.torculus:
+      final a = _word(up(0, 1)), b = _word(dn(1, 2));
+      return (a == null || b == null) ? null : 'Torculus$a${b}Nothing';
+    case NeumeType.porrectus:
+      final a = _word(dn(0, 1)), b = _word(up(1, 2));
+      return (a == null || b == null) ? null : 'Porrectus$a${b}Nothing';
+    case NeumeType.scandicus:
+      final a = _word(up(0, 1)), b = _word(up(1, 2));
+      return (a == null || b == null) ? null : 'Scandicus$a${b}Nothing';
+    case NeumeType.quilismaGroup:
+      if (steps.length == 2) {
+        final a = _word(up(0, 1));
+        return a == null ? null : 'QuilismaPes${a}Nothing';
+      }
+      return null;
+    default:
+      return null;
+  }
+}
 
-/// Emits the draw ops for one neume (square style), per [NeumeType].
-_NeumeBox _emitNeume(Neume e, List<int> steps, double sp) {
-  final ops = <_Op>[];
+/// Emits the glyph ops for one neume using the [font] (for advances).
+_NeumeBox _emitNeume(
+    Neume e, List<int> steps, GreciliaeFont font, double scale) {
   final forms = e.components.map((c) => c.form).toList();
-  final noteW = 0.64 * sp; // chantPunctum advance
-
-  String formGlyph(int i) =>
-      _noteGlyph(i < forms.length ? forms[i] : NcForm.punctum);
+  double advPx(String name) {
+    final u = font.advanceUnits(name);
+    return (u > 0 ? u : 166) * scale;
+  }
 
   // Single note.
   if (steps.length == 1) {
-    final glyph =
-        e.type == NeumeType.virga ? 'chantPunctumVirga' : formGlyph(0);
+    final name = e.type == NeumeType.virga ? 'Virga' : _singleGlyph(forms[0]);
+    final g = font.has(name) ? name : 'Punctum';
+    return _NeumeBox([_GlyphOp(g, steps[0], 0)], advPx(g), e.syllable, steps[0]);
+  }
+
+  // Precomposed single-glyph neume?
+  final name = _neumeGlyphName(e.type, steps, forms);
+  if (name != null && font.has(name)) {
     return _NeumeBox(
-        [_Op(_OpKind.note, glyph, steps[0], 0)], noteW, e.syllable, steps[0]);
+        [_GlyphOp(name, steps[0], 0)], advPx(name), e.syllable, steps[0]);
   }
 
-  final type = (e.type == NeumeType.torculus || e.type == NeumeType.porrectus) &&
-          steps.length < 3
-      ? NeumeType.custom
-      : e.type;
-
-  double width;
-  switch (type) {
-    case NeumeType.bivirga:
-    case NeumeType.trivirga:
-      final n = type == NeumeType.bivirga ? 2 : 3;
-      for (var i = 0; i < n; i++) {
-        ops.add(_Op(_OpKind.note, 'chantPunctumVirga', steps[0], i * noteW));
-      }
-      width = noteW * n;
-    case NeumeType.pes:
-      // Two squares stacked (lower then upper) joined by a left vertical stroke.
-      ops.add(_Op(_OpKind.note, 'chantPunctum', steps[0], 0));
-      ops.add(_Op(_OpKind.note, formGlyph(1), steps[1], 0));
-      ops.add(_Op(_OpKind.stroke, '', steps[1], noteW * 0.06, steps[0]));
-      width = noteW;
-    case NeumeType.clivis:
-      // First (higher) square, then a lower square to the right; a left vertical
-      // stroke descends from the first note to the second's level.
-      ops.add(_Op(_OpKind.note, 'chantPunctum', steps[0], 0));
-      ops.add(_Op(_OpKind.note, 'chantPunctum', steps[1], noteW * 0.92));
-      ops.add(_Op(_OpKind.stroke, '', steps[0], noteW * 0.06, steps[1]));
-      width = noteW * 1.92;
-    case NeumeType.scandicus:
-    case NeumeType.salicus:
-      var cx = 0.0;
-      for (var i = 0; i < steps.length; i++) {
-        final isLast = i == steps.length - 1;
-        ops.add(_Op(_OpKind.note, isLast ? 'chantPunctumVirga' : 'chantPunctum',
-            steps[i], cx));
-        cx += noteW * 0.95;
-      }
-      width = cx - noteW * 0.95 + noteW;
-    case NeumeType.climacus:
-      // Virga then a run of descending puncta inclinata (diamonds).
-      var cx = 0.0;
-      ops.add(_Op(_OpKind.note, 'chantPunctumVirga', steps[0], cx));
-      cx += noteW * 0.95;
-      for (var i = 1; i < steps.length; i++) {
-        ops.add(_Op(_OpKind.note, 'chantPunctumInclinatum', steps[i], cx));
-        cx += noteW * 0.95;
-      }
-      width = cx;
-    case NeumeType.torculus:
-    case NeumeType.porrectus:
-      // Three squares on a diagonal (hump / valley) — the contour conveys it.
-      var cx = 0.0;
-      for (var i = 0; i < steps.length; i++) {
-        ops.add(_Op(_OpKind.note, 'chantPunctum', steps[i], cx));
-        cx += noteW * 0.95;
-      }
-      width = cx - noteW * 0.95 + noteW;
-    default:
-      // Generic contour walk: square per component; descending steps use
-      // puncta inclinata (diamonds).
-      var cx = 0.0;
-      for (var i = 0; i < steps.length; i++) {
-        final descending = i > 0 && steps[i] < steps[i - 1];
-        ops.add(_Op(_OpKind.note,
-            descending ? 'chantPunctumInclinatum' : formGlyph(i), steps[i], cx));
-        cx += noteW * 0.92;
-      }
-      width = cx - noteW * 0.92 + noteW;
-  }
-
-  // Rhythmic marks (Solesmes): episema, ictus, mora — attached per notehead.
-  final noteOps = ops.where((o) => o.kind == _OpKind.note).toList();
-  for (var i = 0; i < e.components.length && i < noteOps.length; i++) {
-    final c = e.components[i];
-    final no = noteOps[i];
-    if (c.episema) ops.add(_Op(_OpKind.episema, 'chantEpisema', no.step, no.dx));
-    if (c.ictus) {
-      ops.add(_Op(_OpKind.ictus,
-          c.ictusAbove ? 'chantIctusAbove' : 'chantIctusBelow', no.step, no.dx));
+  // Otherwise assemble glyph-per-note left to right. Descending steps use a
+  // punctum inclinatum (diamond); the first note of a descending run is a virga.
+  final ops = <_GlyphOp>[];
+  var cx = 0.0;
+  for (var i = 0; i < steps.length; i++) {
+    final descending = i > 0 && steps[i] < steps[i - 1];
+    String g;
+    if (descending) {
+      g = font.has('DescendensPunctumInclinatum')
+          ? 'DescendensPunctumInclinatum'
+          : (font.has('PunctumInclinatumDeminutus')
+              ? 'PunctumInclinatumDeminutus'
+              : 'Punctum');
+    } else if (i == 0 && steps.length > 1 && steps[1] < steps[0]) {
+      g = 'Virga'; // climacus head
+    } else {
+      g = _singleGlyph(forms[i]);
+      if (!font.has(g)) g = 'Punctum';
     }
-    for (var d = 0; d < c.morae; d++) {
-      ops.add(_Op(_OpKind.mora, 'chantAugmentum', no.step,
-          no.dx + noteW + d * noteW * 0.5));
-    }
+    ops.add(_GlyphOp(g, steps[i], cx));
+    cx += advPx(g) * 0.98;
   }
-  final lastMorae = e.components.isNotEmpty ? e.components.last.morae : 0;
-  if (lastMorae > 0) width += noteW * 0.6 * lastMorae;
-
-  return _NeumeBox(ops, width, e.syllable, steps.first);
+  return _NeumeBox(ops, cx, e.syllable, steps.first);
 }
 
-/// Builds and lays out chant as width-wrapped systems.
+/// Builds and lays out chant as width-wrapped systems using [font].
 class GregorianLayout {
   final List<_Row> _rows;
   final ChantClef clef;
@@ -248,8 +206,10 @@ class GregorianLayout {
     ChantClef clef,
     double maxWidth,
     GregorianTheme theme,
+    GreciliaeFont font,
   ) {
     final sp = theme.staffSpace;
+    final scale = sp * _fontScale / GreciliaeFont.unitsPerEm;
 
     final dis = <int>[];
     for (final e in elements) {
@@ -262,7 +222,7 @@ class GregorianLayout {
       }
     }
     dis.sort();
-    final referenceDi = dis.isEmpty ? 0 : dis[dis.length ~/ 2];
+    final ref = dis.isEmpty ? 0 : dis[dis.length ~/ 2];
 
     final ordered = <Object>[];
     var hasSyllables = false;
@@ -271,61 +231,56 @@ class GregorianLayout {
         final steps = e.components.map((c) {
           final di = (c.pitchName != null && c.octave != null)
               ? _diatonic(c.pitchName!, c.octave!)
-              : referenceDi;
-          return di - referenceDi;
+              : ref;
+          return di - ref;
         }).toList();
         if (steps.isEmpty) continue;
-        final box = _emitNeume(e, steps, sp);
+        final box = _emitNeume(e, steps, font, scale);
         if (box.syllable != null && box.syllable!.isNotEmpty) hasSyllables = true;
         ordered.add(box);
       } else if (e is NeumeDivision) {
-        ordered.add(_Divisio(_divisioGlyph(e.type)));
+        ordered.add(_Divisio(e.type));
       }
     }
 
-    final clefX = sp * 0.4;
-    final notesStartX = clefX + sp * 1.8;
-    final neumeGap = sp * 0.9;
+    final clefX = sp * 0.3;
+    final notesStartX = clefX + sp * 1.6;
+    final gap = sp * 0.85;
     final divisioGap = sp * 0.9;
-    final rightPad = sp * 1.6;
-    final hardWidth = maxWidth.isFinite && maxWidth > sp * 12 ? maxWidth : 0.0;
+    final rightPad = sp * 1.4;
+    final hardWidth = maxWidth.isFinite && maxWidth > sp * 10 ? maxWidth : 0.0;
 
-    double itemWidth(Object o) => o is _NeumeBox ? o.width : divisioGap;
+    double itemWidth(Object o) => o is _NeumeBox ? o.width : sp * 0.3;
 
-    // Pack items into rows by width (just record membership + order here;
-    // X positions are assigned afterwards, with justification).
     final rows = <_Row>[];
     var row = _Row();
-    var packCursor = notesStartX;
+    var cursor = notesStartX;
     var maxContent = notesStartX;
     for (final o in ordered) {
-      final w = itemWidth(o) + neumeGap;
+      final w = itemWidth(o) + (o is _Divisio ? divisioGap : gap);
       if (hardWidth > 0 &&
           row.items.isNotEmpty &&
-          packCursor + w > hardWidth - rightPad) {
+          cursor + w > hardWidth - rightPad) {
         rows.add(row);
         row = _Row();
-        packCursor = notesStartX;
+        cursor = notesStartX;
       }
       row.items.add(o);
-      packCursor += w;
-      if (packCursor > maxContent) maxContent = packCursor;
+      cursor += w;
+      if (cursor > maxContent) maxContent = cursor;
     }
     if (row.items.isNotEmpty) rows.add(row);
 
     final fullWidth = hardWidth > 0 ? hardWidth : maxContent + rightPad;
 
-    // Assign X. Non-last rows are JUSTIFIED to fill the line; the last row is
-    // left-packed and its staff lines stop just after the final element.
     for (var r = 0; r < rows.length; r++) {
       final items = rows[r].items;
       final isLast = r == rows.length - 1;
       final sumW = items.fold<double>(0, (a, o) => a + itemWidth(o));
       final avail = (fullWidth - rightPad) - notesStartX;
-      final gaps = items.length; // gaps between + trailing (before custos)
-      final gap = (!isLast && items.length > 1 && avail > sumW)
-          ? (avail - sumW) / gaps
-          : neumeGap;
+      final g = (!isLast && items.length > 1 && avail > sumW)
+          ? (avail - sumW) / items.length
+          : gap;
       var x = notesStartX;
       for (final o in items) {
         if (o is _NeumeBox) {
@@ -333,27 +288,21 @@ class GregorianLayout {
         } else if (o is _Divisio) {
           o.x = x;
         }
-        x += itemWidth(o) + gap;
+        x += itemWidth(o) + g;
       }
-      rows[r].lineEnd = isLast ? (x - gap + rightPad * 0.4) : fullWidth;
+      rows[r].lineEnd = isLast ? (x - g + rightPad * 0.4) : fullWidth;
     }
 
-    // Custos: end of each row (except last) shows the next row's first pitch.
     for (var i = 0; i < rows.length - 1; i++) {
-      final next = rows[i + 1].items;
-      final firstNeume = next.whereType<_NeumeBox>().cast<_NeumeBox?>().firstWhere(
-            (b) => b != null,
-            orElse: () => null,
-          );
-      if (firstNeume != null) rows[i].custosStep = firstNeume.firstStep;
+      final next = rows[i + 1].items.whereType<_NeumeBox>();
+      if (next.isNotEmpty) rows[i].custosStep = next.first.firstStep;
     }
 
-    final width = fullWidth;
     return GregorianLayout._(
       rows: rows,
       clef: clef,
       clefX: clefX,
-      width: width,
+      width: fullWidth,
       staffSpace: sp,
       hasSyllables: hasSyllables,
     );
@@ -361,57 +310,48 @@ class GregorianLayout {
 
   double rowHeight() {
     final sp = staffSpace;
-    final lyric = hasSyllables ? sp * 2.0 : 0.0;
-    return sp * 6.2 + lyric;
+    return sp * 6.0 + (hasSyllables ? sp * 2.0 : 0.0);
   }
 
-  double totalHeight() => _rows.length * rowHeight() + staffSpace * 1.0;
+  double totalHeight() => _rows.length * rowHeight() + staffSpace;
 }
 
-/// Paints a [GregorianLayout] using a precise staff grid + square chant glyphs.
+/// Paints a [GregorianLayout] with Greciliae glyphs on a precise staff grid.
 class GregorianPainter extends CustomPainter {
   final GregorianLayout layout;
   final GregorianTheme theme;
-  final SmuflMetadata metadata;
+  final GreciliaeFont font;
 
   GregorianPainter({
     required this.layout,
     required this.theme,
-    required this.metadata,
+    required this.font,
   });
 
   double get _sp => theme.staffSpace;
-  double get _lineGap => _lineGapU * _sp;
-  double get _halfStep => _halfStepU * _sp;
+  double get _fontSize => _sp * _fontScale;
+  double get _scale => _fontSize / GreciliaeFont.unitsPerEm;
+  double get _halfStep => _unitsPerStep * _scale;
+  double get _lineGap => 2 * _halfStep;
 
-  /// Canvas Y of staff line [line] (1 = bottom .. 4 = top) for staff center cy.
   double _lineY(double cy, int line) => cy + (1.5 - (line - 1)) * _lineGap;
-
-  /// Canvas Y of a note at diatonic [step] (median centered on the staff middle).
   double _stepY(double cy, int step) => cy - step * _halfStep;
 
-  /// Draws a chant glyph so its notehead/bbox anchor lands EXACTLY at (cx, cy).
-  /// Horizontally the glyph's left edge is at cx; vertically [cy] is the bbox
-  /// center, except virga (where the notehead sits at the top → origin anchor).
-  void _glyph(Canvas canvas, String glyphName, double cx, double cy,
-      {bool originAnchor = false}) {
-    final ch = metadata.getCodepoint(glyphName);
-    if (ch.isEmpty) return;
-    final box = metadata.getGlyphBoundingBox(glyphName);
-    final isVirga = glyphName.contains('Virga');
-    // Divisiones/custos register by their SMuFL origin (staff reference);
-    // virga by its origin (notehead at top); everything else by bbox center.
-    final anchorY =
-        (originAnchor || isVirga) ? 0.0 : (box?.centerY ?? 0.0);
-    final leftX = (box?.bBoxSwX ?? 0.0);
-
+  /// Draws a Greciliae glyph by [name] so the font-y [anchorUnits] lands at
+  /// (x, y). Notes use the first-note anchor; clef/custos register by bbox
+  /// center so they sit centered on their line.
+  void _glyph(Canvas canvas, String name, double x, double y,
+      {double? anchorUnits}) {
+    final ch = font.glyph(name);
+    if (ch == null) return;
+    final anchor = anchorUnits ?? _firstNoteAnchor;
     final tp = TextPainter(
       text: TextSpan(
         text: ch,
         style: TextStyle(
-          fontFamily: 'Bravura',
+          fontFamily: 'Greciliae',
           package: 'flutter_notemus',
-          fontSize: _sp * 4.0,
+          fontSize: _fontSize,
           color: theme.color,
           height: 1.0,
         ),
@@ -419,9 +359,7 @@ class GregorianPainter extends CustomPainter {
       textDirection: TextDirection.ltr,
     )..layout();
     final ascent = tp.computeDistanceToActualBaseline(TextBaseline.alphabetic);
-    final px = cx - leftX * _sp;
-    final py = cy - ascent + anchorY * _sp;
-    tp.paint(canvas, Offset(px, py));
+    tp.paint(canvas, Offset(x, y - ascent + anchor * _scale));
   }
 
   void _lyric(Canvas canvas, String text, double centerX, double topY) {
@@ -442,69 +380,70 @@ class GregorianPainter extends CustomPainter {
     tp.paint(canvas, Offset(centerX - tp.width / 2, topY));
   }
 
+  /// Draws a divisio (chant pause bar) as a geometric stroke. Greciliae's
+  /// Divisio* glyphs have unstable bounding boxes (and no Finalis), so the bars
+  /// are drawn directly: minima cuts the top space, minor the upper half, maior
+  /// the whole staff, finalis a double full bar (end of piece).
+  void _drawDivisio(
+      Canvas canvas, NeumeDivisionType t, double x, double cy, Paint p) {
+    final top = _lineY(cy, 4);
+    final l3 = _lineY(cy, 3);
+    final l2 = _lineY(cy, 2);
+    final bottom = _lineY(cy, 1);
+    switch (t) {
+      case NeumeDivisionType.minima:
+        canvas.drawLine(Offset(x, top), Offset(x, l3), p);
+        break;
+      case NeumeDivisionType.minor:
+        canvas.drawLine(Offset(x, top), Offset(x, l2), p);
+        break;
+      case NeumeDivisionType.maior:
+        canvas.drawLine(Offset(x, top), Offset(x, bottom), p);
+        break;
+      case NeumeDivisionType.finalis:
+        canvas.drawLine(Offset(x, top), Offset(x, bottom), p);
+        canvas.drawLine(
+            Offset(x + _sp * 0.3, top), Offset(x + _sp * 0.3, bottom), p);
+        break;
+    }
+  }
+
   @override
   void paint(Canvas canvas, Size size) {
-    if (metadata.isNotLoaded) return;
+    if (!font.isLoaded) return;
     final sp = _sp;
     final rowHeight = layout.rowHeight();
     final linePaint = Paint()
       ..color = theme.color
-      ..strokeWidth = sp * 0.07
+      ..strokeWidth = sp * 0.06
       ..strokeCap = StrokeCap.butt;
-    final notePaint = Paint()..color = theme.color;
+    final barPaint = Paint()
+      ..color = theme.color
+      ..strokeWidth = sp * 0.09;
 
     for (var r = 0; r < layout.rowCount; r++) {
       final row = layout._rows[r];
-      final cy = r * rowHeight + sp * 3.2;
+      final cy = r * rowHeight + sp * 3.0;
 
-      // 4 staff lines (primitives, exact grid), stopping at this row's end.
       for (var ln = 1; ln <= 4; ln++) {
         final y = _lineY(cy, ln);
         canvas.drawLine(Offset(0, y), Offset(row.lineEnd, y), linePaint);
       }
 
-      // Clef (repeated each row), centered on its line.
       _glyph(canvas, layout.clef.glyphName, layout.clefX,
-          _lineY(cy, layout.clef.line));
+          _lineY(cy, layout.clef.line),
+          anchorUnits: font.centerYUnits(layout.clef.glyphName));
 
-      final lyricTop = _lineY(cy, 1) + sp * 1.0;
+      final lyricTop = _lineY(cy, 1) + sp * 1.1;
 
       for (final item in row.items) {
         if (item is _Divisio) {
-          _glyph(canvas, item.glyphName, item.x, cy, originAnchor: true);
+          _drawDivisio(canvas, item.type, item.x, cy, barPaint);
           continue;
         }
         final box = item as _NeumeBox;
-        // Connecting strokes first (under the squares).
-        for (final op in box.ops) {
-          if (op.kind == _OpKind.stroke) {
-            final x = box.startX + op.dx;
-            canvas.drawRect(
-              Rect.fromLTRB(
-                  x, _stepY(cy, op.step), x + sp * 0.1, _stepY(cy, op.step2)),
-              notePaint,
-            );
-          }
-        }
-        for (final op in box.ops) {
-          if (op.kind == _OpKind.note) {
-            _glyph(canvas, op.glyph, box.startX + op.dx, _stepY(cy, op.step));
-          }
-        }
-        for (final op in box.ops) {
-          switch (op.kind) {
-            case _OpKind.episema:
-              _glyph(canvas, op.glyph, box.startX + op.dx,
-                  _stepY(cy, op.step) - sp * 0.6);
-            case _OpKind.ictus:
-              final dy = op.glyph == 'chantIctusAbove' ? -sp * 0.7 : sp * 0.7;
-              _glyph(canvas, op.glyph, box.startX + op.dx,
-                  _stepY(cy, op.step) + dy);
-            case _OpKind.mora:
-              _glyph(canvas, op.glyph, box.startX + op.dx, _stepY(cy, op.step));
-            default:
-              break;
-          }
+        for (final op in box.glyphs) {
+          _glyph(canvas, op.name, box.startX + op.dx, _stepY(cy, op.step));
         }
         if (box.syllable != null && box.syllable!.isNotEmpty) {
           _lyric(canvas, box.syllable!, (box.startX + box.endX) / 2, lyricTop);
@@ -512,8 +451,13 @@ class GregorianPainter extends CustomPainter {
       }
 
       if (row.custosStep != null) {
-        _glyph(canvas, 'chantCustosStemUpPosMiddle', row.lineEnd - sp * 1.0,
-            _stepY(cy, row.custosStep!), originAnchor: true);
+        // The custos marks the next line's first pitch; its note-head seats on
+        // the step like a note (the tail flourishes up/down from there), so it
+        // uses the note anchor rather than the bbox center.
+        final up = row.custosStep! >= 0;
+        final g0 = up ? 'CustosUpShort' : 'CustosDownShort';
+        final g = font.has(g0) ? g0 : 'Punctum';
+        _glyph(canvas, g, row.lineEnd - sp * 1.0, _stepY(cy, row.custosStep!));
       }
     }
   }

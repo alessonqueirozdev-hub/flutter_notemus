@@ -64,9 +64,15 @@ flutter:
   assets:
     - assets/smufl/bravura_metadata.json
     - assets/smufl/glyphnames.json
+    - assets/gregorian/greciliae_glyphnames.json
 
-  # Declare Bravura font for SMuFL rendering.
+  # Declare fonts.
   fonts:
+    # Bravura for SMuFL (CMN) rendering.
     - family: Bravura
       fonts:
         - asset: assets/smufl/Bravura.otf
+    # Greciliae (SIL OFL 1.1) for Gregorian square-notation chant.
+    - family: Greciliae
+      fonts:
+        - asset: assets/gregorian/greciliae.ttf
