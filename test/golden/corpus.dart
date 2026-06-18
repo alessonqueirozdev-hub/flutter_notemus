@@ -406,9 +406,9 @@ Staff _rests() {
       Clef(clefType: ClefType.treble),
       TimeSignature(numerator: 4, denominator: 4),
       _n('C', 5),
-      _r(DurationType.quarter),
+      _r(DurationType.quarter, dots: 1), // dotted quarter rest
+      _r(DurationType.eighth),
       _n('E', 5),
-      _r(DurationType.quarter),
     ]),
     _measure([
       _r(DurationType.whole), // whole-measure rest, centered
