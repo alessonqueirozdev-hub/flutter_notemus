@@ -1,5 +1,6 @@
 library;
 
+export 'src/midi/chant_midi_mapper.dart';
 export 'src/midi/midi_file_writer.dart';
 export 'src/midi/midi_mapper.dart';
 export 'src/midi/midi_models.dart';

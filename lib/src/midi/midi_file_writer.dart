@@ -5,6 +5,16 @@ import 'midi_models.dart';
 
 class MidiFileWriter {
   static Uint8List write(MidiSequence sequence) {
+    // SMF stores the metrical division as an unsigned 15-bit value; reject
+    // out-of-range resolutions instead of silently truncating them.
+    if (sequence.ticksPerQuarter < 1 || sequence.ticksPerQuarter > 0x7FFF) {
+      throw ArgumentError.value(
+        sequence.ticksPerQuarter,
+        'ticksPerQuarter',
+        'must be in 1..32767 for a Standard MIDI File',
+      );
+    }
+
     final buffer = BytesBuilder();
 
     final trackCount = sequence.tracks.length;
