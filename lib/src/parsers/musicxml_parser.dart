@@ -285,7 +285,47 @@ void _buildMeasureXml(XmlBuilder builder, Measure measure, int number) {
               );
             },
           );
+        } else if (element is Barline) {
+          _buildBarlineXml(builder, element);
         }
+      }
+    },
+  );
+}
+
+void _buildBarlineXml(XmlBuilder builder, Barline barline) {
+  if (barline.type == BarlineType.single) return; // implicit between measures
+  final repeatDir = switch (barline.type) {
+    BarlineType.repeatForward => 'forward',
+    BarlineType.repeatBackward || BarlineType.repeatBoth => 'backward',
+    _ => null,
+  };
+  final barStyle = switch (barline.type) {
+    BarlineType.double || BarlineType.lightLight => 'light-light',
+    BarlineType.final_ ||
+    BarlineType.lightHeavy ||
+    BarlineType.repeatBackward ||
+    BarlineType.repeatBoth =>
+      'light-heavy',
+    BarlineType.repeatForward || BarlineType.heavyLight => 'heavy-light',
+    BarlineType.heavyHeavy => 'heavy-heavy',
+    BarlineType.dashed => 'dashed',
+    BarlineType.heavy => 'heavy',
+    BarlineType.tick => 'tick',
+    BarlineType.short_ => 'short',
+    BarlineType.none => 'none',
+    BarlineType.single => 'regular',
+  };
+  builder.element(
+    'barline',
+    nest: () {
+      builder.attribute('location', repeatDir == 'forward' ? 'left' : 'right');
+      builder.element('bar-style', nest: barStyle);
+      if (repeatDir != null) {
+        builder.element(
+          'repeat',
+          nest: () => builder.attribute('direction', repeatDir),
+        );
       }
     },
   );

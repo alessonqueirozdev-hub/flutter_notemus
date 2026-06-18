@@ -53,6 +53,43 @@ void main() {
     });
   });
 
+  group('MusicXML barline export', () {
+    test('final and repeat barlines are emitted and round-trip', () {
+      final staff = Staff(measures: [
+        Measure()
+          ..add(Clef(clefType: ClefType.treble))
+          ..add(TimeSignature(numerator: 4, denominator: 4))
+          ..add(Note(
+              pitch: const Pitch(step: 'C', octave: 5),
+              duration: const Duration(DurationType.whole)))
+          ..add(Barline(type: BarlineType.repeatBackward)),
+      ]);
+      final xml = MusicXMLParser.staffToMusicXML(staff);
+      expect(xml.contains('<barline'), isTrue);
+      expect(xml.contains('<repeat'), isTrue);
+      expect(xml.contains('backward'), isTrue);
+
+      final barlines = MusicXMLParser.parseMusicXML(xml)
+          .measures
+          .expand((m) => m.elements)
+          .whereType<Barline>()
+          .toList();
+      expect(barlines.any((b) => b.type == BarlineType.repeatBackward), isTrue);
+    });
+
+    test('a plain single barline is not emitted', () {
+      final staff = Staff(measures: [
+        Measure()
+          ..add(Note(
+              pitch: const Pitch(step: 'C', octave: 5),
+              duration: const Duration(DurationType.whole)))
+          ..add(Barline(type: BarlineType.single)),
+      ]);
+      expect(MusicXMLParser.staffToMusicXML(staff).contains('<barline'),
+          isFalse);
+    });
+  });
+
   group('MusicXML tuplet round-trip', () {
     test('a triplet survives export -> import', () {
       final staff = Staff(measures: [
