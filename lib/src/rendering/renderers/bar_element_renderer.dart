@@ -43,9 +43,24 @@ class BarElementRenderer {
         yOffset = coordinates.getStaffLineY(4) - coordinates.staffBaseline.dy;
         break;
       case ClefType.alto:
-        yOffset = 0;
+        yOffset = 0; // C clef on the middle (3rd) line
         break;
       case ClefType.tenor:
+        yOffset = coordinates.getStaffLineY(4) - coordinates.staffBaseline.dy;
+        break;
+      case ClefType.soprano:
+        yOffset = coordinates.getStaffLineY(1) - coordinates.staffBaseline.dy;
+        break;
+      case ClefType.mezzoSoprano:
+        yOffset = coordinates.getStaffLineY(2) - coordinates.staffBaseline.dy;
+        break;
+      case ClefType.baritone: // C clef on the 5th line
+        yOffset = coordinates.getStaffLineY(5) - coordinates.staffBaseline.dy;
+        break;
+      case ClefType.bassThirdLine: // F clef on the 3rd line
+        yOffset = 0;
+        break;
+      case ClefType.c8vb: // C clef (8 below) on the 4th line
         yOffset = coordinates.getStaffLineY(4) - coordinates.staffBaseline.dy;
         break;
       default:

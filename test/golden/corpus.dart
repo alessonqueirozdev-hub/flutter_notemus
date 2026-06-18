@@ -471,6 +471,21 @@ Staff _chromaticChords() {
   ]);
 }
 
+/// Soprano C-clef: the clef sits on the bottom line and C4 (its reference) is
+/// read off that line, so a C-D-E-F-G run climbs from the bottom line up.
+Staff _cClefPositions() {
+  return _staff([
+    _measure([
+      Clef(clefType: ClefType.soprano),
+      TimeSignature(numerator: 4, denominator: 4),
+      _n('C', 4),
+      _n('E', 4),
+      _n('G', 4),
+      _n('B', 4),
+    ]),
+  ]);
+}
+
 /// Stacked articulations: multiple marks on one note stack outward (dot/tenuto
 /// inner, accent/marcato outer) instead of overlapping.
 Staff _stackedArticulations() {
@@ -639,6 +654,14 @@ final List<CorpusCase> corpus = [
     tier: 'intermediate',
     exercises: 'multiple articulations stack outward without overlap',
     build: _stackedArticulations,
+  ),
+  CorpusCase(
+    id: 'm04g_c_clefs',
+    title: 'C-clef / F-clef positions (soprano…baritone)',
+    tier: 'intermediate',
+    exercises: 'C/F clef vertical placement on lines 1-5',
+    build: _cClefPositions,
+    size: const Size(1000, 240),
   ),
   CorpusCase(
     id: 'm04d_within_measure_accidentals',

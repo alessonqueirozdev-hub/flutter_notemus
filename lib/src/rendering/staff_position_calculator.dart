@@ -144,7 +144,6 @@ class StaffPositionCalculator {
       // A line \1 está 1 line Above the middle line (line \1)
       // staffPosition: middle line = 0, então line \1 = +2
       case ClefType.bass:
-      case ClefType.bassThirdLine:
       case ClefType.bass8va:
       case ClefType.bass8vb:
       case ClefType.bass15ma:
@@ -155,23 +154,25 @@ class StaffPositionCalculator {
           basePosition: 2, // Quarta linha está 2 semitons ACIMA do centro
         );
 
-      // C clef (C Clef) - Alto
-      // C4 na middle line (staffPosition 0)
-      case ClefType.alto:
-        return ClefReference(
-          baseStep: 0, // C
-          baseOctave: 4,
-          basePosition: 0, // Linha central
-        );
+      // Baritone F clef: F3 on the 3rd (middle) line.
+      case ClefType.bassThirdLine:
+        return ClefReference(baseStep: 3, baseOctave: 3, basePosition: 0);
 
-      // C clef (C Clef) - Tenor
-      // C4 na quarta line (staffPosition +2)
+      // C clefs (C4 on the clef line): line 1 = -4, 2 = -2, 3 = 0, 4 = +2,
+      // 5 = +4 (each staff line is 2 half-space positions apart).
+      case ClefType.soprano:
+        return ClefReference(baseStep: 0, baseOctave: 4, basePosition: -4);
+      case ClefType.mezzoSoprano:
+        return ClefReference(baseStep: 0, baseOctave: 4, basePosition: -2);
+      case ClefType.alto:
+        return ClefReference(baseStep: 0, baseOctave: 4, basePosition: 0);
       case ClefType.tenor:
-        return ClefReference(
-          baseStep: 0, // C
-          baseOctave: 4,
-          basePosition: 2, // Quarta linha (acima da linha central)
-        );
+        return ClefReference(baseStep: 0, baseOctave: 4, basePosition: 2);
+      case ClefType.baritone:
+        return ClefReference(baseStep: 0, baseOctave: 4, basePosition: 4);
+      case ClefType.c8vb:
+        // C clef sounding an octave lower; same line as tenor by convention.
+        return ClefReference(baseStep: 0, baseOctave: 3, basePosition: 2);
 
       // Clef DE PERCUSSÃO
       case ClefType.percussion:
@@ -182,14 +183,6 @@ class StaffPositionCalculator {
       case ClefType.tab6:
       case ClefType.tab4:
         return ClefReference(baseStep: 0, baseOctave: 4, basePosition: 0);
-
-      default:
-        // Fallback: Treble clef
-        return ClefReference(
-          baseStep: 4, // G
-          baseOctave: 4,
-          basePosition: -2, // CORREÇÃO: G4 na segunda linha é posição -2
-        );
     }
   }
 }
