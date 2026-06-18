@@ -1,0 +1,261 @@
+// GABC import (Gregorio chant format) — Tier B.
+//
+// Parses a .gabc string into the chant model (ChantClef + a flat list of
+// Neume/NeumeDivision) for the Gregorian renderer. Grounded in the Gregorio
+// GABC spec (see doc/GREGORIAN_RESEARCH.json):
+//   * header lines "field: value;" until a line that is exactly "%%", then a
+//     stream of `syllable(notes)` tokens (whitespace separates words);
+//   * pitch letters a..m are STAFF SLOTS relative to the clef (a lowest), never
+//     absolute pitches — mapped here to a consistent relative diatonic sequence
+//     so the renderer draws the correct contour (absolute pitch deferred);
+//   * clefs c1..c4 (do) / f1..f4 (fa), optional clef-flat (cb/fb);
+//   * note shapes: lowercase = punctum, UPPER = punctum inclinatum, v = virga,
+//     w = quilisma, o = oriscus, s = stropha;
+//   * modifiers: ~ deminutus (liquescent), < / > liquescence, . mora, _ episema,
+//     ' ictus, accidentals x/y/#;
+//   * compound neumes auto-classified from the melodic contour;
+//   * divisiones ` , ; : :: and spaces !, /, //.
+//
+// Tier B v1: one syllable group may contain several neumes separated by chant
+// spaces; the syllable text attaches to the first. Complex fusions (@, soft
+// accidentals, double clefs) are not yet handled and degrade gracefully.
+
+import 'package:flutter_notemus/core/core.dart';
+
+import 'gregorian_renderer.dart';
+
+/// Result of parsing a GABC document.
+class GabcResult {
+  final ChantClef clef;
+  final List<MusicalElement> elements;
+  final Map<String, String> headers;
+  const GabcResult(this.clef, this.elements, this.headers);
+}
+
+class GabcParser {
+  static GabcResult parse(String gabc) {
+    final headers = <String, String>{};
+
+    // 1. Split header block from the score on a line that is exactly "%%".
+    final lines = gabc.split('\n');
+    var sep = -1;
+    for (var i = 0; i < lines.length; i++) {
+      if (lines[i].trim() == '%%') {
+        sep = i;
+        break;
+      }
+    }
+    final headerLines = sep >= 0 ? lines.sublist(0, sep) : const <String>[];
+    final body = (sep >= 0 ? lines.sublist(sep + 1) : lines).join(' ');
+    for (final line in headerLines) {
+      final idx = line.indexOf(':');
+      if (idx > 0) {
+        headers[line.substring(0, idx).trim()] =
+            line.substring(idx + 1).replaceAll(';', '').trim();
+      }
+    }
+
+    // 2. Walk `text(notes)` tokens.
+    var clef = const ChantClef();
+    final elements = <MusicalElement>[];
+    final token = RegExp(r'([^()\s]*)\(([^)]*)\)');
+    for (final m in token.allMatches(body)) {
+      final text = _cleanText(m.group(1) ?? '');
+      final notes = (m.group(2) ?? '').trim();
+
+      final clefMatch = RegExp(r'^([cf])b?([1-4])$').firstMatch(notes);
+      if (clefMatch != null && _isPureClef(notes)) {
+        clef = ChantClef(
+          type: clefMatch.group(1) == 'c'
+              ? ChantClefType.doClef
+              : ChantClefType.faClef,
+          line: int.parse(clefMatch.group(2)!),
+        );
+        continue;
+      }
+
+      _parseSyllable(notes, text, elements);
+    }
+
+    return GabcResult(clef, elements, headers);
+  }
+
+  static bool _isPureClef(String s) =>
+      RegExp(r'^[cf]b?[1-4]$').hasMatch(s);
+
+  /// Strips GABC text-layer markup (`<i>..</i>`, `<sp>..</sp>`, `*`, etc.).
+  static String _cleanText(String t) => t
+      .replaceAll(RegExp(r'<[^>]*>'), '')
+      .replaceAll(RegExp(r'[*{}]'), '')
+      .trim();
+
+  /// Parses the note string of one syllable group into neumes/divisiones.
+  static void _parseSyllable(
+    String notes,
+    String syllable,
+    List<MusicalElement> out,
+  ) {
+    if (notes.isEmpty) return;
+
+    // Split into segments on chant spaces (/, //, !) — each becomes a neume.
+    // Divisio characters are emitted as their own elements in order.
+    var assignedSyllable = false;
+    final segment = StringBuffer();
+
+    void flushSegment() {
+      final s = segment.toString();
+      segment.clear();
+      if (s.trim().isEmpty) return;
+      final neume = _buildNeume(s, assignedSyllable ? null : syllable);
+      if (neume != null) {
+        out.add(neume);
+        assignedSyllable = true;
+      }
+    }
+
+    for (var i = 0; i < notes.length; i++) {
+      final c = notes[i];
+      switch (c) {
+        case ':':
+          flushSegment();
+          // "::" = finalis, ":" = maior.
+          if (i + 1 < notes.length && notes[i + 1] == ':') {
+            out.add(NeumeDivision(type: NeumeDivisionType.finalis));
+            i++;
+          } else {
+            out.add(NeumeDivision(type: NeumeDivisionType.maior));
+          }
+        case ';':
+          flushSegment();
+          out.add(NeumeDivision(type: NeumeDivisionType.minor));
+        case ',':
+          flushSegment();
+          out.add(NeumeDivision(type: NeumeDivisionType.minima));
+        case '`':
+          flushSegment();
+          out.add(NeumeDivision(type: NeumeDivisionType.minima));
+        case '/':
+        case '!':
+        case ' ':
+          flushSegment();
+        default:
+          segment.write(c);
+      }
+    }
+    flushSegment();
+  }
+
+  /// Builds a [Neume] from a single note segment (no spaces/divisiones).
+  static Neume? _buildNeume(String seg, String? syllable) {
+    final comps = <NeumeComponent>[];
+    final steps = <int>[];
+    var hasInclinatum = false;
+
+    var i = 0;
+    while (i < seg.length) {
+      final ch = seg[i];
+      final lower = ch.toLowerCase();
+      final code = lower.codeUnitAt(0);
+      final isPitch = code >= 0x61 && code <= 0x6d; // a..m
+      if (!isPitch) {
+        i++;
+        continue;
+      }
+      final idx = code - 0x61; // 0..12
+      final octave = 3 + idx ~/ 7;
+      final step = 'CDEFGAB'[idx % 7];
+      final upper = ch != lower; // uppercase = punctum inclinatum
+      if (upper) hasInclinatum = true;
+
+      var form = NcForm.punctum;
+      var episema = false;
+      var ictus = false;
+      var liquescent = false;
+      var morae = 0;
+
+      // Consume trailing shape/modifier characters bound to this pitch.
+      i++;
+      while (i < seg.length) {
+        final mod = seg[i];
+        final mlow = mod.toLowerCase();
+        final mcode = mlow.codeUnitAt(0);
+        if (mcode >= 0x61 && mcode <= 0x6d) break; // next pitch
+        switch (mod) {
+          case 'v':
+          case 'V':
+            form = NcForm.virga;
+          case 'w':
+            form = NcForm.quilisma;
+          case 'o':
+          case 'O':
+            form = NcForm.oriscus;
+          case 's':
+            form = NcForm.stropha;
+          case '~':
+          case '<':
+          case '>':
+            liquescent = true;
+          case '_':
+            episema = true;
+          case "'":
+            ictus = true;
+          case '.':
+            morae++;
+          default:
+            break; // accidentals x/y/# and unknowns: ignored in Tier B v1
+        }
+        i++;
+      }
+
+      comps.add(NeumeComponent(
+        pitchName: step,
+        octave: octave,
+        form: form,
+        isLiquescent: liquescent,
+        episema: episema,
+        ictus: ictus,
+        morae: morae,
+      ));
+      steps.add(idx);
+    }
+
+    if (comps.isEmpty) return null;
+    return Neume(
+      type: _classify(steps, hasInclinatum, comps),
+      components: comps,
+      syllable: syllable,
+    );
+  }
+
+  /// Classifies a neume from its melodic contour (and shapes).
+  static NeumeType _classify(
+    List<int> steps,
+    bool hasInclinatum,
+    List<NeumeComponent> comps,
+  ) {
+    final n = steps.length;
+    if (n == 1) {
+      return comps.first.form == NcForm.virga
+          ? NeumeType.virga
+          : NeumeType.punctum;
+    }
+    if (n == 2) {
+      return steps[1] > steps[0] ? NeumeType.pes : NeumeType.clivis;
+    }
+    if (n == 3) {
+      final a = steps[1] - steps[0];
+      final b = steps[2] - steps[1];
+      if (a > 0 && b > 0) return NeumeType.scandicus;
+      if (a < 0 && b < 0) return NeumeType.climacus;
+      if (a > 0 && b < 0) return NeumeType.torculus;
+      if (a < 0 && b > 0) return NeumeType.porrectus;
+    }
+    // Descending runs with inclinata read as a climacus.
+    if (hasInclinatum &&
+        n >= 3 &&
+        List.generate(n - 1, (k) => steps[k + 1] <= steps[k]).every((x) => x)) {
+      return NeumeType.climacus;
+    }
+    return NeumeType.custom;
+  }
+}

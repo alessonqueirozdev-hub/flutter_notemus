@@ -67,6 +67,7 @@ export 'src/rendering/jianpu/jianpu_score.dart';
 export 'src/rendering/gregorian/gregorian_renderer.dart'
     show GregorianTheme, ChantClef, ChantClefType;
 export 'src/rendering/gregorian/chant_score.dart';
+export 'src/rendering/gregorian/gabc_parser.dart' show GabcParser, GabcResult;
 export 'src/layout/collision_detector.dart';
 
 /// The main Flutter widget for rendering music notetion.

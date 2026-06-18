@@ -110,4 +110,52 @@ void main() {
       matchesGoldenFile('goldens/chant_kyrie_tierA.png'),
     );
   });
+
+  testWidgets('golden chant_from_gabc', (tester) async {
+    // A real GABC incipit parsed end-to-end via ChantScore.fromGabc.
+    const gabc = '''
+name: Salve Regina;
+%%
+(c4) Sal(g)ve(gh) Re(h)gí(hgh)na(g) *(,) ma(g)ter(hg)
+mi(g)se(f)ri(gh)cór(g)di(f)ae(f) (::)
+''';
+
+    await tester.binding.setSurfaceSize(const Size(520, 470));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: textFontAvailable ? ThemeData(fontFamily: kTextFontFamily) : null,
+        home: Scaffold(
+          backgroundColor: Colors.white,
+          body: Center(
+            child: RepaintBoundary(
+              key: kGoldenBoundaryKey,
+              child: Container(
+                width: 520,
+                height: 470,
+                color: Colors.white,
+                child: ChantScore.fromGabc(
+                  gabc,
+                  theme: GregorianTheme(
+                    lyricSize: 14,
+                    lyricTextFamily:
+                        textFontAvailable ? kTextFontFamily : null,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    await expectLater(
+      find.byKey(kGoldenBoundaryKey),
+      matchesGoldenFile('goldens/chant_from_gabc.png'),
+    );
+  });
 }

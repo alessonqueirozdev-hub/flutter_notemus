@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_notemus/core/core.dart';
 
 import '../../smufl/smufl_metadata_loader.dart';
+import 'gabc_parser.dart';
 import 'gregorian_renderer.dart';
 
 /// Renders a sequence of [Neume]/[NeumeDivision] elements as Gregorian chant
@@ -26,6 +27,21 @@ class ChantScore extends StatefulWidget {
     this.clef = const ChantClef(),
     this.theme = const GregorianTheme(),
   });
+
+  /// Builds a [ChantScore] from a GABC (Gregorio) document.
+  factory ChantScore.fromGabc(
+    String gabc, {
+    Key? key,
+    GregorianTheme theme = const GregorianTheme(),
+  }) {
+    final result = GabcParser.parse(gabc);
+    return ChantScore(
+      key: key,
+      elements: result.elements,
+      clef: result.clef,
+      theme: theme,
+    );
+  }
 
   @override
   State<ChantScore> createState() => _ChantScoreState();
