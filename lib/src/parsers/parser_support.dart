@@ -70,6 +70,12 @@ Staff parseMusicXmlStaff(String source, {int partIndex = 0}) {
   return _MusicXmlImportParser(partIndex: partIndex).parse(document);
 }
 
+/// Imports every part/staff of a MusicXML document into a [Score].
+Score parseMusicXmlScore(String source) {
+  final document = XmlDocument.parse(source);
+  return _MusicXmlImportParser(partIndex: 0).parseScore(document);
+}
+
 Staff parseMeiStaff(String source, {int staffIndex = 0}) {
   final document = XmlDocument.parse(source);
   return _MeiImportParser(staffIndex: staffIndex).parse(document);
@@ -1168,6 +1174,78 @@ class _MusicXmlImportParser {
     }
   }
 
+  /// Imports EVERY part (and every staff within a part) as a Staff, grouped
+  /// into a [Score] — so piano (2 staves) and SATB/ensemble (many parts) no
+  /// longer collapse onto a single staff.
+  Score parseScore(XmlDocument document) {
+    final root = document.rootElement;
+    final isPartwise = root.name.local == 'score-partwise';
+    final isTimewise = root.name.local == 'score-timewise';
+    if (!isPartwise && !isTimewise) {
+      throw const FormatException(
+        'MusicXML root must be score-partwise or score-timewise.',
+      );
+    }
+
+    final staves = <Staff>[];
+    if (isPartwise) {
+      for (final part in root.findElements('part')) {
+        final count = _partStaffCount(part);
+        for (var s = 1; s <= count; s++) {
+          final filter = count == 1 ? null : s;
+          final staff = Staff();
+          for (final m in part.findElements('measure')) {
+            staff.add(_parseMeasure(m, staffFilter: filter));
+          }
+          staves.add(staff);
+        }
+      }
+    } else {
+      // Timewise: gather each part's measures across all <measure> wrappers.
+      final partMeasures = <int, List<XmlElement>>{};
+      var partCount = 0;
+      for (final measure in root.findElements('measure')) {
+        final parts = measure.findElements('part').toList();
+        partCount = parts.length > partCount ? parts.length : partCount;
+        for (var p = 0; p < parts.length; p++) {
+          (partMeasures[p] ??= <XmlElement>[]).add(parts[p]);
+        }
+      }
+      for (var p = 0; p < partCount; p++) {
+        final staff = Staff();
+        for (final m in partMeasures[p] ?? const <XmlElement>[]) {
+          staff.add(_parseMeasure(m));
+        }
+        staves.add(staff);
+      }
+    }
+
+    if (staves.isEmpty) staves.add(Staff());
+    return Score(
+      title: root.findAllElements('work-title').firstOrNull?.innerText,
+      composer: root
+          .findAllElements('creator')
+          .where((e) => e.getAttribute('type') == 'composer')
+          .firstOrNull
+          ?.innerText,
+      staffGroups: [StaffGroup(staves: staves)],
+    );
+  }
+
+  /// Number of staves in a part (max `staves` or per-note `staff`; default 1).
+  int _partStaffCount(XmlElement part) {
+    var maxStaff = 1;
+    for (final staves in part.findAllElements('staves')) {
+      final n = _asInt(staves.innerText.trim());
+      if (n != null && n > maxStaff) maxStaff = n;
+    }
+    for (final st in part.findAllElements('staff')) {
+      final n = _asInt(st.innerText.trim());
+      if (n != null && n > maxStaff) maxStaff = n;
+    }
+    return maxStaff;
+  }
+
   Staff _parsePartwise(XmlElement root) {
     final parts = root.findElements('part').toList();
     if (parts.isEmpty) return Staff();
@@ -1199,7 +1277,9 @@ class _MusicXmlImportParser {
     return staff;
   }
 
-  Measure _parseMeasure(XmlElement measureElement) {
+  /// Parses one MusicXML measure. When [staffFilter] is set (multi-staff part),
+  /// only notes whose `staff` matches and clefs for that staff are kept.
+  Measure _parseMeasure(XmlElement measureElement, {int? staffFilter}) {
     final Map<int, _VoiceAccumulator> voices = <int, _VoiceAccumulator>{};
     final List<MusicalElement> metadataElements = <MusicalElement>[];
     TimeSignature? currentTimeSignature;
@@ -1221,7 +1301,8 @@ class _MusicXmlImportParser {
     for (final child in measureElement.children.whereType<XmlElement>()) {
       switch (child.name.local) {
         case 'attributes':
-          for (final element in _parseMusicXmlAttributes(child)) {
+          for (final element
+              in _parseMusicXmlAttributes(child, staffFilter: staffFilter)) {
             appendLeadElement(element);
           }
           break;
@@ -1236,6 +1317,10 @@ class _MusicXmlImportParser {
           }
           break;
         case 'note':
+          if (staffFilter != null) {
+            final noteStaff = _asInt(_childText(child, 'staff')) ?? 1;
+            if (noteStaff != staffFilter) break;
+          }
           _parseMusicXmlNoteNode(
             child,
             voiceForNumber: voice,
@@ -1334,12 +1419,19 @@ class _MusicXmlImportParser {
   }
 }
 
-List<MusicalElement> _parseMusicXmlAttributes(XmlElement attributesElement) {
+List<MusicalElement> _parseMusicXmlAttributes(XmlElement attributesElement,
+    {int? staffFilter}) {
   final List<MusicalElement> result = <MusicalElement>[];
 
   for (final child in attributesElement.children.whereType<XmlElement>()) {
     switch (child.name.local) {
       case 'clef':
+        // <clef number="N"> is per-staff; keep only this staff's clef when
+        // splitting a multi-staff part (no number = staff 1).
+        if (staffFilter != null) {
+          final clefStaff = _asInt(child.getAttribute('number')) ?? 1;
+          if (clefStaff != staffFilter) break;
+        }
         final clef = _musicXmlClef(child);
         if (clef != null) result.add(clef);
         break;

@@ -6,6 +6,12 @@ import 'parser_support.dart';
 /// Parser and utilidades for MusicXML.
 class MusicXMLParser {
   /// Converts MusicXML for a [Staff].
+  /// Imports every part (and every staff within a part) of a MusicXML document
+  /// into a [Score] — multi-part (SATB/ensemble) and multi-staff (piano) scores
+  /// no longer collapse onto a single staff.
+  static Score scoreFromMusicXML(String xmlString) =>
+      parseMusicXmlScore(xmlString);
+
   static Staff parseMusicXML(String xmlString, {int partIndex = 0}) {
     return parseMusicXmlStaff(xmlString, partIndex: partIndex);
   }
