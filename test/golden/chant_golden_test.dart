@@ -87,7 +87,7 @@ void main() {
                   elements: elements,
                   clef: const ChantClef(
                     type: ChantClefType.doClef,
-                    line: 4,
+                    line: 1,
                   ),
                   theme: GregorianTheme(
                     lyricSize: 15,
@@ -151,7 +151,7 @@ void main() {
                 child: ChantScore(
                   elements: elements,
                   clef: const ChantClef(
-                      type: ChantClefType.doClef, line: 4),
+                      type: ChantClefType.doClef, line: 1),
                   theme: GregorianTheme(
                     lyricSize: 14,
                     color: const Color(0xFF101010),
@@ -219,7 +219,7 @@ void main() {
                 child: ChantScore(
                   elements: elements,
                   clef: const ChantClef(
-                      type: ChantClefType.doClef, line: 4),
+                      type: ChantClefType.doClef, line: 1),
                   theme: GregorianTheme(
                     lyricSize: 14,
                     color: const Color(0xFF101010),
@@ -280,7 +280,7 @@ void main() {
                 child: ChantScore(
                   elements: elements,
                   clef: const ChantClef(
-                      type: ChantClefType.doClef, line: 4),
+                      type: ChantClefType.doClef, line: 1),
                   theme: GregorianTheme(
                     lyricSize: 14,
                     color: const Color(0xFF101010),

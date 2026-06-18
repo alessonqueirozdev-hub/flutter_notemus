@@ -67,6 +67,11 @@ int _diatonic(String step, int octave) {
   return octave * 7 + (i < 0 ? 0 : i);
 }
 
+/// Diatonic value that sits ON the clef line: do-clef line = C4, fa-clef = F4
+/// (octave 4 anchor, matching GabcParser._slotToPitch).
+int _clefAnchorDiatonic(ChantClef clef) =>
+    clef.type == ChantClefType.doClef ? _diatonic('C', 4) : _diatonic('F', 4);
+
 const _words = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven'];
 String? _word(int n) => (n >= 1 && n < _words.length) ? _words[n] : null;
 
@@ -315,18 +320,11 @@ class GregorianLayout {
     final sp = theme.staffSpace;
     final scale = sp * _fontScale / GreciliaeFont.unitsPerEm;
 
-    final dis = <int>[];
-    for (final e in elements) {
-      if (e is Neume) {
-        for (final c in e.components) {
-          if (c.pitchName != null && c.octave != null) {
-            dis.add(_diatonic(c.pitchName!, c.octave!));
-          }
-        }
-      }
-    }
-    dis.sort();
-    final ref = dis.isEmpty ? 0 : dis[dis.length ~/ 2];
+    // Vertical reference is the CLEF, not the melody: a do-clef makes its line
+    // "do" (C4), an fa-clef "fa" (F4), matching GabcParser._slotToPitch. Step 0
+    // is the clef line, so notes are placed absolutely off the anchored line
+    // (clef, accidentals, custos all line up) rather than centred on the median.
+    final ref = _clefAnchorDiatonic(clef);
 
     final ordered = <Object>[];
     var hasSyllables = false;
@@ -439,7 +437,11 @@ class GregorianPainter extends CustomPainter {
   double get _lineGap => 2 * _halfStep;
 
   double _lineY(double cy, int line) => cy + (1.5 - (line - 1)) * _lineGap;
-  double _stepY(double cy, int step) => cy - step * _halfStep;
+
+  /// Vertical position of a note, anchored to the clef line: step 0 sits on the
+  /// clef line, each diatonic step is half an inter-line gap.
+  double _stepY(double cy, int step) =>
+      _lineY(cy, layout.clef.line) - step * _halfStep;
 
   /// Draws a Greciliae glyph by [name] so the font-y [anchorUnits] lands at
   /// (x, y). Notes use the first-note anchor; clef/custos register by bbox
