@@ -208,6 +208,25 @@ Clave, armadura (sustenidos/bemóis), fórmula (C/comum), cabeças, hastes, feix
 | `fix(lyrics):` #13 | **#13 ✅** | Linha de melisma estende até o fim real (passe pós-layout), antes stub fixo de 1 SS | golden `m12_melisma` |
 | `fix(beaming):` V4 | **V4 ✅** | Feixe por meia-barra no 4/4 (grupos de 4) / por beat nos demais; antes a barra inteira virava 1 feixe | `beam_grouping_test.dart` (4) + goldens s01, c01 |
 
+### Épico Gregoriano — renderização de notação quadrada (em andamento)
+
+Meta do autor: **suporte completo a canto gregoriano** (renderização nível-editor + futura execução), superando o que a doc registra. Decisão-chave: notação por **fonte Greciliae** (projeto Gregorio, SIL OFL 1.1) com **neumas pré-compostos** desenhados por tipógrafos de canto — abandonadas as tentativas com Bravura (glifos calligráficos como *componentes*) e com geometria primitiva (ambas rejeitadas visualmente pelo autor).
+
+| Commit | O quê | Evidência |
+|---|---|---|
+| `feat(gregorian):` Greciliae | Adoção da fonte Greciliae: `greciliae.ttf` + `OFL.txt` + mapa `nome→[cp,adv,bbox]`; loader `GreciliaeFont`; renderer reescrito (grade de pauta precisa, 1 passo diatônico ≈ 147 unidades de fonte). **Corrige "clave fora da pauta"**: clave registra pelo centro da bbox; divisórias desenhadas como barras geométricas (minima/minor/maior + finalis dupla). | goldens `chant_kyrie_tierA`, `chant_from_gabc` |
+| `feat(gregorian):` marcas rítmicas | Episema horizontal, ictus (episema vertical) e ponto(s) de mora — o parser GABC já os populava; agora são desenhados por componente. | golden `chant_kyrie_tierA` (nota "A" episema+ictus, "men" mora) |
+| `feat(gregorian):` liquescências | Neumas líquidos (deminutus): epiphonus (pes), cephalicus (clivis) + torculus/porrectus/scandicus/quilisma-pes; fallback p/ forma plena quando o âmbito não tem glifo líquido. | golden `chant_liquescence` |
+| `feat(gregorian):` neumas compostos | Salicus (oriscus no meio) + torculus resupinus e porrectus flexus de 4 notas como glifos únicos; classificador GABC detecta âmbito de 3 intervalos. | golden `chant_compound` |
+
+**Renderiza com autenticidade (confirmado nos PNGs):** clave-dó centrada na linha, punctum/virga, pes, clivis (flexus), torculus, porrectus (oblíqua), scandicus, climacus (losangos *inclinatum*), quilisma, salicus, resupinus/flexus, líquidas, episema/ictus/mora, custos de fim de linha, divisórias, justificação por sistema, letras em fonte serifada.
+
+**Lacunas conhecidas (honestidade):**
+- **Acidentes** (bemol/bequadro/sustenido): o parser GABC reconhece `x/y/#` mas os **ignora** (Tier B v1) — exige campo novo no modelo `NeumeComponent` (decisão de modelo, a confirmar com o autor). Glifos `Flat/Natural/Sharp` existem na fonte.
+- **Altura absoluta / execução (playback)**: render usa contorno **relativo à mediana** (visualmente centrado na pauta); a âncora à linha da clave (do/fa) e a derivação de altura p/ MIDI ainda **não** estão feitas. Canto **não** tem altura absoluta (clave fixa só do/fa) — modelar como MIDI exige resolver a referência.
+- **Repetidos** (distropha/tristropha/bivirga/pressus) e **initio debilis**: ainda montados nota-a-nota ou não tratados.
+- **Posição vertical do ponto de mora** (espaço vs. linha): hoje na altura da nota (aproximação).
+
 **Verificado como NÃO-defeito:** **V5** — o colchete da quiáltera já fica do lado correto (lado da haste/feixe); estilo válido, sem ação.
 
 **Follow-ups restantes (menor impacto):** V3b (layout reservar largura p/ acidentes quando o acorde inicia o compasso), I2 (`divisions` MusicXML — só afeta arquivos sem `<type>`), I4 (microtons no import).
