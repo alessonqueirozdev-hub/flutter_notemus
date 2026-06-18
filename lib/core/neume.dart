@@ -200,11 +200,17 @@ class Neume extends MusicalElement {
   /// Indicates a tradition de noteção (quadrada, adiastemática, etc.).
   final NeumeNotationStyle notationStyle;
 
+  /// Whether this syllable is joined to the NEXT syllable of the same word by a
+  /// hyphen (word-internal syllable break). Set by GABC import; used for the
+  /// lyric underlay. Default false (word-final or standalone syllable).
+  final bool hyphenAfter;
+
   Neume({
     required this.type,
     required this.components,
     this.syllable,
     this.notationStyle = NeumeNotationStyle.square,
+    this.hyphenAfter = false,
   });
 }
 

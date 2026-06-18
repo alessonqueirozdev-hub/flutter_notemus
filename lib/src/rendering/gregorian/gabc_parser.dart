@@ -63,7 +63,9 @@ class GabcParser {
     var sawClef = false;
     final elements = <MusicalElement>[];
     final token = RegExp(r'([^()\s]*)\(([^)]*)\)');
-    for (final m in token.allMatches(body)) {
+    final matches = token.allMatches(body).toList();
+    for (var mi = 0; mi < matches.length; mi++) {
+      final m = matches[mi];
       final text = _cleanText(m.group(1) ?? '');
       final notes = (m.group(2) ?? '').trim();
 
@@ -83,7 +85,20 @@ class GabcParser {
         continue;
       }
 
-      _parseSyllable(notes, text, elements, clef);
+      // Hyphenation: a syllable joins the next with a hyphen when the next token
+      // is also a syllable and there is NO whitespace between them in the source
+      // (GABC writes a word's syllables contiguously; whitespace = word break).
+      var hyphenAfter = false;
+      if (text.isNotEmpty && mi + 1 < matches.length) {
+        final next = matches[mi + 1];
+        final between = body.substring(m.end, next.start);
+        if (!between.contains(RegExp(r'\s')) &&
+            _cleanText(next.group(1) ?? '').isNotEmpty) {
+          hyphenAfter = true;
+        }
+      }
+
+      _parseSyllable(notes, text, elements, clef, hyphenAfter);
     }
 
     return GabcResult(sawClef ? firstClef : clef, elements, headers);
@@ -122,6 +137,7 @@ class GabcParser {
     String syllable,
     List<MusicalElement> out,
     ChantClef clef,
+    bool hyphenAfter,
   ) {
     if (notes.isEmpty) return;
 
@@ -134,7 +150,9 @@ class GabcParser {
       final s = segment.toString();
       segment.clear();
       if (s.trim().isEmpty) return;
-      final elems = _buildNeume(s, assignedSyllable ? null : syllable, clef);
+      // Only the neume that actually carries the syllable gets the hyphen.
+      final elems = _buildNeume(s, assignedSyllable ? null : syllable, clef,
+          assignedSyllable ? false : hyphenAfter);
       if (elems.isNotEmpty) {
         out.addAll(elems);
         assignedSyllable = true;
@@ -180,7 +198,7 @@ class GabcParser {
   /// own standalone element (no notehead), flushing any pending notes first so
   /// the sign precedes the notes it governs.
   static List<MusicalElement> _buildNeume(
-      String seg, String? syllable, ChantClef clef) {
+      String seg, String? syllable, ChantClef clef, bool hyphenAfter) {
     final result = <MusicalElement>[];
     var comps = <NeumeComponent>[];
     var steps = <int>[];
@@ -189,10 +207,12 @@ class GabcParser {
 
     void flushNotes() {
       if (comps.isEmpty) return;
+      final carriesSyllable = !syllableUsed;
       result.add(Neume(
         type: _classify(steps, hasInclinatum, comps),
         components: comps,
-        syllable: syllableUsed ? null : syllable,
+        syllable: carriesSyllable ? syllable : null,
+        hyphenAfter: carriesSyllable && hyphenAfter,
       ));
       syllableUsed = true;
       comps = <NeumeComponent>[];

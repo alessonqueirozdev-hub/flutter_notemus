@@ -127,6 +127,21 @@ mode: 1;
       expect(n.pitchName, 'F'); // slot 'h' is on line 3 = fa = F
     });
 
+    test('marks word-internal syllable hyphens', () {
+      // 'Ky','ri','e' are one word (contiguous tokens); a space starts a new
+      // word, so the last syllable before the space is not hyphenated.
+      const gabc = '(c4) Ky(g)ri(h)e(g) e(h)le(g)';
+      final neumes =
+          GabcParser.parse(gabc).elements.whereType<Neume>().toList();
+      expect(neumes[0].syllable, 'Ky');
+      expect(neumes[0].hyphenAfter, isTrue); // Ky-
+      expect(neumes[1].hyphenAfter, isTrue); // ri-
+      expect(neumes[2].hyphenAfter, isFalse); // e (word-final, space follows)
+      expect(neumes[3].syllable, 'e');
+      expect(neumes[3].hyphenAfter, isTrue); // e-le
+      expect(neumes[4].hyphenAfter, isFalse); // le (end)
+    });
+
     test('fa clef and pitch contour are relative to the clef', () {
       const gabc = '(f3) a(g)b(h)';
       final r = GabcParser.parse(gabc);

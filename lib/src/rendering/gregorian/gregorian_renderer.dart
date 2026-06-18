@@ -101,9 +101,13 @@ class _NeumeBox {
   final List<_Mark> marks;
   final double width;
   final String? syllable;
+
+  /// This syllable is joined to the next of the same word by a hyphen.
+  final bool hyphen;
   final int firstStep;
   double startX = 0;
-  _NeumeBox(this.glyphs, this.marks, this.width, this.syllable, this.firstStep);
+  _NeumeBox(this.glyphs, this.marks, this.width, this.syllable, this.hyphen,
+      this.firstStep);
   double get endX => startX + width;
 }
 
@@ -224,8 +228,8 @@ _NeumeBox _emitNeume(
   if (comps.length == 1 && comps[0].accidental != NeumeAccidental.none) {
     final g = _accidentalGlyph(comps[0].accidental);
     final name = font.has(g) ? g : 'Punctum';
-    return _NeumeBox(
-        [_GlyphOp(name, steps[0], 0)], const [], advPx(name), e.syllable, steps[0]);
+    return _NeumeBox([_GlyphOp(name, steps[0], 0)], const [], advPx(name),
+        e.syllable, e.hyphenAfter, steps[0]);
   }
 
   // Build the glyph ops, the box width, and a center-x per component (px), used
@@ -303,7 +307,7 @@ _NeumeBox _emitNeume(
     }
   }
 
-  return _NeumeBox(ops, marks, width, e.syllable, steps.first);
+  return _NeumeBox(ops, marks, width, e.syllable, e.hyphenAfter, steps.first);
 }
 
 /// Builds and lays out chant as width-wrapped systems using [font].
@@ -502,6 +506,48 @@ class GregorianPainter extends CustomPainter {
     tp.paint(canvas, Offset(centerX - tp.width / 2, topY));
   }
 
+  /// X of the syllable text for a neume box (centred under its first note).
+  double _syllableX(_NeumeBox box) {
+    final firstW = box.glyphs.isEmpty
+        ? _sp * 0.6
+        : font.advanceUnits(box.glyphs.first.name) * _scale;
+    return box.startX + firstW / 2;
+  }
+
+  /// X of the next syllable-bearing neume in [row] after [current], or null.
+  double? _nextSyllableX(_Row row, _NeumeBox current) {
+    var seen = false;
+    for (final item in row.items) {
+      if (identical(item, current)) {
+        seen = true;
+        continue;
+      }
+      if (seen && item is _NeumeBox && (item.syllable?.isNotEmpty ?? false)) {
+        return _syllableX(item);
+      }
+    }
+    return null;
+  }
+
+  /// Draws a word-internal hyphen centred between two syllables at [topY].
+  void _hyphen(Canvas canvas, double x1, double x2, double topY) {
+    final tp = TextPainter(
+      text: TextSpan(
+        text: '-',
+        style: TextStyle(
+          fontSize: theme.lyricSize,
+          color: theme.color,
+          fontFamily: theme.lyricTextFamily,
+          fontFamilyFallback: theme.lyricTextFamily == null
+              ? const ['Georgia', 'Times New Roman', 'serif']
+              : null,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    tp.paint(canvas, Offset((x1 + x2) / 2 - tp.width / 2, topY));
+  }
+
   /// Draws a rhythmic mark centered on a note at screen (cx, ny): a horizontal
   /// episema above, a vertical episema (ictus) below (or above), or a mora
   /// (augmentum) dot to the right at note height.
@@ -618,10 +664,13 @@ class GregorianPainter extends CustomPainter {
         if (box.syllable != null && box.syllable!.isNotEmpty) {
           // The syllable centres under the FIRST note of its neume (Solesmes
           // underlay), not under the whole neume box.
-          final firstW = box.glyphs.isEmpty
-              ? _sp * 0.6
-              : font.advanceUnits(box.glyphs.first.name) * _scale;
-          _lyric(canvas, box.syllable!, box.startX + firstW / 2, lyricTop);
+          final syllX = _syllableX(box);
+          _lyric(canvas, box.syllable!, syllX, lyricTop);
+          // Word-internal hyphen: connect to the next syllable in this row.
+          if (box.hyphen) {
+            final next = _nextSyllableX(row, box);
+            if (next != null) _hyphen(canvas, syllX, next, lyricTop);
+          }
         }
       }
 
