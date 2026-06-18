@@ -362,7 +362,9 @@ class NoteRenderer extends BaseGlyphRenderer {
       return note.voice!.isOdd;
     }
 
-    // Regra posicional (voice única)
-    return staffPosition <= 0;
+    // Regra posicional (voz única, Gould): notas acima da linha do meio →
+    // haste para baixo; abaixo → para cima; NA linha do meio (staffPosition 0)
+    // → haste para baixo por convenção.
+    return staffPosition < 0;
   }
 }
