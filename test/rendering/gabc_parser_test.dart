@@ -60,6 +60,39 @@ mode: 1;
       expect(neumes[1].components.first.form, NcForm.quilisma);
     });
 
+    test('emits standalone accidental signs (flat/natural/sharp)', () {
+      // `ix` = flat sign at i, then a note i; `gy` = natural at g, then note g.
+      const gabc = '(c4) Do(ixi)mi(g#g)ne(gy)';
+      final neumes = GabcParser.parse(gabc).elements.whereType<Neume>().toList();
+
+      // ix -> flat sign (accidental-only, no sung note); i -> note.
+      expect(neumes[0].components.single.accidental, NeumeAccidental.flat);
+      expect(neumes[1].components.single.accidental, NeumeAccidental.none);
+      // g# -> sharp sign; g -> note.
+      expect(neumes[2].components.single.accidental, NeumeAccidental.sharp);
+      expect(neumes[3].components.single.accidental, NeumeAccidental.none);
+      // gy -> natural sign (last token, no following note).
+      expect(neumes[4].components.single.accidental, NeumeAccidental.natural);
+      // The syllable attaches to the first SUNG note, not the accidental sign.
+      expect(neumes[0].syllable, isNull);
+      expect(neumes[1].syllable, 'Do');
+    });
+
+    test('classifies salicus (oriscus middle) vs scandicus', () {
+      const gabc = '(c4) a(fgh)b(fgoh)';
+      final neumes = GabcParser.parse(gabc).elements.whereType<Neume>().toList();
+      expect(neumes[0].type, NeumeType.scandicus); // plain three rising
+      expect(neumes[1].type, NeumeType.salicus); // oriscus on middle note
+    });
+
+    test('classifies four-note compound neumes by contour', () {
+      // up-down-up = torculus resupinus; down-up-down = porrectus flexus.
+      const gabc = '(c4) a(fhgi)b(hfgf)';
+      final neumes = GabcParser.parse(gabc).elements.whereType<Neume>().toList();
+      expect(neumes[0].type, NeumeType.torculusResupinus);
+      expect(neumes[1].type, NeumeType.porrectusFlexus);
+    });
+
     test('fa clef and pitch contour are relative to the clef', () {
       const gabc = '(f3) a(g)b(h)';
       final r = GabcParser.parse(gabc);

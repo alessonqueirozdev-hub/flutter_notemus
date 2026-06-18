@@ -27,6 +27,20 @@ enum NcForm {
   connected,
 }
 
+/// Acidente cromático aplicado a a posição de pauta no canto (sinal autônomo,
+/// colocado antes das notes que governa — persiste até a próxima divisória/
+/// palavra). O bemol no si é o mais comum.
+enum NeumeAccidental {
+  /// Sem acidente.
+  none,
+  /// Bemol (♭) — GABC `x`.
+  flat,
+  /// Bequadro (♮) — GABC `y`.
+  natural,
+  /// Sustenido (♯) — GABC `#`.
+  sharp,
+}
+
 /// Intervalo direcional between neumas consecutivos.
 enum NeumeInterval {
   /// Uníssono (same height)
@@ -86,6 +100,12 @@ class NeumeComponent {
   /// Number of mora (augmentum) dots after the note — the lengthening dot(s).
   final int morae;
 
+  /// Acidente cromático nesta posição. Quando diferente de [NeumeAccidental.none],
+  /// o componente representa um **sinal de acidente autônomo** (sem cabeça de
+  /// note), no estilo GABC — o sinal precede e governa as notes seguintes da
+  /// mesma altura.
+  final NeumeAccidental accidental;
+
   const NeumeComponent({
     this.pitchName,
     this.octave,
@@ -97,6 +117,7 @@ class NeumeComponent {
     this.ictus = false,
     this.ictusAbove = false,
     this.morae = 0,
+    this.accidental = NeumeAccidental.none,
   });
 }
 

@@ -105,6 +105,14 @@ class _Row {
   double lineEnd = 0;
 }
 
+/// Accidental glyph name.
+String _accidentalGlyph(NeumeAccidental a) => switch (a) {
+      NeumeAccidental.flat => 'Flat',
+      NeumeAccidental.natural => 'Natural',
+      NeumeAccidental.sharp => 'Sharp',
+      NeumeAccidental.none => 'Natural',
+    };
+
 /// Single-note glyph name by form.
 String _singleGlyph(NcForm form) => switch (form) {
       NcForm.virga => 'Virga',
@@ -180,6 +188,15 @@ _NeumeBox _emitNeume(
   }
 
   final noteW = advPx('Punctum');
+
+  // Standalone accidental sign (no notehead): flat/natural/sharp at a staff
+  // position, governing the following notes of the same pitch.
+  if (comps.length == 1 && comps[0].accidental != NeumeAccidental.none) {
+    final g = _accidentalGlyph(comps[0].accidental);
+    final name = font.has(g) ? g : 'Punctum';
+    return _NeumeBox(
+        [_GlyphOp(name, steps[0], 0)], const [], advPx(name), e.syllable, steps[0]);
+  }
 
   // Build the glyph ops, the box width, and a center-x per component (px), used
   // to anchor the rhythmic marks.

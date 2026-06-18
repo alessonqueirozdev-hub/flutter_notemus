@@ -106,9 +106,9 @@ class GabcParser {
       final s = segment.toString();
       segment.clear();
       if (s.trim().isEmpty) return;
-      final neume = _buildNeume(s, assignedSyllable ? null : syllable);
-      if (neume != null) {
-        out.add(neume);
+      final elems = _buildNeume(s, assignedSyllable ? null : syllable);
+      if (elems.isNotEmpty) {
+        out.addAll(elems);
         assignedSyllable = true;
       }
     }
@@ -145,11 +145,31 @@ class GabcParser {
     flushSegment();
   }
 
-  /// Builds a [Neume] from a single note segment (no spaces/divisiones).
-  static Neume? _buildNeume(String seg, String? syllable) {
-    final comps = <NeumeComponent>[];
-    final steps = <int>[];
+  /// Builds the elements of a single note segment (no spaces/divisiones).
+  ///
+  /// Returns a list because a segment can interleave accidental SIGNS
+  /// (pitch + `x`/`y`/`#`) with note neumes: each accidental is emitted as its
+  /// own standalone element (no notehead), flushing any pending notes first so
+  /// the sign precedes the notes it governs.
+  static List<MusicalElement> _buildNeume(String seg, String? syllable) {
+    final result = <MusicalElement>[];
+    var comps = <NeumeComponent>[];
+    var steps = <int>[];
     var hasInclinatum = false;
+    var syllableUsed = false;
+
+    void flushNotes() {
+      if (comps.isEmpty) return;
+      result.add(Neume(
+        type: _classify(steps, hasInclinatum, comps),
+        components: comps,
+        syllable: syllableUsed ? null : syllable,
+      ));
+      syllableUsed = true;
+      comps = <NeumeComponent>[];
+      steps = <int>[];
+      hasInclinatum = false;
+    }
 
     var i = 0;
     while (i < seg.length) {
@@ -165,13 +185,13 @@ class GabcParser {
       final octave = 3 + idx ~/ 7;
       final step = 'CDEFGAB'[idx % 7];
       final upper = ch != lower; // uppercase = punctum inclinatum
-      if (upper) hasInclinatum = true;
 
       var form = NcForm.punctum;
       var episema = false;
       var ictus = false;
       var liquescent = false;
       var morae = 0;
+      var accidental = NeumeAccidental.none;
 
       // Consume trailing shape/modifier characters bound to this pitch.
       i++;
@@ -201,12 +221,35 @@ class GabcParser {
             ictus = true;
           case '.':
             morae++;
+          case 'x':
+            accidental = NeumeAccidental.flat;
+          case 'y':
+            accidental = NeumeAccidental.natural;
+          case '#':
+            accidental = NeumeAccidental.sharp;
           default:
-            break; // accidentals x/y/# and unknowns: ignored in Tier B v1
+            break; // unknowns ignored in Tier B v1
         }
         i++;
       }
 
+      if (accidental != NeumeAccidental.none) {
+        // Standalone accidental sign at this staff position.
+        flushNotes();
+        result.add(Neume(
+          type: NeumeType.custom,
+          components: [
+            NeumeComponent(
+              pitchName: step,
+              octave: octave,
+              accidental: accidental,
+            ),
+          ],
+        ));
+        continue;
+      }
+
+      if (upper) hasInclinatum = true;
       comps.add(NeumeComponent(
         pitchName: step,
         octave: octave,
@@ -219,12 +262,8 @@ class GabcParser {
       steps.add(idx);
     }
 
-    if (comps.isEmpty) return null;
-    return Neume(
-      type: _classify(steps, hasInclinatum, comps),
-      components: comps,
-      syllable: syllable,
-    );
+    flushNotes();
+    return result;
   }
 
   /// Classifies a neume from its melodic contour (and shapes).
