@@ -192,14 +192,31 @@ void _buildMeasureXml(XmlBuilder builder, Measure measure, int number) {
                     final line = switch (type) {
                       ClefType.soprano => '1',
                       ClefType.mezzoSoprano => '2',
-                      ClefType.tenor => '4',
+                      ClefType.alto => '3',
+                      ClefType.tenor || ClefType.c8vb => '4',
                       ClefType.baritone => '5',
                       ClefType.bassThirdLine => '3',
-                      ClefType.bass => '4',
-                      _ => '2',
+                      // treble family -> line 2 (G), bass family -> line 4 (F).
+                      _ => sign == 'G' ? '2' : (sign == 'F' ? '4' : '3'),
+                    };
+                    // The original clef type (actualClefType collapses octave
+                    // variants to treble/bass).
+                    final octaveChange = switch (element.clefType) {
+                      ClefType.treble8va || ClefType.bass8va => 1,
+                      ClefType.treble8vb ||
+                      ClefType.bass8vb ||
+                      ClefType.c8vb =>
+                        -1,
+                      ClefType.treble15ma || ClefType.bass15ma => 2,
+                      ClefType.treble15mb || ClefType.bass15mb => -2,
+                      _ => 0,
                     };
                     builder.element('sign', nest: sign);
                     builder.element('line', nest: line);
+                    if (octaveChange != 0) {
+                      builder.element('clef-octave-change',
+                          nest: octaveChange);
+                    }
                   },
                 );
               } else if (element is KeySignature) {

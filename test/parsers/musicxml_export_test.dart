@@ -32,6 +32,27 @@ void main() {
     });
   });
 
+  group('MusicXML clef export', () {
+    String clefXml(ClefType ct) => MusicXMLParser.staffToMusicXML(Staff(
+        measures: [Measure()..add(Clef(clefType: ct))]));
+
+    test('alto C-clef exports on line 3 (not 2)', () {
+      final xml = clefXml(ClefType.alto);
+      expect(xml.contains('<sign>C</sign>'), isTrue);
+      expect(xml.contains('<line>3</line>'), isTrue);
+    });
+
+    test('bass clef exports on line 4', () {
+      expect(clefXml(ClefType.bass).contains('<line>4</line>'), isTrue);
+    });
+
+    test('octave clef emits clef-octave-change', () {
+      final xml = clefXml(ClefType.treble8vb);
+      expect(xml.contains('<clef-octave-change>-1</clef-octave-change>'),
+          isTrue);
+    });
+  });
+
   group('MusicXML tuplet round-trip', () {
     test('a triplet survives export -> import', () {
       final staff = Staff(measures: [
