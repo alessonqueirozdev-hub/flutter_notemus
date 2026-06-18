@@ -244,53 +244,102 @@ void _buildMeasureXml(XmlBuilder builder, Measure measure, int number) {
         );
       }
 
-      for (final element in measure.elements) {
-        if (element is Note) {
-          _buildNoteXml(builder, element);
-        } else if (element is Rest) {
-          _buildRestXml(builder, element);
-        } else if (element is Chord) {
-          for (int index = 0; index < element.notes.length; index++) {
-            _buildNoteXml(
-              builder,
-              element.notes[index],
-              isChordTone: index > 0,
-            );
-          }
-        } else if (element is Tuplet) {
-          // Export each tuplet member with scaled duration + <time-modification>.
-          for (final inner in element.elements) {
-            if (inner is Note) {
-              _buildNoteXml(builder, inner, tuplet: element.ratio);
-            } else if (inner is Rest) {
-              _buildRestXml(builder, inner, tuplet: element.ratio);
-            } else if (inner is Chord) {
-              for (int i = 0; i < inner.notes.length; i++) {
-                _buildNoteXml(builder, inner.notes[i],
-                    isChordTone: i > 0, tuplet: element.ratio);
-              }
+      if (measure is MultiVoiceMeasure) {
+        // Emit each voice in turn, backing up the cursor to the measure start
+        // between voices (MusicXML polyphony).
+        final voices = measure.sortedVoices;
+        for (var vi = 0; vi < voices.length; vi++) {
+          if (vi > 0) {
+            final back = _voiceDurationDivisions(voices[vi - 1]);
+            if (back > 0) {
+              builder.element('backup',
+                  nest: () => builder.element('duration', nest: back));
             }
           }
-        } else if (element is Dynamic) {
-          _buildDynamicXml(builder, element);
-        } else if (element is TempoMark) {
-          _buildTempoXml(builder, element);
-        } else if (element is MusicText) {
-          builder.element(
-            'direction',
-            nest: () {
-              builder.element(
-                'direction-type',
-                nest: () => builder.element('words', nest: element.text),
-              );
-            },
-          );
-        } else if (element is Barline) {
-          _buildBarlineXml(builder, element);
+          for (final element in voices[vi].elements) {
+            _buildMeasureElement(builder, element,
+                voiceNumber: voices[vi].number);
+          }
+        }
+      } else {
+        for (final element in measure.elements) {
+          _buildMeasureElement(builder, element);
         }
       }
     },
   );
+}
+
+/// Dispatches one measure element to its MusicXML builder, tagging notes with
+/// [voiceNumber] when set (multi-voice).
+void _buildMeasureElement(XmlBuilder builder, MusicalElement element,
+    {int? voiceNumber}) {
+  if (element is Note) {
+    _buildNoteXml(builder, element, voiceNumber: voiceNumber);
+  } else if (element is Rest) {
+    _buildRestXml(builder, element, voiceNumber: voiceNumber);
+  } else if (element is Chord) {
+    for (int index = 0; index < element.notes.length; index++) {
+      _buildNoteXml(builder, element.notes[index],
+          isChordTone: index > 0, voiceNumber: voiceNumber);
+    }
+  } else if (element is Tuplet) {
+    for (final inner in element.elements) {
+      if (inner is Note) {
+        _buildNoteXml(builder, inner,
+            tuplet: element.ratio, voiceNumber: voiceNumber);
+      } else if (inner is Rest) {
+        _buildRestXml(builder, inner,
+            tuplet: element.ratio, voiceNumber: voiceNumber);
+      } else if (inner is Chord) {
+        for (int i = 0; i < inner.notes.length; i++) {
+          _buildNoteXml(builder, inner.notes[i],
+              isChordTone: i > 0,
+              tuplet: element.ratio,
+              voiceNumber: voiceNumber);
+        }
+      }
+    }
+  } else if (element is Dynamic) {
+    _buildDynamicXml(builder, element);
+  } else if (element is TempoMark) {
+    _buildTempoXml(builder, element);
+  } else if (element is MusicText) {
+    builder.element(
+      'direction',
+      nest: () {
+        builder.element(
+          'direction-type',
+          nest: () => builder.element('words', nest: element.text),
+        );
+      },
+    );
+  } else if (element is Barline) {
+    _buildBarlineXml(builder, element);
+  }
+}
+
+/// Total sounding duration of a voice in MusicXML divisions (for `backup`).
+int _voiceDurationDivisions(Voice voice) {
+  var total = 0;
+  void add(MusicalElement el, [double factor = 1.0]) {
+    if (el is Note && !el.isGraceNote) {
+      total += _durationDivisions(el.duration, factor);
+    } else if (el is Rest) {
+      total += _durationDivisions(el.duration, factor);
+    } else if (el is Chord) {
+      total += _durationDivisions(el.duration, factor);
+    } else if (el is Tuplet) {
+      for (final inner in el.elements) {
+        add(inner, el.ratio.modifier);
+      }
+    }
+  }
+
+  for (final el in voice.elements) {
+    add(el);
+  }
+  return total;
 }
 
 void _buildBarlineXml(XmlBuilder builder, Barline barline) {
@@ -332,7 +381,7 @@ void _buildBarlineXml(XmlBuilder builder, Barline barline) {
 }
 
 void _buildNoteXml(XmlBuilder builder, Note note,
-    {bool isChordTone = false, TupletRatio? tuplet}) {
+    {bool isChordTone = false, TupletRatio? tuplet, int? voiceNumber}) {
   builder.element(
     'note',
     nest: () {
@@ -356,6 +405,9 @@ void _buildNoteXml(XmlBuilder builder, Note note,
       if (!note.isGraceNote) {
         builder.element('duration',
             nest: _durationDivisions(note.duration, tuplet?.modifier ?? 1.0));
+      }
+      if (voiceNumber != null) {
+        builder.element('voice', nest: voiceNumber);
       }
       builder.element('type', nest: _durationTypeToString(note.duration.type));
       for (int index = 0; index < note.duration.dots; index++) {
@@ -479,13 +531,17 @@ String _syllabicToString(SyllableType type) => switch (type) {
       SyllableType.terminal => 'end',
     };
 
-void _buildRestXml(XmlBuilder builder, Rest rest, {TupletRatio? tuplet}) {
+void _buildRestXml(XmlBuilder builder, Rest rest,
+    {TupletRatio? tuplet, int? voiceNumber}) {
   builder.element(
     'note',
     nest: () {
       builder.element('rest');
       builder.element('duration',
           nest: _durationDivisions(rest.duration, tuplet?.modifier ?? 1.0));
+      if (voiceNumber != null) {
+        builder.element('voice', nest: voiceNumber);
+      }
       builder.element('type', nest: _durationTypeToString(rest.duration.type));
       for (int index = 0; index < rest.duration.dots; index++) {
         builder.element('dot');

@@ -53,6 +53,37 @@ void main() {
     });
   });
 
+  group('MusicXML multi-voice export', () {
+    test('two voices export with <backup> and round-trip', () {
+      final measure = MultiVoiceMeasure()
+        ..addVoice(Voice(number: 1, elements: [
+          Note(
+              pitch: const Pitch(step: 'G', octave: 5),
+              duration: const Duration(DurationType.half)),
+          Note(
+              pitch: const Pitch(step: 'A', octave: 5),
+              duration: const Duration(DurationType.half)),
+        ]))
+        ..addVoice(Voice(number: 2, elements: [
+          Note(
+              pitch: const Pitch(step: 'C', octave: 4),
+              duration: const Duration(DurationType.whole)),
+        ]));
+      final xml = MusicXMLParser.staffToMusicXML(Staff(measures: [measure]));
+      expect(xml.contains('<backup>'), isTrue);
+      expect(xml.contains('<voice>1</voice>'), isTrue);
+      expect(xml.contains('<voice>2</voice>'), isTrue);
+
+      final reimported = MusicXMLParser.parseMusicXML(xml);
+      final m = reimported.measures.first;
+      expect(m is MultiVoiceMeasure, isTrue);
+      expect((m as MultiVoiceMeasure).voiceCount, 2);
+      // Voice 1 has the two half notes; voice 2 the whole note.
+      expect(m.getVoice(1)!.elements.whereType<Note>().length, 2);
+      expect(m.getVoice(2)!.elements.whereType<Note>().length, 1);
+    });
+  });
+
   group('MusicXML barline export', () {
     test('final and repeat barlines are emitted and round-trip', () {
       final staff = Staff(measures: [
