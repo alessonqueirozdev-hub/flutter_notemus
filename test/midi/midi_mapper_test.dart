@@ -196,6 +196,67 @@ void main() {
       expect(noteOns.where((event) => event.note == 76).length, 2);
       expect(noteOns.where((event) => event.note == 77).length, 5);
     });
+
+    test('staccato shortens the sounding duration but not the advance', () {
+      final measure = Measure()
+        ..add(Note(
+          pitch: const Pitch(step: 'C', octave: 4),
+          duration: const Duration(DurationType.quarter),
+          articulations: const [ArticulationType.staccato],
+        ))
+        ..add(Note(
+          pitch: const Pitch(step: 'D', octave: 4),
+          duration: const Duration(DurationType.quarter),
+        ));
+      final track = MidiMapper.fromStaff(Staff(measures: [measure]))
+          .tracks
+          .firstWhere((t) => t.name == 'Staff 1');
+      final ons =
+          track.events.where((e) => e.type == MidiEventType.noteOn).toList();
+      final offs =
+          track.events.where((e) => e.type == MidiEventType.noteOff).toList();
+      // ppq 960: staccato quarter sounds ~480 ticks (gate 0.5)...
+      expect(offs.first.tick - ons.first.tick, 480);
+      // ...but the next note still starts a full quarter later.
+      expect(ons[1].tick, 960);
+    });
+
+    test('accent raises note velocity', () {
+      Measure m(List<ArticulationType> arts) => Measure()
+        ..add(Note(
+          pitch: const Pitch(step: 'C', octave: 4),
+          duration: const Duration(DurationType.quarter),
+          articulations: arts,
+        ));
+      int vel(List<ArticulationType> arts) => MidiMapper.fromStaff(
+              Staff(measures: [m(arts)]))
+          .tracks
+          .firstWhere((t) => t.name == 'Staff 1')
+          .events
+          .firstWhere((e) => e.type == MidiEventType.noteOn)
+          .velocity!;
+      expect(vel(const [ArticulationType.accent]),
+          greaterThan(vel(const [])));
+      expect(vel(const [ArticulationType.marcato]),
+          greaterThan(vel(const [ArticulationType.accent])));
+    });
+
+    test('tied notes are never shortened by articulation', () {
+      final measure = Measure()
+        ..add(Note(
+          pitch: const Pitch(step: 'C', octave: 4),
+          duration: const Duration(DurationType.quarter),
+          articulations: const [ArticulationType.staccato],
+          tie: TieType.start,
+        ));
+      final track = MidiMapper.fromStaff(Staff(measures: [measure]))
+          .tracks
+          .firstWhere((t) => t.name == 'Staff 1');
+      final on = track.events.firstWhere((e) => e.type == MidiEventType.noteOn);
+      // tie keeps it open to the end of the sequence (full duration), not gated.
+      expect(track.events.any((e) => e.type == MidiEventType.noteOff), isTrue);
+      expect(on.tick, 0);
+    });
   });
 
   group('MidiFileWriter', () {

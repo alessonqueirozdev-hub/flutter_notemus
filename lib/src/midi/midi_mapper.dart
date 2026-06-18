@@ -393,14 +393,23 @@ class _TrackEventBuilder {
       options: options,
     );
     final midiNote = note.pitch.midiNumber.clamp(0, 127);
-    final velocity = note.dynamicElement != null
+    var velocity = note.dynamicElement != null
         ? velocityFromDynamic(note.dynamicElement!.type)
         : (_voiceVelocity[voiceNumber] ?? baseVelocity);
+
+    // Articulations: accent-types raise velocity; staccato/tenuto gate the
+    // sounding length. The note still ADVANCES the full duration (the gate
+    // just inserts silence); tied notes are never shortened.
+    final effect = _articulationEffect(note.articulations);
+    velocity = (velocity * effect.accent).round().clamp(1, 127);
+    final soundingTicks = note.tie == null
+        ? (durationTicks * effect.gate).round().clamp(1, durationTicks)
+        : durationTicks;
 
     _emitTiedNote(
       midiNote: midiNote,
       startTick: startTick,
-      durationTicks: durationTicks,
+      durationTicks: soundingTicks,
       velocity: velocity,
       tieType: note.tie,
       voiceNumber: voiceNumber,
@@ -426,18 +435,34 @@ class _TrackEventBuilder {
         ? velocityFromDynamic(chord.dynamic!.type)
         : (_voiceVelocity[voiceNumber] ?? baseVelocity);
 
+    final chordEffect = _articulationEffect(chord.articulations);
+
     for (final chordNote in chord.notes) {
       final midiNote = chordNote.pitch.midiNumber.clamp(0, 127);
-      final noteVelocity = chordNote.dynamicElement != null
+      var noteVelocity = chordNote.dynamicElement != null
           ? velocityFromDynamic(chordNote.dynamicElement!.type)
           : dynamicVelocity;
+
+      // Combine the chord's and the note's articulations.
+      final noteEffect = _articulationEffect(chordNote.articulations);
+      final accent = chordEffect.accent > noteEffect.accent
+          ? chordEffect.accent
+          : noteEffect.accent;
+      final gate = chordEffect.gate < noteEffect.gate
+          ? chordEffect.gate
+          : noteEffect.gate;
+      noteVelocity = (noteVelocity * accent).round().clamp(1, 127);
+      final tieType = chordNote.tie ?? chord.tie;
+      final soundingTicks = tieType == null
+          ? (durationTicks * gate).round().clamp(1, durationTicks)
+          : durationTicks;
 
       _emitTiedNote(
         midiNote: midiNote,
         startTick: startTick,
-        durationTicks: durationTicks,
+        durationTicks: soundingTicks,
         velocity: noteVelocity,
-        tieType: chordNote.tie ?? chord.tie,
+        tieType: tieType,
         voiceNumber: voiceNumber,
       );
     }
@@ -540,6 +565,38 @@ class _TrackEventBuilder {
         return;
     }
   }
+}
+
+/// Duration "gate" fraction for an articulation (how much of the written
+/// duration actually sounds): staccato shortens, tenuto is near-full.
+double _articulationGate(ArticulationType a) => switch (a) {
+      ArticulationType.staccatissimo => 0.25,
+      ArticulationType.staccato => 0.5,
+      ArticulationType.portato => 0.75,
+      ArticulationType.tenuto => 1.0,
+      _ => 1.0,
+    };
+
+/// Velocity multiplier for an accent-type articulation.
+double _articulationAccent(ArticulationType a) => switch (a) {
+      ArticulationType.strongAccent || ArticulationType.marcato => 1.35,
+      ArticulationType.accent => 1.2,
+      ArticulationType.tenuto => 1.05,
+      _ => 1.0,
+    };
+
+/// Combined gate (min) and accent (max) for a note's articulations.
+({double gate, double accent}) _articulationEffect(
+    List<ArticulationType> arts) {
+  var gate = 1.0;
+  var accent = 1.0;
+  for (final a in arts) {
+    final g = _articulationGate(a);
+    if (g < gate) gate = g;
+    final v = _articulationAccent(a);
+    if (v > accent) accent = v;
+  }
+  return (gate: gate, accent: accent);
 }
 
 class _TrackBuildResult {
