@@ -247,7 +247,24 @@ Meta do autor: **suporte completo a canto gregoriano** (renderização nível-ed
 | `fix(engraving):` articulações empilhadas | Múltiplas articulações empilham (não sobrepõem). | `m04f` |
 | `fix(engraving):` claves C/F | soprano/mezzo/baritono/baritono-fá: glifo na linha certa + posição de nota. | `m04g` + testes |
 
-**Os 3 itens HIGH da auditoria CMN foram resolvidos.** ~58 itens médio/baixo restantes no [LIBRARY_AUDIT_BACKLOG.md](LIBRARY_AUDIT_BACKLOG.md): hairpins por glifo SMuFL, articulações de acorde, naturais de cancelamento sem largura reservada, espaço do ponto de aumento, último sistema não justificar à largura cheia, mudanças de clave no meio do sistema (caixa pequena), tuplets aninhados MEI, round-trip de letras no export MusicXML, etc. Próximo: seguir por impacto.
+**Os 3 itens HIGH da auditoria CMN foram resolvidos.** ~58 itens médio/baixo restantes no [LIBRARY_AUDIT_BACKLOG.md](LIBRARY_AUDIT_BACKLOG.md): hairpins por glifo SMuFL, articulações de acorde, naturais de cancelamento sem largura reservada, espaço do ponto de aumento, último sistema não justificar à largura cheia, mudanças de clave no meio do sistema (caixa pequena), etc.
+
+### Fase 4 — Import/Export + Playback em todo o sistema (em andamento)
+
+Auditoria adversarial de I/O + MIDI: 41 lacunas confirmadas em 6 dimensões (doc/IO_MIDI_AUDIT_BACKLOG.md). Atacadas:
+
+| Commit | O quê |
+|---|---|
+| `feat(midi):` articulações | staccato encurta, accent/marcato aumentam velocity (notas + acordes); notas ligadas nunca encurtam |
+| `feat(musicxml):` letras+feixes | export de `<lyric>` (por verso) e `<beam>` — letras agora sobrevivem ao round-trip |
+| `fix(musicxml):` durações+tuplets | `<divisions>` + duração real por nota (era `1` fixo); tuplets exportados com `<time-modification>` (antes sumiam) |
+| `feat(mei):` scoreDef/staffDef + containers | lê clave/armadura/compasso do `<scoreDef>/<staffDef>`; recursão em `<beam>`/`<tuplet>` (antes perdiam as notas) |
+| `feat(musicxml):` wedges | `<wedge>` cresc./dim. → Dynamic hairpin |
+| `fix(midi):` tempo+hairpin | unidade de batida do TempoMark respeitada; hairpin não reseta mais o velocity |
+| `fix(midi):` grace notes | apogiatura "rouba" tempo em vez de transbordar o compasso |
+| `fix(musicxml):` claves | linha de clave correta (alto=3, etc.) + `<clef-octave-change>` |
+
+**Itens HIGH restantes (grandes):** import MusicXML multi-parte/multi-pauta (piano/SATB colapsam em 1 pauta); eventos de controle MEI com @startid/@endid (slur/tie/dynam/fermata); expansão de ornamentos (trill/mordent/turn) no playback. Demais médios documentados no backlog de I/O.
 
 **Renderiza com autenticidade (confirmado nos PNGs):** clave-dó centrada na linha, punctum/virga, pes, clivis (flexus), torculus, porrectus (oblíqua), scandicus, climacus (losangos *inclinatum*), quilisma, salicus, resupinus/flexus, líquidas, episema/ictus/mora, custos de fim de linha, divisórias, justificação por sistema, letras em fonte serifada.
 
