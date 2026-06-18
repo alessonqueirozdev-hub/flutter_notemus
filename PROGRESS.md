@@ -270,7 +270,10 @@ Auditoria adversarial de I/O + MIDI: 41 lacunas confirmadas em 6 dimensões (doc
 
 **Cobertura de export MusicXML agora**: notas/acordes/pausas, durações reais + `<divisions>`, tuplets (`<time-modification>`), ligaduras/laços, articulações, **ornamentos**, **grace notes**, dinâmicas, letras (por verso), feixes, claves (com octave-change), armaduras, fórmulas, **barras/repetições**.
 
-**Itens HIGH restantes (grandes):** eventos de controle MEI com @startid/@endid (slur/tie/dynam/fermata entre measures); export multi-voz MusicXML. Demais médios documentados nos backlogs.
+| `feat(mei):` eventos de controle | `<slur>/<tie>/<dynam>` por `@startid/@endid` resolvidos para as notas referenciadas. |
+| `feat(musicxml):` export multi-voz | medidas polifônicas exportam com `<backup>`+`<voice>` (antes vazias); round-trip 2 vozes. |
+
+**TODOS os itens HIGH das 3 auditorias (CMN render, I/O, MIDI) foram resolvidos**, além dos principais médios de I/O (export round-trip completo, import multi-parte/multi-pauta, MEI scoreDef/containers/control-events). Restam itens médio/baixo de polimento de render (articulações de acorde, hairpin por glifo SMuFL, largura de bequadro de cancelamento, espaço de ponto de aumento, justificação do último sistema, mudança de clave no meio do sistema em tamanho cue) e refinamentos gregorianos (modelo de melisma/multi-verso, pressus), documentados nos backlogs.
 
 **Renderiza com autenticidade (confirmado nos PNGs):** clave-dó centrada na linha, punctum/virga, pes, clivis (flexus), torculus, porrectus (oblíqua), scandicus, climacus (losangos *inclinatum*), quilisma, salicus, resupinus/flexus, líquidas, episema/ictus/mora, custos de fim de linha, divisórias, justificação por sistema, letras em fonte serifada.
 
