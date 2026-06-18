@@ -302,6 +302,52 @@ void main() {
     );
   });
 
+  testWidgets('golden chant_clef_flat', (tester) async {
+    // A clef-flat (cb4): a soft B-flat drawn just after the do-clef.
+    const gabc = '''
+name: Clef flat test;
+%%
+(cb4) Ve(h)ni(hi)te(i) ad(hg)o(h)re(g)mus.(g) (::)
+''';
+
+    await tester.binding.setSurfaceSize(const Size(520, 300));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: textFontAvailable ? ThemeData(fontFamily: kTextFontFamily) : null,
+        home: Scaffold(
+          backgroundColor: Colors.white,
+          body: Center(
+            child: RepaintBoundary(
+              key: kGoldenBoundaryKey,
+              child: Container(
+                width: 520,
+                height: 300,
+                color: Colors.white,
+                child: ChantScore.fromGabc(
+                  gabc,
+                  theme: GregorianTheme(
+                    lyricSize: 14,
+                    lyricTextFamily: serifFontAvailable ? kSerifFamily : null,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    await expectLater(
+      find.byKey(kGoldenBoundaryKey),
+      matchesGoldenFile('goldens/chant_clef_flat.png'),
+    );
+  });
+
   testWidgets('golden chant_accidentals', (tester) async {
     // Standalone accidental signs (flat/natural/sharp) preceding their notes,
     // parsed end-to-end from GABC (ix = flat at i, etc.).

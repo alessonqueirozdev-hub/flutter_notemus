@@ -569,6 +569,16 @@ class GregorianPainter extends CustomPainter {
           _lineY(cy, layout.clef.line),
           anchorUnits: font.centerYUnits(layout.clef.glyphName));
 
+      // Clef-flat (soft si): a flat just after the clef, at the si line — one
+      // diatonic step below do (do-clef) or three above fa (fa-clef).
+      if (layout.clef.flat) {
+        final siSteps =
+            layout.clef.type == ChantClefType.doClef ? -1 : 3;
+        _glyph(canvas, font.has('Flat') ? 'Flat' : 'Punctum',
+            layout.clefX + sp * 0.8,
+            _lineY(cy, layout.clef.line) - siSteps * _halfStep);
+      }
+
       final lyricTop = _lineY(cy, 1) + sp * 1.1;
 
       for (final item in row.items) {
