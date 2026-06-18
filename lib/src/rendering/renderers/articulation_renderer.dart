@@ -26,13 +26,24 @@ class ArticulationRenderer extends BaseGlyphRenderer {
 
     final articulationAbove = !stemUp;
 
-    for (final articulation in articulations) {
+    // Stack multiple articulations outward from the notehead (Behind Bars):
+    // dot/tenuto closest, accent/marcato outside, bowing/mutes outermost.
+    final ordered = [...articulations]
+      ..sort((a, b) => _stackRank(a).compareTo(_stackRank(b)));
+
+    double nextClearSS = 0.0;
+    var first = true;
+    for (final articulation in ordered) {
       final glyphName = _getArticulationGlyph(articulation, articulationAbove);
       if (glyphName == null) continue;
 
-      // A8 FIX: Behind Bars standard: 0.5 SS clearance from notehead to
-      // optical centre of articulation (previously 1.5/1.2 SS – too far).
-      final clearanceSS = _getArticulationClearanceSS(articulation);
+      // A8 FIX: Behind Bars standard: 0.5 SS clearance from notehead to optical
+      // centre of the FIRST articulation; each further mark stacks beyond it.
+      if (first) {
+        nextClearSS = _getArticulationClearanceSS(articulation);
+        first = false;
+      }
+      final clearanceSS = nextClearSS;
       final yOffsetPx = articulationAbove
           ? -coordinates.staffSpace * clearanceSS
           : coordinates.staffSpace * clearanceSS;
@@ -47,8 +58,21 @@ class ArticulationRenderer extends BaseGlyphRenderer {
           size: glyphSize * 0.8,
         ),
       );
+
+      final glyphHeight =
+          metadata.getGlyphInfo(glyphName)?.boundingBox?.height ?? 0.8;
+      nextClearSS += glyphHeight + 0.3;
     }
   }
+
+  /// Stacking order from the notehead outward (lower = closer).
+  static int _stackRank(ArticulationType type) => switch (type) {
+        ArticulationType.staccato || ArticulationType.staccatissimo => 0,
+        ArticulationType.tenuto || ArticulationType.portato => 1,
+        ArticulationType.accent => 2,
+        ArticulationType.strongAccent || ArticulationType.marcato => 3,
+        _ => 4,
+      };
 
   String? _getArticulationGlyph(ArticulationType type, bool above) {
     return switch (type) {

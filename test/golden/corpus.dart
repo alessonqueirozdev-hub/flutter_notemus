@@ -471,6 +471,22 @@ Staff _chromaticChords() {
   ]);
 }
 
+/// Stacked articulations: multiple marks on one note stack outward (dot/tenuto
+/// inner, accent/marcato outer) instead of overlapping.
+Staff _stackedArticulations() {
+  Note a(String s, int o, List<ArticulationType> arts) => _n(s, o, artic: arts);
+  return _staff([
+    _measure([
+      Clef(clefType: ClefType.treble),
+      TimeSignature(numerator: 4, denominator: 4),
+      a('G', 5, [ArticulationType.staccato, ArticulationType.accent]),
+      a('G', 5, [ArticulationType.tenuto, ArticulationType.staccato]),
+      a('G', 5, [ArticulationType.staccato, ArticulationType.strongAccent]),
+      a('C', 4, [ArticulationType.staccato, ArticulationType.accent]),
+    ]),
+  ]);
+}
+
 /// Articulations beyond the basics — portato, snap pizzicato, brass stopped/
 /// open/half-stopped, thumb — which previously rendered nothing.
 Staff _extendedArticulations() {
@@ -616,6 +632,13 @@ final List<CorpusCase> corpus = [
     tier: 'intermediate',
     exercises: 'articulation glyph coverage beyond the basics',
     build: _extendedArticulations,
+  ),
+  CorpusCase(
+    id: 'm04f_articulations_stacked',
+    title: 'Stacked articulations (staccato+accent, etc.)',
+    tier: 'intermediate',
+    exercises: 'multiple articulations stack outward without overlap',
+    build: _stackedArticulations,
   ),
   CorpusCase(
     id: 'm04d_within_measure_accidentals',
