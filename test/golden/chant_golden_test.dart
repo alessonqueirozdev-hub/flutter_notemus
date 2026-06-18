@@ -302,6 +302,79 @@ void main() {
     );
   });
 
+  testWidgets('golden chant_special_neumes', (tester) async {
+    // Liquescent climacus -> precomposed Ancus; ordinary climacus assembles;
+    // quilisma keeps its wavy glyph in a pes and a 3-note rising group.
+    NeumeComponent liq(String s, int o) =>
+        NeumeComponent(pitchName: s, octave: o, isLiquescent: true);
+    final elements = <MusicalElement>[
+      // ordinary climacus C4-B3-A3 (assembles: virga + diamonds)
+      Neume(type: NeumeType.climacus, components: [
+        nc('C', 4, NcForm.virga),
+        nc('B', 3),
+        nc('A', 3),
+      ], syllable: 'cli'),
+      // liquescent climacus -> Ancus
+      Neume(type: NeumeType.climacus, components: [
+        nc('C', 4, NcForm.virga),
+        nc('B', 3),
+        liq('A', 3),
+      ], syllable: 'an'),
+      // quilisma pes (low quilisma rising)
+      Neume(type: NeumeType.pes, components: [
+        nc('A', 3, NcForm.quilisma),
+        nc('B', 3),
+      ], syllable: 'qui'),
+      // quilisma in a 3-note rising group (assembles, wavy glyph shows)
+      Neume(type: NeumeType.scandicus, components: [
+        nc('G', 3),
+        nc('A', 3, NcForm.quilisma),
+        nc('B', 3),
+      ], syllable: 'sca'),
+      NeumeDivision(type: NeumeDivisionType.finalis),
+    ];
+
+    await tester.binding.setSurfaceSize(const Size(520, 300));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: textFontAvailable ? ThemeData(fontFamily: kTextFontFamily) : null,
+        home: Scaffold(
+          backgroundColor: Colors.white,
+          body: Center(
+            child: RepaintBoundary(
+              key: kGoldenBoundaryKey,
+              child: Container(
+                width: 520,
+                height: 300,
+                color: Colors.white,
+                child: ChantScore(
+                  elements: elements,
+                  clef: const ChantClef(
+                      type: ChantClefType.doClef, line: 2),
+                  theme: GregorianTheme(
+                    lyricSize: 14,
+                    color: const Color(0xFF101010),
+                    lyricTextFamily: serifFontAvailable ? kSerifFamily : null,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    await expectLater(
+      find.byKey(kGoldenBoundaryKey),
+      matchesGoldenFile('goldens/chant_special_neumes.png'),
+    );
+  });
+
   testWidgets('golden chant_clef_flat', (tester) async {
     // A clef-flat (cb4): a soft B-flat drawn just after the do-clef.
     const gabc = '''

@@ -154,11 +154,27 @@ String? _neumeGlyphName(NeumeType type, List<int> steps, List<NcForm> forms,
     return font.has(alt) ? alt : null;
   }
 
+  // A quilisma must keep its wavy glyph: the 2-note rising case is the
+  // precomposed quilisma-pes; longer quilisma groups assemble (return null) so
+  // the Quilisma glyph still shows instead of a plain scandicus/pes.
+  if (forms.any((f) => f == NcForm.quilisma)) {
+    if (steps.length == 2 && up(0, 1) > 0) {
+      return pick('QuilismaPes', _word(up(0, 1)));
+    }
+    return null;
+  }
+
   switch (type) {
     case NeumeType.pes:
       return pick('Pes', _word(up(0, 1)));
     case NeumeType.clivis:
       return pick('Flexus', _word(dn(0, 1)));
+    case NeumeType.climacus:
+      // Ordinary climacus assembles (virga + inclinata); the liquescent
+      // (diminished) climacus is the precomposed Ancus.
+      if (!liquescent || steps.length != 3) return null;
+      final a = _word(dn(0, 1)), b = _word(dn(1, 2));
+      return (a == null || b == null) ? null : pick('Ancus', '$a$b');
     case NeumeType.torculus:
       final a = _word(up(0, 1)), b = _word(dn(1, 2));
       return (a == null || b == null) ? null : pick('Torculus', '$a$b');
