@@ -266,8 +266,11 @@ Auditoria adversarial de I/O + MIDI: 41 lacunas confirmadas em 6 dimensões (doc
 
 | `feat(musicxml):` multi-parte/multi-pauta | `scoreFromMusicXML()` → `Score`: cada `<part>` vira pauta; parte com `<staves>` divide por `<staff>` com claves por pauta. **Antes piano/SATB colapsavam em 1 pauta.** |
 | `feat(midi):` ornamentos | trinado/mordente/grupeto expandidos em sub-notas no playback (antes nota única). |
+| `feat(musicxml):` export round-trip | barras/repetições, ornamentos e grace notes agora exportados (antes perdidos no round-trip). |
 
-**Itens HIGH restantes (grandes):** eventos de controle MEI com @startid/@endid (slur/tie/dynam/fermata entre measures). Demais médios documentados no backlog de I/O (export multi-voz/ornamentos/barras, etc.).
+**Cobertura de export MusicXML agora**: notas/acordes/pausas, durações reais + `<divisions>`, tuplets (`<time-modification>`), ligaduras/laços, articulações, **ornamentos**, **grace notes**, dinâmicas, letras (por verso), feixes, claves (com octave-change), armaduras, fórmulas, **barras/repetições**.
+
+**Itens HIGH restantes (grandes):** eventos de controle MEI com @startid/@endid (slur/tie/dynam/fermata entre measures); export multi-voz MusicXML. Demais médios documentados nos backlogs.
 
 **Renderiza com autenticidade (confirmado nos PNGs):** clave-dó centrada na linha, punctum/virga, pes, clivis (flexus), torculus, porrectus (oblíqua), scandicus, climacus (losangos *inclinatum*), quilisma, salicus, resupinus/flexus, líquidas, episema/ictus/mora, custos de fim de linha, divisórias, justificação por sistema, letras em fonte serifada.
 
