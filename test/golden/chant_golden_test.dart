@@ -173,6 +173,74 @@ void main() {
     );
   });
 
+  testWidgets('golden chant_compound', (tester) async {
+    // Four-note compound neumes and the salicus, which Greciliae ships as
+    // single precomposed glyphs.
+    final elements = <MusicalElement>[
+      // salicus: three rising notes, oriscus in the middle (F-G-A)
+      Neume(type: NeumeType.salicus, components: [
+        nc('F', 4),
+        nc('G', 4, NcForm.oriscus),
+        nc('A', 4),
+      ], syllable: 'sa'),
+      // torculus resupinus: up-down-up (F-A-G-B)
+      Neume(type: NeumeType.torculusResupinus, components: [
+        nc('F', 4),
+        nc('A', 4),
+        nc('G', 4),
+        nc('B', 4),
+      ], syllable: 'tor-res'),
+      // porrectus flexus: down-up-down (A-F-G-E)
+      Neume(type: NeumeType.porrectusFlexus, components: [
+        nc('A', 4),
+        nc('F', 4),
+        nc('G', 4),
+        nc('E', 4),
+      ], syllable: 'por-fl'),
+      NeumeDivision(type: NeumeDivisionType.finalis),
+    ];
+
+    await tester.binding.setSurfaceSize(const Size(480, 300));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: textFontAvailable ? ThemeData(fontFamily: kTextFontFamily) : null,
+        home: Scaffold(
+          backgroundColor: Colors.white,
+          body: Center(
+            child: RepaintBoundary(
+              key: kGoldenBoundaryKey,
+              child: Container(
+                width: 480,
+                height: 300,
+                color: Colors.white,
+                child: ChantScore(
+                  elements: elements,
+                  clef: const ChantClef(
+                      type: ChantClefType.doClef, line: 4),
+                  theme: GregorianTheme(
+                    lyricSize: 14,
+                    color: const Color(0xFF101010),
+                    lyricTextFamily: serifFontAvailable ? kSerifFamily : null,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    await expectLater(
+      find.byKey(kGoldenBoundaryKey),
+      matchesGoldenFile('goldens/chant_compound.png'),
+    );
+  });
+
   testWidgets('golden chant_from_gabc', (tester) async {
     // A real GABC incipit parsed end-to-end via ChantScore.fromGabc.
     const gabc = '''

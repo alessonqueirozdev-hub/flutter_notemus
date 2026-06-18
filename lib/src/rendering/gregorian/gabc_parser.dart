@@ -245,10 +245,25 @@ class GabcParser {
     if (n == 3) {
       final a = steps[1] - steps[0];
       final b = steps[2] - steps[1];
-      if (a > 0 && b > 0) return NeumeType.scandicus;
+      if (a > 0 && b > 0) {
+        // Three rising notes with an oriscus in the middle are a salicus;
+        // otherwise a scandicus.
+        return comps[1].form == NcForm.oriscus
+            ? NeumeType.salicus
+            : NeumeType.scandicus;
+      }
       if (a < 0 && b < 0) return NeumeType.climacus;
       if (a > 0 && b < 0) return NeumeType.torculus;
       if (a < 0 && b > 0) return NeumeType.porrectus;
+    }
+    if (n == 4) {
+      final a = steps[1] - steps[0];
+      final b = steps[2] - steps[1];
+      final c = steps[3] - steps[2];
+      if (a > 0 && b < 0 && c > 0) return NeumeType.torculusResupinus;
+      if (a < 0 && b > 0 && c < 0) return NeumeType.porrectusFlexus;
+      if (a > 0 && b > 0 && c < 0) return NeumeType.scandicusFlexus;
+      if (a < 0 && b < 0 && c > 0) return NeumeType.climacusResupinus;
     }
     // Descending runs with inclinata read as a climacus.
     if (hasInclinatum &&

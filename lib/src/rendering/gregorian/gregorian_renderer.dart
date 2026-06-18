@@ -146,6 +146,21 @@ String? _neumeGlyphName(NeumeType type, List<int> steps, List<NcForm> forms,
     case NeumeType.scandicus:
       final a = _word(up(0, 1)), b = _word(up(1, 2));
       return (a == null || b == null) ? null : pick('Scandicus', '$a$b');
+    case NeumeType.salicus:
+      final a = _word(up(0, 1)), b = _word(up(1, 2));
+      return (a == null || b == null) ? null : pick('Salicus', '$a$b');
+    case NeumeType.torculusResupinus:
+      if (steps.length < 4) return null;
+      final a = _word(up(0, 1)), b = _word(dn(1, 2)), c = _word(up(2, 3));
+      return (a == null || b == null || c == null)
+          ? null
+          : pick('TorculusResupinus', '$a$b$c');
+    case NeumeType.porrectusFlexus:
+      if (steps.length < 4) return null;
+      final a = _word(dn(0, 1)), b = _word(up(1, 2)), c = _word(dn(2, 3));
+      return (a == null || b == null || c == null)
+          ? null
+          : pick('PorrectusFlexus', '$a$b$c');
     case NeumeType.quilismaGroup:
       if (steps.length == 2) return pick('QuilismaPes', _word(up(0, 1)));
       return null;
