@@ -241,6 +241,44 @@ void main() {
           greaterThan(vel(const [ArticulationType.accent])));
     });
 
+    test('half-note metronome mark scales to per-quarter MIDI tempo', () {
+      final measure = Measure()
+        ..add(TempoMark(beatUnit: DurationType.half, bpm: 80))
+        ..add(Note(
+          pitch: const Pitch(step: 'C', octave: 4),
+          duration: const Duration(DurationType.quarter),
+        ));
+      final seq = MidiMapper.fromStaff(Staff(measures: [measure]));
+      final tempo = seq.tracks
+          .expand((t) => t.events)
+          .firstWhere((e) => e.type == MidiEventType.tempo && e.tick > 0,
+              orElse: () => seq.tracks
+                  .expand((t) => t.events)
+                  .lastWhere((e) => e.type == MidiEventType.tempo));
+      // half = 80 -> quarter = 160.
+      expect(tempo.bpm, 160);
+    });
+
+    test('a hairpin dynamic does not reset the running velocity', () {
+      final measure = Measure()
+        ..add(Dynamic(type: DynamicType.f)) // forte
+        ..add(Note(
+            pitch: const Pitch(step: 'C', octave: 4),
+            duration: const Duration(DurationType.quarter)))
+        ..add(Dynamic(type: DynamicType.crescendo, isHairpin: true))
+        ..add(Note(
+            pitch: const Pitch(step: 'D', octave: 4),
+            duration: const Duration(DurationType.quarter)));
+      final track = MidiMapper.fromStaff(Staff(measures: [measure]))
+          .tracks
+          .firstWhere((t) => t.name == 'Staff 1');
+      final ons =
+          track.events.where((e) => e.type == MidiEventType.noteOn).toList();
+      // Both notes keep the forte velocity; the hairpin doesn't reset to mf.
+      expect(ons[0].velocity, ons[1].velocity);
+      expect(ons[1].velocity, velocityFromDynamic(DynamicType.f));
+    });
+
     test('tied notes are never shortened by articulation', () {
       final measure = Measure()
         ..add(Note(

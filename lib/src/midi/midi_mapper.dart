@@ -327,7 +327,12 @@ class _TrackEventBuilder {
 
     if (element is TempoMark) {
       if (element.bpm != null) {
-        metaEvents.add(MidiEvent.tempo(tick: tick, bpm: element.bpm!));
+        // A MIDI tempo is always per quarter note; scale a non-quarter beat
+        // unit (e.g. half-note = 80  ->  quarter = 160).
+        final beatQuarters = music.Duration(element.beatUnit).realValue * 4.0;
+        final quarterBpm = (element.bpm! * beatQuarters).round();
+        metaEvents.add(MidiEvent.tempo(
+            tick: tick, bpm: quarterBpm < 1 ? element.bpm! : quarterBpm));
       }
       if (element.text != null && element.text!.trim().isNotEmpty) {
         metaEvents.add(
@@ -349,7 +354,11 @@ class _TrackEventBuilder {
     }
 
     if (element is Dynamic) {
-      _voiceVelocity[voiceNumber] = velocityFromDynamic(element.type);
+      // A hairpin (cresc./dim.) is a ramp marker, not an absolute level — it
+      // must NOT reset the running velocity to mf.
+      if (!element.isHairpin) {
+        _voiceVelocity[voiceNumber] = velocityFromDynamic(element.type);
+      }
       return 0;
     }
 
