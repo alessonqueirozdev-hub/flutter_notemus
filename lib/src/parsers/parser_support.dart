@@ -1773,14 +1773,53 @@ class _MeiImportParser {
     final section = score.findAllElements('section').firstOrNull;
     if (section == null) return Staff();
 
+    // MEI encodes the initial clef/key/meter in <scoreDef>/<staffDef>, not
+    // inline in <staff>. Capture them and seed the first measure.
+    final scoreDef = score.findAllElements('scoreDef').firstOrNull;
+    final defaults =
+        scoreDef == null ? const <MusicalElement>[] : _meiStaffDefaults(scoreDef);
+
     final staff = Staff();
+    var first = true;
     for (final measure in section.findElements('measure')) {
-      staff.add(_parseMeasure(measure));
+      staff.add(_parseMeasure(
+        measure,
+        leadingDefaults: first ? defaults : const <MusicalElement>[],
+      ));
+      first = false;
     }
     return staff;
   }
 
-  Measure _parseMeasure(XmlElement measureElement) {
+  /// Clef/key/meter declared in a `scoreDef`'s `staffDef` for this staffIndex
+  /// (or the scoreDef itself), reading both attribute and child-element forms.
+  List<MusicalElement> _meiStaffDefaults(XmlElement scoreDef) {
+    final defs = scoreDef.findAllElements('staffDef').toList();
+    XmlElement? sd;
+    for (final d in defs) {
+      if ((_asInt(d.getAttribute('n')) ?? 1) == staffIndex + 1) {
+        sd = d;
+        break;
+      }
+    }
+    sd ??= defs.isNotEmpty
+        ? defs[staffIndex.clamp(0, defs.length - 1)]
+        : null;
+    final result = <MusicalElement>[];
+    final clef = (sd != null ? _meiDefClef(sd) : null) ?? _meiDefClef(scoreDef);
+    if (clef != null) result.add(clef);
+    final key = (sd != null ? _meiDefKey(sd) : null) ?? _meiDefKey(scoreDef);
+    if (key != null) result.add(key);
+    final meter =
+        (sd != null ? _meiDefMeter(sd) : null) ?? _meiDefMeter(scoreDef);
+    if (meter != null) result.add(meter);
+    return result;
+  }
+
+  Measure _parseMeasure(
+    XmlElement measureElement, {
+    List<MusicalElement> leadingDefaults = const <MusicalElement>[],
+  }) {
     final Map<int, _VoiceAccumulator> voices = <int, _VoiceAccumulator>{};
     final List<MusicalElement> metadataElements = <MusicalElement>[];
     TimeSignature? currentTimeSignature;
@@ -1810,6 +1849,22 @@ class _MeiImportParser {
     }
 
     final staffElement = staffElements[staffIndex];
+
+    // Seed the first measure with the scoreDef/staffDef clef/key/meter, unless
+    // the staff redeclares that element type inline.
+    if (leadingDefaults.isNotEmpty) {
+      final inlineNames =
+          staffElement.children.whereType<XmlElement>().map((e) => e.name.local);
+      final hasClef = inlineNames.contains('clef');
+      final hasKey = inlineNames.contains('keySig');
+      final hasMeter = inlineNames.contains('meterSig');
+      for (final d in leadingDefaults) {
+        if (d is Clef && hasClef) continue;
+        if (d is KeySignature && hasKey) continue;
+        if (d is TimeSignature && hasMeter) continue;
+        appendLead(d);
+      }
+    }
 
     final leftBarline = _meiBarlineFromToken(
       measureElement.getAttribute('left'),
@@ -1941,10 +1996,58 @@ class _MeiImportParser {
     final accumulator = voiceForNumber(voiceNumber);
 
     for (final child in layerElement.children.whereType<XmlElement>()) {
+      _appendMeiChild(child, accumulator, voiceNumber, currentTimeSignature);
+    }
+  }
+
+  /// Appends one MEI layer child. `<beam>`/`<tuplet>` are CONTAINERS (the common
+  /// MEI 5 encoding) and are recursed into, so their child notes are not lost.
+  void _appendMeiChild(
+    XmlElement child,
+    _VoiceAccumulator accumulator,
+    int voiceNumber,
+    TimeSignature? currentTimeSignature, {
+    BeamType? beamOverride,
+  }) {
       switch (child.name.local) {
+        case 'beam':
+          // Position-based beam types over the beamable (note/chord) children.
+          final kids = child.children.whereType<XmlElement>().toList();
+          final beamable = kids
+              .where((e) => e.name.local == 'note' || e.name.local == 'chord')
+              .length;
+          var bi = 0;
+          for (final inner in kids) {
+            final isBeamable =
+                inner.name.local == 'note' || inner.name.local == 'chord';
+            BeamType? bo;
+            if (isBeamable && beamable > 1) {
+              bo = bi == 0
+                  ? BeamType.start
+                  : (bi == beamable - 1 ? BeamType.end : BeamType.inner);
+              bi++;
+            }
+            _appendMeiChild(inner, accumulator, voiceNumber,
+                currentTimeSignature,
+                beamOverride: bo);
+          }
+          return;
+        case 'tuplet':
+          accumulator.startTuplet(
+            actualNotes: _asInt(child.getAttribute('num')) ?? 3,
+            normalNotes: _asInt(child.getAttribute('numbase')) ?? 2,
+            timeSignature: currentTimeSignature,
+          );
+          for (final inner in child.children.whereType<XmlElement>()) {
+            _appendMeiChild(
+                inner, accumulator, voiceNumber, currentTimeSignature);
+          }
+          accumulator.finishTuplet();
+          return;
         case 'note':
-          final note = _meiNote(child, voiceNumber: voiceNumber);
-          if (note == null) continue;
+          final note = _meiNote(child,
+              voiceNumber: voiceNumber, beamOverride: beamOverride);
+          if (note == null) return;
           final tupletInfo = _meiTupletInfo(child);
           if (tupletInfo.startsTuplet) {
             accumulator.startTuplet(
@@ -1957,7 +2060,7 @@ class _MeiImportParser {
           if (tupletInfo.endsTuplet) {
             accumulator.finishTuplet();
           }
-          break;
+          return;
         case 'rest':
           final rest = _meiRest(child);
           final tupletInfo = _meiTupletInfo(child);
@@ -1975,7 +2078,7 @@ class _MeiImportParser {
           break;
         case 'chord':
           final chord = _meiChord(child, voiceNumber: voiceNumber);
-          if (chord == null) continue;
+          if (chord == null) return;
           final tupletInfo = _meiTupletInfo(child);
           if (tupletInfo.startsTuplet) {
             accumulator.startTuplet(
@@ -2013,7 +2116,7 @@ class _MeiImportParser {
           break;
         case 'dir':
           final text = child.innerText.trim();
-          if (text.isEmpty) continue;
+          if (text.isEmpty) return;
           final repeatType = _parseRepeatType(text);
           if (repeatType != null) {
             accumulator.append(RepeatMark(type: repeatType, label: text));
@@ -2042,8 +2145,66 @@ class _MeiImportParser {
           }
           break;
       }
-    }
   }
+}
+
+/// Clef from a `scoreDef`/`staffDef` (child `clef` or clef.shape/clef.line).
+Clef? _meiDefClef(XmlElement def) {
+  final child = def.findElements('clef').firstOrNull;
+  if (child != null) {
+    final c = _meiClef(child);
+    if (c != null) return c;
+  }
+  final shape = def.getAttribute('clef.shape');
+  if (shape == null) return null;
+  final line = _asInt(def.getAttribute('clef.line'));
+  final s = _normalizeToken(shape);
+  if (s == 'g') return Clef(clefType: ClefType.treble);
+  if (s == 'f') {
+    return Clef(
+        clefType: line == 3 ? ClefType.bassThirdLine : ClefType.bass);
+  }
+  if (s == 'c') {
+    return Clef(
+      clefType: switch (line) {
+        1 => ClefType.soprano,
+        2 => ClefType.mezzoSoprano,
+        4 => ClefType.tenor,
+        5 => ClefType.baritone,
+        _ => ClefType.alto,
+      },
+    );
+  }
+  if (s == 'perc') return Clef(clefType: ClefType.percussion);
+  return null;
+}
+
+/// Key signature from a `scoreDef`/`staffDef` (child `keySig` or key.sig).
+KeySignature? _meiDefKey(XmlElement def) {
+  final child = def.findElements('keySig').firstOrNull;
+  if (child != null) {
+    final k = _meiKeySignature(child);
+    if (k != null) return k;
+  }
+  final sig = def.getAttribute('key.sig');
+  if (sig == null || sig.trim().isEmpty) return null;
+  final n = sig.trim().toLowerCase();
+  if (n == '0') return KeySignature(0);
+  final m = RegExp(r'^(-?\d+)([sf])$').firstMatch(n);
+  if (m == null) return null;
+  final count = int.tryParse(m.group(1)!);
+  if (count == null) return null;
+  return KeySignature(m.group(2) == 'f' ? -count : count);
+}
+
+/// Meter from a `scoreDef`/`staffDef` (child `meterSig` or meter.count/unit).
+TimeSignature? _meiDefMeter(XmlElement def) {
+  final child = def.findElements('meterSig').firstOrNull;
+  if (child != null) {
+    final m = _meiTimeSignature(child);
+    if (m != null) return m;
+  }
+  return _meiTimeSignature(def); // reads meter.count/meter.unit attributes
 }
 
 Clef? _meiClef(XmlElement clefElement) {
@@ -2141,7 +2302,8 @@ TimeSignature? _meiTimeSignature(XmlElement meterSigElement) {
   return TimeSignature(numerator: numerator, denominator: denominator);
 }
 
-Note? _meiNote(XmlElement noteElement, {required int voiceNumber}) {
+Note? _meiNote(XmlElement noteElement,
+    {required int voiceNumber, BeamType? beamOverride}) {
   final step = noteElement.getAttribute('pname')?.toUpperCase();
   final octave = _asInt(noteElement.getAttribute('oct'));
   if (step == null || octave == null) return null;
@@ -2162,7 +2324,7 @@ Note? _meiNote(XmlElement noteElement, {required int voiceNumber}) {
           DurationType.quarter,
       dots: _asInt(noteElement.getAttribute('dots')) ?? 0,
     ),
-    beam: _parseBeamType(noteElement.getAttribute('beam')),
+    beam: beamOverride ?? _parseBeamType(noteElement.getAttribute('beam')),
     articulations: _parseArticulationList(
       noteElement.getAttribute('artic')?.split(RegExp(r'\s+')),
     ),
