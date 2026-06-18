@@ -230,6 +230,23 @@ Meta do autor: **suporte completo a canto gregoriano** (renderização nível-ed
 
 **Auditoria adversarial SOTA gregoriana:** 59 lacunas confirmadas (doc/GREGORIAN_AUDIT_BACKLOG.md). Atacados os itens de maior impacto: âncora à clave (#1), quilisma/Ancus, hifenização, alinhamento de letras. Restantes (médio/baixo): modelo completo de sílaba (melisma/multi-verso), pressus, glifos de episema por forma, linhas de fusão, renderização de cabeçalhos (modo/título) — refinamentos.
 
+### Fase 3 — Biblioteca inteira (CMN) ao estado da arte (em andamento)
+
+**Auditoria adversarial de renderização CMN:** 72 lacunas confirmadas em 10 dimensões de gravação (doc/LIBRARY_AUDIT_BACKLOG.md). Atacados:
+
+| Commit | O quê | Evidência |
+|---|---|---|
+| `fix(engraving):` fórmulas multi-dígito | Fórmulas de compasso ≥10 (12/8, 16…) decompostas em dígitos e centradas; antes não desenhavam nada. | golden `m04b_compound_meter` |
+| `fix(engraving):` haste na linha do meio | Nota na linha do meio → haste para baixo (Gould), era para cima. | goldens m02/m03/c01 |
+| `fix(engraving):` pontos em pausas | Pausas pontuadas agora desenham o ponto de aumento. | golden `m10_rests` |
+| `fix(engraving):` articulações estendidas | portato/snap/stopped/open/half-stopped/thumb agora renderizam (mapeamento SMuFL). | golden `m04c_articulations_extended` |
+
+**Itens HIGH restantes (exigem mudança coordenada layout+render, foco dedicado):**
+- **Persistência de acidente no compasso** (#1 CMN): mostrar acidente só na 1ª ocorrência da altura no compasso, bequadro automático ao reverter, reset na barra, ciente da armadura. Exige decisão em tempo de LAYOUT (largura) + render + acordes — não é fix rápido (risco ao empacotamento de acidentes de acorde do V3).
+- **Repetição de clave no início de cada sistema** (pauta quebrada): sistemas após o 1º não redesenham clave/armadura.
+
+Demais ~64 itens (médio/baixo) documentados no backlog: hairpins por glifo, articulações de acorde/empilhadas, claves-C em linhas erradas, naturais de cancelamento sem largura, espaço de ponto de aumento, último sistema não justificar, etc.
+
 **Renderiza com autenticidade (confirmado nos PNGs):** clave-dó centrada na linha, punctum/virga, pes, clivis (flexus), torculus, porrectus (oblíqua), scandicus, climacus (losangos *inclinatum*), quilisma, salicus, resupinus/flexus, líquidas, episema/ictus/mora, custos de fim de linha, divisórias, justificação por sistema, letras em fonte serifada.
 
 **Resolvido desde então:** acidentes (campo aditivo), repetidos, ponto de mora no espaço, **âncora de altura à clave** (modelo de altura agora correto para playback), **execução/playback** (neuma→MIDI), clave-bemol.
