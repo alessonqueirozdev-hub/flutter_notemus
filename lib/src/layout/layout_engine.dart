@@ -374,6 +374,9 @@ class LayoutEngine {
 
     // System de inheritance de TimeSignature
     TimeSignature? currentTimeSignature;
+    // Running clef/key, restated at the start of each new system.
+    Clef? currentClef;
+    KeySignature? currentKey;
 
     // Contador de validação (only for estatísticas)
     int validMeasures = 0;
@@ -432,6 +435,33 @@ class LayoutEngine {
           cursor.addBarline(positionedElements);
         }
         cursor.startNewSystem();
+      }
+
+      // Restate the running clef (and key signature) at the start of every
+      // system after the first, when this measure does not carry its own — so
+      // each wrapped line begins with its prevailing clef/key (Gould/Verovio).
+      if (cursor.isFirstMeasureInSystem && i > 0) {
+        final hasClef = measure.elements.any((e) => e is Clef);
+        final hasKey = measure.elements.any((e) => e is KeySignature);
+        var restated = false;
+        final clef = currentClef;
+        if (!hasClef && clef != null) {
+          cursor.addElement(clef, positionedElements);
+          cursor.advance(_getElementWidthSimple(clef));
+          restated = true;
+        }
+        final key = currentKey;
+        if (!hasKey && key != null && key.count != 0) {
+          cursor.addElement(key, positionedElements);
+          cursor.advance(_getElementWidthSimple(key));
+          restated = true;
+        }
+        if (restated) cursor.advance(staffSpace * 1.0);
+      }
+      // Update the running clef/key from this measure (used by later systems).
+      for (final e in measure.elements) {
+        if (e is Clef) currentClef = e;
+        if (e is KeySignature) currentKey = e;
       }
 
       // Guardar index initial of the measure for justificação

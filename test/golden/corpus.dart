@@ -489,6 +489,28 @@ Staff _extendedArticulations() {
   ]);
 }
 
+/// Multi-system wrap: a key-signature piece long enough to break across systems,
+/// so the clef and key signature are restated at the start of each new line.
+Staff _multiSystem() {
+  final measures = <Measure>[];
+  const steps = ['G', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'A', 'B', 'C', 'D'];
+  for (var m = 0; m < 8; m++) {
+    final els = <MusicalElement>[];
+    if (m == 0) {
+      els.add(Clef(clefType: ClefType.treble));
+      els.add(KeySignature(1)); // G major (F#)
+      els.add(TimeSignature(numerator: 4, denominator: 4));
+    }
+    for (var b = 0; b < 4; b++) {
+      final s = steps[(m + b) % steps.length];
+      els.add(_n(s, 4, dur: DurationType.quarter,
+          alter: s == 'F' ? 1.0 : 0.0));
+    }
+    measures.add(_measure(els));
+  }
+  return _staff(measures);
+}
+
 /// Within-measure accidental persistence: a repeated altered pitch shows its
 /// accidental once; reverting to natural shows a natural; the rule resets at the
 /// barline.
@@ -601,6 +623,15 @@ final List<CorpusCase> corpus = [
     tier: 'intermediate',
     exercises: 'accidental shown once/measure, natural cancel, barline reset',
     build: _withinMeasureAccidentals,
+  ),
+  CorpusCase(
+    id: 'm04e_multi_system',
+    title: 'Multi-system wrap (clef + key restated per system)',
+    tier: 'intermediate',
+    exercises: 'clef/key restatement at each new system',
+    build: _multiSystem,
+    staffSpace: 13.0,
+    size: const Size(460, 360),
   ),
   CorpusCase(
     id: 'm05_slurs_ties',
