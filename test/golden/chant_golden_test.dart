@@ -93,7 +93,7 @@ void main() {
                     lyricSize: 15,
                     color: const Color(0xFF101010),
                     lyricTextFamily:
-                        textFontAvailable ? kTextFontFamily : null,
+                        serifFontAvailable ? kSerifFamily : null,
                   ),
                 ),
               ),
@@ -141,7 +141,7 @@ mi(g)se(f)ri(gh)cór(g)di(f)ae(f) (::)
                   theme: GregorianTheme(
                     lyricSize: 14,
                     lyricTextFamily:
-                        textFontAvailable ? kTextFontFamily : null,
+                        serifFontAvailable ? kSerifFamily : null,
                   ),
                 ),
               ),

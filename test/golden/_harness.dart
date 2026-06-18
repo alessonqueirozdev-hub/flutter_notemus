@@ -41,7 +41,21 @@ const List<String> _textFontCandidates = [
   '/System/Library/Fonts/Supplemental/Arial.ttf',
 ];
 
+/// Family under which a real SERIF font is registered, for chant lyrics (the
+/// traditional Gregorian text face is serif, not sans).
+const String kSerifFamily = 'ChantSerif';
+
+const List<String> _serifFontCandidates = [
+  r'C:\Windows\Fonts\georgia.ttf',
+  r'C:\Windows\Fonts\times.ttf',
+  r'C:\Windows\Fonts\constan.ttf',
+  '/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf',
+  '/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf',
+  '/Library/Fonts/Georgia.ttf',
+];
+
 bool textFontAvailable = false;
+bool serifFontAvailable = false;
 
 /// Loads Bravura (from the package asset on disk), a best-effort text font, and
 /// SMuFL metadata exactly once. Safe to call from every `setUpAll`.
@@ -78,13 +92,32 @@ Future<void> loadNotemusFonts() async {
           'Academico',
           'Century Schoolbook',
           'Edwin',
-          'serif',
         ]) {
           final loader = FontLoader(family)
             ..addFont(Future.value(ByteData.view(tb.buffer)));
           await loader.load();
         }
         textFontAvailable = true;
+        break;
+      }
+    }
+
+    // Serif font for chant lyrics (registered under the serif family names).
+    for (final path in _serifFontCandidates) {
+      final f = File(path);
+      if (f.existsSync()) {
+        final sb = await f.readAsBytes();
+        for (final family in const [
+          kSerifFamily,
+          'serif',
+          'Georgia',
+          'Times New Roman',
+        ]) {
+          final loader = FontLoader(family)
+            ..addFont(Future.value(ByteData.view(sb.buffer)));
+          await loader.load();
+        }
+        serifFontAvailable = true;
         break;
       }
     }
