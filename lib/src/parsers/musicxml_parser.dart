@@ -146,6 +146,16 @@ class MusicXMLParser {
   }
 }
 
+/// Divisions per quarter note for the exported MusicXML. 480 is divisible by
+/// 2/3/4/5/6/8/… so common durations and tuplets map to whole tick counts.
+const int _kDivisions = 480;
+
+/// Duration of [d] in MusicXML divisions, optionally scaled by a tuplet factor.
+int _durationDivisions(Duration d, [double factor = 1.0]) {
+  final v = (d.realValue * 4 * _kDivisions * factor).round();
+  return v < 1 ? 1 : v;
+}
+
 void _buildMeasureXml(XmlBuilder builder, Measure measure, int number) {
   builder.element(
     'measure',
@@ -159,10 +169,15 @@ void _buildMeasureXml(XmlBuilder builder, Measure measure, int number) {
             element is TimeSignature,
       );
 
-      if (systemElements.isNotEmpty) {
+      // The first measure always carries <divisions>; later measures only emit
+      // <attributes> when a clef/key/time actually appears.
+      if (number == 1 || systemElements.isNotEmpty) {
         builder.element(
           'attributes',
           nest: () {
+            if (number == 1) {
+              builder.element('divisions', nest: _kDivisions);
+            }
             for (final element in systemElements) {
               if (element is Clef) {
                 builder.element(
@@ -219,6 +234,20 @@ void _buildMeasureXml(XmlBuilder builder, Measure measure, int number) {
               isChordTone: index > 0,
             );
           }
+        } else if (element is Tuplet) {
+          // Export each tuplet member with scaled duration + <time-modification>.
+          for (final inner in element.elements) {
+            if (inner is Note) {
+              _buildNoteXml(builder, inner, tuplet: element.ratio);
+            } else if (inner is Rest) {
+              _buildRestXml(builder, inner, tuplet: element.ratio);
+            } else if (inner is Chord) {
+              for (int i = 0; i < inner.notes.length; i++) {
+                _buildNoteXml(builder, inner.notes[i],
+                    isChordTone: i > 0, tuplet: element.ratio);
+              }
+            }
+          }
         } else if (element is Dynamic) {
           _buildDynamicXml(builder, element);
         } else if (element is TempoMark) {
@@ -239,7 +268,8 @@ void _buildMeasureXml(XmlBuilder builder, Measure measure, int number) {
   );
 }
 
-void _buildNoteXml(XmlBuilder builder, Note note, {bool isChordTone = false}) {
+void _buildNoteXml(XmlBuilder builder, Note note,
+    {bool isChordTone = false, TupletRatio? tuplet}) {
   builder.element(
     'note',
     nest: () {
@@ -256,10 +286,20 @@ void _buildNoteXml(XmlBuilder builder, Note note, {bool isChordTone = false}) {
           builder.element('octave', nest: note.pitch.octave);
         },
       );
-      builder.element('duration', nest: '1');
+      builder.element('duration',
+          nest: _durationDivisions(note.duration, tuplet?.modifier ?? 1.0));
       builder.element('type', nest: _durationTypeToString(note.duration.type));
       for (int index = 0; index < note.duration.dots; index++) {
         builder.element('dot');
+      }
+      if (tuplet != null) {
+        builder.element(
+          'time-modification',
+          nest: () {
+            builder.element('actual-notes', nest: tuplet.actualNotes);
+            builder.element('normal-notes', nest: tuplet.normalNotes);
+          },
+        );
       }
       if (note.tie != null) {
         builder.element(
@@ -338,15 +378,25 @@ String _syllabicToString(SyllableType type) => switch (type) {
       SyllableType.terminal => 'end',
     };
 
-void _buildRestXml(XmlBuilder builder, Rest rest) {
+void _buildRestXml(XmlBuilder builder, Rest rest, {TupletRatio? tuplet}) {
   builder.element(
     'note',
     nest: () {
       builder.element('rest');
-      builder.element('duration', nest: '1');
+      builder.element('duration',
+          nest: _durationDivisions(rest.duration, tuplet?.modifier ?? 1.0));
       builder.element('type', nest: _durationTypeToString(rest.duration.type));
       for (int index = 0; index < rest.duration.dots; index++) {
         builder.element('dot');
+      }
+      if (tuplet != null) {
+        builder.element(
+          'time-modification',
+          nest: () {
+            builder.element('actual-notes', nest: tuplet.actualNotes);
+            builder.element('normal-notes', nest: tuplet.normalNotes);
+          },
+        );
       }
     },
   );
