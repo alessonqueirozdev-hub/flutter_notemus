@@ -616,7 +616,12 @@ class GregorianPainter extends CustomPainter {
           _drawMark(canvas, mk.type, box.startX + mk.dx, ny);
         }
         if (box.syllable != null && box.syllable!.isNotEmpty) {
-          _lyric(canvas, box.syllable!, (box.startX + box.endX) / 2, lyricTop);
+          // The syllable centres under the FIRST note of its neume (Solesmes
+          // underlay), not under the whole neume box.
+          final firstW = box.glyphs.isEmpty
+              ? _sp * 0.6
+              : font.advanceUnits(box.glyphs.first.name) * _scale;
+          _lyric(canvas, box.syllable!, box.startX + firstW / 2, lyricTop);
         }
       }
 
