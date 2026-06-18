@@ -93,6 +93,14 @@ mode: 1;
       expect(neumes[1].type, NeumeType.porrectusFlexus);
     });
 
+    test('classifies repeated unison notes (bivirga vs repeated puncta)', () {
+      const gabc = '(c4) a(gvgv)b(gg)';
+      final neumes = GabcParser.parse(gabc).elements.whereType<Neume>().toList();
+      expect(neumes[0].type, NeumeType.bivirga); // two virgae, same pitch
+      expect(neumes[0].components.length, 2);
+      expect(neumes[1].type, NeumeType.custom); // two puncta, same pitch
+    });
+
     test('fa clef and pitch contour are relative to the clef', () {
       const gabc = '(f3) a(g)b(h)';
       final r = GabcParser.parse(gabc);

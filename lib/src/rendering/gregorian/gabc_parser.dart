@@ -278,6 +278,15 @@ class GabcParser {
           ? NeumeType.virga
           : NeumeType.punctum;
     }
+    // Repeated notes at the same pitch: bivirga / trivirga (repeated virgae);
+    // repeated puncta/strophae have no dedicated enum value and stay custom.
+    if (steps.every((s) => s == steps[0])) {
+      if (comps.every((c) => c.form == NcForm.virga)) {
+        if (n == 2) return NeumeType.bivirga;
+        if (n == 3) return NeumeType.trivirga;
+      }
+      return NeumeType.custom;
+    }
     if (n == 2) {
       return steps[1] > steps[0] ? NeumeType.pes : NeumeType.clivis;
     }

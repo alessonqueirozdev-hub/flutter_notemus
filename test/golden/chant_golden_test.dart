@@ -241,6 +241,67 @@ void main() {
     );
   });
 
+  testWidgets('golden chant_repeated', (tester) async {
+    // Repeated-pitch neumes: bivirga, distropha, tristropha (assembled from
+    // side-by-side virga/stropha glyphs).
+    final elements = <MusicalElement>[
+      Neume(type: NeumeType.bivirga, components: [
+        nc('G', 4, NcForm.virga),
+        nc('G', 4, NcForm.virga),
+      ], syllable: 'bi'),
+      Neume(type: NeumeType.custom, components: [
+        nc('G', 4, NcForm.stropha),
+        nc('G', 4, NcForm.stropha),
+      ], syllable: 'di'),
+      Neume(type: NeumeType.custom, components: [
+        nc('G', 4, NcForm.stropha),
+        nc('G', 4, NcForm.stropha),
+        nc('G', 4, NcForm.stropha),
+      ], syllable: 'tri'),
+      NeumeDivision(type: NeumeDivisionType.finalis),
+    ];
+
+    await tester.binding.setSurfaceSize(const Size(480, 300));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: textFontAvailable ? ThemeData(fontFamily: kTextFontFamily) : null,
+        home: Scaffold(
+          backgroundColor: Colors.white,
+          body: Center(
+            child: RepaintBoundary(
+              key: kGoldenBoundaryKey,
+              child: Container(
+                width: 480,
+                height: 300,
+                color: Colors.white,
+                child: ChantScore(
+                  elements: elements,
+                  clef: const ChantClef(
+                      type: ChantClefType.doClef, line: 4),
+                  theme: GregorianTheme(
+                    lyricSize: 14,
+                    color: const Color(0xFF101010),
+                    lyricTextFamily: serifFontAvailable ? kSerifFamily : null,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    await expectLater(
+      find.byKey(kGoldenBoundaryKey),
+      matchesGoldenFile('goldens/chant_repeated.png'),
+    );
+  });
+
   testWidgets('golden chant_accidentals', (tester) async {
     // Standalone accidental signs (flat/natural/sharp) preceding their notes,
     // parsed end-to-end from GABC (ix = flat at i, etc.).

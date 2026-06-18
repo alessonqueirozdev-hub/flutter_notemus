@@ -572,7 +572,11 @@ class GregorianPainter extends CustomPainter {
           _glyph(canvas, op.name, box.startX + op.dx, _stepY(cy, op.step));
         }
         for (final mk in box.marks) {
-          _drawMark(canvas, mk.type, box.startX + mk.dx, _stepY(cy, mk.step));
+          var ny = _stepY(cy, mk.step);
+          // The mora dot belongs in a space; when the note sits on a line
+          // (odd step in this grid) raise the dot into the space above it.
+          if (mk.type == _MarkType.mora && mk.step.isOdd) ny -= _halfStep;
+          _drawMark(canvas, mk.type, box.startX + mk.dx, ny);
         }
         if (box.syllable != null && box.syllable!.isNotEmpty) {
           _lyric(canvas, box.syllable!, (box.startX + box.endX) / 2, lyricTop);
