@@ -218,14 +218,21 @@ Meta do autor: **suporte completo a canto gregoriano** (renderização nível-ed
 | `feat(gregorian):` marcas rítmicas | Episema horizontal, ictus (episema vertical) e ponto(s) de mora — o parser GABC já os populava; agora são desenhados por componente. | golden `chant_kyrie_tierA` (nota "A" episema+ictus, "men" mora) |
 | `feat(gregorian):` liquescências | Neumas líquidos (deminutus): epiphonus (pes), cephalicus (clivis) + torculus/porrectus/scandicus/quilisma-pes; fallback p/ forma plena quando o âmbito não tem glifo líquido. | golden `chant_liquescence` |
 | `feat(gregorian):` neumas compostos | Salicus (oriscus no meio) + torculus resupinus e porrectus flexus de 4 notas como glifos únicos; classificador GABC detecta âmbito de 3 intervalos. | golden `chant_compound` |
+| `feat(gregorian):` acidentes | Campo aditivo `NeumeAccidental` em `NeumeComponent` (aprovado pelo autor); sinais bemol/bequadro/sustenido autônomos no estilo GABC. | golden `chant_accidentals` |
+| `feat(gregorian):` repetidos + mora | bivirga/distropha/tristropha; ponto de mora no espaço correto (sobe quando a nota está na linha). | golden `chant_repeated` |
+| `fix(gregorian):` âncora à clave | **Resolução de altura RELATIVA à clave** (achado por revisão adversarial do playback): clave-dó → linha=dó(C), clave-fá → linha=fá(F); semitons E-F/B-C caem nas linhas certas; clave pode mudar no meio. Render inalterado (contorno relativo preservado). | testes do parser |
+| `feat(midi):` **playback gregoriano** | `ChantMidiMapper` (Dart puro) neuma→`MidiSequence`: altura diatônica resolvida pela clave→MIDI, acidentes locais + clave-bemol (si suave), ritmo livre como pulso igual com alongamento por mora, divisórias como respiros, transposição configurável, linha do tempo por nota p/ editor. Ponte `gabcToMidiSequence()` + extensão `ChantScore.toMidiSequence()`. `MidiFileWriter` valida ticksPerQuarter. | 18 testes `chant_midi_mapper_test` |
+| `feat(gregorian):` clave-bemol | Desenha o bemol (si suave) após a clave (cb/fb). | golden `chant_clef_flat` |
 
 **Renderiza com autenticidade (confirmado nos PNGs):** clave-dó centrada na linha, punctum/virga, pes, clivis (flexus), torculus, porrectus (oblíqua), scandicus, climacus (losangos *inclinatum*), quilisma, salicus, resupinus/flexus, líquidas, episema/ictus/mora, custos de fim de linha, divisórias, justificação por sistema, letras em fonte serifada.
 
+**Resolvido desde então:** acidentes (campo aditivo), repetidos, ponto de mora no espaço, **âncora de altura à clave** (modelo de altura agora correto para playback), **execução/playback** (neuma→MIDI), clave-bemol.
+
 **Lacunas conhecidas (honestidade):**
-- **Acidentes** (bemol/bequadro/sustenido): o parser GABC reconhece `x/y/#` mas os **ignora** (Tier B v1) — exige campo novo no modelo `NeumeComponent` (decisão de modelo, a confirmar com o autor). Glifos `Flat/Natural/Sharp` existem na fonte.
-- **Altura absoluta / execução (playback)**: render usa contorno **relativo à mediana** (visualmente centrado na pauta); a âncora à linha da clave (do/fa) e a derivação de altura p/ MIDI ainda **não** estão feitas. Canto **não** tem altura absoluta (clave fixa só do/fa) — modelar como MIDI exige resolver a referência.
-- **Repetidos** (distropha/tristropha/bivirga/pressus) e **initio debilis**: ainda montados nota-a-nota ou não tratados.
-- **Posição vertical do ponto de mora** (espaço vs. linha): hoje na altura da nota (aproximação).
+- **Posicionamento vertical do render**: ainda **centrado na mediana** (robusto p/ entrada GABC e notas reais). A altura é musicalmente correta no MODELO/playback (clave do/fa), mas o render não ancora visualmente cada nota à linha da clave — escolha deliberada (ancorar exigiria que o app garanta clave compatível; risco de transbordo p/ entrada programática). Glifo do clave-bemol é posicionado relativo à clave (ok).
+- **Pressus, oriscus isolado, quilisma-scandicus, initio debilis**: ainda montados nota-a-nota ou não tratados (initio debilis exigiria campo aditivo).
+- **GABC**: `@` (fusões), acidentais suaves especiais, claves duplas, custos manual — não tratados (Tier B).
+- Auditoria adversarial de estado-da-arte em andamento p/ ranquear o que falta.
 
 **Verificado como NÃO-defeito:** **V5** — o colchete da quiáltera já fica do lado correto (lado da haste/feixe); estilo válido, sem ação.
 
