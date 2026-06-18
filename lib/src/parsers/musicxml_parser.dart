@@ -270,6 +270,20 @@ void _buildNoteXml(XmlBuilder builder, Note note, {bool isChordTone = false}) {
           ),
         );
       }
+      // Beam (begin/continue/end) — before notations, per MusicXML order.
+      if (note.beam != null) {
+        builder.element(
+          'beam',
+          nest: () {
+            builder.attribute('number', '1');
+            builder.text(switch (note.beam!) {
+              BeamType.start => 'begin',
+              BeamType.inner => 'continue',
+              BeamType.end => 'end',
+            });
+          },
+        );
+      }
       if (note.articulations.isNotEmpty || note.slur != null) {
         builder.element(
           'notations',
@@ -296,9 +310,33 @@ void _buildNoteXml(XmlBuilder builder, Note note, {bool isChordTone = false}) {
           },
         );
       }
+      // Lyric verses (one <lyric> per syllable, numbered by verse).
+      final syllables = note.syllables;
+      if (syllables != null) {
+        for (var v = 0; v < syllables.length; v++) {
+          final syl = syllables[v];
+          if (syl.text.isEmpty) continue;
+          builder.element(
+            'lyric',
+            nest: () {
+              builder.attribute('number', '${v + 1}');
+              builder.element('syllabic', nest: _syllabicToString(syl.type));
+              builder.element('text', nest: syl.text);
+            },
+          );
+        }
+      }
     },
   );
 }
+
+String _syllabicToString(SyllableType type) => switch (type) {
+      SyllableType.single => 'single',
+      SyllableType.initial => 'begin',
+      SyllableType.middle => 'middle',
+      SyllableType.hyphen => 'middle',
+      SyllableType.terminal => 'end',
+    };
 
 void _buildRestXml(XmlBuilder builder, Rest rest) {
   builder.element(

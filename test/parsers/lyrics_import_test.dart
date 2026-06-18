@@ -88,4 +88,46 @@ void main() {
       expect(note.syllables!.map((s) => s.text).toList(), ['one', 'two']);
     });
   });
+
+  group('MusicXML lyric export round-trip', () {
+    test('syllable text + syllabic type survive export and re-import', () {
+      final staff = Staff(measures: [
+        Measure()
+          ..add(Clef(clefType: ClefType.treble))
+          ..add(TimeSignature(numerator: 4, denominator: 4))
+          ..add(Note(
+            pitch: const Pitch(step: 'C', octave: 5),
+            duration: const Duration(DurationType.quarter),
+            syllables: const [
+              Syllable(text: 'Glo', type: SyllableType.initial),
+            ],
+          ))
+          ..add(Note(
+            pitch: const Pitch(step: 'D', octave: 5),
+            duration: const Duration(DurationType.quarter),
+            syllables: const [
+              Syllable(text: 'ri', type: SyllableType.middle),
+            ],
+          ))
+          ..add(Note(
+            pitch: const Pitch(step: 'E', octave: 5),
+            duration: const Duration(DurationType.quarter),
+            syllables: const [
+              Syllable(text: 'a', type: SyllableType.terminal),
+            ],
+          )),
+      ]);
+
+      final xml = MusicXMLParser.staffToMusicXML(staff);
+      expect(xml.contains('<lyric'), isTrue);
+
+      final notes = notesOf(MusicXMLParser.parseMusicXML(xml));
+      expect(notes[0].syllables!.single.text, 'Glo');
+      expect(notes[0].syllables!.single.type, SyllableType.initial);
+      expect(notes[1].syllables!.single.text, 'ri');
+      expect(notes[1].syllables!.single.type, SyllableType.middle);
+      expect(notes[2].syllables!.single.text, 'a');
+      expect(notes[2].syllables!.single.type, SyllableType.terminal);
+    });
+  });
 }
