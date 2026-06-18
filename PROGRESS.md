@@ -240,12 +240,14 @@ Meta do autor: **suporte completo a canto gregoriano** (renderização nível-ed
 | `fix(engraving):` haste na linha do meio | Nota na linha do meio → haste para baixo (Gould), era para cima. | goldens m02/m03/c01 |
 | `fix(engraving):` pontos em pausas | Pausas pontuadas agora desenham o ponto de aumento. | golden `m10_rests` |
 | `fix(engraving):` articulações estendidas | portato/snap/stopped/open/half-stopped/thumb agora renderizam (mapeamento SMuFL). | golden `m04c_articulations_extended` |
+| `feat(engraving):` **persistência de acidente no compasso** | Regra CMN #1: acidente mostrado 1×/compasso, bequadro automático ao reverter, reset na barra, ciente da armadura. Resolver baseado no modelo alimenta largura+render+acordes. Corrigiu bug latente (Ode to Joy fá♮→fá♯). | golden `m04d` + 7 testes do resolver |
+| `feat(engraving):` **clave/armadura por sistema** | Pauta quebrada redesenha clave + armadura no início de cada sistema (Gould/Verovio). | golden `m04e_multi_system` |
+| `fix(engraving):` haste linha do meio | Nota na linha do meio → haste para baixo. | m02/m03/c01 |
+| `fix(engraving):` pontos em pausas | Pausas pontuadas desenham o ponto. | `m10_rests` |
+| `fix(engraving):` articulações empilhadas | Múltiplas articulações empilham (não sobrepõem). | `m04f` |
+| `fix(engraving):` claves C/F | soprano/mezzo/baritono/baritono-fá: glifo na linha certa + posição de nota. | `m04g` + testes |
 
-**Itens HIGH restantes (exigem mudança coordenada layout+render, foco dedicado):**
-- **Persistência de acidente no compasso** (#1 CMN): mostrar acidente só na 1ª ocorrência da altura no compasso, bequadro automático ao reverter, reset na barra, ciente da armadura. Exige decisão em tempo de LAYOUT (largura) + render + acordes — não é fix rápido (risco ao empacotamento de acidentes de acorde do V3).
-- **Repetição de clave no início de cada sistema** (pauta quebrada): sistemas após o 1º não redesenham clave/armadura.
-
-Demais ~64 itens (médio/baixo) documentados no backlog: hairpins por glifo, articulações de acorde/empilhadas, claves-C em linhas erradas, naturais de cancelamento sem largura, espaço de ponto de aumento, último sistema não justificar, etc.
+**Os 3 itens HIGH da auditoria CMN foram resolvidos.** ~58 itens médio/baixo restantes no [LIBRARY_AUDIT_BACKLOG.md](LIBRARY_AUDIT_BACKLOG.md): hairpins por glifo SMuFL, articulações de acorde, naturais de cancelamento sem largura reservada, espaço do ponto de aumento, último sistema não justificar à largura cheia, mudanças de clave no meio do sistema (caixa pequena), tuplets aninhados MEI, round-trip de letras no export MusicXML, etc. Próximo: seguir por impacto.
 
 **Renderiza com autenticidade (confirmado nos PNGs):** clave-dó centrada na linha, punctum/virga, pes, clivis (flexus), torculus, porrectus (oblíqua), scandicus, climacus (losangos *inclinatum*), quilisma, salicus, resupinus/flexus, líquidas, episema/ictus/mora, custos de fim de linha, divisórias, justificação por sistema, letras em fonte serifada.
 
