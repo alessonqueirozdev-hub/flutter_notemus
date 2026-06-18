@@ -5,6 +5,7 @@ import '../../core/dynamic.dart';
 import '../../core/measure.dart';
 import '../../core/musical_element.dart';
 import '../../core/note.dart';
+import '../../core/ornament.dart';
 import '../../core/repeat.dart';
 import '../../core/rest.dart';
 import '../../core/score.dart';
@@ -438,6 +439,21 @@ class _TrackEventBuilder {
     // just inserts silence); tied notes are never shortened.
     final effect = _articulationEffect(note.articulations);
     velocity = (velocity * effect.accent).round().clamp(1, 127);
+
+    // Ornaments (trill/mordent/turn) expand into rapid sub-notes when the note
+    // is not tied; otherwise it plays plainly.
+    if (note.tie == null && note.ornaments.isNotEmpty) {
+      if (_emitOrnament(
+        midiNote: midiNote,
+        startTick: startTick,
+        durationTicks: durationTicks,
+        velocity: velocity,
+        type: note.ornaments.first.type,
+      )) {
+        return durationTicks;
+      }
+    }
+
     final soundingTicks = note.tie == null
         ? (durationTicks * effect.gate).round().clamp(1, durationTicks)
         : durationTicks;
@@ -452,6 +468,83 @@ class _TrackEventBuilder {
     );
 
     return durationTicks;
+  }
+
+  /// Expands a trill/mordent/turn into rapid sub-notes filling [durationTicks].
+  /// Neighbor tones default to a whole step (key-aware intervals are future
+  /// work). Returns false for ornaments that are not melodic expansions.
+  bool _emitOrnament({
+    required int midiNote,
+    required int startTick,
+    required int durationTicks,
+    required int velocity,
+    required OrnamentType type,
+  }) {
+    // Pitch offsets (semitones) to play, and whether to fill the duration by
+    // repeating the pattern (trill) or play it once (mordent/turn).
+    final List<int> pattern;
+    final bool fill;
+    switch (type) {
+      case OrnamentType.trill:
+      case OrnamentType.trillNatural:
+      case OrnamentType.trillSharp:
+      case OrnamentType.trillFlat:
+      case OrnamentType.shortTrill:
+      case OrnamentType.pralltriller:
+        pattern = const [0, 2];
+        fill = true;
+        break;
+      case OrnamentType.mordent:
+        pattern = const [0, 2, 0]; // upper mordent
+        fill = false;
+        break;
+      case OrnamentType.invertedMordent:
+        pattern = const [0, -2, 0]; // lower mordent
+        fill = false;
+        break;
+      case OrnamentType.turn:
+        pattern = const [2, 0, -2, 0];
+        fill = false;
+        break;
+      case OrnamentType.turnInverted:
+      case OrnamentType.invertedTurn:
+        pattern = const [-2, 0, 2, 0];
+        fill = false;
+        break;
+      default:
+        return false;
+    }
+
+    final end = startTick + durationTicks;
+    final unit = (options.ticksPerQuarter ~/ 8).clamp(1, durationTicks);
+
+    void emit(int offset, int from, int to) {
+      if (to <= from) return;
+      final n = (midiNote + offset).clamp(0, 127);
+      events.add(MidiEvent.noteOn(
+          tick: from, channel: channel, note: n, velocity: velocity));
+      events.add(MidiEvent.noteOff(tick: to, channel: channel, note: n));
+    }
+
+    if (fill) {
+      var t = startTick;
+      var i = 0;
+      while (t < end) {
+        final to = (t + unit) > end ? end : (t + unit);
+        emit(pattern[i % pattern.length], t, to);
+        t = to;
+        i++;
+      }
+    } else {
+      var t = startTick;
+      for (var i = 0; i < pattern.length; i++) {
+        final isLast = i == pattern.length - 1;
+        final to = isLast ? end : ((t + unit) > end ? end : (t + unit));
+        emit(pattern[i], t, to);
+        t = to;
+      }
+    }
+    return true;
   }
 
   int _emitChord({

@@ -241,6 +241,40 @@ void main() {
           greaterThan(vel(const [ArticulationType.accent])));
     });
 
+    test('a trill expands into rapid alternating sub-notes', () {
+      final measure = Measure()
+        ..add(Note(
+          pitch: const Pitch(step: 'C', octave: 5),
+          duration: const Duration(DurationType.quarter),
+          ornaments: [Ornament(type: OrnamentType.trill)],
+        ));
+      final track = MidiMapper.fromStaff(Staff(measures: [measure]))
+          .tracks
+          .firstWhere((t) => t.name == 'Staff 1');
+      final ons =
+          track.events.where((e) => e.type == MidiEventType.noteOn).toList();
+      // Many alternations, between C5 (72) and the upper neighbour (74).
+      expect(ons.length, greaterThan(3));
+      expect(ons.map((e) => e.note).toSet(), {72, 74});
+    });
+
+    test('a mordent plays main-upper-main', () {
+      final measure = Measure()
+        ..add(Note(
+          pitch: const Pitch(step: 'C', octave: 5),
+          duration: const Duration(DurationType.quarter),
+          ornaments: [Ornament(type: OrnamentType.mordent)],
+        ));
+      final ons = MidiMapper.fromStaff(Staff(measures: [measure]))
+          .tracks
+          .firstWhere((t) => t.name == 'Staff 1')
+          .events
+          .where((e) => e.type == MidiEventType.noteOn)
+          .map((e) => e.note)
+          .toList();
+      expect(ons, [72, 74, 72]);
+    });
+
     test('grace note steals time: it sounds before the beat and does not '
         'delay the main note', () {
       final measure = Measure()
