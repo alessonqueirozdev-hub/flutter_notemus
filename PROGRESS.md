@@ -264,7 +264,10 @@ Auditoria adversarial de I/O + MIDI: 41 lacunas confirmadas em 6 dimensões (doc
 | `fix(midi):` grace notes | apogiatura "rouba" tempo em vez de transbordar o compasso |
 | `fix(musicxml):` claves | linha de clave correta (alto=3, etc.) + `<clef-octave-change>` |
 
-**Itens HIGH restantes (grandes):** import MusicXML multi-parte/multi-pauta (piano/SATB colapsam em 1 pauta); eventos de controle MEI com @startid/@endid (slur/tie/dynam/fermata); expansão de ornamentos (trill/mordent/turn) no playback. Demais médios documentados no backlog de I/O.
+| `feat(musicxml):` multi-parte/multi-pauta | `scoreFromMusicXML()` → `Score`: cada `<part>` vira pauta; parte com `<staves>` divide por `<staff>` com claves por pauta. **Antes piano/SATB colapsavam em 1 pauta.** |
+| `feat(midi):` ornamentos | trinado/mordente/grupeto expandidos em sub-notas no playback (antes nota única). |
+
+**Itens HIGH restantes (grandes):** eventos de controle MEI com @startid/@endid (slur/tie/dynam/fermata entre measures). Demais médios documentados no backlog de I/O (export multi-voz/ornamentos/barras, etc.).
 
 **Renderiza com autenticidade (confirmado nos PNGs):** clave-dó centrada na linha, punctum/virga, pes, clivis (flexus), torculus, porrectus (oblíqua), scandicus, climacus (losangos *inclinatum*), quilisma, salicus, resupinus/flexus, líquidas, episema/ictus/mora, custos de fim de linha, divisórias, justificação por sistema, letras em fonte serifada.
 
