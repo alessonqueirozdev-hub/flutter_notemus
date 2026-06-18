@@ -70,13 +70,26 @@ class _GlyphOp {
   _GlyphOp(this.name, this.step, this.dx);
 }
 
+/// A rhythmic sign attached to one component (episema, ictus, mora dot).
+enum _MarkType { episema, ictus, ictusAbove, mora }
+
+class _Mark {
+  final _MarkType type;
+  final int step;
+
+  /// Center-x of the mark within the neume box (px).
+  final double dx;
+  _Mark(this.type, this.step, this.dx);
+}
+
 class _NeumeBox {
   final List<_GlyphOp> glyphs;
+  final List<_Mark> marks;
   final double width;
   final String? syllable;
   final int firstStep;
   double startX = 0;
-  _NeumeBox(this.glyphs, this.width, this.syllable, this.firstStep);
+  _NeumeBox(this.glyphs, this.marks, this.width, this.syllable, this.firstStep);
   double get endX => startX + width;
 }
 
@@ -133,52 +146,88 @@ String? _neumeGlyphName(NeumeType type, List<int> steps, List<NcForm> forms) {
   }
 }
 
-/// Emits the glyph ops for one neume using the [font] (for advances).
+/// Emits the glyph ops + rhythmic marks for one neume using the [font].
 _NeumeBox _emitNeume(
     Neume e, List<int> steps, GreciliaeFont font, double scale) {
   final forms = e.components.map((c) => c.form).toList();
+  final comps = e.components;
   double advPx(String name) {
     final u = font.advanceUnits(name);
     return (u > 0 ? u : 166) * scale;
   }
 
-  // Single note.
+  final noteW = advPx('Punctum');
+
+  // Build the glyph ops, the box width, and a center-x per component (px), used
+  // to anchor the rhythmic marks.
+  late final List<_GlyphOp> ops;
+  late final List<double> compX;
+  late final double width;
+
   if (steps.length == 1) {
     final name = e.type == NeumeType.virga ? 'Virga' : _singleGlyph(forms[0]);
     final g = font.has(name) ? name : 'Punctum';
-    return _NeumeBox([_GlyphOp(g, steps[0], 0)], advPx(g), e.syllable, steps[0]);
-  }
-
-  // Precomposed single-glyph neume?
-  final name = _neumeGlyphName(e.type, steps, forms);
-  if (name != null && font.has(name)) {
-    return _NeumeBox(
-        [_GlyphOp(name, steps[0], 0)], advPx(name), e.syllable, steps[0]);
-  }
-
-  // Otherwise assemble glyph-per-note left to right. Descending steps use a
-  // punctum inclinatum (diamond); the first note of a descending run is a virga.
-  final ops = <_GlyphOp>[];
-  var cx = 0.0;
-  for (var i = 0; i < steps.length; i++) {
-    final descending = i > 0 && steps[i] < steps[i - 1];
-    String g;
-    if (descending) {
-      g = font.has('DescendensPunctumInclinatum')
-          ? 'DescendensPunctumInclinatum'
-          : (font.has('PunctumInclinatumDeminutus')
-              ? 'PunctumInclinatumDeminutus'
-              : 'Punctum');
-    } else if (i == 0 && steps.length > 1 && steps[1] < steps[0]) {
-      g = 'Virga'; // climacus head
+    ops = [_GlyphOp(g, steps[0], 0)];
+    width = advPx(g);
+    compX = [width / 2];
+  } else {
+    final name = _neumeGlyphName(e.type, steps, forms);
+    if (name != null && font.has(name)) {
+      // Precomposed single glyph: spread the component anchors across its width
+      // (approximate — exact sub-glyph offsets are not exposed by the font).
+      width = advPx(name);
+      ops = [_GlyphOp(name, steps[0], 0)];
+      final n = steps.length;
+      compX = [for (var i = 0; i < n; i++) width * (i + 0.5) / n];
     } else {
-      g = _singleGlyph(forms[i]);
-      if (!font.has(g)) g = 'Punctum';
+      // Assemble glyph-per-note left to right. Descending steps use a punctum
+      // inclinatum (diamond); the first note of a descending run is a virga.
+      final o = <_GlyphOp>[];
+      final cxs = <double>[];
+      var cx = 0.0;
+      for (var i = 0; i < steps.length; i++) {
+        final descending = i > 0 && steps[i] < steps[i - 1];
+        String g;
+        if (descending) {
+          g = font.has('DescendensPunctumInclinatum')
+              ? 'DescendensPunctumInclinatum'
+              : (font.has('PunctumInclinatumDeminutus')
+                  ? 'PunctumInclinatumDeminutus'
+                  : 'Punctum');
+        } else if (i == 0 && steps.length > 1 && steps[1] < steps[0]) {
+          g = 'Virga'; // climacus head
+        } else {
+          g = _singleGlyph(forms[i]);
+          if (!font.has(g)) g = 'Punctum';
+        }
+        final w = advPx(g);
+        o.add(_GlyphOp(g, steps[i], cx));
+        cxs.add(cx + w / 2);
+        cx += w * 0.98;
+      }
+      ops = o;
+      compX = cxs;
+      width = cx;
     }
-    ops.add(_GlyphOp(g, steps[i], cx));
-    cx += advPx(g) * 0.98;
   }
-  return _NeumeBox(ops, cx, e.syllable, steps.first);
+
+  // Rhythmic marks per component (episema bar, ictus tick, mora dot(s)).
+  final marks = <_Mark>[];
+  for (var i = 0; i < comps.length && i < compX.length; i++) {
+    final c = comps[i];
+    final x = compX[i];
+    if (c.episema) marks.add(_Mark(_MarkType.episema, steps[i], x));
+    if (c.ictus) {
+      marks.add(_Mark(
+          c.ictusAbove ? _MarkType.ictusAbove : _MarkType.ictus, steps[i], x));
+    }
+    for (var d = 0; d < c.morae; d++) {
+      // Mora dot(s) sit to the right of the note; successive dots step further.
+      marks.add(_Mark(_MarkType.mora, steps[i], x + noteW * (0.6 + d * 0.5)));
+    }
+  }
+
+  return _NeumeBox(ops, marks, width, e.syllable, steps.first);
 }
 
 /// Builds and lays out chant as width-wrapped systems using [font].
@@ -380,6 +429,37 @@ class GregorianPainter extends CustomPainter {
     tp.paint(canvas, Offset(centerX - tp.width / 2, topY));
   }
 
+  /// Draws a rhythmic mark centered on a note at screen (cx, ny): a horizontal
+  /// episema above, a vertical episema (ictus) below (or above), or a mora
+  /// (augmentum) dot to the right at note height.
+  void _drawMark(Canvas canvas, _MarkType type, double cx, double ny) {
+    final sp = _sp;
+    final p = Paint()
+      ..color = theme.color
+      ..strokeWidth = sp * 0.09
+      ..strokeCap = StrokeCap.round;
+    const halfH = 0.4; // note half-height in staff spaces (Punctum ≈ 0.4 sp)
+    switch (type) {
+      case _MarkType.mora:
+        canvas.drawCircle(
+            Offset(cx, ny), sp * 0.13, Paint()..color = theme.color);
+        break;
+      case _MarkType.episema:
+        final y = ny - sp * (halfH + 0.18);
+        canvas.drawLine(
+            Offset(cx - sp * 0.34, y), Offset(cx + sp * 0.34, y), p);
+        break;
+      case _MarkType.ictus:
+        final y0 = ny + sp * (halfH + 0.04);
+        canvas.drawLine(Offset(cx, y0), Offset(cx, y0 + sp * 0.45), p);
+        break;
+      case _MarkType.ictusAbove:
+        final y0 = ny - sp * (halfH + 0.04);
+        canvas.drawLine(Offset(cx, y0), Offset(cx, y0 - sp * 0.45), p);
+        break;
+    }
+  }
+
   /// Draws a divisio (chant pause bar) as a geometric stroke. Greciliae's
   /// Divisio* glyphs have unstable bounding boxes (and no Finalis), so the bars
   /// are drawn directly: minima cuts the top space, minor the upper half, maior
@@ -444,6 +524,9 @@ class GregorianPainter extends CustomPainter {
         final box = item as _NeumeBox;
         for (final op in box.glyphs) {
           _glyph(canvas, op.name, box.startX + op.dx, _stepY(cy, op.step));
+        }
+        for (final mk in box.marks) {
+          _drawMark(canvas, mk.type, box.startX + mk.dx, _stepY(cy, mk.step));
         }
         if (box.syllable != null && box.syllable!.isNotEmpty) {
           _lyric(canvas, box.syllable!, (box.startX + box.endX) / 2, lyricTop);
