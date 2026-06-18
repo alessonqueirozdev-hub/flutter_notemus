@@ -336,6 +336,9 @@ void _buildNoteXml(XmlBuilder builder, Note note,
   builder.element(
     'note',
     nest: () {
+      if (note.isGraceNote) {
+        builder.element('grace');
+      }
       if (isChordTone) {
         builder.element('chord');
       }
@@ -349,8 +352,11 @@ void _buildNoteXml(XmlBuilder builder, Note note,
           builder.element('octave', nest: note.pitch.octave);
         },
       );
-      builder.element('duration',
-          nest: _durationDivisions(note.duration, tuplet?.modifier ?? 1.0));
+      // Grace notes carry no <duration> in MusicXML.
+      if (!note.isGraceNote) {
+        builder.element('duration',
+            nest: _durationDivisions(note.duration, tuplet?.modifier ?? 1.0));
+      }
       builder.element('type', nest: _durationTypeToString(note.duration.type));
       for (int index = 0; index < note.duration.dots; index++) {
         builder.element('dot');
@@ -387,7 +393,13 @@ void _buildNoteXml(XmlBuilder builder, Note note,
           },
         );
       }
-      if (note.articulations.isNotEmpty || note.slur != null) {
+      final ornamentNames = [
+        for (final o in note.ornaments)
+          if (_ornamentToString(o.type) != null) _ornamentToString(o.type)!,
+      ];
+      if (note.articulations.isNotEmpty ||
+          note.slur != null ||
+          ornamentNames.isNotEmpty) {
         builder.element(
           'notations',
           nest: () {
@@ -398,6 +410,16 @@ void _buildNoteXml(XmlBuilder builder, Note note,
                   'type',
                   note.slur == SlurType.end ? 'stop' : 'start',
                 ),
+              );
+            }
+            if (ornamentNames.isNotEmpty) {
+              builder.element(
+                'ornaments',
+                nest: () {
+                  for (final name in ornamentNames) {
+                    builder.element(name);
+                  }
+                },
               );
             }
             if (note.articulations.isNotEmpty) {
@@ -432,6 +454,22 @@ void _buildNoteXml(XmlBuilder builder, Note note,
     },
   );
 }
+
+String? _ornamentToString(OrnamentType type) => switch (type) {
+      OrnamentType.trill ||
+      OrnamentType.trillNatural ||
+      OrnamentType.trillSharp ||
+      OrnamentType.trillFlat ||
+      OrnamentType.shortTrill ||
+      OrnamentType.pralltriller =>
+        'trill-mark',
+      OrnamentType.mordent => 'mordent',
+      OrnamentType.invertedMordent => 'inverted-mordent',
+      OrnamentType.turn => 'turn',
+      OrnamentType.turnInverted || OrnamentType.invertedTurn => 'inverted-turn',
+      OrnamentType.turnSlash => 'turn',
+      _ => null,
+    };
 
 String _syllabicToString(SyllableType type) => switch (type) {
       SyllableType.single => 'single',

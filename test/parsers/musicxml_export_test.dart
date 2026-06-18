@@ -90,6 +90,35 @@ void main() {
     });
   });
 
+  group('MusicXML ornament + grace export', () {
+    test('trill ornament and grace note are emitted and round-trip', () {
+      final staff = Staff(measures: [
+        Measure()
+          ..add(Clef(clefType: ClefType.treble))
+          ..add(TimeSignature(numerator: 4, denominator: 4))
+          ..add(Note(
+              pitch: const Pitch(step: 'D', octave: 5),
+              duration: const Duration(DurationType.eighth),
+              isGraceNote: true))
+          ..add(Note(
+              pitch: const Pitch(step: 'C', octave: 5),
+              duration: const Duration(DurationType.quarter),
+              ornaments: [Ornament(type: OrnamentType.trill)])),
+      ]);
+      final xml = MusicXMLParser.staffToMusicXML(staff);
+      expect(xml.contains('<grace'), isTrue);
+      expect(xml.contains('<ornaments>'), isTrue);
+      expect(xml.contains('<trill-mark'), isTrue);
+
+      final notes = notesOf(MusicXMLParser.parseMusicXML(xml));
+      expect(notes.any((n) => n.isGraceNote), isTrue);
+      expect(
+          notes.any((n) =>
+              n.ornaments.any((o) => o.type == OrnamentType.trill)),
+          isTrue);
+    });
+  });
+
   group('MusicXML tuplet round-trip', () {
     test('a triplet survives export -> import', () {
       final staff = Staff(measures: [
