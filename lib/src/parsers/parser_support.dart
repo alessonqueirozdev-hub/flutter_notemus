@@ -1413,6 +1413,16 @@ List<MusicalElement> _parseMusicXmlDirections(XmlElement directionElement) {
             result.add(octave);
           }
           break;
+        case 'wedge':
+          // Crescendo/diminuendo hairpin spanner; the start carries the type,
+          // 'stop' just closes it (ignored here).
+          final wtype = _normalizeToken(child.getAttribute('type'));
+          if (wtype == 'crescendo') {
+            result.add(Dynamic(type: DynamicType.crescendo, isHairpin: true));
+          } else if (wtype == 'diminuendo' || wtype == 'decrescendo') {
+            result.add(Dynamic(type: DynamicType.diminuendo, isHairpin: true));
+          }
+          break;
       }
     }
   }
