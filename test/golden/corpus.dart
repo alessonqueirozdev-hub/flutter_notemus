@@ -102,25 +102,25 @@ const _odeToJoyJson = '''
       {"type": "clef", "clefType": "treble"},
       {"type": "keySignature", "count": 2},
       {"type": "timeSignature", "numerator": 4, "denominator": 4},
-      {"type": "note", "pitch": {"step": "F", "octave": 5, "alter": 0.0}, "duration": {"type": "quarter"}},
-      {"type": "note", "pitch": {"step": "F", "octave": 5, "alter": 0.0}, "duration": {"type": "quarter"}},
+      {"type": "note", "pitch": {"step": "F", "octave": 5, "alter": 1.0}, "duration": {"type": "quarter"}},
+      {"type": "note", "pitch": {"step": "F", "octave": 5, "alter": 1.0}, "duration": {"type": "quarter"}},
       {"type": "note", "pitch": {"step": "G", "octave": 5, "alter": 0.0}, "duration": {"type": "quarter"}},
       {"type": "note", "pitch": {"step": "A", "octave": 5, "alter": 0.0}, "duration": {"type": "quarter"}}
     ]},
     {"elements": [
       {"type": "note", "pitch": {"step": "A", "octave": 5, "alter": 0.0}, "duration": {"type": "quarter"}},
       {"type": "note", "pitch": {"step": "G", "octave": 5, "alter": 0.0}, "duration": {"type": "quarter"}},
-      {"type": "note", "pitch": {"step": "F", "octave": 5, "alter": 0.0}, "duration": {"type": "quarter"}},
+      {"type": "note", "pitch": {"step": "F", "octave": 5, "alter": 1.0}, "duration": {"type": "quarter"}},
       {"type": "note", "pitch": {"step": "E", "octave": 5, "alter": 0.0}, "duration": {"type": "quarter"}}
     ]},
     {"elements": [
       {"type": "note", "pitch": {"step": "D", "octave": 5, "alter": 0.0}, "duration": {"type": "quarter"}},
       {"type": "note", "pitch": {"step": "D", "octave": 5, "alter": 0.0}, "duration": {"type": "quarter"}},
       {"type": "note", "pitch": {"step": "E", "octave": 5, "alter": 0.0}, "duration": {"type": "quarter"}},
-      {"type": "note", "pitch": {"step": "F", "octave": 5, "alter": 0.0}, "duration": {"type": "quarter"}}
+      {"type": "note", "pitch": {"step": "F", "octave": 5, "alter": 1.0}, "duration": {"type": "quarter"}}
     ]},
     {"elements": [
-      {"type": "note", "pitch": {"step": "F", "octave": 5, "alter": 0.0}, "duration": {"type": "quarter", "dots": 1}},
+      {"type": "note", "pitch": {"step": "F", "octave": 5, "alter": 1.0}, "duration": {"type": "quarter", "dots": 1}},
       {"type": "note", "pitch": {"step": "E", "octave": 5, "alter": 0.0}, "duration": {"type": "eighth"}},
       {"type": "note", "pitch": {"step": "E", "octave": 5, "alter": 0.0}, "duration": {"type": "half"}}
     ]}
@@ -489,6 +489,28 @@ Staff _extendedArticulations() {
   ]);
 }
 
+/// Within-measure accidental persistence: a repeated altered pitch shows its
+/// accidental once; reverting to natural shows a natural; the rule resets at the
+/// barline.
+Staff _withinMeasureAccidentals() {
+  return _staff([
+    _measure([
+      Clef(clefType: ClefType.treble),
+      TimeSignature(numerator: 4, denominator: 4),
+      _n('C', 5, alter: 1.0), // C#  -> sharp shown
+      _n('C', 5, alter: 1.0), // C#  -> hidden (already sharp)
+      _n('C', 5, alter: 0.0), // C   -> natural shown (cancels the sharp)
+      _n('C', 5, alter: 0.0), // C   -> hidden (already natural)
+    ]),
+    _measure([
+      _n('C', 5, alter: 1.0), // new measure -> sharp shown again
+      _n('F', 4, alter: 1.0), // F# shown
+      _n('F', 4, alter: 1.0), // hidden
+      _r(DurationType.quarter),
+    ]),
+  ]);
+}
+
 /// Compound + multi-digit meters: 12/8 (two-digit numerator) and 6/8, to
 /// verify multi-digit time-signature rendering and width reservation.
 Staff _compoundMeter() {
@@ -572,6 +594,13 @@ final List<CorpusCase> corpus = [
     tier: 'intermediate',
     exercises: 'articulation glyph coverage beyond the basics',
     build: _extendedArticulations,
+  ),
+  CorpusCase(
+    id: 'm04d_within_measure_accidentals',
+    title: 'Within-measure accidental persistence',
+    tier: 'intermediate',
+    exercises: 'accidental shown once/measure, natural cancel, barline reset',
+    build: _withinMeasureAccidentals,
   ),
   CorpusCase(
     id: 'm05_slurs_ties',

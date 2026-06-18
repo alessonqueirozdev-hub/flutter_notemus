@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import '../../../core/core.dart';
 import '../../smufl/smufl_metadata_loader.dart';
 import '../../theme/music_score_theme.dart';
+import '../accidental_resolver.dart';
 import '../smufl_positioning_engine.dart';
 import '../staff_coordinate_system.dart';
 import '../staff_position_calculator.dart';
@@ -110,6 +111,7 @@ class NoteRenderer extends BaseGlyphRenderer {
     Clef currentClef, {
     bool renderOnlyNotehead = false,
     int? voiceNumber,
+    AccidentalDisplay accidentalDisplay = AccidentalDisplay.show,
   }) {
     final staffPosition = StaffPositionCalculator.calculate(
       note.pitch,
@@ -149,7 +151,8 @@ class NoteRenderer extends BaseGlyphRenderer {
 
     final noteCenter = Offset(basePosition.dx + centerX, noteY + centerY);
 
-    accidentalRenderer.render(canvas, note, notePos, staffPosition.toDouble());
+    accidentalRenderer.render(canvas, note, notePos, staffPosition.toDouble(),
+        display: accidentalDisplay);
 
     drawGlyphWithBBox(
       canvas,

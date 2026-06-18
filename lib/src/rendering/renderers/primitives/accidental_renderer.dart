@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/core.dart';
 import '../../../theme/music_score_theme.dart';
+import '../../accidental_resolver.dart';
 import '../../smufl_positioning_engine.dart';
 import '../base_glyph_renderer.dart';
 
@@ -32,11 +33,16 @@ class AccidentalRenderer extends BaseGlyphRenderer {
     Canvas canvas,
     Note note,
     Offset notePosition,
-    double staffPosition,
-  ) {
-    if (note.pitch.accidentalGlyph == null) return;
+    double staffPosition, {
+    AccidentalDisplay display = AccidentalDisplay.show,
+  }) {
+    // Within-measure resolution: suppress repeats, draw a natural on revert.
+    if (display == AccidentalDisplay.hide) return;
+    final String? accidentalGlyph = display == AccidentalDisplay.natural
+        ? 'accidentalNatural'
+        : note.pitch.accidentalGlyph;
+    if (accidentalGlyph == null) return;
 
-    final accidentalGlyph = note.pitch.accidentalGlyph!;
     final noteheadGlyph = note.duration.type.glyphName;
 
     // Calculate position of the accidental using positioning engine

@@ -6,6 +6,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../core/core.dart'; // 🆕 Tipos do core
 import '../layout/layout_engine.dart';
+import 'accidental_resolver.dart';
 import '../smufl/smufl_metadata_loader.dart';
 import '../theme/music_score_theme.dart';
 import '../beaming/beaming.dart'; // Sistema de beaming avançado
@@ -223,6 +224,10 @@ class StaffRenderer {
   final Set<Note> _notesInAdvancedBeams = {};
   final Map<Note, Clef> _noteClefs = {};
 
+  /// Within-measure accidental decisions for the current render pass (set from
+  /// the layout engine, which resolves them from the model).
+  Map<Note, AccidentalDisplay> _accidentalDecisions = const {};
+
   void renderStaff(
     Canvas canvas,
     List<PositionedElement> elements,
@@ -233,6 +238,7 @@ class StaffRenderer {
     // Limpar set de notes beamed
     _notesInAdvancedBeams.clear();
     _noteClefs.clear();
+    _accidentalDecisions = layoutEngine?.accidentalDecisions ?? const {};
 
     // Coletar notes that are in advanced beam groups
     if (layoutEngine != null) {
@@ -798,6 +804,8 @@ class StaffRenderer {
         currentClef!,
         renderOnlyNotehead: onlyNotehead,
         voiceNumber: positioned.voiceNumber,
+        accidentalDisplay:
+            _accidentalDecisions[element] ?? AccidentalDisplay.show,
       );
     } else if (element is Rest) {
       restRenderer.render(
@@ -817,6 +825,7 @@ class StaffRenderer {
         basePosition,
         currentClef!,
         voiceNumber: positioned.voiceNumber,
+        accidentalDecisions: _accidentalDecisions,
       );
     } else if (element is Tuplet && currentClef != null) {
       tupletRenderer.render(canvas, element, basePosition, currentClef!);

@@ -9,6 +9,7 @@ import 'package:flutter_notemus/src/beaming/beam_analyzer.dart';
 import 'package:flutter_notemus/src/beaming/beam_group.dart';
 import 'package:flutter_notemus/src/layout/beam_grouper.dart';
 import 'package:flutter_notemus/src/layout/measure_validator.dart'; // ✅ ADICIONADO
+import 'package:flutter_notemus/src/rendering/accidental_resolver.dart';
 import 'package:flutter_notemus/src/rendering/staff_position_calculator.dart';
 import 'package:flutter_notemus/src/rendering/smufl_positioning_engine.dart';
 import 'package:flutter_notemus/src/smufl/smufl_metadata_loader.dart'; // ✅ ADICIONADO
@@ -226,6 +227,11 @@ class LayoutEngine {
       {}; // ✅ NOVO: Y absoluto em pixels
   final List<AdvancedBeamGroup> _advancedBeamGroups = [];
 
+  /// Within-measure accidental display decision per note (Behind Bars rule),
+  /// resolved from the model so layout width and rendering agree.
+  late final Map<Note, AccidentalDisplay> accidentalDecisions =
+      AccidentalResolver.resolve(staff.measures);
+
   // Configuresção de validação (silenciosa by default)
   final bool verboseValidation;
 
@@ -277,6 +283,20 @@ class LayoutEngine {
       noteheadWidth: noteheadBlackWidth * staffSpace,
       positioningEngine: positioningEngine,
     );
+  }
+
+  /// Effective accidental glyph after within-measure resolution: null = hide
+  /// (alteration already in force), the natural glyph when reverting, else the
+  /// note's own accidental.
+  String? _effectiveAccidentalGlyph(Note note) {
+    switch (accidentalDecisions[note] ?? AccidentalDisplay.show) {
+      case AccidentalDisplay.hide:
+        return null;
+      case AccidentalDisplay.natural:
+        return 'accidentalNatural';
+      case AccidentalDisplay.show:
+        return note.pitch.accidentalGlyph;
+    }
   }
 
   /// Gets width de glifo dinamicamente of the metadata or Returns fallback
@@ -1034,9 +1054,10 @@ class LayoutEngine {
 
     if (element is Note) {
       double width = noteheadBlackWidth * staffSpace;
-      if (element.pitch.accidentalGlyph != null) {
+      final accGlyph = _effectiveAccidentalGlyph(element);
+      if (accGlyph != null) {
         // Fix: SMuFL: Detecção more robusta and uso de valores corretos
-        final glyphName = element.pitch.accidentalGlyph!;
+        final glyphName = accGlyph;
         double accWidth = accidentalSharpWidth; // Default
 
         // Identificar type de accidental corretamente
@@ -1066,9 +1087,10 @@ class LayoutEngine {
       double maxAccidentalWidth = 0;
 
       for (final note in element.notes) {
-        if (note.pitch.accidentalGlyph != null) {
+        final accGlyph = _effectiveAccidentalGlyph(note);
+        if (accGlyph != null) {
           // Fix: Use same lógica robusta de detecção that Note
-          final glyphName = note.pitch.accidentalGlyph!;
+          final glyphName = accGlyph;
           double accWidth = accidentalSharpWidth;
 
           if (glyphName.contains('Flat') || glyphName.contains('flat')) {

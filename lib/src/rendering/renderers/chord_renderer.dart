@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/core.dart';
 import '../../theme/music_score_theme.dart';
+import '../accidental_resolver.dart';
 import '../staff_position_calculator.dart';
 import 'base_glyph_renderer.dart';
 import 'note_renderer.dart';
@@ -140,7 +141,20 @@ class ChordRenderer extends BaseGlyphRenderer {
     Offset basePosition,
     Clef currentClef, {
     int? voiceNumber,
+    Map<Note, AccidentalDisplay>? accidentalDecisions,
   }) {
+    // Effective accidental glyph for a chord note after within-measure
+    // resolution: null = suppress, the natural glyph on revert, else the note's.
+    String? effAcc(Note n) {
+      switch (accidentalDecisions?[n] ?? AccidentalDisplay.show) {
+        case AccidentalDisplay.hide:
+          return null;
+        case AccidentalDisplay.natural:
+          return 'accidentalNatural';
+        case AccidentalDisplay.show:
+          return n.pitch.accidentalGlyph;
+      }
+    }
     final sortedNotes = [...chord.notes]
       ..sort(
         (a, b) => StaffPositionCalculator.calculate(
@@ -201,16 +215,17 @@ class ChordRenderer extends BaseGlyphRenderer {
       return (heightSpaces * 2.0) + 0.5;
     }
 
-    // Notes carrying an accidental, already ordered top -> bottom.
+    // Notes whose accidental DISPLAYS (after within-measure resolution),
+    // ordered top -> bottom.
     final accIdx = <int>[
       for (int i = 0; i < sortedNotes.length; i++)
-        if (sortedNotes[i].pitch.accidentalGlyph != null) i,
+        if (effAcc(sortedNotes[i]) != null) i,
     ];
     final assignedColumns = assignAccidentalColumns(
       [for (final i in accIdx) positions[i]],
       [
         for (final i in accIdx)
-          accClearanceHalfSpaces(sortedNotes[i].pitch.accidentalGlyph!),
+          accClearanceHalfSpaces(effAcc(sortedNotes[i])!),
       ],
     );
 
@@ -225,7 +240,7 @@ class ChordRenderer extends BaseGlyphRenderer {
       (columnMembers[column] ??= <int>[]).add(i);
       columnWidthSpaces[column] = math.max(
         columnWidthSpaces[column] ?? 0.0,
-        accWidthSpaces(sortedNotes[i].pitch.accidentalGlyph!),
+        accWidthSpaces(effAcc(sortedNotes[i])!),
       );
     }
 
@@ -249,7 +264,7 @@ class ChordRenderer extends BaseGlyphRenderer {
 
       for (final entry in accidentalColumns.entries) {
         final i = entry.key;
-        final accidentalGlyph = sortedNotes[i].pitch.accidentalGlyph!;
+        final accidentalGlyph = effAcc(sortedNotes[i])!;
         final noteY = StaffPositionCalculator.toPixelY(
           positions[i],
           coordinates.staffSpace,
