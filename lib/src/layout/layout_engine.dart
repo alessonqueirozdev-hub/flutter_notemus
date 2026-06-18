@@ -1023,7 +1023,13 @@ class LayoutEngine {
     }
 
     if (element is TimeSignature) {
-      return 3.0 * staffSpace;
+      // Width scales with the widest of the numerator/denominator digit counts
+      // so multi-digit meters (12/8, 16, …) reserve enough room.
+      final digits = element.numerator.toString().length >
+              element.denominator.toString().length
+          ? element.numerator.toString().length
+          : element.denominator.toString().length;
+      return (1.6 + 1.4 * digits) * staffSpace;
     }
 
     if (element is Note) {

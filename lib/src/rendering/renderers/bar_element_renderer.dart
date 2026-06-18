@@ -197,22 +197,63 @@ class BarElementRenderer {
       return;
     }
 
-    _drawGlyph(
-      canvas,
-      glyphName: 'timeSig${ts.numerator}',
-      position: Offset(basePosition.dx, coordinates.getStaffLineY(4)),
-      size: glyphSize,
-      color: theme.timeSignatureColor,
-      centerVertically: true,
-    );
-    _drawGlyph(
-      canvas,
-      glyphName: 'timeSig${ts.denominator}',
-      position: Offset(basePosition.dx, coordinates.getStaffLineY(2)),
-      size: glyphSize,
-      color: theme.timeSignatureColor,
-      centerVertically: true,
-    );
+    // Multi-digit meters (12/8, 16, 10/4, …): SMuFL only defines single-digit
+    // timeSig0..9, so decompose each number into digits, lay them out as a
+    // stack, and centre the narrower stack over the wider one.
+    final numStr = ts.numerator.toString();
+    final denStr = ts.denominator.toString();
+    final numW = _digitsWidth(numStr);
+    final denW = _digitsWidth(denStr);
+    final maxW = numW > denW ? numW : denW;
+    _drawDigits(canvas, numStr, basePosition.dx + (maxW - numW) / 2,
+        coordinates.getStaffLineY(4));
+    _drawDigits(canvas, denStr, basePosition.dx + (maxW - denW) / 2,
+        coordinates.getStaffLineY(2));
+  }
+
+  /// Pixel advance of a Bravura glyph (SMuFL advance is in staff spaces; falls
+  /// back to the rendered width when metadata lacks the glyph).
+  double _glyphAdvancePx(String glyphName) {
+    final adv = metadata.getGlyphAdvanceWidth(glyphName);
+    if (adv != null) return adv * coordinates.staffSpace;
+    final ch = metadata.getCodepoint(glyphName);
+    if (ch.isEmpty) return 0;
+    final tp = TextPainter(
+      text: TextSpan(
+        text: ch,
+        style: TextStyle(
+          fontFamily: 'Bravura',
+          package: 'flutter_notemus',
+          fontSize: glyphSize,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    return tp.width;
+  }
+
+  double _digitsWidth(String digits) {
+    var w = 0.0;
+    for (final ch in digits.split('')) {
+      w += _glyphAdvancePx('timeSig$ch');
+    }
+    return w;
+  }
+
+  void _drawDigits(Canvas canvas, String digits, double startX, double y) {
+    var x = startX;
+    for (final ch in digits.split('')) {
+      final g = 'timeSig$ch';
+      _drawGlyph(
+        canvas,
+        glyphName: g,
+        position: Offset(x, y),
+        size: glyphSize,
+        color: theme.timeSignatureColor,
+        centerVertically: true,
+      );
+      x += _glyphAdvancePx(g);
+    }
   }
 
   void _drawGlyph(

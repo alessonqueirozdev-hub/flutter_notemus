@@ -471,6 +471,29 @@ Staff _chromaticChords() {
   ]);
 }
 
+/// Compound + multi-digit meters: 12/8 (two-digit numerator) and 6/8, to
+/// verify multi-digit time-signature rendering and width reservation.
+Staff _compoundMeter() {
+  return _staff([
+    _measure([
+      Clef(clefType: ClefType.treble),
+      TimeSignature(numerator: 12, denominator: 8),
+      _n('G', 4, dur: DurationType.eighth, beam: BeamType.start),
+      _n('A', 4, dur: DurationType.eighth, beam: BeamType.inner),
+      _n('B', 4, dur: DurationType.eighth, beam: BeamType.end),
+      _n('C', 5, dur: DurationType.eighth, beam: BeamType.start),
+      _n('B', 4, dur: DurationType.eighth, beam: BeamType.inner),
+      _n('A', 4, dur: DurationType.eighth, beam: BeamType.end),
+    ]),
+    _measure([
+      TimeSignature(numerator: 6, denominator: 8),
+      _n('G', 4, dur: DurationType.eighth, beam: BeamType.start),
+      _n('A', 4, dur: DurationType.eighth, beam: BeamType.inner),
+      _n('B', 4, dur: DurationType.eighth, beam: BeamType.end),
+    ]),
+  ]);
+}
+
 /// The full corpus, ordered simple → complex.
 final List<CorpusCase> corpus = [
   CorpusCase(
@@ -517,6 +540,13 @@ final List<CorpusCase> corpus = [
     tier: 'intermediate',
     exercises: 'tuplet bracket + number, bracket angle',
     build: _triplets,
+  ),
+  CorpusCase(
+    id: 'm04b_compound_meter',
+    title: 'Compound meters (12/8, 6/8)',
+    tier: 'intermediate',
+    exercises: 'multi-digit time signature digits + width reservation',
+    build: _compoundMeter,
   ),
   CorpusCase(
     id: 'm05_slurs_ties',
