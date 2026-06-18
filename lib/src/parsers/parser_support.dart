@@ -1863,6 +1863,43 @@ class _MeiImportParser {
 
   final int staffIndex;
 
+  // Measure-scoped control events resolved by @startid/@endid -> note xml:id.
+  final Map<String, SlurType> _slurById = <String, SlurType>{};
+  final Map<String, TieType> _tieById = <String, TieType>{};
+  final Map<String, List<MusicalElement>> _afterNoteById =
+      <String, List<MusicalElement>>{};
+
+  static String? _stripHash(String? id) =>
+      id == null ? null : (id.startsWith('#') ? id.substring(1) : id);
+
+  /// Scans a measure's control events (slur/tie/dynam) and indexes them by
+  /// the referenced note xml:id via @startid/@endid.
+  void _collectMeiControlEvents(XmlElement measureElement) {
+    for (final ev in measureElement.children.whereType<XmlElement>()) {
+      final startId = _stripHash(ev.getAttribute('startid'));
+      final endId = _stripHash(ev.getAttribute('endid'));
+      switch (ev.name.local) {
+        case 'slur':
+          if (startId != null) _slurById[startId] = SlurType.start;
+          if (endId != null) _slurById[endId] = SlurType.end;
+          break;
+        case 'tie':
+          if (startId != null) _tieById[startId] = TieType.start;
+          if (endId != null) _tieById[endId] = TieType.end;
+          break;
+        case 'dynam':
+          if (startId != null) {
+            final d = _parseDynamicType(ev.innerText.trim());
+            if (d != null) {
+              (_afterNoteById[startId] ??= <MusicalElement>[])
+                  .add(Dynamic(type: d));
+            }
+          }
+          break;
+      }
+    }
+  }
+
   Staff parse(XmlDocument document) {
     final root = document.rootElement;
     if (root.name.local != 'mei') {
@@ -1925,6 +1962,13 @@ class _MeiImportParser {
     final Map<int, _VoiceAccumulator> voices = <int, _VoiceAccumulator>{};
     final List<MusicalElement> metadataElements = <MusicalElement>[];
     TimeSignature? currentTimeSignature;
+
+    // Resolve measure-level control events (slur/tie/dynam) that reference notes
+    // by @startid/@endid, so they apply even though they sit outside <staff>.
+    _slurById.clear();
+    _tieById.clear();
+    _afterNoteById.clear();
+    _collectMeiControlEvents(measureElement);
 
     _VoiceAccumulator voice(int number) {
       return voices.putIfAbsent(number, () => _VoiceAccumulator(number));
@@ -2147,8 +2191,12 @@ class _MeiImportParser {
           accumulator.finishTuplet();
           return;
         case 'note':
+          final noteId = child.getAttribute('xml:id');
           final note = _meiNote(child,
-              voiceNumber: voiceNumber, beamOverride: beamOverride);
+              voiceNumber: voiceNumber,
+              beamOverride: beamOverride,
+              slurOverride: noteId == null ? null : _slurById[noteId],
+              tieOverride: noteId == null ? null : _tieById[noteId]);
           if (note == null) return;
           final tupletInfo = _meiTupletInfo(child);
           if (tupletInfo.startsTuplet) {
@@ -2159,6 +2207,12 @@ class _MeiImportParser {
             );
           }
           accumulator.append(note);
+          // Control events (e.g. <dynam startid>) anchored to this note.
+          if (noteId != null) {
+            for (final extra in _afterNoteById[noteId] ?? const []) {
+              accumulator.append(extra);
+            }
+          }
           if (tupletInfo.endsTuplet) {
             accumulator.finishTuplet();
           }
@@ -2405,7 +2459,10 @@ TimeSignature? _meiTimeSignature(XmlElement meterSigElement) {
 }
 
 Note? _meiNote(XmlElement noteElement,
-    {required int voiceNumber, BeamType? beamOverride}) {
+    {required int voiceNumber,
+    BeamType? beamOverride,
+    SlurType? slurOverride,
+    TieType? tieOverride}) {
   final step = noteElement.getAttribute('pname')?.toUpperCase();
   final octave = _asInt(noteElement.getAttribute('oct'));
   if (step == null || octave == null) return null;
@@ -2430,8 +2487,8 @@ Note? _meiNote(XmlElement noteElement,
     articulations: _parseArticulationList(
       noteElement.getAttribute('artic')?.split(RegExp(r'\s+')),
     ),
-    tie: _parseTieType(noteElement.getAttribute('tie')),
-    slur: _parseSlurType(noteElement.getAttribute('slur')),
+    tie: tieOverride ?? _parseTieType(noteElement.getAttribute('tie')),
+    slur: slurOverride ?? _parseSlurType(noteElement.getAttribute('slur')),
     ornaments: _parseOrnamentList(noteElement.getAttribute('ornam')),
     voice: voiceNumber,
     isGraceNote: noteElement.getAttribute('grace') != null,

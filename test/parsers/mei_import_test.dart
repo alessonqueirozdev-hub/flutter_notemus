@@ -47,6 +47,45 @@ void main() {
     });
   });
 
+  group('MEI control events (@startid/@endid)', () {
+    test('<slur>/<tie> resolve to the referenced notes', () {
+      final doc = mei(
+        '<section><measure n="1">'
+        '<staff n="1"><layer n="1">'
+        '<note xml:id="n1" pname="c" oct="5" dur="4"/>'
+        '<note xml:id="n2" pname="d" oct="5" dur="4"/>'
+        '<note xml:id="n3" pname="e" oct="5" dur="4"/>'
+        '</layer></staff>'
+        '<slur startid="#n1" endid="#n3"/>'
+        '<tie startid="#n1" endid="#n2"/>'
+        '</measure></section>',
+      );
+      final notes = notesOf(MEIParser.parseMEI(doc));
+      expect(notes[0].slur, SlurType.start);
+      expect(notes[2].slur, SlurType.end);
+      expect(notes[0].tie, TieType.start);
+      expect(notes[1].tie, TieType.end);
+    });
+
+    test('<dynam startid> attaches a dynamic after its note', () {
+      final doc = mei(
+        '<section><measure n="1">'
+        '<staff n="1"><layer n="1">'
+        '<note xml:id="n1" pname="c" oct="5" dur="4"/>'
+        '</layer></staff>'
+        '<dynam startid="#n1">f</dynam>'
+        '</measure></section>',
+      );
+      final dyns = MEIParser.parseMEI(doc)
+          .measures
+          .first
+          .elements
+          .whereType<Dynamic>()
+          .toList();
+      expect(dyns.any((d) => d.type == DynamicType.f), isTrue);
+    });
+  });
+
   group('MEI container elements', () {
     test('<beam> preserves its notes with positional beam types', () {
       final doc = mei(
