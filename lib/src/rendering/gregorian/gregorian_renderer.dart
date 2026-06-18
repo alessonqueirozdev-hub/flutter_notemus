@@ -115,31 +115,39 @@ String _singleGlyph(NcForm form) => switch (form) {
     };
 
 /// Picks the precomposed Greciliae glyph name for a neume, or null if it must be
-/// assembled from components.
-String? _neumeGlyphName(NeumeType type, List<int> steps, List<NcForm> forms) {
+/// assembled from components. When [liquescent], prefers the diminished
+/// (`Deminutus`) variant — the epiphonus (pes), cephalicus (clivis), etc. —
+/// falling back to the full (`Nothing`) form if that ambitus has no liquescent
+/// glyph. The returned name is guaranteed present in [font].
+String? _neumeGlyphName(NeumeType type, List<int> steps, List<NcForm> forms,
+    bool liquescent, GreciliaeFont font) {
   int up(int i, int j) => steps[j] - steps[i];
   int dn(int i, int j) => steps[i] - steps[j];
+  final suffix = liquescent ? 'Deminutus' : 'Nothing';
+  String? pick(String shape, String? amb) {
+    if (amb == null) return null;
+    final want = '$shape$amb$suffix';
+    if (font.has(want)) return want;
+    final alt = '$shape${amb}Nothing';
+    return font.has(alt) ? alt : null;
+  }
+
   switch (type) {
     case NeumeType.pes:
-      final a = _word(up(0, 1));
-      return a == null ? null : 'Pes${a}Nothing';
+      return pick('Pes', _word(up(0, 1)));
     case NeumeType.clivis:
-      final a = _word(dn(0, 1));
-      return a == null ? null : 'Flexus${a}Nothing';
+      return pick('Flexus', _word(dn(0, 1)));
     case NeumeType.torculus:
       final a = _word(up(0, 1)), b = _word(dn(1, 2));
-      return (a == null || b == null) ? null : 'Torculus$a${b}Nothing';
+      return (a == null || b == null) ? null : pick('Torculus', '$a$b');
     case NeumeType.porrectus:
       final a = _word(dn(0, 1)), b = _word(up(1, 2));
-      return (a == null || b == null) ? null : 'Porrectus$a${b}Nothing';
+      return (a == null || b == null) ? null : pick('Porrectus', '$a$b');
     case NeumeType.scandicus:
       final a = _word(up(0, 1)), b = _word(up(1, 2));
-      return (a == null || b == null) ? null : 'Scandicus$a${b}Nothing';
+      return (a == null || b == null) ? null : pick('Scandicus', '$a$b');
     case NeumeType.quilismaGroup:
-      if (steps.length == 2) {
-        final a = _word(up(0, 1));
-        return a == null ? null : 'QuilismaPes${a}Nothing';
-      }
+      if (steps.length == 2) return pick('QuilismaPes', _word(up(0, 1)));
       return null;
     default:
       return null;
@@ -171,7 +179,13 @@ _NeumeBox _emitNeume(
     width = advPx(g);
     compX = [width / 2];
   } else {
-    final name = _neumeGlyphName(e.type, steps, forms);
+    // The liquescent (melting) note is the last of the neume; prefer the
+    // diminished glyph when it is flagged liquescent.
+    final last = comps.last;
+    final liquescent = last.isLiquescent ||
+        last.form == NcForm.liquescentAscending ||
+        last.form == NcForm.liquescentDescending;
+    final name = _neumeGlyphName(e.type, steps, forms, liquescent, font);
     if (name != null && font.has(name)) {
       // Precomposed single glyph: spread the component anchors across its width
       // (approximate — exact sub-glyph offsets are not exposed by the font).
