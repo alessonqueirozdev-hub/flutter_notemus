@@ -377,9 +377,10 @@ class GrandStaffPainter extends CustomPainter {
       staffIdx += g.staves.length;
     }
 
-    // With more than one group, a thin system barline at the left edge joins
-    // every staff (the orchestral "system start" line).
-    if (groups.length > 1) {
+    // A system-start barline at the left edge joins every staff of the system
+    // (the vertical line the brace/bracket caps) — present on any grand staff
+    // or multi-staff system, not just multi-group scores.
+    if (_allStaves.length > 1) {
       final paint = Paint()
         ..color = theme.barlineColor
         ..strokeWidth =
