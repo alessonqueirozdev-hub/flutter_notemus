@@ -525,6 +525,9 @@ class LayoutEngine {
     // Center a lone full-measure rest within its bar (Behind Bars p.158).
     _centerFullMeasureRests(positionedElements, measureStartIndices);
 
+    // Displace cross-voice noteheads that would overlap (seconds/unisons).
+    _resolveCrossVoiceCollisions(positionedElements);
+
     // Sincronizar _noteXPositions with as positions pós-justificação.
     // _justifyHorizontally modifica positionedElements mas not _noteXPositions,
     // causing desalinhamento between beams (that use _noteXPositions) and noteheads.
@@ -720,6 +723,72 @@ class LayoutEngine {
         system: positioned.system,
         voiceNumber: positioned.voiceNumber,
       );
+    }
+  }
+
+  /// When two voices place noteheads a second or unison apart at the same
+  /// onset, the heads overlap. Displace the lower voice's head(s) by one
+  /// notehead width so the interval reads clearly (Gould p.39-46). Runs after
+  /// justification; only handles the two-voice case.
+  void _resolveCrossVoiceCollisions(List<PositionedElement> elements) {
+    final noteW = noteheadBlackWidth * staffSpace;
+
+    // Group note elements (that carry a voice) by system + rounded X.
+    final groups = <String, List<int>>{};
+    for (var i = 0; i < elements.length; i++) {
+      final pe = elements[i];
+      if (pe.element is! Note || pe.voiceNumber == null) continue;
+      final key = '${pe.system}_${pe.position.dx.round()}';
+      (groups[key] ??= <int>[]).add(i);
+    }
+
+    for (final idxs in groups.values) {
+      if (idxs.length < 2) continue;
+
+      // (positioned-index, voice, staffPosition) for each note in the group.
+      final infos = <({int idx, int voice, int pos})>[];
+      for (final i in idxs) {
+        final sp = _noteStaffPositions[elements[i].element as Note];
+        if (sp == null) continue;
+        infos.add((idx: i, voice: elements[i].voiceNumber!, pos: sp));
+      }
+      if (infos.length < 2) continue;
+      if (infos.map((n) => n.voice).toSet().length < 2) continue;
+
+      // Closest cross-voice interval.
+      var minDiff = 9999;
+      for (final a in infos) {
+        for (final b in infos) {
+          if (a.voice == b.voice) continue;
+          final d = (a.pos - b.pos).abs();
+          if (d < minDiff) minDiff = d;
+        }
+      }
+      if (minDiff > 1) continue; // only seconds and unisons collide
+
+      // Pick the lower voice (smallest staff position; tie -> larger voice id).
+      int? lowerVoice;
+      int? lowerPos;
+      for (final n in infos) {
+        if (lowerVoice == null ||
+            n.pos < lowerPos! ||
+            (n.pos == lowerPos && n.voice > lowerVoice)) {
+          lowerVoice = n.voice;
+          lowerPos = n.pos;
+        }
+      }
+
+      // Shift that voice's note(s) in this onset group left by one head width.
+      for (final n in infos) {
+        if (n.voice != lowerVoice) continue;
+        final pe = elements[n.idx];
+        elements[n.idx] = PositionedElement(
+          pe.element,
+          Offset(pe.position.dx - noteW, pe.position.dy),
+          system: pe.system,
+          voiceNumber: pe.voiceNumber,
+        );
+      }
     }
   }
 

@@ -584,6 +584,26 @@ Staff _twoVoice() {
   return _staff([m]);
 }
 
+Staff _twoVoiceSeconds() {
+  // Two voices a second apart at each onset — noteheads must not overlap.
+  final m = MultiVoiceMeasure();
+  m.addVoice(Voice.voice1(elements: [
+    Clef(clefType: ClefType.treble),
+    TimeSignature(numerator: 4, denominator: 4),
+    _n('D', 5),
+    _n('E', 5),
+    _n('C', 5), // unison with voice 2's C5
+    _n('B', 4),
+  ]));
+  m.addVoice(Voice.voice2(elements: [
+    _n('C', 5),
+    _n('D', 5),
+    _n('C', 5), // unison
+    _n('A', 4),
+  ]));
+  return _staff([m]);
+}
+
 Staff _anacrusis() {
   // Pickup measure (single quarter) then a full bar.
   return _staff([
@@ -1002,6 +1022,13 @@ final List<CorpusCase> corpus = [
     exercises: 'melisma line from a syllable over note-less notes (#13)',
     build: _melisma,
     size: const Size(900, 280),
+  ),
+  CorpusCase(
+    id: 'm08b_two_voice_seconds',
+    title: 'Two voices a second/unison apart (notehead displacement)',
+    tier: 'complex',
+    exercises: 'cross-voice second/unison noteheads do not overlap',
+    build: _twoVoiceSeconds,
   ),
   CorpusCase(
     id: 'm08_two_voice',
