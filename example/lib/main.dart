@@ -13,10 +13,11 @@ import 'examples/complete_music_piece.dart';
 import 'examples/dots_and_ledgers_example.dart';
 import 'examples/dynamics_example.dart';
 import 'examples/grace_notes_example.dart';
+import 'examples/grand_staff_example.dart';
+import 'examples/gregorian_chant_example.dart';
 import 'examples/jianpu_example.dart';
 import 'examples/key_signatures_example.dart';
 import 'examples/lyrics_text_example.dart';
-import 'examples/multi_staff_example.dart';
 import 'examples/octave_marks_example.dart';
 import 'examples/ornaments_example.dart';
 import 'examples/polyphony_example.dart';
@@ -157,7 +158,7 @@ class _BootstrapLoadingView extends StatelessWidget {
             const CupertinoActivityIndicator(radius: 16),
             const SizedBox(height: 18),
             Text(
-              'Preparing the 2.5.1 showcase...',
+              'Preparing the 2.6.0 showcase...',
               style: theme.textTheme.navTitleTextStyle.copyWith(
                 color: const Color(0xFF111827),
               ),
@@ -407,11 +408,11 @@ class _MainScreenState extends State<MainScreen> {
     ),
     _ExampleEntry(
       category: 'Advanced',
-      title: 'Multi-Staff',
-      subtitle: 'Grand staff layouts and aligned systems.',
+      title: 'Grand Staff & Scores',
+      subtitle: 'Brace/bracket groups, full scores, and cross-staff beaming.',
       icon: CupertinoIcons.rectangle_stack,
       accentColor: const Color(0xFF7C2D12),
-      builder: () => const MultiStaffDemoApp(),
+      builder: () => const GrandStaffExample(),
     ),
     _ExampleEntry(
       category: 'Advanced',
@@ -452,6 +453,14 @@ class _MainScreenState extends State<MainScreen> {
       icon: CupertinoIcons.number,
       accentColor: const Color(0xFFB91C1C),
       builder: () => const JianpuExample(),
+    ),
+    _ExampleEntry(
+      category: 'Notation Systems',
+      title: 'Gregorian Chant',
+      subtitle: 'Square notation in the Greciliae font, imported from GABC.',
+      icon: CupertinoIcons.book,
+      accentColor: const Color(0xFF92400E),
+      builder: () => const GregorianChantExample(),
     ),
   ];
 
@@ -699,7 +708,7 @@ class _CatalogHeader extends StatelessWidget {
               borderRadius: BorderRadius.circular(999),
             ),
             child: Text(
-              'Release 2.5.1',
+              'Release 2.6.0',
               style: textTheme.tabLabelTextStyle.copyWith(
                 color: const Color(0xFFFFFFFF),
                 fontWeight: FontWeight.w700,
@@ -717,7 +726,7 @@ class _CatalogHeader extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            'A cleaner catalog that keeps the useful public examples, trims only redundant demos, and highlights the refreshed 2.5.1 work.',
+            'A curated catalog spanning the fundamentals, expression, multi-staff scores, and alternative notation systems — refreshed for the 2.6.0 release.',
             style: textTheme.textStyle.copyWith(
               color: const Color(0xF2FFFFFF),
               fontSize: 15,

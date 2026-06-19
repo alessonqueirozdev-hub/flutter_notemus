@@ -9,6 +9,7 @@ import 'package:flutter_notemus/src/beaming/beam_analyzer.dart';
 import 'package:flutter_notemus/src/beaming/beam_group.dart';
 import 'package:flutter_notemus/src/layout/beam_grouper.dart';
 import 'package:flutter_notemus/src/layout/measure_validator.dart'; // ✅ ADICIONADO
+import 'package:flutter_notemus/src/rendering/accidental_resolver.dart';
 import 'package:flutter_notemus/src/rendering/staff_position_calculator.dart';
 import 'package:flutter_notemus/src/rendering/smufl_positioning_engine.dart';
 import 'package:flutter_notemus/src/smufl/smufl_metadata_loader.dart'; // ✅ ADICIONADO
@@ -217,6 +218,7 @@ class LayoutEngine {
 
   // System de Intelligent spacing
   late final spacing.IntelligentSpacingEngine _spacingEngine;
+  late final spacing.SpacingPreferences _spacingPreferences;
 
   // System de Beaming Avançado
   late final BeamAnalyzer _beamAnalyzer;
@@ -225,6 +227,11 @@ class LayoutEngine {
   final Map<Note, double> _noteYPositions =
       {}; // ✅ NOVO: Y absoluto em pixels
   final List<AdvancedBeamGroup> _advancedBeamGroups = [];
+
+  /// Within-measure accidental display decision per note (Behind Bars rule),
+  /// resolved from the model so layout width and rendering agree.
+  late final Map<Note, AccidentalDisplay> accidentalDecisions =
+      AccidentalResolver.resolve(staff.measures);
 
   // Configuresção de validação (silenciosa by default)
   final bool verboseValidation;
@@ -257,8 +264,9 @@ class LayoutEngine {
     spacing.SpacingPreferences? spacingPreferences,
   }) {
     // Initialise spacing engine
+    _spacingPreferences = spacingPreferences ?? spacing.SpacingPreferences.normal;
     _spacingEngine = spacing.IntelligentSpacingEngine(
-      preferences: spacingPreferences ?? spacing.SpacingPreferences.normal,
+      preferences: _spacingPreferences,
     );
     _spacingEngine.initializeOpticalCompensator(staffSpace);
 
@@ -277,6 +285,20 @@ class LayoutEngine {
       noteheadWidth: noteheadBlackWidth * staffSpace,
       positioningEngine: positioningEngine,
     );
+  }
+
+  /// Effective accidental glyph after within-measure resolution: null = hide
+  /// (alteration already in force), the natural glyph when reverting, else the
+  /// note's own accidental.
+  String? _effectiveAccidentalGlyph(Note note) {
+    switch (accidentalDecisions[note] ?? AccidentalDisplay.show) {
+      case AccidentalDisplay.hide:
+        return null;
+      case AccidentalDisplay.natural:
+        return 'accidentalNatural';
+      case AccidentalDisplay.show:
+        return note.pitch.accidentalGlyph;
+    }
   }
 
   /// Gets width de glifo dinamicamente of the metadata or Returns fallback
@@ -318,6 +340,13 @@ class LayoutEngine {
   /// ✅ Expor positions Y das notes for Rendering de stems
   Map<Note, double> get noteYPositions => Map.unmodifiable(_noteYPositions);
 
+  /// Overrides a note's horizontal position after layout (used by the
+  /// multi-staff aligner so beams follow re-aligned noteheads). No-op for notes
+  /// the engine never positioned.
+  void overrideNoteX(Note note, double x) {
+    if (_noteXPositions.containsKey(note)) _noteXPositions[note] = x;
+  }
+
   List<PositionedElement> layout() {
     return _layoutInternal();
   }
@@ -354,6 +383,9 @@ class LayoutEngine {
 
     // System de inheritance de TimeSignature
     TimeSignature? currentTimeSignature;
+    // Running clef/key, restated at the start of each new system.
+    Clef? currentClef;
+    KeySignature? currentKey;
 
     // Contador de validação (only for estatísticas)
     int validMeasures = 0;
@@ -414,6 +446,33 @@ class LayoutEngine {
         cursor.startNewSystem();
       }
 
+      // Restate the running clef (and key signature) at the start of every
+      // system after the first, when this measure does not carry its own — so
+      // each wrapped line begins with its prevailing clef/key (Gould/Verovio).
+      if (cursor.isFirstMeasureInSystem && i > 0) {
+        final hasClef = measure.elements.any((e) => e is Clef);
+        final hasKey = measure.elements.any((e) => e is KeySignature);
+        var restated = false;
+        final clef = currentClef;
+        if (!hasClef && clef != null) {
+          cursor.addElement(clef, positionedElements);
+          cursor.advance(_getElementWidthSimple(clef));
+          restated = true;
+        }
+        final key = currentKey;
+        if (!hasKey && key != null && key.count != 0) {
+          cursor.addElement(key, positionedElements);
+          cursor.advance(_getElementWidthSimple(key));
+          restated = true;
+        }
+        if (restated) cursor.advance(staffSpace * 1.0);
+      }
+      // Update the running clef/key from this measure (used by later systems).
+      for (final e in measure.elements) {
+        if (e is Clef) currentClef = e;
+        if (e is KeySignature) currentKey = e;
+      }
+
       // Guardar index initial of the measure for justificação
       final measureStartIndex = positionedElements.length;
       measureStartIndices[i] = measureStartIndex;
@@ -469,6 +528,12 @@ class LayoutEngine {
 
     // JUSTIFICAÇÃO HORIZONTAL: Esticar measures for preencher width
     _justifyHorizontally(positionedElements, systemMeasures);
+
+    // Center a lone full-measure rest within its bar (Behind Bars p.158).
+    _centerFullMeasureRests(positionedElements, measureStartIndices);
+
+    // Displace cross-voice noteheads that would overlap (seconds/unisons).
+    _resolveCrossVoiceCollisions(positionedElements);
 
     // Sincronizar _noteXPositions with as positions pós-justificação.
     // _justifyHorizontally modifica positionedElements mas not _noteXPositions,
@@ -551,6 +616,14 @@ class LayoutEngine {
   ) {
     final usableWidth = availableWidth - (systemMargin * staffSpace * 2);
 
+    // The last system must keep natural spacing (Behind Bars), and any system
+    // that fills less than this fraction of the line is left at natural width
+    // instead of being stretched edge-to-edge.
+    const double fillThreshold = 0.7;
+    final int lastSystem = systemMeasures.keys.isEmpty
+        ? -1
+        : systemMeasures.keys.reduce((a, b) => a > b ? a : b);
+
     for (final entry in systemMeasures.entries) {
       final system = entry.key;
       final measures = entry.value;
@@ -570,6 +643,12 @@ class LayoutEngine {
 
       final usedWidth = maxX - minX;
       final extraSpace = usableWidth - usedWidth;
+
+      // Don't stretch the last system, nor any sparsely-filled system.
+      final isLastSystem = system == lastSystem;
+      final fillsEnough =
+          usableWidth > 0 && (usedWidth / usableWidth) >= fillThreshold;
+      if (isLastSystem || !fillsEnough) continue;
 
       // If há space extra, distribuir proporcionalmente
       if (extraSpace > 0 && measures.length > 1) {
@@ -596,19 +675,142 @@ class LayoutEngine {
     }
   }
 
+  /// Centers a measure that contains a single full-bar rest between its left
+  /// content edge and its closing barline (Behind Bars p.158: a whole-measure
+  /// rest sits centered regardless of meter). Runs after justification so the
+  /// barline X is final.
+  void _centerFullMeasureRests(
+    List<PositionedElement> elements,
+    Map<int, int> measureStartIndices,
+  ) {
+    final keys = measureStartIndices.keys.toList()..sort();
+    for (var ki = 0; ki < keys.length; ki++) {
+      final i = keys[ki];
+      final measure = staff.measures[i];
+      if (measure is MultiVoiceMeasure) continue;
+
+      final musical = measure.elements
+          .where((e) => e is Note || e is Rest || e is Chord)
+          .toList();
+      if (musical.length != 1 || musical.first is! Rest) continue;
+      final rest = musical.first as Rest;
+
+      // Only a true full-bar rest: a whole rest (used as a measure rest in any
+      // meter) or a rest whose value fills the measure.
+      final ts = measure.timeSignature ?? measure.inheritedTimeSignature;
+      final isFullBar = rest.duration.type == DurationType.whole ||
+          (ts != null &&
+              !ts.isFreeTime &&
+              rest.duration.realValue >= ts.measureValue - 1e-6);
+      if (!isFullBar) continue;
+
+      final start = measureStartIndices[i]!;
+      final end =
+          ki + 1 < keys.length ? measureStartIndices[keys[ki + 1]]! : elements.length;
+
+      var restIdx = -1;
+      double? barlineX;
+      for (var j = start; j < end; j++) {
+        final el = elements[j].element;
+        if (el is Rest && restIdx < 0) restIdx = j;
+        if (el is Barline) barlineX = elements[j].position.dx;
+      }
+      if (restIdx < 0 || barlineX == null) continue;
+
+      final positioned = elements[restIdx];
+      final restWidth = _getElementWidthSimple(positioned.element);
+      final leftBound = positioned.position.dx;
+      final available = barlineX - leftBound;
+      if (available <= restWidth) continue;
+
+      final newX = leftBound + (available - restWidth) / 2;
+      elements[restIdx] = PositionedElement(
+        positioned.element,
+        Offset(newX, positioned.position.dy),
+        system: positioned.system,
+        voiceNumber: positioned.voiceNumber,
+      );
+    }
+  }
+
+  /// When two voices place noteheads a second or unison apart at the same
+  /// onset, the heads overlap. Displace the lower voice's head(s) by one
+  /// notehead width so the interval reads clearly (Gould p.39-46). Runs after
+  /// justification; only handles the two-voice case.
+  void _resolveCrossVoiceCollisions(List<PositionedElement> elements) {
+    final noteW = noteheadBlackWidth * staffSpace;
+
+    // Group note elements (that carry a voice) by system + rounded X.
+    final groups = <String, List<int>>{};
+    for (var i = 0; i < elements.length; i++) {
+      final pe = elements[i];
+      if (pe.element is! Note || pe.voiceNumber == null) continue;
+      final key = '${pe.system}_${pe.position.dx.round()}';
+      (groups[key] ??= <int>[]).add(i);
+    }
+
+    for (final idxs in groups.values) {
+      if (idxs.length < 2) continue;
+
+      // (positioned-index, voice, staffPosition) for each note in the group.
+      final infos = <({int idx, int voice, int pos})>[];
+      for (final i in idxs) {
+        final sp = _noteStaffPositions[elements[i].element as Note];
+        if (sp == null) continue;
+        infos.add((idx: i, voice: elements[i].voiceNumber!, pos: sp));
+      }
+      if (infos.length < 2) continue;
+      if (infos.map((n) => n.voice).toSet().length < 2) continue;
+
+      // Closest cross-voice interval.
+      var minDiff = 9999;
+      for (final a in infos) {
+        for (final b in infos) {
+          if (a.voice == b.voice) continue;
+          final d = (a.pos - b.pos).abs();
+          if (d < minDiff) minDiff = d;
+        }
+      }
+      if (minDiff > 1) continue; // only seconds and unisons collide
+
+      // Pick the lower voice (smallest staff position; tie -> larger voice id).
+      int? lowerVoice;
+      int? lowerPos;
+      for (final n in infos) {
+        if (lowerVoice == null ||
+            n.pos < lowerPos! ||
+            (n.pos == lowerPos && n.voice > lowerVoice)) {
+          lowerVoice = n.voice;
+          lowerPos = n.pos;
+        }
+      }
+
+      // Shift that voice's note(s) in this onset group left by one head width.
+      for (final n in infos) {
+        if (n.voice != lowerVoice) continue;
+        final pe = elements[n.idx];
+        elements[n.idx] = PositionedElement(
+          pe.element,
+          Offset(pe.position.dx - noteW, pe.position.dy),
+          system: pe.system,
+          voiceNumber: pe.voiceNumber,
+        );
+      }
+    }
+  }
+
   double _calculateMeasureWidthCursor(Measure measure, bool isFirstInSystem) {
     double totalWidth = 0;
     int musicalElementCount = 0;
 
     for (final element in measure.elements) {
-      if (!isFirstInSystem && _isSystemElement(element)) {
-        continue;
-      }
       // Floating elements don't contribute to measure width.
       if (_isAboveOrBelowStaffElement(element)) {
         continue;
       }
 
+      // System elements (clef/key/time) now always render when present in a
+      // measure (opening or mid-line change), so they must count toward width.
       totalWidth += _getElementWidthSimple(element);
 
       if (element is Note || element is Rest || element is Chord) {
@@ -656,10 +858,12 @@ class LayoutEngine {
         manualBeamGroups: measure.manualBeamGroups,
       );
 
-      // Voice 2+ never renders system elements (clef/key/time sig belong to voice 1)
+      // Voice 2+ never renders system elements (clef/key/time sig belong to
+      // voice 1). The lead voice renders every system element it carries —
+      // those are author-placed openings or genuine mid-line changes.
       final elementsToRender = processedElements.where((element) {
         if (!isLeadVoice && _isSystemElement(element)) return false;
-        return isFirstInSystem || !_isSystemElement(element);
+        return true;
       }).toList();
 
       bool seenFirstMusicElement =
@@ -818,9 +1022,13 @@ class LayoutEngine {
       manualBeamGroups: measure.manualBeamGroups,
     );
 
-    final elementsToRender = processedElements.where((element) {
-      return isFirstInSystem || !_isSystemElement(element);
-    }).toList();
+    // Render every element the measure actually carries. System elements
+    // (clef/key/time) only appear in a measure's data when the author placed
+    // them — the opening measure, or a genuine mid-line change — so they must
+    // draw regardless of position in the system. Inherited restatements at
+    // system starts are injected separately by the caller (so they are NOT in
+    // measure.elements and won't double up here).
+    final elementsToRender = processedElements;
 
     if (elementsToRender.isEmpty) return;
 
@@ -1015,22 +1223,50 @@ class LayoutEngine {
     }
 
     if (element is KeySignature) {
-      if (element.count == 0) return 0.5 * staffSpace;
+      // Reserve width for cancellation naturals of the outgoing key, which the
+      // renderer draws before the new accidentals: previousCount.abs() naturals
+      // at 0.8 SS each + a 0.5 SS gap (mirrors bar_element_renderer).
+      double width = 0;
+      final prev = element.previousCount;
+      if (prev != null && prev != 0) {
+        width += (prev.abs() * 0.8 + 0.5) * staffSpace;
+      }
+      if (element.count == 0) {
+        // C major: only the cancellation naturals (if any), else a small pad.
+        return width == 0 ? 0.5 * staffSpace : width;
+      }
       final accidentalWidth = element.count > 0
           ? accidentalSharpWidth
           : accidentalFlatWidth;
-      return (element.count.abs() * 0.8 + accidentalWidth) * staffSpace;
+      width += (element.count.abs() * 0.8 + accidentalWidth) * staffSpace;
+      return width;
     }
 
     if (element is TimeSignature) {
-      return 3.0 * staffSpace;
+      // Free time draws nothing, so it reserves no width.
+      if (element.isFreeTime) return 0;
+      // Width scales with the widest of the numerator/denominator digit counts
+      // so multi-digit meters (12/8, 16, …) reserve enough room.
+      final denDigits = element.denominator.toString().length;
+      int numDigits;
+      if (element.isAdditive) {
+        // Group digits + one '+' separator slot per inter-group gap.
+        final groups = element.additiveGroups!;
+        numDigits = groups.fold<int>(0, (a, g) => a + g.numerator.toString().length) +
+            (groups.length - 1);
+      } else {
+        numDigits = element.numerator.toString().length;
+      }
+      final digits = numDigits > denDigits ? numDigits : denDigits;
+      return (1.6 + 1.4 * digits) * staffSpace;
     }
 
     if (element is Note) {
       double width = noteheadBlackWidth * staffSpace;
-      if (element.pitch.accidentalGlyph != null) {
+      final accGlyph = _effectiveAccidentalGlyph(element);
+      if (accGlyph != null) {
         // Fix: SMuFL: Detecção more robusta and uso de valores corretos
-        final glyphName = element.pitch.accidentalGlyph!;
+        final glyphName = accGlyph;
         double accWidth = accidentalSharpWidth; // Default
 
         // Identificar type de accidental corretamente
@@ -1048,6 +1284,12 @@ class LayoutEngine {
         // CORRIGIDO: Spacing recomendado SMuFL is 0.25-0.3 staff spaces
         width += (accWidth + 0.3) * staffSpace;
       }
+      // Augmentation dots sit to the right of the notehead (DotRenderer: first
+      // dot at centre + 1.0 SS, each further +0.6 SS), extending ~0.7 SS past
+      // the notehead's right edge. Reserve it so dots never crowd the next note.
+      if (element.duration.dots > 0) {
+        width += (0.7 + (element.duration.dots - 1) * 0.6) * staffSpace;
+      }
       return width;
     }
 
@@ -1060,9 +1302,10 @@ class LayoutEngine {
       double maxAccidentalWidth = 0;
 
       for (final note in element.notes) {
-        if (note.pitch.accidentalGlyph != null) {
+        final accGlyph = _effectiveAccidentalGlyph(note);
+        if (accGlyph != null) {
           // Fix: Use same lógica robusta de detecção that Note
-          final glyphName = note.pitch.accidentalGlyph!;
+          final glyphName = accGlyph;
           double accWidth = accidentalSharpWidth;
 
           if (glyphName.contains('Flat') || glyphName.contains('flat')) {
@@ -1083,6 +1326,10 @@ class LayoutEngine {
 
       if (maxAccidentalWidth > 0) {
         width += (maxAccidentalWidth + 0.5) * staffSpace;
+      }
+      // Reserve augmentation-dot space (see the Note branch).
+      if (element.duration.dots > 0) {
+        width += (0.7 + (element.duration.dots - 1) * 0.6) * staffSpace;
       }
       return width;
     }
@@ -1413,61 +1660,62 @@ class LayoutEngine {
     // Base: spacing mínimo between notes (semínima as reference)
     const double baseSpacing = noteMinSpacing;
 
-    // Fatores de spacing PROPORCIONAIS (modelo √2 approximate)
-    // Progressão geométrica smooth for proporção visual correct
+    // Gould square-root spacing law (Behind Bars / Verovio): horizontal space
+    // is proportional to sqrt(duration), normalised to the quarter note (=1.0).
+    // The previous ad-hoc table was far too wide for short notes (16th 0.7 vs
+    // the correct 0.5, 64th 0.55 vs 0.25), flattening rhythmic proportion.
     final durationFactors = {
-      DurationType.whole: 2.0, // Semibreve: 2x
-      DurationType.half: 1.5, // Mínima: 1.5x (√2 ≈ 1.41)
-      DurationType.quarter: 1.0, // Semínima: 1x (base)
-      DurationType.eighth: 0.8, // Colcheia: 0.8x
-      DurationType.sixteenth: 0.7, // Semicolcheia: 0.7x
-      DurationType.thirtySecond: 0.6, // Fusa: 0.6x
-      DurationType.sixtyFourth: 0.55, // Semifusa: 0.55x
+      DurationType.whole: 2.0, // √4
+      DurationType.half: 1.414, // √2
+      DurationType.quarter: 1.0, // √1 (base)
+      DurationType.eighth: 0.707, // √0.5
+      DurationType.sixteenth: 0.5, // √0.25
+      DurationType.thirtySecond: 0.354, // √0.125
+      DurationType.sixtyFourth: 0.25, // √0.0625
     };
 
-    // Get duração of the element current
-    DurationType? currentDuration;
-    if (currentElement is Note) {
-      currentDuration = currentElement.duration.type;
-    } else if (currentElement is Chord) {
-      currentDuration = currentElement.duration.type;
-    } else if (currentElement is Rest) {
-      currentDuration = currentElement.duration.type;
+    // Inter-onset spacing (Gould): the gap BEFORE this element reflects how much
+    // horizontal space the PREVIOUS element occupies — proportional to its
+    // (sqrt) duration — not this element's own duration. So a long note gets a
+    // wide gap after it and short notes cluster tightly.
+    DurationType? prevDuration;
+    if (previousElement is Note) {
+      prevDuration = previousElement.duration.type;
+    } else if (previousElement is Chord) {
+      prevDuration = previousElement.duration.type;
+    } else if (previousElement is Rest) {
+      prevDuration = previousElement.duration.type;
     }
 
-    // If not for elemento musical rhythmic, Use spacing base
-    if (currentDuration == null) {
+    // No previous rhythmic element (start of measure/system): use base spacing.
+    if (prevDuration == null) {
       return baseSpacing * staffSpace;
     }
 
-    // Appliesr fator de duração
-    final factor = durationFactors[currentDuration] ?? 1.0;
+    // Appliesr fator de duração (do elemento anterior)
+    final factor = durationFactors[prevDuration] ?? 1.0;
     double spacing = baseSpacing * factor * staffSpace;
 
-    // AJUSTE: Spacing added for paUsess (80% according to Gould)
-    if (currentElement is Rest) {
-      spacing *= 1.15; // Pausas têm pouco mais ar
+    // A rest occupies slightly LESS space than an equal-duration note
+    // (Gould ~0.8x) via the configurable restSpacingRatio.
+    if (previousElement is Rest) {
+      spacing *= _spacingPreferences.restSpacingRatio;
     }
 
-    // AJUSTE: Spacing added if elemento previous tem point de aumentação
-    if (previousElement is Note && previousElement.duration.dots > 0) {
-      spacing +=
-          staffSpace * 0.2 * previousElement.duration.dots; // REDUZIDO de 0.3
-    } else if (previousElement is Chord && previousElement.duration.dots > 0) {
-      spacing +=
-          staffSpace * 0.2 * previousElement.duration.dots; // REDUZIDO de 0.3
-    }
+    // Augmentation-dot space is reserved on the dotted note's own trailing
+    // width (_getElementWidthSimple), so no extra leading gap is needed here.
 
-    // AJUSTE: More spacing if elemento previous tem accidental
-    if (previousElement is Note &&
-        previousElement.pitch.accidentalGlyph != null) {
-      spacing += staffSpace * 0.15; // REDUZIDO de 0.2
-    } else if (previousElement is Chord) {
-      final hasAccidental = previousElement.notes.any(
+    // Leading space for the CURRENT element's accidental, which hangs to the
+    // left of its notehead into this gap.
+    if (currentElement is Note &&
+        currentElement.pitch.accidentalGlyph != null) {
+      spacing += staffSpace * 0.15;
+    } else if (currentElement is Chord) {
+      final hasAccidental = currentElement.notes.any(
         (note) => note.pitch.accidentalGlyph != null,
       );
       if (hasAccidental) {
-        spacing += staffSpace * 0.15; // REDUZIDO de 0.2
+        spacing += staffSpace * 0.15;
       }
     }
 
@@ -1546,6 +1794,9 @@ class LayoutEngine {
               tabFret: note.tabFret,
               tabString: note.tabString,
               syllables: note.syllables,
+              accidentalParenthesis: note.accidentalParenthesis,
+              slurs: note.slurs,
+              crossStaffMove: note.crossStaffMove,
             );
             beamedNote.xmlId = note.xmlId;
 

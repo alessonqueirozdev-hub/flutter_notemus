@@ -59,10 +59,17 @@ class SlurCalculator {
     // 2. Calculate length horizontal of the slur
     final horizontalLength = (adjustedEnd.dx - adjustedStart.dx).abs();
 
-    // 3. Calculate height ideal of the slur based no length
-    // Fórmula OSMD: height = k * sqrt(length) where k varia with placement
-    final heightFactor = placement ? 0.5 : 0.4;
-    final idealHeight = heightFactor * math.sqrt(horizontalLength);
+    // 3. Calculate height ideal of the slur based on length.
+    // height = k * sqrt(lengthInStaffSpaces), clamped to a sane range. Working
+    // in staff spaces (not raw pixels) keeps the arch proportional at any
+    // staffSpace; the previous `k * sqrt(pixels)` was far too shallow.
+    final lengthSpaces = horizontalLength / staffSpace;
+    final heightFactor = placement ? 0.55 : 0.45;
+    final idealHeightSpaces = (heightFactor * math.sqrt(lengthSpaces)).clamp(
+      0.6,
+      2.8,
+    );
+    final idealHeight = idealHeightSpaces * staffSpace;
 
     // 4. Ajustar height if houver colisões with skyline
     // C2 FIX: removed redundant `&& notesBoundingBoxes != null` guard —
@@ -163,55 +170,46 @@ class SlurCalculator {
     Offset start,
     Offset end,
     double height,
-    double slopeAngle,
+    double slopeAngle, // kept for API compatibility; shape derives from height
     bool placement,
   ) {
-    // Calculate length horizontal and vertical
     final dx = end.dx - start.dx;
     final dy = end.dy - start.dy;
     final length = math.sqrt(dx * dx + dy * dy);
 
-    // Calculate angles tangentes nos points initial and final
-    // OSMD Uses angles between 30° and 80° according to Behind Bars
-    final minTangentAngle = rules.slurTangentMinAngle * math.pi / 180;
-    final maxTangentAngle = rules.slurTangentMaxAngle * math.pi / 180;
+    // Degenerate (coincident endpoints): emit a small symmetric arc.
+    if (length < 1e-6) {
+      final h = placement ? -height : height;
+      return [
+        start,
+        Offset(start.dx, start.dy + h),
+        Offset(end.dx, end.dy + h),
+        end,
+      ];
+    }
 
-    // Angle tangent based no length of the slur
-    // Slurs curtos: angle more íngreme
-    // Slurs longos: angle more smooth
-    final tangentAngleFactor = (length / 100.0).clamp(0.0, 1.0);
-    final tangentAngle = minTangentAngle +
-        (maxTangentAngle - minTangentAngle) * (1.0 - tangentAngleFactor);
+    // The arch bulges PERPENDICULAR to the chord by `height`, independent of how
+    // steep the chord is. The previous implementation rotated fixed tangent
+    // angles off the chord direction and ignored `height` entirely, so steep
+    // (ascending/descending) slurs produced near-vertical tangents that made the
+    // cubic fold back on itself and render as two disjoint humps (V1).
+    final ux = dx / length;
+    final uy = dy / length;
+    // Perpendicular pointing toward the bulge side (up for `placement`).
+    final perpX = placement ? uy : -uy;
+    final perpY = placement ? -ux : ux;
 
-    // Calculate length dos vectors de control
-    // OSMD Uses aproximadamente 1/3 of the length total
-    final controlLength = length * 0.38;
+    // For a symmetric cubic, control offset ~= 4/3 * apex height so the curve
+    // actually reaches `height` at its midpoint. Control points sit at 1/4 and
+    // 3/4 along the chord.
+    final ctrlOffset = height * (4.0 / 3.0);
+    final c1 = Offset(start.dx + dx * 0.25, start.dy + dy * 0.25);
+    final c2 = Offset(start.dx + dx * 0.75, start.dy + dy * 0.75);
 
-    // P0: point initial
-    final p0 = start;
+    final p1 = Offset(c1.dx + perpX * ctrlOffset, c1.dy + perpY * ctrlOffset);
+    final p2 = Offset(c2.dx + perpX * ctrlOffset, c2.dy + perpY * ctrlOffset);
 
-    // P1: point de control initial
-    // Direction: angle of the slur + angle tangent
-    final startControlAngle = math.atan2(dy, dx) +
-        (placement ? -tangentAngle : tangentAngle);
-    final p1 = Offset(
-      start.dx + controlLength * math.cos(startControlAngle),
-      start.dy + controlLength * math.sin(startControlAngle),
-    );
-
-    // P2: point de control final
-    // Direction: angle of the slur - angle tangent (simétrico)
-    final endControlAngle = math.atan2(dy, dx) +
-        (placement ? tangentAngle : -tangentAngle);
-    final p2 = Offset(
-      end.dx - controlLength * math.cos(endControlAngle),
-      end.dy - controlLength * math.sin(endControlAngle),
-    );
-
-    // P3: point final
-    final p3 = end;
-
-    return [p0, p1, p2, p3];
+    return [start, p1, p2, end];
   }
 
   /// Calculates a tie (tie/slur de prolongation)

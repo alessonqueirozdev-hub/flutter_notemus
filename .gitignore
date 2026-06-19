@@ -43,3 +43,6 @@ linux/flutter/
 
 # Generated Flutter registrant (Android app)
 android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
+
+# Flutter golden test failure diffs (transient)
+test/**/failures/

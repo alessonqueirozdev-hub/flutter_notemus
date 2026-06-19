@@ -113,7 +113,7 @@ class TupletRenderer extends BaseGlyphRenderer {
         endX: spanEndX,
         anchorPositions: allPositions,
         notePositions: noteOnlyPositions,
-        number: tuplet.actualNotes,
+        numberText: tuplet.numberText,
         beamCount: beamCount,
       );
     }
@@ -128,7 +128,7 @@ class TupletRenderer extends BaseGlyphRenderer {
         endX: spanEndX,
         anchorPositions: allPositions,
         notePositions: noteOnlyPositions,
-        number: tuplet.actualNotes,
+        numberText: tuplet.numberText,
         beamCount: beamCount,
       );
     }
@@ -170,16 +170,16 @@ class TupletRenderer extends BaseGlyphRenderer {
     return averageY >= staffCenterY;
   }
 
-  double _calculateBracketY(
-    List<Offset> notePositions, {
+  /// Bracket line endpoints (at [startX]/[endX]) sloped to parallel the note
+  /// trend (Gould p.205-207), clamped to TupletBracket.maxSlope, while clearing
+  /// every note by the same offset the flat bracket would use.
+  ({double startY, double endY}) _bracketLine(
+    List<Offset> notePositions,
+    double startX,
+    double endX, {
     required int beamCount,
   }) {
     final stemUp = _stemUp(notePositions);
-
-    final extremeY = stemUp
-        ? notePositions.map((position) => position.dy).reduce(math.min)
-        : notePositions.map((position) => position.dy).reduce(math.max);
-
     final stemLength = coordinates.staffSpace * 3.5;
     final beamThickness = coordinates.staffSpace * 0.5;
     final beamGap = coordinates.staffSpace * 0.25;
@@ -187,18 +187,35 @@ class TupletRenderer extends BaseGlyphRenderer {
         ? 0.0
         : beamThickness + ((beamCount - 1) * (beamThickness + beamGap));
     final clearance = coordinates.staffSpace * (beamCount > 0 ? 0.95 : 0.75);
+    final off = stemLength + beamStackDepth + clearance;
 
-    if (stemUp) {
-      final beamTopY = extremeY - stemLength - beamStackDepth;
-      final unclamped = beamTopY - clearance;
-      final minY = coordinates.getStaffLineY(5) - coordinates.staffSpace * 2.6;
-      return unclamped < minY ? minY : unclamped;
+    final firstX = notePositions.first.dx;
+    final lastX = notePositions.last.dx;
+    final span = endX - startX;
+    double slope = (lastX - firstX).abs() < 1e-6
+        ? 0.0
+        : (notePositions.last.dy - notePositions.first.dy) / (lastX - firstX);
+    // Clamp the total rise across the bracket to maxSlope.
+    final maxRise = TupletBracket.maxSlope * coordinates.staffSpace;
+    if (span.abs() > 1e-6 && (slope * span).abs() > maxRise) {
+      slope = (slope.isNegative ? -1 : 1) * (maxRise / span.abs());
     }
 
-    final beamBottomY = extremeY + stemLength + beamStackDepth;
-    final unclamped = beamBottomY + clearance;
-    final maxY = coordinates.getStaffLineY(1) + coordinates.staffSpace * 2.6;
-    return unclamped > maxY ? maxY : unclamped;
+    // Fit the intercept so the sloped line clears every note by `off`.
+    double? yStart;
+    for (final p in notePositions) {
+      final target = stemUp ? p.dy - off : p.dy + off;
+      final candidate = target - slope * (p.dx - startX);
+      if (yStart == null) {
+        yStart = candidate;
+      } else if (stemUp) {
+        if (candidate < yStart) yStart = candidate; // highest (smallest Y)
+      } else {
+        if (candidate > yStart) yStart = candidate; // lowest (largest Y)
+      }
+    }
+    yStart ??= stemUp ? -off : off;
+    return (startY: yStart, endY: yStart + slope * span);
   }
 
   void _drawTupletBracket(
@@ -207,7 +224,7 @@ class TupletRenderer extends BaseGlyphRenderer {
     required double endX,
     required List<Offset> anchorPositions,
     required List<Offset> notePositions,
-    required int number,
+    required String numberText,
     required int beamCount,
   }) {
     if (anchorPositions.length < 2) {
@@ -218,7 +235,16 @@ class TupletRenderer extends BaseGlyphRenderer {
         ? notePositions
         : anchorPositions;
     final stemUp = _stemUp(referenceNotes);
-    final bracketY = _calculateBracketY(referenceNotes, beamCount: beamCount);
+    final line = _bracketLine(
+      referenceNotes,
+      startX,
+      endX,
+      beamCount: beamCount,
+    );
+    final span = endX - startX;
+    double yAt(double x) => span.abs() < 1e-6
+        ? line.startY
+        : line.startY + (line.endY - line.startY) * ((x - startX) / span);
 
     final paint = Paint()
       ..color = theme.tupletColor ?? theme.stemColor
@@ -231,7 +257,7 @@ class TupletRenderer extends BaseGlyphRenderer {
     final minSegmentLength = coordinates.staffSpace * 0.5;
     final requestedGap = math.max(
       coordinates.staffSpace * 1.9,
-      number.toString().length * coordinates.staffSpace * 1.25,
+      numberText.length * coordinates.staffSpace * 1.25,
     );
     final numberGap = math.min(totalWidth * 0.5, requestedGap);
     double leftEnd = centerX - (numberGap * 0.5);
@@ -246,22 +272,26 @@ class TupletRenderer extends BaseGlyphRenderer {
 
     final hookLength = coordinates.staffSpace * 0.5;
 
-    canvas.drawLine(Offset(startX, bracketY), Offset(leftEnd, bracketY), paint);
     canvas.drawLine(
-      Offset(rightStart, bracketY),
-      Offset(endX, bracketY),
+      Offset(startX, yAt(startX)),
+      Offset(leftEnd, yAt(leftEnd)),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(rightStart, yAt(rightStart)),
+      Offset(endX, yAt(endX)),
       paint,
     );
 
     final hookDirection = stemUp ? hookLength : -hookLength;
     canvas.drawLine(
-      Offset(startX, bracketY),
-      Offset(startX, bracketY + hookDirection),
+      Offset(startX, yAt(startX)),
+      Offset(startX, yAt(startX) + hookDirection),
       paint,
     );
     canvas.drawLine(
-      Offset(endX, bracketY),
-      Offset(endX, bracketY + hookDirection),
+      Offset(endX, yAt(endX)),
+      Offset(endX, yAt(endX) + hookDirection),
       paint,
     );
   }
@@ -272,10 +302,10 @@ class TupletRenderer extends BaseGlyphRenderer {
     required double endX,
     required List<Offset> anchorPositions,
     required List<Offset> notePositions,
-    required int number,
+    required String numberText,
     required int beamCount,
   }) {
-    if (anchorPositions.isEmpty) {
+    if (anchorPositions.isEmpty || numberText.isEmpty) {
       return;
     }
 
@@ -283,7 +313,14 @@ class TupletRenderer extends BaseGlyphRenderer {
         ? notePositions
         : anchorPositions;
     final stemUp = _stemUp(referenceNotes);
-    final bracketY = _calculateBracketY(referenceNotes, beamCount: beamCount);
+    final line = _bracketLine(
+      referenceNotes,
+      startX,
+      endX,
+      beamCount: beamCount,
+    );
+    // Number sits at the sloped bracket's midpoint.
+    final bracketY = (line.startY + line.endY) / 2;
     final centerX = (startX + endX) / 2;
 
     final numberOffset = stemUp
@@ -291,19 +328,31 @@ class TupletRenderer extends BaseGlyphRenderer {
         : coordinates.staffSpace * 0.95;
     final numberY = bracketY + numberOffset;
 
-    final glyphName = 'tuplet$number';
     final numberSize = coordinates.staffSpace * 2.2;
-    final glyphBounds = metadata.getGlyphBoundingBox(glyphName);
 
-    if (glyphBounds != null) {
+    // SMuFL tuplet glyphs: each digit is tuplet0..tuplet9 and ':' is
+    // tupletColon. Compose the display string ('3', '7', '5:4', '11:8', …) as a
+    // run of glyphs so multi-digit numbers and ratios render (not just one int).
+    String glyphFor(String ch) => ch == ':' ? 'tupletColon' : 'tuplet$ch';
+    // Advance width is in staff spaces at the standard 4-SS em; scale to the
+    // (smaller) tuplet font size.
+    final advScale = numberSize / 4.0;
+    double advanceOf(String glyph) =>
+        (metadata.getGlyphAdvanceWidth(glyph) ?? 0.55) * advScale;
+
+    final chars = numberText.split('');
+    final advances = [for (final c in chars) advanceOf(glyphFor(c))];
+    final totalWidth = advances.fold<double>(0.0, (a, b) => a + b);
+
+    // White mask behind the number (height from a representative digit).
+    final sampleBounds = metadata.getGlyphBoundingBox('tuplet${chars.first}');
+    if (sampleBounds != null) {
       final maskRect = RRect.fromRectAndRadius(
         Rect.fromCenter(
           center: Offset(centerX, numberY),
-          width:
-              glyphBounds.widthInPixels(coordinates.staffSpace) +
-              (coordinates.staffSpace * 0.7),
+          width: totalWidth + (coordinates.staffSpace * 0.5),
           height:
-              glyphBounds.heightInPixels(coordinates.staffSpace) +
+              sampleBounds.heightInPixels(coordinates.staffSpace) +
               (coordinates.staffSpace * 0.55),
         ),
         Radius.circular(coordinates.staffSpace * 0.35),
@@ -311,18 +360,34 @@ class TupletRenderer extends BaseGlyphRenderer {
       canvas.drawRRect(maskRect, Paint()..color = const Color(0xFFFFFFFF));
     }
 
-    drawGlyphWithBBox(
-      canvas,
-      glyphName: glyphName,
-      position: Offset(centerX, numberY),
-      color: theme.tupletColor ?? theme.stemColor,
-      options: GlyphDrawOptions(
-        size: numberSize,
-        centerVertically: true,
-        centerHorizontally: true,
-        trackBounds: false,
-      ),
-    );
+    final numberColor = theme.tupletColor ?? theme.stemColor;
+    var x = centerX - (totalWidth / 2);
+    for (var i = 0; i < chars.length; i++) {
+      if (chars[i] == ':') {
+        // Draw the ratio colon as two dots: the bundled Bravura may not cover
+        // the tupletColon glyph (U+E88A), so render it font-independently.
+        final cx = x + advances[i] / 2;
+        final r = numberSize * 0.055;
+        final dy = numberSize * 0.16;
+        final dotPaint = Paint()..color = numberColor;
+        canvas.drawCircle(Offset(cx, numberY - dy), r, dotPaint);
+        canvas.drawCircle(Offset(cx, numberY + dy), r, dotPaint);
+      } else {
+        drawGlyphWithBBox(
+          canvas,
+          glyphName: glyphFor(chars[i]),
+          position: Offset(x + advances[i] / 2, numberY),
+          color: numberColor,
+          options: GlyphDrawOptions(
+            size: numberSize,
+            centerVertically: true,
+            centerHorizontally: true,
+            trackBounds: false,
+          ),
+        );
+      }
+      x += advances[i];
+    }
   }
 
   void _drawSimpleBeams(

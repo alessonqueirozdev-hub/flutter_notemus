@@ -39,6 +39,11 @@ engraving-default parameterization), #5 (robust `repeatBoth` fallback),
 
 11. `multi_staff_example` still depends on missing `MultiStaffRenderer` support
     - Issue: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/7
+    - Current state (2.6.0): largely addressed — public `GrandStaff` (one
+      `StaffGroup`) and `ScoreView` (a whole `Score`) widgets now render
+      multi-staff systems (grand staff, SATB, full score, cross-staff beaming,
+      multi-system wrapping), and the example gallery uses them
+      (`GrandStaffExample`). The legacy local multi-staff demo was retired.
 
 12. Melisma extension lines still need multi-note context
     - Issue: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/13
@@ -67,11 +72,13 @@ shared `NoteRenderer.renderSyllables`).
 19. Jianpu (numbered notation) rendering — GB/T 46845-2025 conformance epic
     - Epic: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/24
     - Request: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/21
-    - Current state: not supported. Architecture is feasible — a new
-      `JianpuRenderer`/`JianpuScore` parallel to the SMuFL staff path, reusing
-      the existing notation-agnostic music model. Tracked section-by-section
-      against GB/T 46845-2025 in epic #24 (phased: §6 MVP, §5 structure, §7
-      auxiliary). The SMuFL staff path stays untouched.
+    - Current state: **work in progress / experimental.** A `JianpuRenderer` /
+      `JianpuScore` parallel to the SMuFL staff path now exists (reusing the
+      notation-agnostic music model) and basic rendering is shown in the example
+      gallery, but coverage is partial and the API may still change — not yet
+      production-ready. Tracked section-by-section against GB/T 46845-2025 in
+      epic #24 (phased: §6 MVP, §5 structure, §7 auxiliary). The SMuFL staff
+      path stays untouched.
 
 ## Update policy
 

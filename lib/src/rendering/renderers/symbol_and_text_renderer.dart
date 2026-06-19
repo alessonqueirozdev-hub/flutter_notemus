@@ -279,6 +279,7 @@ class SymbolAndTextRenderer {
     Dynamic dynamic,
     Offset basePosition, {
     double verticalOffset = 0.0,
+    double? lengthOverride,
   }) {
     if (dynamic.isHairpin) {
       _renderHairpin(
@@ -286,6 +287,7 @@ class SymbolAndTextRenderer {
         dynamic,
         basePosition,
         verticalOffset: verticalOffset,
+        lengthOverride: lengthOverride,
       );
       return;
     }
@@ -310,13 +312,18 @@ class SymbolAndTextRenderer {
         centerVertically: true,
         centerHorizontally: true,
       );
-    } else if (dynamic.customText != null) {
-      _drawText(
-        canvas,
-        text: dynamic.customText!,
-        position: Offset(basePosition.dx, dynamicY),
-        style: _dynamicTextStyle(),
-      );
+    } else {
+      // No combined glyph (word-based dynamic): fall back to explicit custom
+      // text, then to a standard textual abbreviation (cresc., dim., …).
+      final text = dynamic.customText ?? _getDynamicText(dynamic.type);
+      if (text != null) {
+        _drawText(
+          canvas,
+          text: text,
+          position: Offset(basePosition.dx, dynamicY),
+          style: _dynamicTextStyle(),
+        );
+      }
     }
   }
 
@@ -325,8 +332,12 @@ class SymbolAndTextRenderer {
     Dynamic dynamic,
     Offset basePosition, {
     double verticalOffset = 0.0,
+    double? lengthOverride,
   }) {
-    final length = dynamic.length ?? coordinates.staffSpace * 6;
+    // Precedence: explicit model length, then the computed span to the next
+    // dynamic/barline, then a 6-SS default stub.
+    final length =
+        dynamic.length ?? lengthOverride ?? coordinates.staffSpace * 6;
     // Fix: Use same Y position that dynamic
     // Fix: LACERDA: Add verticalOffset for avoid overlap
     final hairpinY =
@@ -401,17 +412,71 @@ class SymbolAndTextRenderer {
     );
   }
 
+  /// Maps a [DynamicType] to its SMuFL combined-dynamic glyph name.
+  ///
+  /// Covers both the full-word spellings (`piano`, `forte`, …) and the
+  /// abbreviations (`p`, `f`, …); previously only a handful of abbreviations
+  /// were mapped, so `DynamicType.piano`/`.forte`/`.mezzoForte`/`.fff`/… — the
+  /// spellings used throughout the README and public API — returned null and
+  /// rendered nothing. Word-based dynamics (crescendo, subito, …) have no single
+  /// glyph and fall through to [_getDynamicText].
   String? _getDynamicGlyph(DynamicType type) {
-    const dynamicGlyphs = {
-      DynamicType.p: 'dynamicPiano',
-      DynamicType.mp: 'dynamicMezzoPiano',
-      DynamicType.mf: 'dynamicMezzoForte',
-      DynamicType.f: 'dynamicForte',
+    const dynamicGlyphs = <DynamicType, String>{
+      // Full-word spellings
+      DynamicType.pianississimo: 'dynamicPPP',
+      DynamicType.pianissimo: 'dynamicPP',
+      DynamicType.piano: 'dynamicPiano',
+      DynamicType.mezzoPiano: 'dynamicMP',
+      DynamicType.mezzoForte: 'dynamicMF',
+      DynamicType.forte: 'dynamicForte',
+      DynamicType.fortissimo: 'dynamicFF',
+      DynamicType.fortississimo: 'dynamicFFF',
+      // Extremes
+      DynamicType.pppp: 'dynamicPPPP',
+      DynamicType.ppppp: 'dynamicPPPPP',
+      DynamicType.pppppp: 'dynamicPPPPPP',
+      DynamicType.ffff: 'dynamicFFFF',
+      DynamicType.fffff: 'dynamicFFFFF',
+      DynamicType.ffffff: 'dynamicFFFFFF',
+      // Abbreviations
+      DynamicType.ppp: 'dynamicPPP',
       DynamicType.pp: 'dynamicPP',
+      DynamicType.p: 'dynamicPiano',
+      DynamicType.mp: 'dynamicMP',
+      DynamicType.mf: 'dynamicMF',
+      DynamicType.f: 'dynamicForte',
       DynamicType.ff: 'dynamicFF',
+      DynamicType.fff: 'dynamicFFF',
+      // Special accents
       DynamicType.sforzando: 'dynamicSforzando1',
+      DynamicType.sforzandoFF: 'dynamicSforzatoFF',
+      DynamicType.sforzandoPiano: 'dynamicSforzandoPiano',
+      DynamicType.sforzandoPianissimo: 'dynamicSforzandoPianissimo',
+      DynamicType.rinforzando: 'dynamicRinforzando2',
+      DynamicType.fortePiano: 'dynamicFortePiano',
+      DynamicType.niente: 'dynamicNiente',
     };
     return dynamicGlyphs[type];
+  }
+
+  /// Text fallback for word-based dynamics that have no single SMuFL glyph.
+  String? _getDynamicText(DynamicType type) {
+    switch (type) {
+      case DynamicType.crescendo:
+        return 'cresc.';
+      case DynamicType.diminuendo:
+        return 'dim.';
+      case DynamicType.subito:
+        return 'sub.';
+      case DynamicType.possibile:
+        return 'poss.';
+      case DynamicType.menoMosso:
+        return 'meno mosso';
+      case DynamicType.piuMosso:
+        return 'più mosso';
+      default:
+        return null;
+    }
   }
 
   TextStyle _dynamicTextStyle({double fontScale = 0.4}) {
@@ -879,6 +944,7 @@ class SymbolAndTextRenderer {
         text: character,
         style: TextStyle(
           fontFamily: 'Bravura',
+          package: 'flutter_notemus',
           fontSize: size,
           color: color,
           height: 1.0,

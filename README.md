@@ -4,10 +4,10 @@
 [![Flutter](https://img.shields.io/badge/Flutter-3.0+-blue.svg)](https://flutter.dev/)
 [![Dart](https://img.shields.io/badge/Dart-3.8.1+-blue.svg)](https://dart.dev/)
 [![SMuFL](https://img.shields.io/badge/SMuFL-1.40-green.svg)](https://w3c.github.io/smufl/latest/)
-[![MEI](https://img.shields.io/badge/MEI-v5%20100%25-brightgreen.svg)](https://music-encoding.org/guidelines/v5/content/index.html)
+[![MEI](https://img.shields.io/badge/MEI-v5%20CMN-green.svg)](https://music-encoding.org/guidelines/v5/content/index.html)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-Professional music notation rendering for Flutter with SMuFL-compliant engraving, Bravura glyph support, first-party notation-to-MIDI pipeline, and **full MEI v5 conformance**.
+Professional music notation rendering for Flutter with SMuFL-compliant engraving, Bravura glyph support, a first-party notation-to-MIDI pipeline, and a **broad MEI v5 data model with CMN import/export** (see the [conformance section](#mei-v5-conformance) for what is imported/rendered vs. modeled).
 
 ---
 
@@ -51,6 +51,8 @@ Professional music notation rendering for Flutter with SMuFL-compliant engraving
   - [Octave Markings](#octave-markings)
   - [Volta Brackets](#volta-brackets)
   - [Polyphony and Multi-Voice](#polyphony-and-multi-voice)
+  - [Grand Staff, Choir, and Full Scores](#grand-staff-choir-and-full-scores)
+  - [Gregorian Chant (Greciliae)](#gregorian-chant-greciliae)
   - [Repeats](#repeats)
   - [Playing Techniques](#playing-techniques)
   - [Breath and Caesura](#breath-and-caesura)
@@ -66,35 +68,44 @@ Professional music notation rendering for Flutter with SMuFL-compliant engraving
 
 ## MEI v5 Conformance
 
-flutter_notemus implements **100% of the MEI v5 (Music Encoding Initiative) specification**, covering all repertoires and analytical features defined in the [MEI v5 Guidelines](https://music-encoding.org/guidelines/v5/content/index.html).
+flutter_notemus ships a **notation-agnostic data model that covers the breadth of MEI v5 concepts** — from CMN through tablature, mensural, neume, harmonic analysis and figured bass — defined in the [MEI v5 Guidelines](https://music-encoding.org/guidelines/v5/content/index.html).
+
+**Important — what is actually imported/rendered vs. modeled.** MEI *import* and *rendering* focus on **Common Music Notation (CMN)**, which is well supported. Several advanced MEI modules exist in the data model (you can construct them in Dart) but are **not yet wired to the MEI parser/renderer** — they are marked *Model only* below. The table reflects what is genuinely imported and/or rendered, not just representable. (An adversarial audit found ~58% of catalogued items fully wired; the rest are model-only or partial.)
 
 ### Coverage by MEI v5 module
 
-| MEI v5 Module | Coverage | Key classes |
+Legend: ✅ modeled **and** imported/rendered · ◐ partial (see note) · ○ *model only* (classes exist; no MEI import/render yet).
+
+| MEI v5 Module | Status | Notes |
 |---|---|---|
-| **CMN — Pitch & Duration** | ✅ 100% | `Pitch`, `Duration`, `DurationType` (maxima → 2048th) |
-| **CMN — Events** | ✅ 100% | `Note`, `Rest`, `Chord`, `Space`, `MeasureSpace` |
-| **CMN — Measure & Staff** | ✅ 100% | `Measure` (with `@n`), `Staff` (configurable `lineCount`), `xml:id` on all elements |
-| **CMN — Clef / Key / Meter** | ✅ 100% | `Clef` (20 types), `KeySignature` (with `KeyMode`), `TimeSignature` (free + additive) |
-| **CMN — Articulation** | ✅ 100% | `ArticulationType` (17 types), `Articulation` |
-| **CMN — Dynamics** | ✅ 100% | `Dynamic`, `DynamicType` (44 types, hairpin) |
-| **CMN — Ornaments** | ✅ 100% | `Ornament`, `OrnamentType` (60+ types) |
-| **CMN — Slur / Tie / Beam** | ✅ 100% | `SlurType`, `TieType`, `BeamType`, `AdvancedSlur` |
-| **CMN — Tuplets** | ✅ 100% | `Tuplet`, `TupletBracket`, nested tuplets |
-| **CMN — Polyphony** | ✅ 100% | `Voice`, `MultiVoiceMeasure`, `StemDirection` |
-| **CMN — Score structure** | ✅ 100% | `Score`, `StaffGroup`, `ScoreDefinition` (`<scoreDef>`) |
-| **CMN — Navigation** | ✅ 100% | `RepeatMark`, `VoltaBracket`, `BarlineType` (12 types) |
-| **Lyrics & Text** | ✅ 100% | `MusicText`, `Verse`, `Syllable`, `SyllableType` (MEI `<syl>`) |
-| **Metadata (meiHead)** | ✅ 100% | `MeiHeader`, `FileDescription`, `EncodingDescription`, `WorkList`, `ManifestationList`, `RevisionDescription` |
-| **Harmonic Analysis** | ✅ 100% | `HarmonicLabel`, `MelodicInterval`, `HarmonicInterval`, `ScaleDegree`, `ChordTable` |
-| **Figured Bass** | ✅ 100% | `FiguredBass`, `FigureElement` (MEI `<fb>/<f>`) |
-| **Microtonality** | ✅ 100% | `AccidentalType` (sagittal, koma, quarter-tone), `Pitch.pitchClass` |
-| **Solmization** | ✅ 100% | `Pitch.fromSolmization()`, `Pitch.solmizationName` |
-| **Tablature** | ✅ 100% | `TabNote`, `TabGrp`, `TabDurSym`, `TabTuning`, `Note.tabFret/tabString` |
-| **Mensural Notation** | ✅ 100% | `MensuralNote`, `Ligature`, `Mensur`, `ProportMark`, `MensuralRest` |
-| **Neume Notation** | ✅ 100% | `Neume`, `NeumeComponent`, `NeumeType`, `NeumeDivision` |
+| **CMN — Pitch & Duration** | ✅ | `Pitch`, `Duration`, `DurationType` (maxima → 2048th) |
+| **CMN — Events** | ✅ | `Note`, `Rest`, `Chord`, `Space`, `MeasureSpace` |
+| **CMN — Measure & Staff** | ✅ | `Measure` (`@n`), `Staff` (configurable `lineCount`), `xml:id` |
+| **CMN — Clef / Key / Meter** | ◐ | `Clef` (20 types) ✅; `KeyMode` and additive meter exist in the model but are **not parsed from MEI** yet |
+| **CMN — Articulation** | ✅ | `ArticulationType` (17 types) |
+| **CMN — Dynamics** | ◐ | `DynamicType` has 36 types; 9 are rendered, plus hairpins |
+| **CMN — Ornaments** | ◐ | `OrnamentType` has 43 types; 33 mapped to glyphs |
+| **CMN — Slur / Tie / Beam** | ✅ | `SlurType`, `TieType`, `BeamType`, `SlurEvent` (nested/numbered) |
+| **CMN — Tuplets** | ✅ | `Tuplet`, `TupletBracket`, nested tuplets |
+| **CMN — Polyphony** | ✅ | `Voice`, `MultiVoiceMeasure`, `StemDirection` |
+| **CMN — Score structure** | ✅ | `Score`, `StaffGroup`, `ScoreDefinition` (`<scoreDef>`) |
+| **CMN — Navigation** | ✅ | `RepeatMark`, `VoltaBracket`, `BarlineType` (15 types) |
+| **Lyrics & Text** | ◐ | `Syllable`/`SyllableType` imported & rendered; `Verse` grouping not populated by the parser yet |
+| **Metadata (meiHead / FRBR)** | ○ | `MeiHeader` & FRBR classes exist; **not parsed from MEI** |
+| **Harmonic Analysis** | ○ | `HarmonicLabel`, `ScaleDegree`, `ChordTable` exist; **not parsed/rendered** |
+| **Figured Bass** | ○ | `FiguredBass`, `FigureElement` exist; **not parsed/rendered** |
+| **Microtonality** | ✅ | `AccidentalType` (sagittal, koma, quarter-tone) — modeled & rendered |
+| **Solmization** | ✅ | `Pitch.fromSolmization()`, `Pitch.solmizationName` |
+| **Tablature** | ◐ | `Note.tabFret/tabString` modeled & rendered; MEI `@tab.*` **import not implemented** |
+| **Mensural Notation** | ○ | `MensuralNote`, `Ligature`, `Mensur` exist; **no MEI import/render** |
+| **Neume Notation** | ◐ | rendered via **GABC/Gregorian**; MEI `<neume>` import not implemented |
 
 ### Key MEI v5 features
+
+> These snippets show the **Dart model API** (constructing objects). For modules
+> marked *Model only* / ◐ above (figured bass, mensural, full `meiHead`, MEI
+> `<neume>`), the objects are constructible but are **not yet imported from MEI
+> XML or rendered** — see the status table.
 
 ```dart
 // xml:id on any element (MEI cross-referencing)
@@ -146,7 +157,7 @@ Neume(type: NeumeType.pes, components: [
   NeumeComponent(pitchName: 'G', octave: 3, form: NcForm.virga),
 ])
 
-// Full MEI header (meiHead)
+// MEI header (meiHead) — model API; not yet parsed from MEI XML
 Score(
   staffGroups: [...],
   meiHeader: MeiHeader(
@@ -187,20 +198,48 @@ For a full conformance audit see [`doc/MEI_V5_AUDIT.md`](doc/MEI_V5_AUDIT.md).
 ## Current Status
 
 - Current package release target: `2.6.0`
-- Previous pub.dev baseline before the new generation: `0.1.0`
-- Core notation rendering is production-ready.
-- MIDI mapping and `.mid` export are available in the package.
+- Previous pub.dev baseline: `2.5.1`
+- Core notation rendering is production-ready; **multi-staff / grand-staff and
+  cross-staff beaming** are now supported alongside single-staff `MusicScore`.
+- MIDI mapping and `.mid` export are available in the package (CMN and chant).
 - Android native audio backend is active; other native targets are configured and tracked as pending.
 
 ### What's New in 2.6.0
 
-- Engraving/typographic correctness pass closing issues [#3](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/3), [#4](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/4), [#5](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/5), [#8](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/8), [#9](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/9), and [#12](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/12).
-- Staff-group braces now use the scalable SMuFL `brace` glyph (vertically stretched to the group height) with the legacy custom path kept as an automatic fallback.
-- `repeatBoth` barlines render reliably even when the combined `repeatLeftRight` glyph is missing, by composing `repeatRight` + `repeatLeft` from SMuFL advance metrics.
-- Stem/flag attachment is derived from the SMuFL stem anchor + half `stemThickness`, scaled by `staffSpace`; the hardcoded raw-pixel offset constants were removed so primitives stay proportional at every score size.
-- `Chord` elements now render `Note.syllables` with the same typography as single notes (`NoteRenderer.renderSyllables` is now public; `ChordRenderer.lyricNoteFor` selects the lyric note).
-- `SpacingResult` (`getShortestNoteDuration`/`getMaxWidth`) accounts for `Chord` and `Tuplet` (ratio-aware, recursive for nested tuplets); a misleading dead `Duration.tuplet` TODO in `MeasureValidator` was removed.
-- New regression suites for spacing/validation of chords & tuplets, stem/flag scaling, repeat barlines, the brace glyph, and chord lyrics.
+The library is no longer single-staff. This release adds a full multi-staff /
+score renderer, cross-staff beaming, a sweep of Behind-Bars CMN corrections,
+deeper MusicXML/MEI import, and Gregorian render-fidelity work — and also
+consolidates the earlier engraving/typographic correctness pass that had not
+yet reached pub.dev. Everything is backward-compatible — existing `MusicScore`
+usage is unchanged. See the [CHANGELOG](CHANGELOG.md#260---2026-06-19) for the
+full list.
+
+- **Grand staff, choir, and full scores** — new [`GrandStaff`](#grand-staff-choir-and-full-scores)
+  and `ScoreView` widgets render a `StaffGroup`/`Score` on a shared horizontal
+  grid: piano grand staff, SATB, and multi-section systems, with SMuFL
+  brace/bracket glyphs, system-spanning barlines, **multi-system wrapping**
+  (clef/key restated per system), and **cross-staff beaming**.
+- **MusicXML import → scores** — each part becomes a braced/bracketed
+  `StaffGroup`; `<part-group>` section brackets and mid-beam `<staff>` changes
+  (auto cross-staff) are honored.
+- **CMN engraving** — chord-stem direction fix, Gould square-root /
+  inter-onset spacing, mid-system clef/key/time changes, cue-size clef changes,
+  cautionary/editorial accidentals, nested slurs, additive meters, tuplet
+  ratios, sloped tuplet brackets, chord articulations, cross-voice notehead
+  displacement, and more.
+- **Gregorian chant** — episema/mora rendered with Greciliae glyphs
+  (shape-specific episema), asymmetric divisio breathing, climacus/strophae
+  tucking, custos length by leap.
+- **Earlier engraving/typography pass** (also shipping here) — SMuFL `brace`
+  glyph for staff-group braces, robust `repeatBoth` barlines, chord lyrics via
+  the public `NoteRenderer.renderSyllables`, SMuFL-anchored stem/flag
+  attachment, and `Chord`/`Tuplet`-aware spacing — closing issues
+  [#3](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/3),
+  [#4](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/4),
+  [#5](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/5),
+  [#8](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/8),
+  [#9](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/9), and
+  [#12](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/12).
 
 ### What's New in 2.5.1
 
@@ -264,8 +303,21 @@ All pending work is tracked as GitHub issues, with the local index mirrored in [
 
 - Multiple voices in a single staff (`MultiVoiceMeasure`)
 - Multi-staff score support (`Score`, `StaffGroup`)
-- Grand staff scenarios (piano)
-- SATB-style aligned staff rendering
+- `GrandStaff` / `ScoreView` widgets rendering a group on a shared horizontal grid
+- Grand staff scenarios (piano) with SMuFL `brace` and system-spanning barline
+- SATB-style aligned staff rendering with `bracket` glyphs
+- **Cross-staff beaming** (`Note.crossStaffMove`) — beams that cross between staves
+- **Multi-system wrapping** with clef/key restated at each system start
+
+### Gregorian chant (square notation)
+
+- Greciliae font (SIL OFL) precomposed neumes — not geometry-built from CMN glyphs
+- Punctum, virga, podatus/clivis, torculus/porrectus, scandicus/climacus, quilisma
+- Liquescence, compound neumes, repeated notes, special neumes
+- Episema and *mora* (augmentation dot) rendered with shape-specific Greciliae glyphs
+- Divisio (minima/minor/maior/finalis) with asymmetric breathing space
+- Custos (line-end guide) sized by the leap to the next system
+- GABC import and `ChantScore` playback mapping
 
 ### Import and interoperability
 
@@ -290,7 +342,7 @@ Add dependency to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  flutter_notemus: ^2.5.1
+  flutter_notemus: ^2.6.0
 ```
 
 Install packages:
@@ -634,6 +686,112 @@ voice2.add(Note(
 measure.addVoice(voice1);
 measure.addVoice(voice2);
 ```
+
+### Grand Staff, Choir, and Full Scores
+
+`MusicScore` renders a single `Staff`. To render several staves **vertically
+stacked and aligned on a shared horizontal grid** — a piano grand staff, an
+SATB choir, or a full multi-section score — use the `GrandStaff` widget (one
+`StaffGroup`) or `ScoreView` (a whole `Score`).
+
+A `StaffGroup` is a list of staves plus the connector drawn at the left edge:
+
+| `BracketType` | Glyph | Typical use |
+| --- | --- | --- |
+| `brace`   | `{` (SMuFL `brace`) | Keyboard — piano, organ, harp |
+| `bracket` | `[` (SMuFL `bracketTop`/`bracketBottom`) | Choir (SATB), orchestral sections |
+| `line`    | `\|` | Multiple desks of the same instrument (Vln I & II) |
+| `none`    | — | Independent staves |
+
+```dart
+// Piano grand staff: two staves joined by a brace, barlines connected,
+// system-spanning start barline drawn automatically.
+GrandStaff(
+  group: StaffGroup.piano(trebleStaff, bassStaff),
+);
+
+// or explicitly:
+GrandStaff(
+  group: StaffGroup(
+    staves: [soprano, alto, tenor, bass],
+    bracket: BracketType.bracket, // choir
+    name: 'Choir',
+  ),
+);
+```
+
+There are convenience factories for common ensembles: `StaffGroup.piano`,
+`.organ`, `.harp`, `.choir`, `.strings`, `.woodwinds`, `.brass`, `.percussion`,
+and `.multipleInstruments`.
+
+**Full scores.** A `Score` holds multiple `StaffGroup`s. `ScoreView` lays every
+group out on a single unified grid (a true multi-section system):
+
+```dart
+final score = Score(staffGroups: [choir, piano]);
+ScoreView(score: score);
+```
+
+**Multi-system wrapping.** When the music is wider than the available width,
+`GrandStaff`/`ScoreView` break into stacked systems automatically, **restating
+the clef and key signature at the start of every system** and keeping all staves
+aligned on the same break points (ragged-right, Behind-Bars style).
+
+**Cross-staff beaming.** In keyboard music a beamed group can cross between the
+two staves. A note keeps its *home* staff (for voicing, beaming, and spacing)
+but its notehead is drawn on another staff via `Note.crossStaffMove`:
+
+```dart
+Note(
+  pitch: const Pitch(step: 'C', octave: 4),
+  duration: const Duration(DurationType.eighth),
+  beam: BeamType.begin,
+  crossStaffMove: -1, // draw this notehead one staff up; beam crosses the gap
+);
+```
+
+`0` = home staff, `-1` = one staff up, `+1` = one staff down. The grand-staff
+renderer routes the beam and stems across the staff gap to the displaced
+noteheads. Cross-staff beams are also produced automatically on MusicXML import
+when a `<staff>` change occurs mid-beam (see
+[Import](#import-from-json-musicxml-and-mei)).
+
+### Gregorian Chant (Greciliae)
+
+The library renders Gregorian **square notation** with the Greciliae font (SIL
+OFL) — precomposed neume glyphs, *not* shapes assembled from common-music
+noteheads. Use the `ChantScore` widget. The fastest path is GABC (the Gregorio
+project's plain-text chant format):
+
+```dart
+ChantScore.fromGabc(
+  '(c4) Ký(h)ri(h)e(hgh) *(,) e(hg)lé(hi)i(h)son.(g) (::)',
+);
+```
+
+`(c4)` is the clef (do/fa on a staff line), letters are pitches, `(,)`/`(::)`
+are divisiones (breath marks / final), and modifiers encode episema, *mora*,
+quilisma, liquescence, and compound neumes.
+
+You can also build chant element-by-element with `Neume` / `NeumeDivision` and
+render with an explicit clef:
+
+```dart
+ChantScore(
+  clef: const ChantClef(type: ChantClefType.doClef, line: 4),
+  elements: [
+    Neume(/* components: punctum, podatus, clivis, … */),
+    NeumeDivision(type: NeumeDivisionType.minor),
+  ],
+);
+```
+
+Rendering covers: punctum, virga, podatus/clivis, torculus/porrectus,
+scandicus/climacus, quilisma, liquescence, compound and repeated neumes,
+shape-specific horizontal episema and *mora* glyphs, asymmetric divisio
+breathing space, climacus/strophae tucking, and a custos (end-of-line guide)
+sized by the leap to the next system. Chant can be sent to MIDI with
+`ChantMidiMapper` (see [MIDI](#midi-mapping-and-export)).
 
 ### Repeats
 

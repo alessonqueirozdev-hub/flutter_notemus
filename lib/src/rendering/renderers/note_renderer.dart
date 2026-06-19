@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import '../../../core/core.dart';
 import '../../smufl/smufl_metadata_loader.dart';
 import '../../theme/music_score_theme.dart';
+import '../accidental_resolver.dart';
 import '../smufl_positioning_engine.dart';
 import '../staff_coordinate_system.dart';
 import '../staff_position_calculator.dart';
@@ -110,6 +111,7 @@ class NoteRenderer extends BaseGlyphRenderer {
     Clef currentClef, {
     bool renderOnlyNotehead = false,
     int? voiceNumber,
+    AccidentalDisplay accidentalDisplay = AccidentalDisplay.show,
   }) {
     final staffPosition = StaffPositionCalculator.calculate(
       note.pitch,
@@ -149,7 +151,8 @@ class NoteRenderer extends BaseGlyphRenderer {
 
     final noteCenter = Offset(basePosition.dx + centerX, noteY + centerY);
 
-    accidentalRenderer.render(canvas, note, notePos, staffPosition.toDouble());
+    accidentalRenderer.render(canvas, note, notePos, staffPosition.toDouble(),
+        display: accidentalDisplay);
 
     drawGlyphWithBBox(
       canvas,
@@ -302,7 +305,10 @@ class NoteRenderer extends BaseGlyphRenderer {
     switch (syllable.type) {
       case SyllableType.initial:
       case SyllableType.middle:
-        displayText = '${syllable.text}-';
+        // The connecting hyphen is drawn CENTERED between this syllable and the
+        // next by StaffRenderer's post-layout lyric-hyphen pass (#14), not glued
+        // to the syllable text.
+        displayText = syllable.text;
       case SyllableType.hyphen:
         displayText = '-';
       case SyllableType.single:
@@ -310,10 +316,15 @@ class NoteRenderer extends BaseGlyphRenderer {
         displayText = syllable.text;
     }
 
-    final textStyle = TextStyle(
-      fontSize: fontSize,
-      color: color,
-      fontStyle: syllable.italic ? FontStyle.italic : FontStyle.normal,
+    // Respect theme.lyricTextStyle (font family/weight/etc.) when provided,
+    // falling back to size-aware defaults. Previously this field was ignored.
+    final base = theme.lyricTextStyle ?? const TextStyle();
+    final textStyle = base.copyWith(
+      fontSize: base.fontSize ?? fontSize,
+      color: base.color ?? color,
+      fontStyle: syllable.italic
+          ? FontStyle.italic
+          : (base.fontStyle ?? FontStyle.normal),
       height: 1.0,
     );
 
@@ -326,23 +337,9 @@ class NoteRenderer extends BaseGlyphRenderer {
     final textX = noteX - painter.width * 0.5;
     painter.paint(canvas, Offset(textX, y - painter.height * 0.5));
 
-    // For syllables únicas/terminais, desenhar line de melisma curta if a note
-    // for melismática (text igual to the syllable = vocalização estendida).
-    // A extension completa requer position of the note seguinte (Rendersda pelo StaffRenderer).
-    // Aqui only marcamos o start of the line with a traço de 1 SS de length.
-    if (syllable.type == SyllableType.single ||
-        syllable.type == SyllableType.terminal) {
-      if (syllable.italic) {
-        // Convenção: italic sinaliza melisma — traço de extension initial
-        final lineStartX = textX + painter.width + fontSize * 0.2;
-        final lineEndX = lineStartX + coordinates.staffSpace;
-        final paint = Paint()
-          ..color = color
-          ..strokeWidth = 0.8
-          ..style = PaintingStyle.stroke;
-        canvas.drawLine(Offset(lineStartX, y), Offset(lineEndX, y), paint);
-      }
-    }
+    // Melisma extension lines are drawn by StaffRenderer's post-layout pass
+    // (_renderMelismaLines, #13), which has the X of the following notes and can
+    // extend the line to the actual end of the melisma instead of a fixed stub.
   }
 
   /// Determina a direction of the stem pela voice (polyphony) or pela staff position.
@@ -368,7 +365,9 @@ class NoteRenderer extends BaseGlyphRenderer {
       return note.voice!.isOdd;
     }
 
-    // Regra posicional (voice única)
-    return staffPosition <= 0;
+    // Regra posicional (voz única, Gould): notas acima da linha do meio →
+    // haste para baixo; abaixo → para cima; NA linha do meio (staffPosition 0)
+    // → haste para baixo por convenção.
+    return staffPosition < 0;
   }
 }

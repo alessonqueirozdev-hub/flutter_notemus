@@ -64,7 +64,13 @@ export 'src/rendering/renderers/base_glyph_renderer.dart';
 export 'src/rendering/jianpu/jianpu_pitch_mapper.dart';
 export 'src/rendering/jianpu/jianpu_renderer.dart' show JianpuTheme;
 export 'src/rendering/jianpu/jianpu_score.dart';
+export 'src/rendering/gregorian/gregorian_renderer.dart'
+    show GregorianTheme, ChantClef, ChantClefType;
+export 'src/rendering/gregorian/chant_score.dart';
+export 'src/rendering/gregorian/chant_playback.dart';
+export 'src/rendering/gregorian/gabc_parser.dart' show GabcParser, GabcResult;
 export 'src/layout/collision_detector.dart';
+export 'src/widgets/grand_staff.dart' show GrandStaff, ScoreView;
 
 /// The main Flutter widget for rendering music notetion.
 ///

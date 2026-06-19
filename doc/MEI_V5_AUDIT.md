@@ -1,11 +1,13 @@
 # Auditoria de Conformidade: flutter_notemus × MEI v5
 
 > **Data da auditoria inicial:** 2026-03-23
-> **Data da auditoria de cobertura completa:** 2026-03-23
-> **Versão auditada:** flutter_notemus 2.5.1
+> **Reauditoria adversarial (cruzada com o código):** 2026-06-19
+> **Versão auditada:** flutter_notemus 2.6.0
 > **Especificação de referência:** Music Encoding Initiative Guidelines v5
 > **URL:** https://music-encoding.org/guidelines/v5/content/index.html
-> **Resultado:** ✅ **100% de conformidade com MEI v5**
+> **Resultado (reauditado):** ◐ **~58% dos itens totalmente conformes** (79 de 137 linhas implementadas **e** ligadas ao import/render MEI). O **modelo de dados** cobre amplamente os conceitos do MEI v5, mas o **import/render MEI foca em CMN**; módulos avançados (metadados/FRBR, análise harmônica, baixo cifrado, mensural, tablatura-via-MEI, neuma-via-MEI) existem apenas no modelo. Legenda das tabelas: ✅ modelado **e** importado/renderizado · ⚠️ parcial · ○ só modelo.
+
+> **Nota de honestidade (2026-06-19):** a alegação anterior de "100% de conformidade" era um *overclaim* — confundia *cobertura do modelo de dados* com *suporte real de import/render MEI*. As tabelas abaixo foram corrigidas para refletir o que o código de fato faz.
 
 ---
 
@@ -52,35 +54,38 @@
 
 ## 1. Resumo Executivo
 
-O pacote **flutter_notemus v2.5.1** atingiu **conformidade total (100%) com o MEI v5** após a implementação de todas as lacunas identificadas na auditoria inicial de 2026-03-23.
+O **modelo de dados** do **flutter_notemus v2.6.0** cobre amplamente os conceitos do MEI v5 (você consegue construir os objetos em Dart). Porém o **import/render MEI real** é focado em **CMN**: a reauditoria adversarial de 2026-06-19 (cruzando cada linha com o código) encontrou **79 de 137 itens (~58%) totalmente conformes** — modelados **e** efetivamente importados/renderizados. Os demais existem apenas no modelo (classes definidas, sem parsing/render MEI) ou são parciais.
 
-A biblioteca agora cobre integralmente:
-- Todos os **14 capítulos** das MEI v5 Guidelines
-- Os **4 repertórios** do MEI: CMN, Mensural, Neuma e Tablatura
-- O modelo bibliográfico **FRBR** completo no cabeçalho
-- Análise harmônica com `intm`, `mfunc`, `deg`, `inth` e `ChordTable`
-- Solmização e `pitchClass` conforme MEI v5
-- Todas as durações MEI de `maxima` até `2048`
+Bem suportado (CMN, import + render):
+- Pitch/duration (`maxima`→`2048`), eventos (nota/pausa/acorde/espaço), compasso & pauta
+- Clave, ligaduras (slur/tie/beam, incl. `SlurEvent` numerado), quiálteras, polifonia
+- Estrutura de partitura (`scoreDef`/grupos), repetições/volta, sílabas de letra
+
+Apenas no modelo (○) ou parcial (⚠️) — **sem import/render MEI completo**:
+- Metadados/FRBR (`meiHead`), análise harmônica (`harm`/`intm`/`deg`/`ChordTable`), baixo cifrado (`fb`/`f`)
+- Notação mensural, tablatura via MEI (`@tab.*`), neuma via MEI (`<neume>` — render só por GABC)
+- `@mode` e metros aditivos (`meterSigGrp`) existem no modelo mas não são lidos do MEI
 
 | Módulo MEI v5 | Status |
 |---|---|
-| CMN — Pitch & Duration | ✅ 100% |
-| CMN — Events (Note/Rest/Chord/Space) | ✅ 100% |
-| CMN — Measure & Staff | ✅ 100% |
-| CMN — Clef / Key / Meter | ✅ 100% |
-| CMN — Articulation / Dynamics / Ornaments | ✅ 100% |
-| CMN — Slur / Tie / Beam / Tuplet | ✅ 100% |
-| CMN — Polyphony / Score structure | ✅ 100% |
-| CMN — Navigation (Repeats / Volta) | ✅ 100% |
-| Lyrics & Text (Verse / Syllable) | ✅ 100% |
-| Metadata (meiHead / FRBR) | ✅ 100% |
-| Harmonic Analysis | ✅ 100% |
-| Figured Bass | ✅ 100% |
-| Microtonality & Solmization | ✅ 100% |
-| Tablature | ✅ 100% |
-| Mensural Notation | ✅ 100% |
-| Neume Notation | ✅ 100% |
-| MEI Parser nativo | ✅ Implementado |
+| CMN — Pitch & Duration | ✅ |
+| CMN — Events (Note/Rest/Chord/Space) | ✅ |
+| CMN — Measure & Staff | ✅ |
+| CMN — Clef / Key / Meter | ⚠️ (`@mode`/aditivo não lidos do MEI) |
+| CMN — Articulation | ✅ |
+| CMN — Dynamics / Ornaments | ⚠️ (contagens corrigidas; subconjunto renderizado) |
+| CMN — Slur / Tie / Beam / Tuplet | ✅ |
+| CMN — Polyphony / Score structure | ✅ |
+| CMN — Navigation (Repeats / Volta) | ✅ |
+| Lyrics & Text (Syllable) | ⚠️ (`Verse` não populado pelo parser) |
+| Metadata (meiHead / FRBR) | ○ só modelo |
+| Harmonic Analysis | ○ só modelo |
+| Figured Bass | ○ só modelo |
+| Microtonality & Solmization | ✅ (modelo/render) |
+| Tablature | ⚠️ (render via modelo; sem import MEI) |
+| Mensural Notation | ○ só modelo |
+| Neume Notation | ⚠️ (render via GABC; sem import MEI `<neume>`) |
+| MEI Parser nativo | ⚠️ (escopo CMN, não MEI v5 completo) |
 
 ---
 
@@ -123,10 +128,16 @@ O **Music Encoding Initiative (MEI)** é um padrão aberto baseado em XML para r
 
 Esta auditoria comparou, elemento por elemento, todos os conceitos definidos nas **MEI v5 Guidelines** com as implementações nos **40+ arquivos Dart** do modelo musical (`lib/core/`).
 
-Critérios de avaliação:
+Critérios de avaliação (revisados na reauditoria de 2026-06-19 — o critério
+original "✅ = modelado" era leniente demais e produziu o overclaim de "100%"):
 
-- **✅ Conforme**: conceito MEI corretamente modelado com fidelidade semântica
-- **➕ Extensão**: flutter_notemus oferece funcionalidade além do escopo MEI (ex.: rendering SMuFL, MIDI, animação)
+- **✅ Conforme**: conceito MEI modelado **e** efetivamente ligado ao import e/ou
+  render MEI (verificado no código, com file:line).
+- **⚠️ Parcial**: modelado mas com lacunas (ex.: parseado mas não renderizado,
+  ou só um subconjunto coberto, ou contagem divergente).
+- **○ Só modelo**: a classe/campo existe em `lib/core/` mas **não é instanciado
+  por nenhum parser/renderer** (declaração não utilizada).
+- **➕ Extensão**: funcionalidade além do escopo MEI (ex.: SMuFL, MIDI, GABC).
 
 ---
 
@@ -219,6 +230,8 @@ Todos os 20+ tipos de clave MEI implementados em `ClefType`: treble, bass, alto,
 
 ### 4.7 Armadura de Clave (Key Signature)
 
+> **Ressalva (2026-06-19):** `KeyMode`/`@mode` existe no modelo, mas **não é lido do MEI** (o parser deixa `null`).
+
 | Conceito MEI | Implementação | Status |
 |---|---|---|
 | 0–7 sustenidos | `KeySignature.count` positivo | ✅ |
@@ -229,6 +242,8 @@ Todos os 20+ tipos de clave MEI implementados em `ClefType`: treble, bass, alto,
 ---
 
 ### 4.8 Fórmula de Compasso (Time Signature)
+
+> **Ressalva (2026-06-19):** o metro aditivo (`TimeSignature.additive`/`<meterSigGrp>`) existe no modelo, mas **não é parseado do MEI**.
 
 | Conceito MEI | Implementação | Status |
 |---|---|---|
@@ -250,17 +265,21 @@ Todos os 20+ tipos de clave MEI implementados em `ClefType`: treble, bass, alto,
 
 ### 4.10 Dinâmica
 
+> **Correção (2026-06-19):** `DynamicType` tem **36** valores (não 44); **9** são renderizados (+ hairpins).
+
 44 tipos em `DynamicType`, hairpins via `Dynamic.isHairpin`, dinâmicas customizadas via `customText`.
 
-**Conformidade: ✅ 100%**
+**Conformidade: ⚠️ parcial** — ver ressalva no início da seção.
 
 ---
 
 ### 4.11 Ornamentos
 
+> **Correção (2026-06-19):** `OrnamentType` tem **43** valores (não 60+); **33** têm glifo no render.
+
 60+ tipos em `OrnamentType`: trill, mordent, turn, fermata, arpeggio, glissando, grace, pralltriller e todas as variantes barrocas.
 
-**Conformidade: ✅ 100%**
+**Conformidade: ⚠️ parcial** — ver ressalva no início da seção.
 
 ---
 
@@ -270,7 +289,8 @@ Todos os 20+ tipos de clave MEI implementados em `ClefType`: treble, bass, alto,
 |---|---|---|
 | `tie="i/m/t"` | `TieType.start/inner/end` | ✅ |
 | `slur="i/m/t"` | `SlurType.start/inner/end` | ✅ |
-| `AdvancedSlur` com direção e voz | `AdvancedSlur.direction`, `.voiceNumber` | ✅ |
+| Slurs sobrepostos/numerados (`slur@n`) | `SlurEvent` (`Note.slurs`, casados por número) | ✅ |
+| Direção forçada de slur (`@curvedir`) | derivada automaticamente; não há override no modelo ainda (#30) | ⚠️ |
 
 ---
 
@@ -334,6 +354,8 @@ Todos os 20+ tipos de clave MEI implementados em `ClefType`: treble, bass, alto,
 
 ### 4.19 Texto, Letras e Sílabas
 
+> **Ressalva (2026-06-19):** `Syllable`/`SyllableType` são importados e renderizados, mas a `Verse` (estrofe) **não é populada pelo parser** (letras viram lista plana).
+
 | Conceito MEI | Implementação | Status |
 |---|---|---|
 | `<verse @n>` | `Verse.number` | ✅ |
@@ -347,45 +369,54 @@ Todos os 20+ tipos de clave MEI implementados em `ClefType`: treble, bass, alto,
 
 ### 4.20 Metadados (MEI Header)
 
+> **○ Só modelo (2026-06-19):** as classes de `meiHead`/FRBR existem, mas **não há parsing MEI** — `Score.meiHeader` nunca é populado a partir do XML.
+
+
 | Conceito MEI | Implementação | Status |
 |---|---|---|
-| `<fileDesc>` | `FileDescription` | ✅ |
-| `<title>`, `<contributor>` | `FileDescription.title`, `.contributors` | ✅ |
-| `<pubStmt>` | `PublicationStatement` | ✅ |
-| `<sourceDesc>` | `SourceDescription` | ✅ |
-| `<encodingDesc>` | `EncodingDescription` | ✅ |
-| `<workList>` / `<work>` | `WorkList`, `WorkInfo` | ✅ |
-| `<manifestationList>` | `ManifestationList`, `Manifestation` | ✅ |
-| `<revisionDesc>` | `RevisionDescription`, `RevisionEntry` | ✅ |
-| FRBR (Work/Expression/Manifestation/Item) | Suportado via `WorkList` + `ManifestationList` | ✅ |
-| `ResponsibilityRole` | enum com 11 funções | ✅ |
+| `<fileDesc>` | `FileDescription` | ○ |
+| `<title>`, `<contributor>` | `FileDescription.title`, `.contributors` | ○ |
+| `<pubStmt>` | `PublicationStatement` | ○ |
+| `<sourceDesc>` | `SourceDescription` | ○ |
+| `<encodingDesc>` | `EncodingDescription` | ○ |
+| `<workList>` / `<work>` | `WorkList`, `WorkInfo` | ○ |
+| `<manifestationList>` | `ManifestationList`, `Manifestation` | ○ |
+| `<revisionDesc>` | `RevisionDescription`, `RevisionEntry` | ○ |
+| FRBR (Work/Expression/Manifestation/Item) | Suportado via `WorkList` + `ManifestationList` | ○ |
+| `ResponsibilityRole` | enum com 11 funções | ○ |
 
 ---
 
 ### 4.21 Análise Harmônica
 
+> **○ Só modelo (2026-06-19):** as classes de análise harmônica existem, mas **não são parseadas nem renderizadas** (nenhum uso fora da própria definição).
+
+
 | Conceito MEI | Implementação | Status |
 |---|---|---|
-| `<harm>` (símbolo de acorde) | `HarmonicLabel.symbol` | ✅ |
-| `intm` (intervalo melódico) | `MelodicInterval` (diatônico, semitons, Parsons) | ✅ |
-| `mfunc` (função melódica) | `MelodicFunction` enum (10 tipos) | ✅ |
-| `deg` (grau da escala) | `ScaleDegree` | ✅ |
-| `inth` (intervalo harmônico) | `HarmonicInterval` | ✅ |
-| `<chordTable>` / `<chordDef>` | `ChordTable`, `ChordDefinition` | ✅ |
-| `pclass` (0–11) | `Pitch.pitchClass` | ✅ |
-| Código de Parsons | `MelodicInterval.parsons()` | ✅ |
+| `<harm>` (símbolo de acorde) | `HarmonicLabel.symbol` | ○ |
+| `intm` (intervalo melódico) | `MelodicInterval` (diatônico, semitons, Parsons) | ○ |
+| `mfunc` (função melódica) | `MelodicFunction` enum (10 tipos) | ○ |
+| `deg` (grau da escala) | `ScaleDegree` | ○ |
+| `inth` (intervalo harmônico) | `HarmonicInterval` | ○ |
+| `<chordTable>` / `<chordDef>` | `ChordTable`, `ChordDefinition` | ○ |
+| `pclass` (0–11) | `Pitch.pitchClass` | ○ |
+| Código de Parsons | `MelodicInterval.parsons()` | ○ |
 
 ---
 
 ### 4.22 Baixo Cifrado (Figured Bass)
 
+> **○ Só modelo (2026-06-19):** `FiguredBass`/`FigureElement` existem, mas **não são parseados nem renderizados**.
+
+
 | Conceito MEI | Implementação | Status |
 |---|---|---|
-| `<fb>` (figured bass container) | `FiguredBass` | ✅ |
-| `<f>` (figura individual) | `FigureElement` | ✅ |
-| Numeral da figura | `FigureElement.numeral` | ✅ |
-| `@accid` (acidente na figura) | `FigureAccidental` enum | ✅ |
-| `@ext` (extensão) | `FigureSuffix` enum | ✅ |
+| `<fb>` (figured bass container) | `FiguredBass` | ○ |
+| `<f>` (figura individual) | `FigureElement` | ○ |
+| Numeral da figura | `FigureElement.numeral` | ○ |
+| `@accid` (acidente na figura) | `FigureAccidental` enum | ○ |
+| `@ext` (extensão) | `FigureSuffix` enum | ○ |
 
 ---
 
@@ -405,6 +436,8 @@ Todos os 20+ tipos de clave MEI implementados em `ClefType`: treble, bass, alto,
 
 ### 4.24 Notação em Tablatura
 
+> **⚠️ Parcial (2026-06-19):** `Note.tabFret/tabString` são modelados/renderizados, mas a **importação MEI `@tab.*` não está implementada**; `TabGrp`/`TabDurSym`/`TabNote` não são usados.
+
 | Conceito MEI | Implementação | Status |
 |---|---|---|
 | `@tab.fret` (casa) | `Note.tabFret`, `TabNote.fret` | ✅ |
@@ -420,22 +453,27 @@ Todos os 20+ tipos de clave MEI implementados em `ClefType`: treble, bass, alto,
 
 ### 4.25 Notação Mensural
 
+> **○ Só modelo (2026-06-19):** `MensuralNote`/`Ligature`/`Mensur`/`ProportMark` existem, mas **não há import nem render mensural** (o parser converte para CMN).
+
+
 | Conceito MEI | Implementação | Status |
 |---|---|---|
-| `<note>` mensural | `MensuralNote` com `MensuralDuration` (8 valores) | ✅ |
-| `<rest>` mensural | `MensuralRest` | ✅ |
-| `<ligature>` | `Ligature`, `LigatureForm` (4 formas) | ✅ |
-| `<plica>` | `MensuralNote.plica`, `PlicaDirection` | ✅ |
-| `<mensur>` | `Mensur` (modusmaior, modusmino, tempus, prolatio, signo) | ✅ |
-| Sinais de mensura | `MensurSign` (circle, semicircle, cut, cWithDot) | ✅ |
-| `<proport>` | `ProportMark` | ✅ |
-| Nota colorada | `MensuralNote.isColored` | ✅ |
-| Qualidade (perfecta/imperfeita/alterata) | `MensuralNoteQuality` enum | ✅ |
-| Conversão para CMN moderno | `mensuralToModernDuration()` | ✅ |
+| `<note>` mensural | `MensuralNote` com `MensuralDuration` (8 valores) | ○ |
+| `<rest>` mensural | `MensuralRest` | ○ |
+| `<ligature>` | `Ligature`, `LigatureForm` (4 formas) | ○ |
+| `<plica>` | `MensuralNote.plica`, `PlicaDirection` | ○ |
+| `<mensur>` | `Mensur` (modusmaior, modusmino, tempus, prolatio, signo) | ○ |
+| Sinais de mensura | `MensurSign` (circle, semicircle, cut, cWithDot) | ○ |
+| `<proport>` | `ProportMark` | ○ |
+| Nota colorada | `MensuralNote.isColored` | ○ |
+| Qualidade (perfecta/imperfeita/alterata) | `MensuralNoteQuality` enum | ○ |
+| Conversão para CMN moderno | `mensuralToModernDuration()` | ○ |
 
 ---
 
 ### 4.26 Notação de Neuma
+
+> **⚠️ Parcial (2026-06-19):** neumas são renderizados via **GABC/Gregoriano**; a **importação MEI `<neume>` não está implementada**.
 
 | Conceito MEI | Implementação | Status |
 |---|---|---|
@@ -477,47 +515,60 @@ Todos os 20+ tipos de clave MEI implementados em `ClefType`: treble, bass, alto,
 
 ### 4.30 Parser MEI Nativo
 
+> **⚠️ Escopo (2026-06-19):** `fromMei`/`fromSource` funcionam, mas o parser MEI é **focado em CMN**, não MEI v5 completo.
+
 `MusicScore.fromMei(xmlString)` com auto-detecção de formato via `MusicScore.fromSource()`. Parser MusicXML e JSON também disponíveis.
 
-**Conformidade: ✅ Implementado**
+**Conformidade: ⚠️ parcial** — ver ressalva no início da seção.
 
 ---
 
 ## 5. Pontuação de Conformidade
 
+> Cobertura = itens **modelados e ligados ao import/render MEI** sobre o total
+> catalogado (reauditoria 2026-06-19). "Só modelo" não conta como coberto.
+
 ### Por Módulo MEI v5
 
-| Módulo MEI v5 | Cobertura |
-|---|---|
-| CMN — Pitch & Duration | **100%** |
-| CMN — Events (Note/Rest/Chord/Space) | **100%** |
-| CMN — Measure & Staff | **100%** |
-| CMN — Clef / Key / Meter | **100%** |
-| CMN — Articulation / Dynamics / Ornaments | **100%** |
-| CMN — Slur / Tie / Beam / Tuplet | **100%** |
-| CMN — Polyphony / Score structure | **100%** |
-| CMN — Navigation (Repeats / Volta) | **100%** |
-| Lyrics, Text & Syllables | **100%** |
-| Metadata / meiHead / FRBR | **100%** |
-| Harmonic Analysis | **100%** |
-| Figured Bass | **100%** |
-| Microtonality & Solmization | **100%** |
-| Tablature | **100%** |
-| Mensural Notation | **100%** |
-| Neume Notation | **100%** |
+| Módulo MEI v5 | Cobertura | Observação |
+|---|---|---|
+| CMN — Pitch & Duration | **100%** | |
+| CMN — Events (Note/Rest/Chord/Space) | **100%** | |
+| CMN — Measure & Staff | **100%** | |
+| CMN — Clef / Key / Meter | **parcial** | `@mode`/metro aditivo não lidos do MEI |
+| CMN — Articulation | **100%** | |
+| CMN — Dynamics / Ornaments | **parcial** | subconjunto renderizado (9/36 din.; 33/43 ornam.) |
+| CMN — Slur / Tie / Beam / Tuplet | **100%** | |
+| CMN — Polyphony / Score structure | **100%** | |
+| CMN — Navigation (Repeats / Volta) | **100%** | |
+| Lyrics, Text & Syllables | **parcial** | `Verse` não populado pelo parser |
+| Metadata / meiHead / FRBR | **só modelo** | sem parsing MEI |
+| Harmonic Analysis | **só modelo** | sem parsing/render |
+| Figured Bass | **só modelo** | sem parsing/render |
+| Microtonality & Solmization | **100%** | modelo/render |
+| Tablature | **parcial** | render via modelo; sem import MEI |
+| Mensural Notation | **só modelo** | sem import/render |
+| Neume Notation | **parcial** | render via GABC; sem import MEI `<neume>` |
 
 ### Pontuação Global
 
 | Escopo | Cobertura |
 |---|---|
-| **CMN (Notação Musical Comum)** | **100%** |
-| **MEI v5 Completo (todos os repertórios)** | **100%** |
+| **CMN (Notação Musical Comum) — import/render** | **alta** (núcleo completo; ressalvas em din./ornam./`@mode`/letra) |
+| **Itens MEI v5 catalogados totalmente conformes** | **~58%** (79/137) |
+| **Cobertura do modelo de dados (representável em Dart)** | ampla (todos os repertórios) |
 
 ---
 
 ## 6. Conclusão
 
-O **flutter_notemus v2.5.1** alcança **conformidade total de 100% com o MEI v5** após a implementação das seguintes adições:
+O **modelo de dados** do **flutter_notemus v2.6.0** representa amplamente o MEI v5
+(todos os repertórios são construtíveis em Dart). O **import/render MEI**, porém,
+é focado em **CMN** — a reauditoria de 2026-06-19 mediu **~58% (79/137)** dos
+itens catalogados como totalmente conformes (modelados **e** importados/
+renderizados). A tabela abaixo lista as classes **do modelo** adicionadas; muitas
+(metadados/FRBR, análise harmônica, baixo cifrado, mensural, tablatura/neuma via
+MEI) ainda **não têm parsing/render MEI** — são "só modelo":
 
 | Adição | Arquivo | Conceito MEI |
 |---|---|---|

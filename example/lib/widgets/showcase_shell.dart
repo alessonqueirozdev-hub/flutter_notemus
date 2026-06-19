@@ -339,7 +339,7 @@ class _ShowcaseHeader extends StatelessWidget {
               borderRadius: BorderRadius.circular(999),
             ),
             child: Text(
-              'Flutter Notemus 2.5.1',
+              'Flutter Notemus 2.6.0',
               style: textTheme.tabLabelTextStyle.copyWith(
                 color: const Color(0xFFFFFFFF),
                 fontWeight: FontWeight.w700,

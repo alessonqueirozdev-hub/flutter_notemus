@@ -109,6 +109,26 @@ class RestRenderer extends BaseGlyphRenderer {
       options: GlyphDrawOptions.restDefault,
     );
 
+    // Augmentation dot(s): to the right of the rest, in the space above its
+    // body (one half-space up), spaced apart for multiple dots.
+    if (rest.duration.dots > 0) {
+      final advance =
+          (metadata.getGlyphAdvanceWidth(glyphName) ?? 1.0) *
+              coordinates.staffSpace;
+      var dotX = position.dx + advance + coordinates.staffSpace * 0.25;
+      final dotY = restY - coordinates.staffSpace * 0.5;
+      for (var d = 0; d < rest.duration.dots; d++) {
+        drawGlyphWithBBox(
+          canvas,
+          glyphName: 'augmentationDot',
+          position: Offset(dotX, dotY),
+          color: theme.restColor,
+          options: const GlyphDrawOptions(),
+        );
+        dotX += coordinates.staffSpace * 0.45;
+      }
+    }
+
     // Rendersr ornaments if presentes
     if (rest.ornaments.isNotEmpty) {
       final placeholderNote = Note(

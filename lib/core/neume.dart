@@ -27,6 +27,20 @@ enum NcForm {
   connected,
 }
 
+/// Acidente cromático aplicado a a posição de pauta no canto (sinal autônomo,
+/// colocado antes das notes que governa — persiste até a próxima divisória/
+/// palavra). O bemol no si é o mais comum.
+enum NeumeAccidental {
+  /// Sem acidente.
+  none,
+  /// Bemol (♭) — GABC `x`.
+  flat,
+  /// Bequadro (♮) — GABC `y`.
+  natural,
+  /// Sustenido (♯) — GABC `#`.
+  sharp,
+}
+
 /// Intervalo direcional between neumas consecutivos.
 enum NeumeInterval {
   /// Uníssono (same height)
@@ -73,6 +87,25 @@ class NeumeComponent {
   /// Indicates conexão with o next componente (ligature graphique).
   final bool connected;
 
+  /// Horizontal episema (small bar over/under the note — slight broadening).
+  final bool episema;
+
+  /// Vertical episema / ictus (rhythmic touch-point). When true, drawn below
+  /// by default unless [ictusAbove] is set.
+  final bool ictus;
+
+  /// Whether the ictus is drawn above the note (default: below).
+  final bool ictusAbove;
+
+  /// Number of mora (augmentum) dots after the note — the lengthening dot(s).
+  final int morae;
+
+  /// Acidente cromático nesta posição. Quando diferente de [NeumeAccidental.none],
+  /// o componente representa um **sinal de acidente autônomo** (sem cabeça de
+  /// note), no estilo GABC — o sinal precede e governa as notes seguintes da
+  /// mesma altura.
+  final NeumeAccidental accidental;
+
   const NeumeComponent({
     this.pitchName,
     this.octave,
@@ -80,6 +113,11 @@ class NeumeComponent {
     this.interval,
     this.isLiquescent = false,
     this.connected = false,
+    this.episema = false,
+    this.ictus = false,
+    this.ictusAbove = false,
+    this.morae = 0,
+    this.accidental = NeumeAccidental.none,
   });
 }
 
@@ -162,11 +200,17 @@ class Neume extends MusicalElement {
   /// Indicates a tradition de noteção (quadrada, adiastemática, etc.).
   final NeumeNotationStyle notationStyle;
 
+  /// Whether this syllable is joined to the NEXT syllable of the same word by a
+  /// hyphen (word-internal syllable break). Set by GABC import; used for the
+  /// lyric underlay. Default false (word-final or standalone syllable).
+  final bool hyphenAfter;
+
   Neume({
     required this.type,
     required this.components,
     this.syllable,
     this.notationStyle = NeumeNotationStyle.square,
+    this.hyphenAfter = false,
   });
 }
 

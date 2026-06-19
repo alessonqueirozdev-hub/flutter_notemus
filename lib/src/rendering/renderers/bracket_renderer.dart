@@ -158,18 +158,24 @@ class BracketRenderer {
 
     // SMuFL fonts use 1 em == 4 staff spaces; rendering at that font size makes
     // metadata staff-space metrics map to staffSpace px directly.
-    final double fontSize = coordinates.staffSpace * 4.0;
-    final double naturalHeightPx = bbox.heightInPixels(coordinates.staffSpace);
-    final double naturalWidthPx = bbox.widthInPixels(coordinates.staffSpace);
+    final double ss = coordinates.staffSpace;
+    final double fontSize = ss * 4.0;
+    final double naturalHeightPx = bbox.heightInPixels(ss);
+    final double naturalWidthPx = bbox.widthInPixels(ss);
     if (naturalHeightPx <= 0) return false;
 
     final double scaleY = height / naturalHeightPx;
+    // Scale the width proportionally so a taller brace is correspondingly
+    // bolder (a Y-only stretch leaves it spindly). Capped so very tall systems
+    // don't get an absurdly wide brace.
+    final double scaleX = scaleY.clamp(1.0, 4.5);
 
     final painter = TextPainter(
       text: TextSpan(
         text: character,
         style: TextStyle(
           fontFamily: 'Bravura',
+          package: 'flutter_notemus',
           fontSize: fontSize,
           color: theme.barlineColor,
           height: 1.0,
@@ -178,13 +184,22 @@ class BracketRenderer {
       textDirection: TextDirection.ltr,
     )..layout();
 
+    // The glyph is anchored at its alphabetic baseline. In SMuFL Y-up metrics
+    // it spans [bBoxSwY, bBoxNeY] staff spaces above the baseline, so on screen
+    // (Y-down) the glyph bottom sits bBoxSwY*ss below the baseline. Placing the
+    // baseline at `baselineY` and scaling Y makes the glyph span exactly
+    // [topY, topY+height].
+    final double bottomY = topY + height;
+    final double baselineY = bottomY + (bbox.bBoxSwY * ss * scaleY);
+    final double baselineFromTop =
+        painter.computeDistanceToActualBaseline(TextBaseline.alphabetic);
+
     canvas.save();
-    // Place the glyph's right edge at x, top at topY, then stretch on Y only.
-    canvas.translate(x - naturalWidthPx, topY);
-    canvas.scale(1.0, scaleY);
-    // Compensate the glyph's own top bearing so it starts exactly at topY.
-    final double topBearingPx = bbox.bBoxNeY * coordinates.staffSpace;
-    painter.paint(canvas, Offset(0, -topBearingPx - painter.height * 0.5));
+    // Anchor the (scaled) glyph's right edge at x so the brace tips face the
+    // staves, then stretch both axes.
+    canvas.translate(x - naturalWidthPx * scaleX, baselineY);
+    canvas.scale(scaleX, scaleY);
+    painter.paint(canvas, Offset(0, -baselineFromTop));
     canvas.restore();
     return true;
   }
@@ -244,35 +259,68 @@ class BracketRenderer {
     double height,
     BracketRenderConfig config,
   ) {
-    final paint = Paint()
-      ..color = theme.barlineColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = coordinates.staffSpace * config.thickness
-      ..strokeCap = StrokeCap.square;
-
+    final ss = coordinates.staffSpace;
     final bottomY = topY + height;
-    final tipWidth = config.tipWidth * coordinates.staffSpace;
+    final spineW = ss * config.thickness;
 
-    // Vertical line
+    // Thick vertical spine.
     canvas.drawLine(
       Offset(x, topY),
       Offset(x, bottomY),
-      paint,
+      Paint()
+        ..color = theme.barlineColor
+        ..strokeWidth = spineW
+        ..strokeCap = StrokeCap.butt,
     );
 
-    // Top tip (horizontal line pointing right)
-    canvas.drawLine(
-      Offset(x, topY),
-      Offset(x + tipWidth, topY),
-      paint,
-    );
+    // SMuFL serif caps (bracketTop/bracketBottom), the typographically correct
+    // orchestral-bracket ends; fall back to plain horizontal tips if the font
+    // lacks them.
+    final md = metadata;
+    if (md != null &&
+        md.hasGlyph('bracketTop') &&
+        md.hasGlyph('bracketBottom') &&
+        _drawBracketCap(canvas, 'bracketTop', x, topY) &&
+        _drawBracketCap(canvas, 'bracketBottom', x, bottomY)) {
+      return;
+    }
 
-    // Bottom tip (horizontal line pointing right)
-    canvas.drawLine(
-      Offset(x, bottomY),
-      Offset(x + tipWidth, bottomY),
-      paint,
-    );
+    final tipWidth = config.tipWidth * ss;
+    final tip = Paint()
+      ..color = theme.barlineColor
+      ..strokeWidth = spineW
+      ..strokeCap = StrokeCap.square;
+    canvas.drawLine(Offset(x, topY), Offset(x + tipWidth, topY), tip);
+    canvas.drawLine(Offset(x, bottomY), Offset(x + tipWidth, bottomY), tip);
+  }
+
+  /// Draws a bracket serif cap glyph anchored at its alphabetic baseline, with
+  /// the spine join at [x],[baselineY]. Returns false if the glyph is missing.
+  bool _drawBracketCap(
+    Canvas canvas,
+    String glyphName,
+    double x,
+    double baselineY,
+  ) {
+    final character = metadata!.getCodepoint(glyphName);
+    if (character.isEmpty) return false;
+    final painter = TextPainter(
+      text: TextSpan(
+        text: character,
+        style: TextStyle(
+          fontFamily: 'Bravura',
+          package: 'flutter_notemus',
+          fontSize: coordinates.staffSpace * 4.0,
+          color: theme.barlineColor,
+          height: 1.0,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    final baselineFromTop =
+        painter.computeDistanceToActualBaseline(TextBaseline.alphabetic);
+    painter.paint(canvas, Offset(x, baselineY - baselineFromTop));
+    return true;
   }
 
   /// Render simple vertical line |

@@ -4,48 +4,106 @@ All notable changes to Flutter Notemus are documented in this file.
 
 The format is based on Keep a Changelog and this project follows Semantic Versioning.
 
-## [2.6.0] - 2026-05-17
+## [2.6.0] - 2026-06-19
 
-This release closes a cluster of engraving and typographic correctness issues
-and removes misleading dead code, with new regression coverage for each fix.
+A large engraving release: **multi-staff / grand-staff rendering** (the library
+is no longer single-staff), **cross-staff beaming**, a sweep of Behind-Bars CMN
+corrections, deeper MusicXML/MEI import, and Gregorian chant render-fidelity
+work. All additions are backward-compatible (new widgets, model fields, and
+parser paths); existing single-staff `MusicScore` usage is unchanged.
 
-### Added
+### Added — multi-staff & score rendering
 
-- SMuFL `brace` glyph workflow for staff-group braces: `BracketRenderer` now
-  renders the scalable `brace` glyph (vertically stretched to the group height)
-  when SMuFL metadata is available, with the previous custom cubic path kept as
-  an automatic fallback (Issue #3).
+- `GrandStaff` widget and `GrandStaffPainter`: render a `StaffGroup` (piano
+  grand staff, SATB choir, N-staff systems) on a shared horizontal grid, with
+  the SMuFL `brace` and `bracketTop`/`bracketBottom` glyphs, a system-start
+  barline joining the staves, continuous per-measure system barlines, and
+  vertically-aligned noteheads.
+- `ScoreView` widget: render a whole `Score` (multiple `StaffGroup`s) on one
+  unified grid — a full multi-section/orchestral system.
+- **Multi-system wrapping** for the grand staff: long groups wrap into stacked
+  systems with shared break points and the clef + key restated each system.
+- **Cross-staff beaming**: a beamed voice can straddle two staves
+  (`Note.crossStaffMove`); the beam is drawn between the staves with stems
+  reaching it.
+- MusicXML import → `Score`: each part becomes a `StaffGroup` (multi-staff
+  parts are braced as a grand staff); `<part-group>`/`<group-symbol>` spans are
+  imported as section brackets; a beam that changes `<staff>` mid-group is kept
+  on its home staff with an automatic cross-staff move.
+
+### Added — common-music notation
+
+- Cautionary (parenthesised) and editorial (bracketed) accidentals
+  (`Note.accidentalParenthesis`), imported and exported via MusicXML.
+- Nested / overlapping slurs with numbered identity (`SlurEvent`,
+  `Note.slurs`), matched by number and arched concentrically; MusicXML
+  `<slur number=>` import.
+- Additive meters (e.g. `3+2+2`) rendered with `timeSigPlus`; free-time
+  (senza misura) draws no glyph.
+- Tuplet ratios (`a:b`) and multi-digit tuplet numbers; sloped tuplet brackets.
+- Chord-level articulations; ledger lines from SMuFL metadata; heavy-light /
+  heavy-heavy barlines with the correct glyphs.
+
+### Changed — engraving (Behind Bars)
+
+- Chord stem direction corrected (was inverted).
+- Inter-note spacing now uses the Gould square-root law keyed to the previous
+  note's duration (inter-onset), with augmentation-dot and cancellation-natural
+  widths reserved; rests use ~0.8× spacing.
+- Mid-system clef/key/time changes now render (and clef changes draw at cue
+  size); the last/underfull system is no longer stretched.
+- Cross-voice second/unison noteheads are displaced so they no longer overlap;
+  chord ties fan outward; a lone full-measure rest is centred; marcato always
+  sits above the note.
+- Hairpins span to the next dynamic/barline.
+
+### Changed — Gregorian chant
+
+- Horizontal episema and augmentum (mora) dot rendered with the Greciliae
+  `HEpisema*` / `AuctumMora` glyphs (shape-specific episema for virga/quilisma);
+  asymmetric breathing space around divisiones; climacus inclinata and repeated
+  same-pitch strophae tucked into single neumes; custos length by leap distance.
+
+### Fixed
+
+- Brace/bracket no longer overlaps the staff; the orchestral bracket uses the
+  Bravura serif glyphs instead of drawn tips; beam-processing no longer drops
+  newly added note fields.
+
+### Added — engraving & typography correctness pass (Issues #3, #4, #5, #8, #9, #12)
+
+This release also consolidates the earlier engraving/typographic correctness
+work that had not yet been published to pub.dev:
+
+- SMuFL `brace` glyph workflow for staff-group braces: `BracketRenderer` renders
+  the scalable `brace` glyph (vertically stretched to the group height) when
+  SMuFL metadata is available, with the previous custom cubic path kept as an
+  automatic fallback (Issue #3).
 - Robust `repeatBoth` barline rendering: uses the combined `repeatLeftRight`
   glyph when present, otherwise composes `repeatRight` + `repeatLeft` using
   SMuFL advance metrics and the `barlineSeparation` engraving default (Issue #5).
 - `NoteRenderer.renderSyllables` is now public and reused by `ChordRenderer`, so
   chords render `Note.syllables` with the same typography as single notes; new
   `ChordRenderer.lyricNoteFor` selects the chord's lyric note (Issue #12).
+- Stem and flag attachment derived from the SMuFL stem anchor plus half the
+  `stemThickness` engraving default, scaled by `staffSpace`; the hardcoded
+  raw-pixel offset constants were removed so single-note stems use the same
+  `SMuFLPositioningEngine` path as chords (Issue #4).
+- `SystemData.getShortestNoteDuration` accounts for `Chord` and `Tuplet`
+  (applying the tuplet ratio, recursively for nested tuplets), and
+  `TimeSlice.getMaxWidth` no longer returns a constant placeholder (Issue #9).
+- Removed a misleading dead `// TODO` in `MeasureValidator` referencing a
+  `Duration.tuplet` field that never existed (Issue #8).
 - Regression suites for spacing/duration of chords & tuplets, tuplet measure
-  validation, stem/flag scaling, repeat barlines, brace glyph, and chord lyrics.
-
-### Changed
-
-- Stem and flag attachment is now derived from the SMuFL stem anchor plus half
-  the `stemThickness` engraving default, scaled by `staffSpace`. The hardcoded
-  raw-pixel offset constants (`stemUpXOffset`/`stemDownXOffset` and the four
-  flag offsets) were removed; single-note stems now use the same
-  `SMuFLPositioningEngine` path as chords, so appearance stays proportional at
-  any `staffSpace` (Issue #4).
-
-### Fixed
-
-- `SystemData.getShortestNoteDuration` now accounts for `Chord` and `Tuplet`
-  elements (applying the tuplet ratio, recursively for nested tuplets), and
-  `TimeSlice.getMaxWidth` no longer returns a constant placeholder width
-  (Issue #9).
-- Removed a misleading dead `// TODO` in `MeasureValidator` that referenced a
-  `Duration.tuplet` field which never existed; tuplet ratios are (and were)
-  correctly applied at the `Tuplet`-element level in `_calculateTupletDuration`,
-  now proven by regression tests (Issue #8).
+  validation, stem/flag scaling, repeat barlines, the brace glyph, and chord
+  lyrics.
 
 ### Known limitations
 
+- **Jianpu (numbered notation) is a work in progress / experimental.** Basic
+  rendering from the model is available and shown in the example gallery, but
+  coverage is partial and the API may still change — it is not yet considered
+  production-ready.
 - Inter-note hyphen centering (Issue #14) and melisma extension lines
   (Issue #13) remain open: both require relocating syllable rendering into a
   post-layout pass, deferred to avoid regressing currently-working lyric

@@ -23,7 +23,12 @@ class BarElementRenderer {
     this.collisionDetector, // CORREÇÃO: Parâmetro opcional
   });
 
-  void renderClef(Canvas canvas, Clef clef, Offset basePosition) {
+  void renderClef(
+    Canvas canvas,
+    Clef clef,
+    Offset basePosition, {
+    double sizeFactor = 1.0,
+  }) {
     final glyphName = clef.glyphName;
     double yOffset = 0;
 
@@ -43,9 +48,24 @@ class BarElementRenderer {
         yOffset = coordinates.getStaffLineY(4) - coordinates.staffBaseline.dy;
         break;
       case ClefType.alto:
-        yOffset = 0;
+        yOffset = 0; // C clef on the middle (3rd) line
         break;
       case ClefType.tenor:
+        yOffset = coordinates.getStaffLineY(4) - coordinates.staffBaseline.dy;
+        break;
+      case ClefType.soprano:
+        yOffset = coordinates.getStaffLineY(1) - coordinates.staffBaseline.dy;
+        break;
+      case ClefType.mezzoSoprano:
+        yOffset = coordinates.getStaffLineY(2) - coordinates.staffBaseline.dy;
+        break;
+      case ClefType.baritone: // C clef on the 5th line
+        yOffset = coordinates.getStaffLineY(5) - coordinates.staffBaseline.dy;
+        break;
+      case ClefType.bassThirdLine: // F clef on the 3rd line
+        yOffset = 0;
+        break;
+      case ClefType.c8vb: // C clef (8 below) on the 4th line
         yOffset = coordinates.getStaffLineY(4) - coordinates.staffBaseline.dy;
         break;
       default:
@@ -56,7 +76,7 @@ class BarElementRenderer {
       canvas,
       glyphName: glyphName,
       position: Offset(basePosition.dx, coordinates.staffBaseline.dy + yOffset),
-      size: glyphSize,
+      size: glyphSize * sizeFactor,
       color: theme.clefColor,
       centerVertically: true,
     );
@@ -170,6 +190,17 @@ class BarElementRenderer {
     TimeSignature ts,
     Offset basePosition,
   ) {
+    // Free time (senza misura) is an open meter — draw no glyph rather than
+    // the literal '0/4' that TimeSignature.free() would otherwise produce.
+    if (ts.isFreeTime) return;
+
+    // Additive meters (e.g. 3+2+2 over 8): render the grouped numerator with a
+    // timeSigPlus glyph between groups, centred over the denominator.
+    if (ts.isAdditive) {
+      _drawAdditiveTimeSignature(canvas, ts, basePosition);
+      return;
+    }
+
     if (ts.numerator == 4 &&
         ts.denominator == 4 &&
         metadata.hasGlyph('timeSigCommon')) {
@@ -197,22 +228,110 @@ class BarElementRenderer {
       return;
     }
 
-    _drawGlyph(
+    // Multi-digit meters (12/8, 16, 10/4, …): SMuFL only defines single-digit
+    // timeSig0..9, so decompose each number into digits, lay them out as a
+    // stack, and centre the narrower stack over the wider one.
+    final numStr = ts.numerator.toString();
+    final denStr = ts.denominator.toString();
+    final numW = _digitsWidth(numStr);
+    final denW = _digitsWidth(denStr);
+    final maxW = numW > denW ? numW : denW;
+    _drawDigits(canvas, numStr, basePosition.dx + (maxW - numW) / 2,
+        coordinates.getStaffLineY(4));
+    _drawDigits(canvas, denStr, basePosition.dx + (maxW - denW) / 2,
+        coordinates.getStaffLineY(2));
+  }
+
+  /// Renders an additive numerator (group digits joined by timeSigPlus) over
+  /// the denominator, with both rows horizontally centred on the wider one.
+  void _drawAdditiveTimeSignature(
+    Canvas canvas,
+    TimeSignature ts,
+    Offset basePosition,
+  ) {
+    final groups = ts.additiveGroups!;
+    // Build the numerator row as alternating digit-strings and '+' separators.
+    final tokens = <String>[];
+    for (var g = 0; g < groups.length; g++) {
+      if (g > 0) tokens.add('+');
+      tokens.add(groups[g].numerator.toString());
+    }
+    double tokenWidth(String t) =>
+        t == '+' ? _glyphAdvancePx('timeSigPlus') : _digitsWidth(t);
+
+    final rowW = tokens.fold<double>(0.0, (a, t) => a + tokenWidth(t));
+    final denStr = ts.denominator.toString();
+    final denW = _digitsWidth(denStr);
+    final maxW = rowW > denW ? rowW : denW;
+
+    var nx = basePosition.dx + (maxW - rowW) / 2;
+    final numY = coordinates.getStaffLineY(4);
+    for (final t in tokens) {
+      if (t == '+') {
+        _drawGlyph(
+          canvas,
+          glyphName: 'timeSigPlus',
+          position: Offset(nx, numY),
+          size: glyphSize,
+          color: theme.timeSignatureColor,
+          centerVertically: true,
+        );
+      } else {
+        _drawDigits(canvas, t, nx, numY);
+      }
+      nx += tokenWidth(t);
+    }
+    _drawDigits(
       canvas,
-      glyphName: 'timeSig${ts.numerator}',
-      position: Offset(basePosition.dx, coordinates.getStaffLineY(4)),
-      size: glyphSize,
-      color: theme.timeSignatureColor,
-      centerVertically: true,
+      denStr,
+      basePosition.dx + (maxW - denW) / 2,
+      coordinates.getStaffLineY(2),
     );
-    _drawGlyph(
-      canvas,
-      glyphName: 'timeSig${ts.denominator}',
-      position: Offset(basePosition.dx, coordinates.getStaffLineY(2)),
-      size: glyphSize,
-      color: theme.timeSignatureColor,
-      centerVertically: true,
-    );
+  }
+
+  /// Pixel advance of a Bravura glyph (SMuFL advance is in staff spaces; falls
+  /// back to the rendered width when metadata lacks the glyph).
+  double _glyphAdvancePx(String glyphName) {
+    final adv = metadata.getGlyphAdvanceWidth(glyphName);
+    if (adv != null) return adv * coordinates.staffSpace;
+    final ch = metadata.getCodepoint(glyphName);
+    if (ch.isEmpty) return 0;
+    final tp = TextPainter(
+      text: TextSpan(
+        text: ch,
+        style: TextStyle(
+          fontFamily: 'Bravura',
+          package: 'flutter_notemus',
+          fontSize: glyphSize,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    return tp.width;
+  }
+
+  double _digitsWidth(String digits) {
+    var w = 0.0;
+    for (final ch in digits.split('')) {
+      w += _glyphAdvancePx('timeSig$ch');
+    }
+    return w;
+  }
+
+  void _drawDigits(Canvas canvas, String digits, double startX, double y) {
+    var x = startX;
+    for (final ch in digits.split('')) {
+      final g = 'timeSig$ch';
+      _drawGlyph(
+        canvas,
+        glyphName: g,
+        position: Offset(x, y),
+        size: glyphSize,
+        color: theme.timeSignatureColor,
+        centerVertically: true,
+      );
+      x += _glyphAdvancePx(g);
+    }
   }
 
   void _drawGlyph(

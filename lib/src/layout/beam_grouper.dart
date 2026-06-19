@@ -130,32 +130,40 @@ class BeamGrouper {
     TimeSignature timeSignature,
   ) {
     final groups = <BeamGroup>[];
-    final beatUnit = 1.0 / timeSignature.denominator;
+    // Beam-grouping macro-beat: in 4/4, beam eighths across the half-bar
+    // (groups of 4, the Behind Bars preference); in other simple meters, beam
+    // by the beat (denominator unit). Previously the break only fired when a
+    // SINGLE note spanned two beats — which never happens for eighths — so a
+    // full bar of eighths beamed as one group (V4).
+    final beatUnit = (timeSignature.numerator == 4 &&
+            timeSignature.denominator == 4)
+        ? 2.0 / timeSignature.denominator
+        : 1.0 / timeSignature.denominator;
 
     var currentGroup = <Note>[];
     var currentPosition = 0.0;
+    int? currentGroupBeat; // macro-beat index the current group belongs to
 
     for (final item in items) {
       if (item.note == null || !item.isBeamable) {
         _addGroupIfValid(groups, currentGroup);
         currentGroup = <Note>[];
+        currentGroupBeat = null;
         currentPosition += item.duration;
         continue;
       }
 
       final note = item.note!;
-      final noteEnd = currentPosition + item.duration;
-      final startBeat = (currentPosition / beatUnit).floor();
-      final endBeat = ((noteEnd - 0.0001) / beatUnit).floor();
+      final startBeat = (currentPosition / beatUnit + 0.0001).floor();
 
-      if (startBeat != endBeat && currentGroup.isNotEmpty) {
+      if (currentGroup.isNotEmpty && startBeat != currentGroupBeat) {
         _addGroupIfValid(groups, currentGroup);
         currentGroup = [note];
       } else {
         currentGroup.add(note);
       }
-
-      currentPosition = noteEnd;
+      currentGroupBeat = startBeat;
+      currentPosition += item.duration;
     }
 
     _addGroupIfValid(groups, currentGroup);

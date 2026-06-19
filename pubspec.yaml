@@ -1,5 +1,5 @@
 name: flutter_notemus
-description: "Professional music notation rendering for Flutter. SMuFL-compliant with 2932 Bravura glyphs, beams, dynamics, articulations, and JSON import/export."
+description: "Professional music notation for Flutter: SMuFL/Bravura engraving, grand-staff & cross-staff beaming, Gregorian chant (Greciliae), and MusicXML/MEI/MIDI I/O."
 version: 2.6.0
 license: Apache-2.0
 homepage: https://github.com/alessonqueirozdev-hub
@@ -29,7 +29,7 @@ dependencies:
     sdk: flutter
   flutter_web_plugins:
     sdk: flutter
-  xml: ^6.5.0
+  xml: '>=6.5.0 <8.0.0'
   pdf: ^3.11.1
   printing: ^5.13.2
 
@@ -64,9 +64,15 @@ flutter:
   assets:
     - assets/smufl/bravura_metadata.json
     - assets/smufl/glyphnames.json
+    - assets/gregorian/greciliae_glyphnames.json
 
-  # Declare Bravura font for SMuFL rendering.
+  # Declare fonts.
   fonts:
+    # Bravura for SMuFL (CMN) rendering.
     - family: Bravura
       fonts:
         - asset: assets/smufl/Bravura.otf
+    # Greciliae (SIL OFL 1.1) for Gregorian square-notation chant.
+    - family: Greciliae
+      fonts:
+        - asset: assets/gregorian/greciliae.ttf

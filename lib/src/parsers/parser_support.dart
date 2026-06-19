@@ -70,6 +70,12 @@ Staff parseMusicXmlStaff(String source, {int partIndex = 0}) {
   return _MusicXmlImportParser(partIndex: partIndex).parse(document);
 }
 
+/// Imports every part/staff of a MusicXML document into a [Score].
+Score parseMusicXmlScore(String source) {
+  final document = XmlDocument.parse(source);
+  return _MusicXmlImportParser(partIndex: 0).parseScore(document);
+}
+
 Staff parseMeiStaff(String source, {int staffIndex = 0}) {
   final document = XmlDocument.parse(source);
   return _MeiImportParser(staffIndex: staffIndex).parse(document);
@@ -1168,6 +1174,201 @@ class _MusicXmlImportParser {
     }
   }
 
+  /// Imports EVERY part (and every staff within a part) as a Staff, grouped
+  /// into a [Score] — so piano (2 staves) and SATB/ensemble (many parts) no
+  /// longer collapse onto a single staff.
+  Score parseScore(XmlDocument document) {
+    final root = document.rootElement;
+    final isPartwise = root.name.local == 'score-partwise';
+    final isTimewise = root.name.local == 'score-timewise';
+    if (!isPartwise && !isTimewise) {
+      throw const FormatException(
+        'MusicXML root must be score-partwise or score-timewise.',
+      );
+    }
+
+    // Each part becomes its own StaffGroup; a multi-staff part (piano) is
+    // braced as a grand staff. <part-group> spans in the <part-list> override
+    // this by bracketing their member parts together.
+    final groups = <StaffGroup>[];
+    if (isPartwise) {
+      final partList = _parsePartList(root);
+      // Build each part's staves first, keeping its id.
+      final partsData = <({String? id, List<Staff> staves, int count})>[];
+      for (final part in root.findElements('part')) {
+        final count = _partStaffCount(part);
+        final partStaves = <Staff>[];
+        for (var s = 1; s <= count; s++) {
+          final filter = count == 1 ? null : s;
+          final staff = Staff();
+          for (final m in part.findElements('measure')) {
+            staff.add(_parseMeasure(m, staffFilter: filter));
+          }
+          partStaves.add(staff);
+        }
+        partsData.add(
+          (id: part.getAttribute('id'), staves: partStaves, count: count),
+        );
+      }
+      // Group consecutive parts that share a <part-group>.
+      var i = 0;
+      while (i < partsData.length) {
+        final gid = partList.groupOf[partsData[i].id];
+        if (gid == null) {
+          groups.add(StaffGroup(
+            staves: partsData[i].staves,
+            bracket:
+                partsData[i].count > 1 ? BracketType.brace : BracketType.none,
+          ));
+          i++;
+        } else {
+          final staves = <Staff>[];
+          while (i < partsData.length &&
+              partList.groupOf[partsData[i].id] == gid) {
+            staves.addAll(partsData[i].staves);
+            i++;
+          }
+          groups.add(StaffGroup(
+            staves: staves,
+            bracket: partList.bracket[gid] ?? BracketType.bracket,
+          ));
+        }
+      }
+    } else {
+      // Timewise: gather each part's measures across all <measure> wrappers.
+      final partMeasures = <int, List<XmlElement>>{};
+      var partCount = 0;
+      for (final measure in root.findElements('measure')) {
+        final parts = measure.findElements('part').toList();
+        partCount = parts.length > partCount ? parts.length : partCount;
+        for (var p = 0; p < parts.length; p++) {
+          (partMeasures[p] ??= <XmlElement>[]).add(parts[p]);
+        }
+      }
+      for (var p = 0; p < partCount; p++) {
+        final staff = Staff();
+        for (final m in partMeasures[p] ?? const <XmlElement>[]) {
+          staff.add(_parseMeasure(m));
+        }
+        groups.add(StaffGroup(staves: [staff]));
+      }
+    }
+
+    if (groups.isEmpty) groups.add(StaffGroup(staves: [Staff()]));
+    return Score(
+      title: root.findAllElements('work-title').firstOrNull?.innerText,
+      composer: root
+          .findAllElements('creator')
+          .where((e) => e.getAttribute('type') == 'composer')
+          .firstOrNull
+          ?.innerText,
+      staffGroups: groups,
+    );
+  }
+
+  /// Maps each `<note>` element to its beam-group home staff and the resulting
+  /// cross-staff move. A beam group's home staff is the staff of its first
+  /// (beam=begin) note; notes that change `<staff>` within the group keep that
+  /// home and get `move = ownStaff - homeStaff`.
+  Map<XmlElement, ({int home, int move})> _crossStaffMap(
+    XmlElement measureElement,
+  ) {
+    final map = <XmlElement, ({int home, int move})>{};
+    final groupHome = <int, int>{}; // voice -> home staff while beam group open
+    for (final note in measureElement.findElements('note')) {
+      final staff = _asInt(_childText(note, 'staff')) ?? 1;
+      final voice = _asInt(_childText(note, 'voice')) ?? 1;
+      final beam =
+          note.findElements('beam').firstOrNull?.innerText.trim().toLowerCase();
+      int home;
+      if (beam == 'begin') {
+        groupHome[voice] = staff;
+        home = staff;
+      } else if ((beam == 'continue' || beam == 'end') &&
+          groupHome.containsKey(voice)) {
+        home = groupHome[voice]!;
+        if (beam == 'end') groupHome.remove(voice);
+      } else {
+        home = staff;
+        groupHome.remove(voice);
+      }
+      map[note] = (home: home, move: staff - home);
+    }
+    return map;
+  }
+
+  /// Reads `<part-group>` spans from the `<part-list>`: maps each part id to the
+  /// id of the innermost group it belongs to (or null), and each group id to its
+  /// bracket type (from `<group-symbol>`).
+  ({Map<String, int?> groupOf, Map<int, BracketType> bracket}) _parsePartList(
+    XmlElement root,
+  ) {
+    final groupOf = <String, int?>{};
+    final bracket = <int, BracketType>{};
+    final partList = root.findElements('part-list').firstOrNull;
+    if (partList == null) return (groupOf: groupOf, bracket: bracket);
+
+    final open = <({int number, int id})>[];
+    var nextId = 0;
+    for (final child in partList.children.whereType<XmlElement>()) {
+      switch (child.name.local) {
+        case 'part-group':
+          final type = child.getAttribute('type');
+          final number =
+              int.tryParse(child.getAttribute('number') ?? '1') ?? 1;
+          if (type == 'start') {
+            final id = nextId++;
+            bracket[id] = _groupSymbolBracket(
+              child.findElements('group-symbol').firstOrNull?.innerText.trim(),
+            );
+            open.add((number: number, id: id));
+          } else if (type == 'stop') {
+            for (var i = open.length - 1; i >= 0; i--) {
+              if (open[i].number == number) {
+                open.removeAt(i);
+                break;
+              }
+            }
+          }
+          break;
+        case 'score-part':
+          final id = child.getAttribute('id');
+          if (id != null) groupOf[id] = open.isNotEmpty ? open.last.id : null;
+          break;
+      }
+    }
+    return (groupOf: groupOf, bracket: bracket);
+  }
+
+  BracketType _groupSymbolBracket(String? symbol) {
+    switch (symbol) {
+      case 'brace':
+        return BracketType.brace;
+      case 'line':
+        return BracketType.line;
+      case 'bracket':
+      case 'square':
+        return BracketType.bracket;
+      default:
+        // A part-group with no explicit symbol still groups; default to bracket.
+        return BracketType.bracket;
+    }
+  }
+
+  /// Number of staves in a part (max `staves` or per-note `staff`; default 1).
+  int _partStaffCount(XmlElement part) {
+    var maxStaff = 1;
+    for (final staves in part.findAllElements('staves')) {
+      final n = _asInt(staves.innerText.trim());
+      if (n != null && n > maxStaff) maxStaff = n;
+    }
+    for (final st in part.findAllElements('staff')) {
+      final n = _asInt(st.innerText.trim());
+      if (n != null && n > maxStaff) maxStaff = n;
+    }
+    return maxStaff;
+  }
+
   Staff _parsePartwise(XmlElement root) {
     final parts = root.findElements('part').toList();
     if (parts.isEmpty) return Staff();
@@ -1199,10 +1400,17 @@ class _MusicXmlImportParser {
     return staff;
   }
 
-  Measure _parseMeasure(XmlElement measureElement) {
+  /// Parses one MusicXML measure. When [staffFilter] is set (multi-staff part),
+  /// only notes whose `staff` matches and clefs for that staff are kept.
+  Measure _parseMeasure(XmlElement measureElement, {int? staffFilter}) {
     final Map<int, _VoiceAccumulator> voices = <int, _VoiceAccumulator>{};
     final List<MusicalElement> metadataElements = <MusicalElement>[];
     TimeSignature? currentTimeSignature;
+    // Cross-staff routing (multi-staff parts only): a beamed voice whose notes
+    // change <staff> mid-beam is kept on its home (beam-start) staff with a
+    // crossStaffMove so the beam survives.
+    final crossStaff =
+        staffFilter != null ? _crossStaffMap(measureElement) : null;
 
     _VoiceAccumulator voice(int number) {
       return voices.putIfAbsent(number, () => _VoiceAccumulator(number));
@@ -1221,7 +1429,8 @@ class _MusicXmlImportParser {
     for (final child in measureElement.children.whereType<XmlElement>()) {
       switch (child.name.local) {
         case 'attributes':
-          for (final element in _parseMusicXmlAttributes(child)) {
+          for (final element
+              in _parseMusicXmlAttributes(child, staffFilter: staffFilter)) {
             appendLeadElement(element);
           }
           break;
@@ -1236,10 +1445,21 @@ class _MusicXmlImportParser {
           }
           break;
         case 'note':
+          var move = 0;
+          if (staffFilter != null) {
+            final cs = crossStaff![child];
+            final noteStaff = _asInt(_childText(child, 'staff')) ?? 1;
+            final home = cs?.home ?? noteStaff;
+            // Route the note to its home staff (cross-staff notes follow their
+            // beam, not their own <staff>).
+            if (home != staffFilter) break;
+            move = cs?.move ?? 0;
+          }
           _parseMusicXmlNoteNode(
             child,
             voiceForNumber: voice,
             currentTimeSignature: currentTimeSignature,
+            crossStaffMove: move,
           );
           break;
         case 'backup':
@@ -1274,6 +1494,7 @@ class _MusicXmlImportParser {
     XmlElement noteElement, {
     required _VoiceAccumulator Function(int number) voiceForNumber,
     required TimeSignature? currentTimeSignature,
+    int crossStaffMove = 0,
   }) {
     final int voiceNumber = _asInt(_childText(noteElement, 'voice')) ?? 1;
     final accumulator = voiceForNumber(voiceNumber);
@@ -1297,9 +1518,13 @@ class _MusicXmlImportParser {
         articulations: _musicXmlArticulations(noteElement),
         tie: _musicXmlTieType(noteElement),
         slur: _musicXmlSlurType(noteElement),
+        slurs: _musicXmlSlurEvents(noteElement),
         ornaments: _musicXmlOrnaments(noteElement),
         voice: voiceNumber,
         isGraceNote: isGrace,
+        syllables: _parseMusicXmlLyrics(noteElement),
+        accidentalParenthesis: _musicXmlAccidentalParenthesis(noteElement),
+        crossStaffMove: crossStaffMove,
       );
       if (isChordTone) {
         if (!accumulator.mergeChordNote(note)) {
@@ -1333,12 +1558,19 @@ class _MusicXmlImportParser {
   }
 }
 
-List<MusicalElement> _parseMusicXmlAttributes(XmlElement attributesElement) {
+List<MusicalElement> _parseMusicXmlAttributes(XmlElement attributesElement,
+    {int? staffFilter}) {
   final List<MusicalElement> result = <MusicalElement>[];
 
   for (final child in attributesElement.children.whereType<XmlElement>()) {
     switch (child.name.local) {
       case 'clef':
+        // <clef number="N"> is per-staff; keep only this staff's clef when
+        // splitting a multi-staff part (no number = staff 1).
+        if (staffFilter != null) {
+          final clefStaff = _asInt(child.getAttribute('number')) ?? 1;
+          if (clefStaff != staffFilter) break;
+        }
         final clef = _musicXmlClef(child);
         if (clef != null) result.add(clef);
         break;
@@ -1410,6 +1642,16 @@ List<MusicalElement> _parseMusicXmlDirections(XmlElement directionElement) {
           final octave = _musicXmlOctaveShift(child);
           if (octave != null) {
             result.add(octave);
+          }
+          break;
+        case 'wedge':
+          // Crescendo/diminuendo hairpin spanner; the start carries the type,
+          // 'stop' just closes it (ignored here).
+          final wtype = _normalizeToken(child.getAttribute('type'));
+          if (wtype == 'crescendo') {
+            result.add(Dynamic(type: DynamicType.crescendo, isHairpin: true));
+          } else if (wtype == 'diminuendo' || wtype == 'decrescendo') {
+            result.add(Dynamic(type: DynamicType.diminuendo, isHairpin: true));
           }
           break;
       }
@@ -1487,6 +1729,58 @@ RepeatMark? _meiRepeatMark(XmlElement element) {
     type: type,
     label: label == null || label.trim().isEmpty ? null : label.trim(),
   );
+}
+
+/// Parses MusicXML `<lyric number="N">` children of a note into one [Syllable]
+/// per verse (ordered by `@number`). `<syllabic>` (single/begin/middle/end)
+/// maps to the syllable connection type; the text comes from `<text>`.
+List<Syllable>? _parseMusicXmlLyrics(XmlElement noteElement) {
+  final lyrics = noteElement.findElements('lyric').toList();
+  if (lyrics.isEmpty) return null;
+  lyrics.sort((a, b) {
+    final na = int.tryParse(a.getAttribute('number') ?? '') ?? 0;
+    final nb = int.tryParse(b.getAttribute('number') ?? '') ?? 0;
+    return na.compareTo(nb);
+  });
+  final result = <Syllable>[];
+  for (final lyric in lyrics) {
+    final text = _childText(lyric, 'text');
+    if (text == null || text.trim().isEmpty) continue;
+    result.add(
+      Syllable(
+        text: text.trim(),
+        type: _musicXmlSyllabicType(_childText(lyric, 'syllabic')),
+      ),
+    );
+  }
+  return result.isEmpty ? null : result;
+}
+
+SyllableType _musicXmlSyllabicType(String? syllabic) {
+  switch (syllabic) {
+    case 'begin':
+      return SyllableType.initial;
+    case 'middle':
+      return SyllableType.middle;
+    case 'end':
+      return SyllableType.terminal;
+    default:
+      return SyllableType.single;
+  }
+}
+
+/// Reads MusicXML cautionary/editorial accidental display from the
+/// `<accidental>` element's attributes. bracket/editorial -> brackets,
+/// parentheses/cautionary -> parentheses.
+AccidentalParenthesis _musicXmlAccidentalParenthesis(XmlElement noteElement) {
+  final acc = noteElement.findElements('accidental').firstOrNull;
+  if (acc == null) return AccidentalParenthesis.none;
+  bool yes(String attr) => acc.getAttribute(attr)?.toLowerCase() == 'yes';
+  if (yes('bracket') || yes('editorial')) return AccidentalParenthesis.brackets;
+  if (yes('parentheses') || yes('cautionary')) {
+    return AccidentalParenthesis.parentheses;
+  }
+  return AccidentalParenthesis.none;
 }
 
 Pitch? _musicXmlPitch(XmlElement noteElement) {
@@ -1593,6 +1887,23 @@ SlurType? _musicXmlSlurType(XmlElement noteElement) {
     }
   }
   return slur;
+}
+
+/// All numbered `<slur>` boundaries on a note (MusicXML `<slur number=>`), so
+/// concurrent/nested slurs can be matched by id. Empty when the note carries no
+/// slur boundary.
+List<SlurEvent> _musicXmlSlurEvents(XmlElement noteElement) {
+  final events = <SlurEvent>[];
+  for (final notations in noteElement.findElements('notations')) {
+    for (final slurElement in notations.findElements('slur')) {
+      final type = _parseSlurType(slurElement.getAttribute('type'));
+      if (type == null) continue;
+      final number =
+          int.tryParse(slurElement.getAttribute('number') ?? '1') ?? 1;
+      events.add(SlurEvent(number: number, type: type));
+    }
+  }
+  return events;
 }
 
 BeamType? _musicXmlBeamType(XmlElement noteElement) {
@@ -1722,6 +2033,43 @@ class _MeiImportParser {
 
   final int staffIndex;
 
+  // Measure-scoped control events resolved by @startid/@endid -> note xml:id.
+  final Map<String, SlurType> _slurById = <String, SlurType>{};
+  final Map<String, TieType> _tieById = <String, TieType>{};
+  final Map<String, List<MusicalElement>> _afterNoteById =
+      <String, List<MusicalElement>>{};
+
+  static String? _stripHash(String? id) =>
+      id == null ? null : (id.startsWith('#') ? id.substring(1) : id);
+
+  /// Scans a measure's control events (slur/tie/dynam) and indexes them by
+  /// the referenced note xml:id via @startid/@endid.
+  void _collectMeiControlEvents(XmlElement measureElement) {
+    for (final ev in measureElement.children.whereType<XmlElement>()) {
+      final startId = _stripHash(ev.getAttribute('startid'));
+      final endId = _stripHash(ev.getAttribute('endid'));
+      switch (ev.name.local) {
+        case 'slur':
+          if (startId != null) _slurById[startId] = SlurType.start;
+          if (endId != null) _slurById[endId] = SlurType.end;
+          break;
+        case 'tie':
+          if (startId != null) _tieById[startId] = TieType.start;
+          if (endId != null) _tieById[endId] = TieType.end;
+          break;
+        case 'dynam':
+          if (startId != null) {
+            final d = _parseDynamicType(ev.innerText.trim());
+            if (d != null) {
+              (_afterNoteById[startId] ??= <MusicalElement>[])
+                  .add(Dynamic(type: d));
+            }
+          }
+          break;
+      }
+    }
+  }
+
   Staff parse(XmlDocument document) {
     final root = document.rootElement;
     if (root.name.local != 'mei') {
@@ -1734,17 +2082,63 @@ class _MeiImportParser {
     final section = score.findAllElements('section').firstOrNull;
     if (section == null) return Staff();
 
+    // MEI encodes the initial clef/key/meter in <scoreDef>/<staffDef>, not
+    // inline in <staff>. Capture them and seed the first measure.
+    final scoreDef = score.findAllElements('scoreDef').firstOrNull;
+    final defaults =
+        scoreDef == null ? const <MusicalElement>[] : _meiStaffDefaults(scoreDef);
+
     final staff = Staff();
+    var first = true;
     for (final measure in section.findElements('measure')) {
-      staff.add(_parseMeasure(measure));
+      staff.add(_parseMeasure(
+        measure,
+        leadingDefaults: first ? defaults : const <MusicalElement>[],
+      ));
+      first = false;
     }
     return staff;
   }
 
-  Measure _parseMeasure(XmlElement measureElement) {
+  /// Clef/key/meter declared in a `scoreDef`'s `staffDef` for this staffIndex
+  /// (or the scoreDef itself), reading both attribute and child-element forms.
+  List<MusicalElement> _meiStaffDefaults(XmlElement scoreDef) {
+    final defs = scoreDef.findAllElements('staffDef').toList();
+    XmlElement? sd;
+    for (final d in defs) {
+      if ((_asInt(d.getAttribute('n')) ?? 1) == staffIndex + 1) {
+        sd = d;
+        break;
+      }
+    }
+    sd ??= defs.isNotEmpty
+        ? defs[staffIndex.clamp(0, defs.length - 1)]
+        : null;
+    final result = <MusicalElement>[];
+    final clef = (sd != null ? _meiDefClef(sd) : null) ?? _meiDefClef(scoreDef);
+    if (clef != null) result.add(clef);
+    final key = (sd != null ? _meiDefKey(sd) : null) ?? _meiDefKey(scoreDef);
+    if (key != null) result.add(key);
+    final meter =
+        (sd != null ? _meiDefMeter(sd) : null) ?? _meiDefMeter(scoreDef);
+    if (meter != null) result.add(meter);
+    return result;
+  }
+
+  Measure _parseMeasure(
+    XmlElement measureElement, {
+    List<MusicalElement> leadingDefaults = const <MusicalElement>[],
+  }) {
     final Map<int, _VoiceAccumulator> voices = <int, _VoiceAccumulator>{};
     final List<MusicalElement> metadataElements = <MusicalElement>[];
     TimeSignature? currentTimeSignature;
+
+    // Resolve measure-level control events (slur/tie/dynam) that reference notes
+    // by @startid/@endid, so they apply even though they sit outside <staff>.
+    _slurById.clear();
+    _tieById.clear();
+    _afterNoteById.clear();
+    _collectMeiControlEvents(measureElement);
 
     _VoiceAccumulator voice(int number) {
       return voices.putIfAbsent(number, () => _VoiceAccumulator(number));
@@ -1771,6 +2165,22 @@ class _MeiImportParser {
     }
 
     final staffElement = staffElements[staffIndex];
+
+    // Seed the first measure with the scoreDef/staffDef clef/key/meter, unless
+    // the staff redeclares that element type inline.
+    if (leadingDefaults.isNotEmpty) {
+      final inlineNames =
+          staffElement.children.whereType<XmlElement>().map((e) => e.name.local);
+      final hasClef = inlineNames.contains('clef');
+      final hasKey = inlineNames.contains('keySig');
+      final hasMeter = inlineNames.contains('meterSig');
+      for (final d in leadingDefaults) {
+        if (d is Clef && hasClef) continue;
+        if (d is KeySignature && hasKey) continue;
+        if (d is TimeSignature && hasMeter) continue;
+        appendLead(d);
+      }
+    }
 
     final leftBarline = _meiBarlineFromToken(
       measureElement.getAttribute('left'),
@@ -1902,10 +2312,62 @@ class _MeiImportParser {
     final accumulator = voiceForNumber(voiceNumber);
 
     for (final child in layerElement.children.whereType<XmlElement>()) {
+      _appendMeiChild(child, accumulator, voiceNumber, currentTimeSignature);
+    }
+  }
+
+  /// Appends one MEI layer child. `<beam>`/`<tuplet>` are CONTAINERS (the common
+  /// MEI 5 encoding) and are recursed into, so their child notes are not lost.
+  void _appendMeiChild(
+    XmlElement child,
+    _VoiceAccumulator accumulator,
+    int voiceNumber,
+    TimeSignature? currentTimeSignature, {
+    BeamType? beamOverride,
+  }) {
       switch (child.name.local) {
+        case 'beam':
+          // Position-based beam types over the beamable (note/chord) children.
+          final kids = child.children.whereType<XmlElement>().toList();
+          final beamable = kids
+              .where((e) => e.name.local == 'note' || e.name.local == 'chord')
+              .length;
+          var bi = 0;
+          for (final inner in kids) {
+            final isBeamable =
+                inner.name.local == 'note' || inner.name.local == 'chord';
+            BeamType? bo;
+            if (isBeamable && beamable > 1) {
+              bo = bi == 0
+                  ? BeamType.start
+                  : (bi == beamable - 1 ? BeamType.end : BeamType.inner);
+              bi++;
+            }
+            _appendMeiChild(inner, accumulator, voiceNumber,
+                currentTimeSignature,
+                beamOverride: bo);
+          }
+          return;
+        case 'tuplet':
+          accumulator.startTuplet(
+            actualNotes: _asInt(child.getAttribute('num')) ?? 3,
+            normalNotes: _asInt(child.getAttribute('numbase')) ?? 2,
+            timeSignature: currentTimeSignature,
+          );
+          for (final inner in child.children.whereType<XmlElement>()) {
+            _appendMeiChild(
+                inner, accumulator, voiceNumber, currentTimeSignature);
+          }
+          accumulator.finishTuplet();
+          return;
         case 'note':
-          final note = _meiNote(child, voiceNumber: voiceNumber);
-          if (note == null) continue;
+          final noteId = child.getAttribute('xml:id');
+          final note = _meiNote(child,
+              voiceNumber: voiceNumber,
+              beamOverride: beamOverride,
+              slurOverride: noteId == null ? null : _slurById[noteId],
+              tieOverride: noteId == null ? null : _tieById[noteId]);
+          if (note == null) return;
           final tupletInfo = _meiTupletInfo(child);
           if (tupletInfo.startsTuplet) {
             accumulator.startTuplet(
@@ -1915,10 +2377,16 @@ class _MeiImportParser {
             );
           }
           accumulator.append(note);
+          // Control events (e.g. <dynam startid>) anchored to this note.
+          if (noteId != null) {
+            for (final extra in _afterNoteById[noteId] ?? const []) {
+              accumulator.append(extra);
+            }
+          }
           if (tupletInfo.endsTuplet) {
             accumulator.finishTuplet();
           }
-          break;
+          return;
         case 'rest':
           final rest = _meiRest(child);
           final tupletInfo = _meiTupletInfo(child);
@@ -1936,7 +2404,7 @@ class _MeiImportParser {
           break;
         case 'chord':
           final chord = _meiChord(child, voiceNumber: voiceNumber);
-          if (chord == null) continue;
+          if (chord == null) return;
           final tupletInfo = _meiTupletInfo(child);
           if (tupletInfo.startsTuplet) {
             accumulator.startTuplet(
@@ -1974,7 +2442,7 @@ class _MeiImportParser {
           break;
         case 'dir':
           final text = child.innerText.trim();
-          if (text.isEmpty) continue;
+          if (text.isEmpty) return;
           final repeatType = _parseRepeatType(text);
           if (repeatType != null) {
             accumulator.append(RepeatMark(type: repeatType, label: text));
@@ -2003,8 +2471,66 @@ class _MeiImportParser {
           }
           break;
       }
-    }
   }
+}
+
+/// Clef from a `scoreDef`/`staffDef` (child `clef` or clef.shape/clef.line).
+Clef? _meiDefClef(XmlElement def) {
+  final child = def.findElements('clef').firstOrNull;
+  if (child != null) {
+    final c = _meiClef(child);
+    if (c != null) return c;
+  }
+  final shape = def.getAttribute('clef.shape');
+  if (shape == null) return null;
+  final line = _asInt(def.getAttribute('clef.line'));
+  final s = _normalizeToken(shape);
+  if (s == 'g') return Clef(clefType: ClefType.treble);
+  if (s == 'f') {
+    return Clef(
+        clefType: line == 3 ? ClefType.bassThirdLine : ClefType.bass);
+  }
+  if (s == 'c') {
+    return Clef(
+      clefType: switch (line) {
+        1 => ClefType.soprano,
+        2 => ClefType.mezzoSoprano,
+        4 => ClefType.tenor,
+        5 => ClefType.baritone,
+        _ => ClefType.alto,
+      },
+    );
+  }
+  if (s == 'perc') return Clef(clefType: ClefType.percussion);
+  return null;
+}
+
+/// Key signature from a `scoreDef`/`staffDef` (child `keySig` or key.sig).
+KeySignature? _meiDefKey(XmlElement def) {
+  final child = def.findElements('keySig').firstOrNull;
+  if (child != null) {
+    final k = _meiKeySignature(child);
+    if (k != null) return k;
+  }
+  final sig = def.getAttribute('key.sig');
+  if (sig == null || sig.trim().isEmpty) return null;
+  final n = sig.trim().toLowerCase();
+  if (n == '0') return KeySignature(0);
+  final m = RegExp(r'^(-?\d+)([sf])$').firstMatch(n);
+  if (m == null) return null;
+  final count = int.tryParse(m.group(1)!);
+  if (count == null) return null;
+  return KeySignature(m.group(2) == 'f' ? -count : count);
+}
+
+/// Meter from a `scoreDef`/`staffDef` (child `meterSig` or meter.count/unit).
+TimeSignature? _meiDefMeter(XmlElement def) {
+  final child = def.findElements('meterSig').firstOrNull;
+  if (child != null) {
+    final m = _meiTimeSignature(child);
+    if (m != null) return m;
+  }
+  return _meiTimeSignature(def); // reads meter.count/meter.unit attributes
 }
 
 Clef? _meiClef(XmlElement clefElement) {
@@ -2102,7 +2628,11 @@ TimeSignature? _meiTimeSignature(XmlElement meterSigElement) {
   return TimeSignature(numerator: numerator, denominator: denominator);
 }
 
-Note? _meiNote(XmlElement noteElement, {required int voiceNumber}) {
+Note? _meiNote(XmlElement noteElement,
+    {required int voiceNumber,
+    BeamType? beamOverride,
+    SlurType? slurOverride,
+    TieType? tieOverride}) {
   final step = noteElement.getAttribute('pname')?.toUpperCase();
   final octave = _asInt(noteElement.getAttribute('oct'));
   if (step == null || octave == null) return null;
@@ -2123,16 +2653,56 @@ Note? _meiNote(XmlElement noteElement, {required int voiceNumber}) {
           DurationType.quarter,
       dots: _asInt(noteElement.getAttribute('dots')) ?? 0,
     ),
-    beam: _parseBeamType(noteElement.getAttribute('beam')),
+    beam: beamOverride ?? _parseBeamType(noteElement.getAttribute('beam')),
     articulations: _parseArticulationList(
       noteElement.getAttribute('artic')?.split(RegExp(r'\s+')),
     ),
-    tie: _parseTieType(noteElement.getAttribute('tie')),
-    slur: _parseSlurType(noteElement.getAttribute('slur')),
+    tie: tieOverride ?? _parseTieType(noteElement.getAttribute('tie')),
+    slur: slurOverride ?? _parseSlurType(noteElement.getAttribute('slur')),
     ornaments: _parseOrnamentList(noteElement.getAttribute('ornam')),
     voice: voiceNumber,
     isGraceNote: noteElement.getAttribute('grace') != null,
+    syllables: _parseMeiVerses(noteElement),
   );
+}
+
+/// Parses MEI `<verse n="N"><syl>…</syl></verse>` lyrics attached to a note into
+/// one [Syllable] per verse (ordered by `@n`). Word position comes from
+/// `@wordpos` (i/m/t) or the connector `@con` (i/m/t/d), else `single`.
+List<Syllable>? _parseMeiVerses(XmlElement noteElement) {
+  final verses = noteElement.findElements('verse').toList();
+  if (verses.isEmpty) return null;
+  verses.sort(
+    (a, b) => (_asInt(a.getAttribute('n')) ?? 0).compareTo(
+      _asInt(b.getAttribute('n')) ?? 0,
+    ),
+  );
+  final result = <Syllable>[];
+  for (final verse in verses) {
+    final syls = verse.findElements('syl');
+    if (syls.isEmpty) continue;
+    final syl = syls.first;
+    final text = syl.innerText.trim();
+    if (text.isEmpty) continue;
+    final pos = syl.getAttribute('wordpos') ?? syl.getAttribute('con');
+    result.add(Syllable(text: text, type: _meiSyllableType(pos)));
+  }
+  return result.isEmpty ? null : result;
+}
+
+SyllableType _meiSyllableType(String? pos) {
+  switch (pos) {
+    case 'i':
+      return SyllableType.initial;
+    case 'm':
+      return SyllableType.middle;
+    case 't':
+      return SyllableType.terminal;
+    case 'd':
+      return SyllableType.hyphen;
+    default:
+      return SyllableType.single;
+  }
 }
 
 Rest _meiRest(XmlElement restElement) {

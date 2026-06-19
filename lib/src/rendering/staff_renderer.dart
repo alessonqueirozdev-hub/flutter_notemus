@@ -6,6 +6,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../core/core.dart'; // 🆕 Tipos do core
 import '../layout/layout_engine.dart';
+import 'accidental_resolver.dart';
 import '../smufl/smufl_metadata_loader.dart';
 import '../theme/music_score_theme.dart';
 import '../beaming/beaming.dart'; // Sistema de beaming avançado
@@ -223,16 +224,26 @@ class StaffRenderer {
   final Set<Note> _notesInAdvancedBeams = {};
   final Map<Note, Clef> _noteClefs = {};
 
+  // Notes to skip drawing (drawn elsewhere, e.g. by the cross-staff beam pass).
+  Set<Note> _skipNotes = const {};
+
+  /// Within-measure accidental decisions for the current render pass (set from
+  /// the layout engine, which resolves them from the model).
+  Map<Note, AccidentalDisplay> _accidentalDecisions = const {};
+
   void renderStaff(
     Canvas canvas,
     List<PositionedElement> elements,
     Size size, {
     LayoutEngine? layoutEngine,
     bool renderBarlines = true,
+    Set<Note> skipNotes = const {},
   }) {
+    _skipNotes = skipNotes;
     // Limpar set de notes beamed
     _notesInAdvancedBeams.clear();
     _noteClefs.clear();
+    _accidentalDecisions = layoutEngine?.accidentalDecisions ?? const {};
 
     // Coletar notes that are in advanced beam groups
     if (layoutEngine != null) {
@@ -262,6 +273,12 @@ class StaffRenderer {
       final noteYPositions = layoutEngine.noteYPositions;
 
       for (final advancedGroup in layoutEngine.advancedBeamGroups) {
+        // A beam group with any skipped (cross-staff) note is redrawn whole by
+        // the grand-staff cross-staff beam pass.
+        if (_skipNotes.isNotEmpty &&
+            advancedGroup.notes.any(_skipNotes.contains)) {
+          continue;
+        }
         beamRenderer.renderAdvancedBeamGroup(
           canvas,
           advancedGroup,
@@ -274,10 +291,20 @@ class StaffRenderer {
     // Terceira passagem: Rendersr elementos de grupo (beams simples, ties, slurs)
     if (currentClef != null) {
       _renderLineOrnaments(canvas, elements);
+      _renderLyricHyphens(canvas, elements);
+      _renderMelismaLines(canvas, elements);
 
       // Pular beams simples if temos advanced beams
       if (layoutEngine == null || layoutEngine.advancedBeamGroups.isEmpty) {
-        groupRenderer.renderBeams(canvas, elements, currentClef!);
+        // Exclude skipped (cross-staff) notes so their beam isn't drawn here —
+        // the grand-staff cross-staff pass draws it between the staves.
+        final beamElements = _skipNotes.isEmpty
+            ? elements
+            : elements
+                .where((pe) =>
+                    !(pe.element is Note && _skipNotes.contains(pe.element)))
+                .toList();
+        groupRenderer.renderBeams(canvas, beamElements, currentClef!);
       }
 
       // Build skyline from positioned elements for slur collision avoidance
@@ -334,6 +361,166 @@ class StaffRenderer {
         currentClef: currentClef!,
         color: theme.slurColor ?? theme.noteheadColor,
       );
+    }
+  }
+
+  /// Post-layout pass (#14): draws the connecting hyphen CENTERED between
+  /// consecutive syllables of a hyphenated word, instead of gluing it to the
+  /// syllable text. Operates per verse line, within a single system (this method
+  /// only sees the current system's elements).
+  void _renderLyricHyphens(Canvas canvas, List<PositionedElement> elements) {
+    final lyricNotes = <({Note note, double x})>[];
+    for (final pe in elements) {
+      final el = pe.element;
+      if (el is Note && el.syllables != null && el.syllables!.isNotEmpty) {
+        lyricNotes.add((note: el, x: pe.position.dx));
+      }
+    }
+    if (lyricNotes.length < 2) return;
+
+    final fontSize = coordinates.staffSpace * 0.85;
+    final lineHeight = fontSize * 1.3;
+    final staffBottomY =
+        coordinates.staffBaseline.dy + 2 * coordinates.staffSpace;
+    final firstLineY = staffBottomY + coordinates.staffSpace * 1.5;
+    final color = theme.noteheadColor.withValues(alpha: 0.85);
+
+    TextStyle styleFor(bool italic) {
+      final base = theme.lyricTextStyle ?? const TextStyle();
+      return base.copyWith(
+        fontSize: base.fontSize ?? fontSize,
+        color: base.color ?? color,
+        fontStyle:
+            italic ? FontStyle.italic : (base.fontStyle ?? FontStyle.normal),
+        height: 1.0,
+      );
+    }
+
+    double measure(String text, bool italic) {
+      final tp = TextPainter(
+        text: TextSpan(text: text, style: styleFor(italic)),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      return tp.width;
+    }
+
+    for (int verse = 0; verse < 32; verse++) {
+      var anyAtVerse = false;
+      ({Note note, double x})? prev;
+      for (final ln in lyricNotes) {
+        final syls = ln.note.syllables!;
+        if (verse >= syls.length) continue;
+        anyAtVerse = true;
+        final syl = syls[verse];
+        if (prev != null) {
+          final prevSyl = prev.note.syllables![verse];
+          if (prevSyl.type == SyllableType.initial ||
+              prevSyl.type == SyllableType.middle) {
+            final prevRight = prev.x + measure(prevSyl.text, prevSyl.italic) / 2;
+            final curLeft = ln.x - measure(syl.text, syl.italic) / 2;
+            final midX = (prevRight + curLeft) / 2;
+            final lyricY = firstLineY + verse * lineHeight;
+            final hp = TextPainter(
+              text: TextSpan(text: '-', style: styleFor(prevSyl.italic)),
+              textDirection: TextDirection.ltr,
+            )..layout();
+            hp.paint(
+              canvas,
+              Offset(midX - hp.width / 2, lyricY - hp.height / 2),
+            );
+          }
+        }
+        prev = ln;
+      }
+      if (!anyAtVerse) break;
+    }
+  }
+
+  /// Post-layout pass (#13): draws melisma extension lines. A single/terminal
+  /// syllable (end of a word) sung over subsequent note(s) that carry no
+  /// syllable extends a horizontal line from the syllable to the last melisma
+  /// note. The melisma ends at the next syllable, a rest, or the system end.
+  void _renderMelismaLines(Canvas canvas, List<PositionedElement> elements) {
+    var maxVerses = 0;
+    for (final pe in elements) {
+      final el = pe.element;
+      if (el is Note && el.syllables != null) {
+        if (el.syllables!.length > maxVerses) maxVerses = el.syllables!.length;
+      }
+    }
+    if (maxVerses == 0) return;
+
+    final fontSize = coordinates.staffSpace * 0.85;
+    final lineHeight = fontSize * 1.3;
+    final staffBottomY =
+        coordinates.staffBaseline.dy + 2 * coordinates.staffSpace;
+    final firstLineY = staffBottomY + coordinates.staffSpace * 1.5;
+    final color = theme.noteheadColor.withValues(alpha: 0.85);
+    final noteHalfWidth =
+        ((metadata.getGlyphInfo('noteheadBlack')?.boundingBox?.width ?? 1.18) *
+            coordinates.staffSpace) *
+        0.5;
+
+    double measure(String text, bool italic) {
+      final base = theme.lyricTextStyle ?? const TextStyle();
+      final tp = TextPainter(
+        text: TextSpan(
+          text: text,
+          style: base.copyWith(
+            fontSize: base.fontSize ?? fontSize,
+            fontStyle:
+                italic ? FontStyle.italic : (base.fontStyle ?? FontStyle.normal),
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      return tp.width;
+    }
+
+    for (int verse = 0; verse < maxVerses; verse++) {
+      double? startX; // right edge of the held syllable text
+      double? endX; // right edge of the last melisma note
+      final y = firstLineY + verse * lineHeight + fontSize * 0.28;
+
+      void flush() {
+        if (startX != null &&
+            endX != null &&
+            endX! - startX! > coordinates.staffSpace * 0.6) {
+          final paint = Paint()
+            ..color = color
+            ..strokeWidth = coordinates.staffSpace * 0.1
+            ..strokeCap = StrokeCap.round
+            ..style = PaintingStyle.stroke;
+          canvas.drawLine(Offset(startX!, y), Offset(endX!, y), paint);
+        }
+        startX = null;
+        endX = null;
+      }
+
+      for (final pe in elements) {
+        final el = pe.element;
+        if (el is Note) {
+          final syls = el.syllables;
+          final hasSyl =
+              syls != null && verse < syls.length && syls[verse].text.isNotEmpty;
+          if (hasSyl) {
+            flush();
+            final syl = syls[verse];
+            if (syl.type == SyllableType.single ||
+                syl.type == SyllableType.terminal) {
+              startX = pe.position.dx +
+                  measure(syl.text, syl.italic) / 2 +
+                  coordinates.staffSpace * 0.35;
+              endX = null;
+            }
+          } else if (startX != null) {
+            endX = pe.position.dx + noteHalfWidth;
+          }
+        } else if (el is Rest) {
+          flush();
+        }
+      }
+      flush();
     }
   }
 
@@ -616,7 +803,26 @@ class StaffRenderer {
 
     if (element is Clef) {
       currentClef = element;
-      barElementRenderer.renderClef(canvas, element, basePosition);
+      // A clef appearing after musical content in the same system is a change,
+      // drawn at cue size (~72%, Behind Bars/Verovio); the opening or restated
+      // clef at a system start stays full size.
+      var isCueClef = false;
+      for (int j = index - 1; j >= 0; j--) {
+        final prev = allElements[j];
+        if (prev.system != positioned.system) break;
+        if (prev.element is Note ||
+            prev.element is Rest ||
+            prev.element is Chord) {
+          isCueClef = true;
+          break;
+        }
+      }
+      barElementRenderer.renderClef(
+        canvas,
+        element,
+        basePosition,
+        sizeFactor: isCueClef ? 0.72 : 1.0,
+      );
     } else if (element is KeySignature && currentClef != null) {
       barElementRenderer.renderKeySignature(
         canvas,
@@ -628,6 +834,9 @@ class StaffRenderer {
       barElementRenderer.renderTimeSignature(canvas, element, basePosition);
     } else if (element is Note && currentClef != null) {
       _noteClefs[element] = currentClef!;
+      // Cross-staff notes are drawn (notehead + stem + beam) by the grand-staff
+      // pass on the target staff, so skip them here.
+      if (_skipNotes.contains(element)) return;
       final onlyNotehead = _notesInAdvancedBeams.contains(element);
       noteRenderer.render(
         canvas,
@@ -636,6 +845,8 @@ class StaffRenderer {
         currentClef!,
         renderOnlyNotehead: onlyNotehead,
         voiceNumber: positioned.voiceNumber,
+        accidentalDisplay:
+            _accidentalDecisions[element] ?? AccidentalDisplay.show,
       );
     } else if (element is Rest) {
       restRenderer.render(
@@ -655,13 +866,48 @@ class StaffRenderer {
         basePosition,
         currentClef!,
         voiceNumber: positioned.voiceNumber,
+        accidentalDecisions: _accidentalDecisions,
       );
     } else if (element is Tuplet && currentClef != null) {
       tupletRenderer.render(canvas, element, basePosition, currentClef!);
     } else if (element is RepeatMark) {
       symbolAndTextRenderer.renderRepeatMark(canvas, element, basePosition);
     } else if (element is Dynamic) {
-      symbolAndTextRenderer.renderDynamic(canvas, element, basePosition);
+      // A hairpin with no explicit length spans to the next dynamic or barline
+      // in the same system (Behind Bars), leaving a small gap before it.
+      double? lengthOverride;
+      if (element.isHairpin && element.length == null) {
+        double? stopX;
+        var stopIsDynamic = false;
+        for (int j = index + 1; j < allElements.length; j++) {
+          final pe = allElements[j];
+          if (pe.system != positioned.system) break;
+          if (pe.element is Dynamic) {
+            stopX = pe.position.dx;
+            stopIsDynamic = true;
+            break;
+          }
+          if (pe.element is Barline) {
+            stopX = pe.position.dx;
+            break;
+          }
+        }
+        if (stopX != null) {
+          // The next dynamic letter is drawn centered on its X, so leave room
+          // for its left half plus a margin; a barline only needs a small gap.
+          final gap = stopIsDynamic
+              ? coordinates.staffSpace * 1.4
+              : coordinates.staffSpace * 0.5;
+          final span = stopX - basePosition.dx - gap;
+          if (span >= coordinates.staffSpace * 2) lengthOverride = span;
+        }
+      }
+      symbolAndTextRenderer.renderDynamic(
+        canvas,
+        element,
+        basePosition,
+        lengthOverride: lengthOverride,
+      );
     } else if (element is MusicText) {
       symbolAndTextRenderer.renderMusicText(canvas, element, basePosition);
     } else if (element is TempoMark) {
@@ -911,9 +1157,12 @@ class StaffRenderer {
       case BarlineType.dashed:
         return 'barlineDashed';
       case BarlineType.heavy:
-      case BarlineType.heavyHeavy:
-      case BarlineType.heavyLight:
         return 'barlineHeavy';
+      case BarlineType.heavyHeavy:
+        return 'barlineHeavyHeavy';
+      case BarlineType.heavyLight:
+        // Reverse-final (heavy then light) — used at section starts.
+        return 'barlineReverseFinal';
       case BarlineType.tick:
         return 'barlineTick';
       case BarlineType.short_:

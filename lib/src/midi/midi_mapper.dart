@@ -5,6 +5,7 @@ import '../../core/dynamic.dart';
 import '../../core/measure.dart';
 import '../../core/musical_element.dart';
 import '../../core/note.dart';
+import '../../core/ornament.dart';
 import '../../core/repeat.dart';
 import '../../core/rest.dart';
 import '../../core/score.dart';
@@ -327,7 +328,12 @@ class _TrackEventBuilder {
 
     if (element is TempoMark) {
       if (element.bpm != null) {
-        metaEvents.add(MidiEvent.tempo(tick: tick, bpm: element.bpm!));
+        // A MIDI tempo is always per quarter note; scale a non-quarter beat
+        // unit (e.g. half-note = 80  ->  quarter = 160).
+        final beatQuarters = music.Duration(element.beatUnit).realValue * 4.0;
+        final quarterBpm = (element.bpm! * beatQuarters).round();
+        metaEvents.add(MidiEvent.tempo(
+            tick: tick, bpm: quarterBpm < 1 ? element.bpm! : quarterBpm));
       }
       if (element.text != null && element.text!.trim().isNotEmpty) {
         metaEvents.add(
@@ -349,7 +355,11 @@ class _TrackEventBuilder {
     }
 
     if (element is Dynamic) {
-      _voiceVelocity[voiceNumber] = velocityFromDynamic(element.type);
+      // A hairpin (cresc./dim.) is a ramp marker, not an absolute level — it
+      // must NOT reset the running velocity to mf.
+      if (!element.isHairpin) {
+        _voiceVelocity[voiceNumber] = velocityFromDynamic(element.type);
+      }
       return 0;
     }
 
@@ -382,7 +392,34 @@ class _TrackEventBuilder {
     required int voiceNumber,
     required double tupletMultiplier,
   }) {
-    if (note.isGraceNote && !options.playGraceNotes) {
+    if (note.isGraceNote) {
+      if (!options.playGraceNotes) return 0;
+      // A grace note STEALS time rather than adding it: play it just before the
+      // beat (borrowing from the preceding note) and do NOT advance the cursor,
+      // so the main note stays on time and the measure does not overflow.
+      final graceTicks = _durationToTicks(
+        duration: note.duration,
+        tupletMultiplier: tupletMultiplier,
+        isGraceNote: true,
+        options: options,
+      );
+      // Borrow from the preceding note when there is room, otherwise crush at
+      // the beat. Either way the cursor does not advance (no overflow).
+      final graceStart = startTick >= graceTicks ? startTick - graceTicks : startTick;
+      final graceEnd =
+          startTick >= graceTicks ? startTick : startTick + graceTicks;
+      final graceMidi = note.pitch.midiNumber.clamp(0, 127);
+      final graceVel = (note.dynamicElement != null
+              ? velocityFromDynamic(note.dynamicElement!.type)
+              : (_voiceVelocity[voiceNumber] ?? baseVelocity))
+          .clamp(1, 127);
+      events.add(MidiEvent.noteOn(
+          tick: graceStart,
+          channel: channel,
+          note: graceMidi,
+          velocity: graceVel));
+      events.add(
+          MidiEvent.noteOff(tick: graceEnd, channel: channel, note: graceMidi));
       return 0;
     }
 
@@ -393,20 +430,121 @@ class _TrackEventBuilder {
       options: options,
     );
     final midiNote = note.pitch.midiNumber.clamp(0, 127);
-    final velocity = note.dynamicElement != null
+    var velocity = note.dynamicElement != null
         ? velocityFromDynamic(note.dynamicElement!.type)
         : (_voiceVelocity[voiceNumber] ?? baseVelocity);
+
+    // Articulations: accent-types raise velocity; staccato/tenuto gate the
+    // sounding length. The note still ADVANCES the full duration (the gate
+    // just inserts silence); tied notes are never shortened.
+    final effect = _articulationEffect(note.articulations);
+    velocity = (velocity * effect.accent).round().clamp(1, 127);
+
+    // Ornaments (trill/mordent/turn) expand into rapid sub-notes when the note
+    // is not tied; otherwise it plays plainly.
+    if (note.tie == null && note.ornaments.isNotEmpty) {
+      if (_emitOrnament(
+        midiNote: midiNote,
+        startTick: startTick,
+        durationTicks: durationTicks,
+        velocity: velocity,
+        type: note.ornaments.first.type,
+      )) {
+        return durationTicks;
+      }
+    }
+
+    final soundingTicks = note.tie == null
+        ? (durationTicks * effect.gate).round().clamp(1, durationTicks)
+        : durationTicks;
 
     _emitTiedNote(
       midiNote: midiNote,
       startTick: startTick,
-      durationTicks: durationTicks,
+      durationTicks: soundingTicks,
       velocity: velocity,
       tieType: note.tie,
       voiceNumber: voiceNumber,
     );
 
     return durationTicks;
+  }
+
+  /// Expands a trill/mordent/turn into rapid sub-notes filling [durationTicks].
+  /// Neighbor tones default to a whole step (key-aware intervals are future
+  /// work). Returns false for ornaments that are not melodic expansions.
+  bool _emitOrnament({
+    required int midiNote,
+    required int startTick,
+    required int durationTicks,
+    required int velocity,
+    required OrnamentType type,
+  }) {
+    // Pitch offsets (semitones) to play, and whether to fill the duration by
+    // repeating the pattern (trill) or play it once (mordent/turn).
+    final List<int> pattern;
+    final bool fill;
+    switch (type) {
+      case OrnamentType.trill:
+      case OrnamentType.trillNatural:
+      case OrnamentType.trillSharp:
+      case OrnamentType.trillFlat:
+      case OrnamentType.shortTrill:
+      case OrnamentType.pralltriller:
+        pattern = const [0, 2];
+        fill = true;
+        break;
+      case OrnamentType.mordent:
+        pattern = const [0, 2, 0]; // upper mordent
+        fill = false;
+        break;
+      case OrnamentType.invertedMordent:
+        pattern = const [0, -2, 0]; // lower mordent
+        fill = false;
+        break;
+      case OrnamentType.turn:
+        pattern = const [2, 0, -2, 0];
+        fill = false;
+        break;
+      case OrnamentType.turnInverted:
+      case OrnamentType.invertedTurn:
+        pattern = const [-2, 0, 2, 0];
+        fill = false;
+        break;
+      default:
+        return false;
+    }
+
+    final end = startTick + durationTicks;
+    final unit = (options.ticksPerQuarter ~/ 8).clamp(1, durationTicks);
+
+    void emit(int offset, int from, int to) {
+      if (to <= from) return;
+      final n = (midiNote + offset).clamp(0, 127);
+      events.add(MidiEvent.noteOn(
+          tick: from, channel: channel, note: n, velocity: velocity));
+      events.add(MidiEvent.noteOff(tick: to, channel: channel, note: n));
+    }
+
+    if (fill) {
+      var t = startTick;
+      var i = 0;
+      while (t < end) {
+        final to = (t + unit) > end ? end : (t + unit);
+        emit(pattern[i % pattern.length], t, to);
+        t = to;
+        i++;
+      }
+    } else {
+      var t = startTick;
+      for (var i = 0; i < pattern.length; i++) {
+        final isLast = i == pattern.length - 1;
+        final to = isLast ? end : ((t + unit) > end ? end : (t + unit));
+        emit(pattern[i], t, to);
+        t = to;
+      }
+    }
+    return true;
   }
 
   int _emitChord({
@@ -426,18 +564,34 @@ class _TrackEventBuilder {
         ? velocityFromDynamic(chord.dynamic!.type)
         : (_voiceVelocity[voiceNumber] ?? baseVelocity);
 
+    final chordEffect = _articulationEffect(chord.articulations);
+
     for (final chordNote in chord.notes) {
       final midiNote = chordNote.pitch.midiNumber.clamp(0, 127);
-      final noteVelocity = chordNote.dynamicElement != null
+      var noteVelocity = chordNote.dynamicElement != null
           ? velocityFromDynamic(chordNote.dynamicElement!.type)
           : dynamicVelocity;
+
+      // Combine the chord's and the note's articulations.
+      final noteEffect = _articulationEffect(chordNote.articulations);
+      final accent = chordEffect.accent > noteEffect.accent
+          ? chordEffect.accent
+          : noteEffect.accent;
+      final gate = chordEffect.gate < noteEffect.gate
+          ? chordEffect.gate
+          : noteEffect.gate;
+      noteVelocity = (noteVelocity * accent).round().clamp(1, 127);
+      final tieType = chordNote.tie ?? chord.tie;
+      final soundingTicks = tieType == null
+          ? (durationTicks * gate).round().clamp(1, durationTicks)
+          : durationTicks;
 
       _emitTiedNote(
         midiNote: midiNote,
         startTick: startTick,
-        durationTicks: durationTicks,
+        durationTicks: soundingTicks,
         velocity: noteVelocity,
-        tieType: chordNote.tie ?? chord.tie,
+        tieType: tieType,
         voiceNumber: voiceNumber,
       );
     }
@@ -540,6 +694,38 @@ class _TrackEventBuilder {
         return;
     }
   }
+}
+
+/// Duration "gate" fraction for an articulation (how much of the written
+/// duration actually sounds): staccato shortens, tenuto is near-full.
+double _articulationGate(ArticulationType a) => switch (a) {
+      ArticulationType.staccatissimo => 0.25,
+      ArticulationType.staccato => 0.5,
+      ArticulationType.portato => 0.75,
+      ArticulationType.tenuto => 1.0,
+      _ => 1.0,
+    };
+
+/// Velocity multiplier for an accent-type articulation.
+double _articulationAccent(ArticulationType a) => switch (a) {
+      ArticulationType.strongAccent || ArticulationType.marcato => 1.35,
+      ArticulationType.accent => 1.2,
+      ArticulationType.tenuto => 1.05,
+      _ => 1.0,
+    };
+
+/// Combined gate (min) and accent (max) for a note's articulations.
+({double gate, double accent}) _articulationEffect(
+    List<ArticulationType> arts) {
+  var gate = 1.0;
+  var accent = 1.0;
+  for (final a in arts) {
+    final g = _articulationGate(a);
+    if (g < gate) gate = g;
+    final v = _articulationAccent(a);
+    if (v > accent) accent = v;
+  }
+  return (gate: gate, accent: accent);
 }
 
 class _TrackBuildResult {

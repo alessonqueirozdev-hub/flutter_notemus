@@ -8,6 +8,27 @@ import 'package:test/test.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 
 void main() {
+  group('StaffPositionCalculator - C and F clef positions', () {
+    int posC4(ClefType ct) => StaffPositionCalculator.calculate(
+        const Pitch(step: 'C', octave: 4), Clef(clefType: ct));
+
+    test('C-clefs put C4 on the clef line (soprano..baritone)', () {
+      // line 1 = -4, line 2 = -2, line 3 = 0, line 4 = +2, line 5 = +4.
+      expect(posC4(ClefType.soprano), -4);
+      expect(posC4(ClefType.mezzoSoprano), -2);
+      expect(posC4(ClefType.alto), 0);
+      expect(posC4(ClefType.tenor), 2);
+      expect(posC4(ClefType.baritone), 4);
+    });
+
+    test('baritone F clef (bassThirdLine) puts F3 on the middle line', () {
+      final pos = StaffPositionCalculator.calculate(
+          const Pitch(step: 'F', octave: 3),
+          Clef(clefType: ClefType.bassThirdLine));
+      expect(pos, 0);
+    });
+  });
+
   group('StaffPositionCalculator - Treble Clef', () {
     final trebleClef = Clef(clefType: ClefType.treble);
 

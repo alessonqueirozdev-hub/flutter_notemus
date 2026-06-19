@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/core.dart';
 import '../../../theme/music_score_theme.dart';
+import '../../accidental_resolver.dart';
 import '../../smufl_positioning_engine.dart';
 import '../base_glyph_renderer.dart';
 
@@ -32,11 +33,16 @@ class AccidentalRenderer extends BaseGlyphRenderer {
     Canvas canvas,
     Note note,
     Offset notePosition,
-    double staffPosition,
-  ) {
-    if (note.pitch.accidentalGlyph == null) return;
+    double staffPosition, {
+    AccidentalDisplay display = AccidentalDisplay.show,
+  }) {
+    // Within-measure resolution: suppress repeats, draw a natural on revert.
+    if (display == AccidentalDisplay.hide) return;
+    final String? accidentalGlyph = display == AccidentalDisplay.natural
+        ? 'accidentalNatural'
+        : note.pitch.accidentalGlyph;
+    if (accidentalGlyph == null) return;
 
-    final accidentalGlyph = note.pitch.accidentalGlyph!;
     final noteheadGlyph = note.duration.type.glyphName;
 
     // Calculate position of the accidental using positioning engine
@@ -53,12 +59,43 @@ class AccidentalRenderer extends BaseGlyphRenderer {
         notePosition.dy + (accidentalPosition.dy * coordinates.staffSpace);
 
     // Desenhar accidental
+    final accColor = theme.accidentalColor ?? theme.noteheadColor;
+
     drawGlyphWithBBox(
       canvas,
       glyphName: accidentalGlyph,
       position: Offset(accidentalX, accidentalY),
-      color: theme.accidentalColor ?? theme.noteheadColor,
+      color: accColor,
       options: const GlyphDrawOptions(),
     );
+
+    // Cautionary/editorial brackets around the accidental.
+    if (note.accidentalParenthesis != AccidentalParenthesis.none) {
+      final isBracket =
+          note.accidentalParenthesis == AccidentalParenthesis.brackets;
+      final leftGlyph =
+          isBracket ? 'accidentalBracketLeft' : 'accidentalParensLeft';
+      final rightGlyph =
+          isBracket ? 'accidentalBracketRight' : 'accidentalParensRight';
+      final accWidth = metadata.getGlyphAdvanceWidth(accidentalGlyph) ?? 1.0;
+      final gap = 0.18 * coordinates.staffSpace;
+      drawGlyphWithBBox(
+        canvas,
+        glyphName: leftGlyph,
+        position: Offset(accidentalX - gap, accidentalY),
+        color: accColor,
+        options: const GlyphDrawOptions(),
+      );
+      drawGlyphWithBBox(
+        canvas,
+        glyphName: rightGlyph,
+        position: Offset(
+          accidentalX + accWidth * coordinates.staffSpace + gap,
+          accidentalY,
+        ),
+        color: accColor,
+        options: const GlyphDrawOptions(),
+      );
+    }
   }
 }
