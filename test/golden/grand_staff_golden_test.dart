@@ -171,6 +171,77 @@ void main() {
     );
   });
 
+  testWidgets('cross-staff beam — eighths crossing treble to bass',
+      (tester) async {
+    const size = Size(760, 320);
+    await tester.binding.setSurfaceSize(size);
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    Note e8(String s, int o, {BeamType? beam, int cross = 0}) => Note(
+          pitch: Pitch(step: s, octave: o),
+          duration: const fn.Duration(DurationType.eighth),
+          beam: beam,
+          crossStaffMove: cross,
+        );
+
+    // Treble voice: a descending run beamed across into the bass staff.
+    final treble = Staff(measures: [
+      Measure()
+        ..add(Clef(clefType: ClefType.treble))
+        ..add(TimeSignature(numerator: 4, denominator: 4))
+        ..add(e8('C', 5, beam: BeamType.start))
+        ..add(e8('A', 4, beam: BeamType.inner))
+        ..add(e8('A', 3, beam: BeamType.inner, cross: 1))
+        ..add(e8('F', 3, beam: BeamType.end, cross: 1))
+        ..add(nDur('G', 4, DurationType.half)),
+    ]);
+    final bass = Staff(measures: [
+      Measure()
+        ..add(Clef(clefType: ClefType.bass))
+        ..add(TimeSignature(numerator: 4, denominator: 4))
+        ..add(nDur('C', 3, DurationType.whole)),
+    ]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: Scaffold(
+          backgroundColor: Colors.white,
+          body: Center(
+            child: RepaintBoundary(
+              key: kGoldenBoundaryKey,
+              child: Container(
+                width: size.width,
+                height: size.height,
+                color: Colors.white,
+                child: CustomPaint(
+                  size: size,
+                  painter: GrandStaffPainter(
+                    staffGroup: StaffGroup(
+                      staves: [treble, bass],
+                      bracket: BracketType.brace,
+                    ),
+                    staffSpace: 12.0,
+                    metadata: SmuflMetadata(),
+                    theme: const MusicScoreTheme(),
+                    availableWidth: size.width,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    await expectLater(
+      find.byKey(kGoldenBoundaryKey),
+      matchesGoldenFile('goldens/grand_staff_cross_beam.png'),
+    );
+  });
+
   testWidgets('public GrandStaff widget renders a StaffGroup', (tester) async {
     await tester.binding.setSurfaceSize(const Size(760, 320));
     addTearDown(() => tester.binding.setSurfaceSize(null));

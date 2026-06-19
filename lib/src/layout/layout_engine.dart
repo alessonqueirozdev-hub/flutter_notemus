@@ -1794,6 +1794,9 @@ class LayoutEngine {
               tabFret: note.tabFret,
               tabString: note.tabString,
               syllables: note.syllables,
+              accidentalParenthesis: note.accidentalParenthesis,
+              slurs: note.slurs,
+              crossStaffMove: note.crossStaffMove,
             );
             beamedNote.xmlId = note.xmlId;
 

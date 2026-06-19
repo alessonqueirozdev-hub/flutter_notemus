@@ -81,6 +81,12 @@ class Note extends MusicalElement with BoundingBoxSupport {
   /// `cautionary`/`editorial`/`parentheses`/`bracket`). Default = none.
   final AccidentalParenthesis accidentalParenthesis;
 
+  /// Cross-staff display offset (keyboard music): the note belongs to its home
+  /// staff (for voice/beam/spacing) but its notehead is drawn on another staff.
+  /// 0 = home staff, +1 = one staff below, -1 = one staff above. Honored by the
+  /// multi-staff (grand-staff) renderer.
+  final int crossStaffMove;
+
   /// Alternate pitch for grace notes with a specific pitch.
   final Pitch? alternatePitch;
 
@@ -117,5 +123,6 @@ class Note extends MusicalElement with BoundingBoxSupport {
     this.syllables,
     this.accidentalParenthesis = AccidentalParenthesis.none,
     this.slurs = const [],
+    this.crossStaffMove = 0,
   });
 }

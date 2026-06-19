@@ -17,6 +17,7 @@ import '../smufl/smufl_metadata_loader.dart';
 import '../theme/music_score_theme.dart';
 import 'renderers/bracket_renderer.dart';
 import 'staff_coordinate_system.dart';
+import 'staff_position_calculator.dart';
 import 'staff_renderer.dart';
 
 /// Layout output for one staff in the group.
@@ -169,6 +170,11 @@ class GrandStaffPainter extends CustomPainter {
 
     final baseline0 = staffSpace * 5.0;
 
+    // Notes drawn by the cross-staff beam pass (skipped by their home staff).
+    final skipPerStaff = [
+      for (var i = 0; i < _layouts.length; i++) _crossStaffNotesOf(i),
+    ];
+
     for (var i = 0; i < _layouts.length; i++) {
       canvas.save();
       canvas.translate(0, i * staffGap);
@@ -189,9 +195,13 @@ class GrandStaffPainter extends CustomPainter {
         // Barlines are drawn once across the whole system below, so the staves
         // don't draw their own (which would double up and not connect).
         renderBarlines: false,
+        skipNotes: skipPerStaff[i],
       );
       canvas.restore();
     }
+
+    // Cross-staff beam groups, drawn after the staves so the beam sits between.
+    _drawCrossStaffBeams(canvas, baseline0);
 
     // Vertical extent of the system: top line of the first staff to the bottom
     // line of the last staff (staff lines span 4 staff spaces around baseline).
@@ -271,6 +281,109 @@ class GrandStaffPainter extends CustomPainter {
         break;
       default:
         line(x, thin);
+    }
+  }
+
+  // --- Cross-staff beams ----------------------------------------------------
+
+  /// Notes of staff [home] that belong to a beam group containing a cross-staff
+  /// note. The home staff skips drawing them; the cross-staff pass draws them.
+  Set<Note> _crossStaffNotesOf(int home) {
+    final out = <Note>{};
+    for (final g in _layouts[home].engine.advancedBeamGroups) {
+      if (g.notes.any((n) => n.crossStaffMove != 0)) {
+        out.addAll(g.notes);
+      }
+    }
+    return out;
+  }
+
+  Clef _clefOf(int staffIndex) {
+    if (staffIndex < 0 || staffIndex >= staffGroup.staves.length) {
+      return Clef(clefType: ClefType.treble);
+    }
+    for (final m in staffGroup.staves[staffIndex].measures) {
+      for (final e in m.elements) {
+        if (e is Clef) return e;
+      }
+    }
+    return Clef(clefType: ClefType.treble);
+  }
+
+  /// Draws beam groups that straddle two staves: each notehead on its target
+  /// staff, stems reaching a single beam placed between the staves.
+  void _drawCrossStaffBeams(Canvas canvas, double baseline0) {
+    final ss = staffSpace;
+    final noteheadChar = metadata.getCodepoint('noteheadBlack');
+    final noteheadW =
+        (metadata.getGlyphAdvanceWidth('noteheadBlack') ?? 1.18) * ss;
+    final stemW = metadata.getEngravingDefault('stemThickness', 0.12) * ss;
+    final beamThick = metadata.getEngravingDefault('beamThickness', 0.5) * ss;
+    final fontSize = ss * 4.0;
+    final stemPaint = Paint()
+      ..color = theme.stemColor
+      ..strokeWidth = stemW;
+    final beamPaint = Paint()..color = theme.stemColor;
+
+    for (var home = 0; home < _layouts.length; home++) {
+      final noteX = _layouts[home].engine.noteXPositions;
+      for (final g in _layouts[home].engine.advancedBeamGroups) {
+        if (!g.notes.any((n) => n.crossStaffMove != 0)) continue;
+
+        final pts = <({double x, double y, double stemX})>[];
+        for (final note in g.notes) {
+          final x = noteX[note];
+          if (x == null) continue;
+          final target = (home + note.crossStaffMove)
+              .clamp(0, staffGroup.staves.length - 1);
+          final pos =
+              StaffPositionCalculator.calculate(note.pitch, _clefOf(target));
+          final y = baseline0 + target * staffGap - pos * ss * 0.5;
+          pts.add((x: x, y: y, stemX: x + noteheadW * 0.5));
+
+          // Notehead glyph (noteheadBlack is ~baseline-centred vertically).
+          if (noteheadChar.isNotEmpty) {
+            final tp = TextPainter(
+              text: TextSpan(
+                text: noteheadChar,
+                style: TextStyle(
+                  fontFamily: 'Bravura',
+                  package: 'flutter_notemus',
+                  fontSize: fontSize,
+                  color: theme.noteheadColor,
+                  height: 1.0,
+                ),
+              ),
+              textDirection: TextDirection.ltr,
+            )..layout();
+            final baselineFromTop =
+                tp.computeDistanceToActualBaseline(TextBaseline.alphabetic);
+            tp.paint(canvas, Offset(x, y - baselineFromTop));
+          }
+        }
+        if (pts.length < 2) continue;
+
+        var minY = pts.first.y, maxY = pts.first.y;
+        for (final p in pts) {
+          if (p.y < minY) minY = p.y;
+          if (p.y > maxY) maxY = p.y;
+        }
+        final beamY = (minY + maxY) / 2;
+
+        for (final p in pts) {
+          canvas.drawLine(Offset(p.stemX, p.y), Offset(p.stemX, beamY), stemPaint);
+        }
+        final xs = pts.map((p) => p.stemX).toList()..sort();
+        canvas.drawRect(
+          Rect.fromLTRB(
+            xs.first,
+            beamY - beamThick / 2,
+            xs.last,
+            beamY + beamThick / 2,
+          ),
+          beamPaint,
+        );
+      }
     }
   }
 

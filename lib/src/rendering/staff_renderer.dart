@@ -224,6 +224,9 @@ class StaffRenderer {
   final Set<Note> _notesInAdvancedBeams = {};
   final Map<Note, Clef> _noteClefs = {};
 
+  // Notes to skip drawing (drawn elsewhere, e.g. by the cross-staff beam pass).
+  Set<Note> _skipNotes = const {};
+
   /// Within-measure accidental decisions for the current render pass (set from
   /// the layout engine, which resolves them from the model).
   Map<Note, AccidentalDisplay> _accidentalDecisions = const {};
@@ -234,7 +237,9 @@ class StaffRenderer {
     Size size, {
     LayoutEngine? layoutEngine,
     bool renderBarlines = true,
+    Set<Note> skipNotes = const {},
   }) {
+    _skipNotes = skipNotes;
     // Limpar set de notes beamed
     _notesInAdvancedBeams.clear();
     _noteClefs.clear();
@@ -268,6 +273,12 @@ class StaffRenderer {
       final noteYPositions = layoutEngine.noteYPositions;
 
       for (final advancedGroup in layoutEngine.advancedBeamGroups) {
+        // A beam group with any skipped (cross-staff) note is redrawn whole by
+        // the grand-staff cross-staff beam pass.
+        if (_skipNotes.isNotEmpty &&
+            advancedGroup.notes.any(_skipNotes.contains)) {
+          continue;
+        }
         beamRenderer.renderAdvancedBeamGroup(
           canvas,
           advancedGroup,
@@ -815,6 +826,9 @@ class StaffRenderer {
       barElementRenderer.renderTimeSignature(canvas, element, basePosition);
     } else if (element is Note && currentClef != null) {
       _noteClefs[element] = currentClef!;
+      // Cross-staff notes are drawn (notehead + stem + beam) by the grand-staff
+      // pass on the target staff, so skip them here.
+      if (_skipNotes.contains(element)) return;
       final onlyNotehead = _notesInAdvancedBeams.contains(element);
       noteRenderer.render(
         canvas,
