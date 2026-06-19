@@ -330,8 +330,10 @@ Auditoria adversarial de I/O + MIDI: 41 lacunas confirmadas em 6 dimensões (doc
 | **Goldens** | piano, ritmos-diferentes, cross-beam, SATB, multi-sistema, **multi-grupo**. |
 
 | **Import de `<part-group>`** | spans de `<part-group>`+`<group-symbol>` no `<part-list>` → partes agrupadas em `StaffGroup` bracketado (bracket/brace/line). Partitura orquestral/coral importada já chega com as seções bracketadas. |
+| **Cross-staff automático no import** | `<staff>` que muda no meio de um feixe (MusicXML) → notas mantidas na pauta home com `crossStaffMove`. **Render end-to-end**: feixe importado atravessa as pautas (detecção por run de `note.beam`, independe de feixe avançado/simples). |
+| **Polimento** | hastes do cross-staff presas na borda da cabeça (lado do feixe); chave/colchete rente ao início das linhas. |
 
-**Escopo atual / follow-up restante:** cross-staff automático no import (`<staff>` que muda no meio de um feixe → `crossStaffMove`) — único item de import multi-pauta pendente. O renderizador de pauta/grade cobre grand staff, SATB, partitura multi-seção, quebra multi-sistema, beam cross-staff, com chave/colchete da Bravura; o import produz `Score` com grupos bracketados (piano e `<part-group>`); `ScoreView` renderiza tudo de ponta a ponta.
+**Arco multi-pauta COMPLETO (modelo → import → render → widgets).** Cobre: grand staff (piano), SATB, partitura multi-seção (grade unificada), quebra multi-sistema, beam cross-staff (manual e importado), chave/colchete da Bravura; import produz `Score` com grupos bracketados (piano, `<part-group>`) e cross-staff automático; widgets `GrandStaff`/`ScoreView`. Goldens: piano, ritmos-diferentes, cross-beam, importado-crossbeam, SATB, multi-sistema, multi-grupo.
 
 > **#35 (acidentes de ornamento) e #36 (linha de trinado estendida): REVERTIDOS.** O posicionamento relativo ao glifo do trinado (`ornamentTrill`, âncora `opticalCenter`) ficou visualmente incorreto (acidente brigando com o "tr"). Adiados — exigem trabalho dedicado de ancoragem por bbox do glifo. Campos do modelo também removidos.
 
