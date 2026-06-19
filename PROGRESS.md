@@ -273,7 +273,23 @@ Auditoria adversarial de I/O + MIDI: 41 lacunas confirmadas em 6 dimensões (doc
 | `feat(mei):` eventos de controle | `<slur>/<tie>/<dynam>` por `@startid/@endid` resolvidos para as notas referenciadas. |
 | `feat(musicxml):` export multi-voz | medidas polifônicas exportam com `<backup>`+`<voice>` (antes vazias); round-trip 2 vozes. |
 
-**TODOS os itens HIGH das 3 auditorias (CMN render, I/O, MIDI) foram resolvidos**, além dos principais médios de I/O (export round-trip completo, import multi-parte/multi-pauta, MEI scoreDef/containers/control-events). Restam itens médio/baixo de polimento de render (articulações de acorde, hairpin por glifo SMuFL, largura de bequadro de cancelamento, espaço de ponto de aumento, justificação do último sistema, mudança de clave no meio do sistema em tamanho cue) e refinamentos gregorianos (modelo de melisma/multi-verso, pressus), documentados nos backlogs.
+**TODOS os itens HIGH das 3 auditorias (CMN render, I/O, MIDI) foram resolvidos**, além dos principais médios de I/O (export round-trip completo, import multi-parte/multi-pauta, MEI scoreDef/containers/control-events).
+
+### Lote de polimento de render CMN (por impacto)
+
+| Commit | Correção | Item backlog |
+|---|---|---|
+| `fix(engraving):` direção de haste de acorde | `resolveStemDirection` estava **invertida** (`mostExtremePos > 0`): tríade grave abaixo da pauta tinha haste p/ baixo. Corrigido p/ `< 0` (alinhado à regra de nota + Behind Bars). Afeta **todos** os acordes. | #21 (metade acorde) |
+| `fix(engraving):` articulações de acorde | staccato/acento/etc. de acorde agora renderizam na cabeça externa do lado oposto à haste (antes ignorados apesar de `Chord.articulations`). | #12 |
+| `fix(engraving):` mudanças de clave/armadura/fórmula no meio do sistema | filtro de layout descartava **toda** mudança de elemento de sistema fora do 1º compasso do sistema (ex.: caso "12/8, 6/8" nunca mostrava o 6/8). Agora renderizam. | causa raiz de #10/#19 |
+| `fix(engraving):` largura dos bequadros de cancelamento | layout reserva `previousCount` bequadros + folga (antes colidiam com as notas). | #10/#19 |
+| `fix(engraving):` espaço do ponto de aumento | reserva `0.7 + (n-1)·0.6` SS na largura da nota/acorde pontuado (antes o ponto invadia a próxima nota). | #6 |
+| `fix(spacing):` pausas `restSpacingRatio` (~0.8×) | substituído o `1.15×` que alargava pausas (contradizia Gould). | #7 |
+| `fix(engraving):` tempo livre não desenha `0/4` | `isFreeTime` → nenhum glifo + 0 de largura. | #20 |
+| `fix(engraving):` barras pesadas | heavyLight → `barlineReverseFinal`, heavyHeavy → `barlineHeavyHeavy` (antes ambas viravam `barlineHeavy`). | #64 |
+| `fix(engraving):` linhas suplementares via metadata | `legerLineThickness` (0.16) + `legerLineExtension` (0.4) do metadata SMuFL (antes 0.13/0.4 hardcoded). | #66/#67 |
+
+Restam itens médio/baixo de polimento de render (hairpin por glifo SMuFL, justificação do último sistema, mudança de clave no meio do sistema em tamanho cue, centralização de pausa de compasso inteiro, modelo de spacing √t) e refinamentos gregorianos (modelo de melisma/multi-verso, pressus), documentados nos backlogs.
 
 **Renderiza com autenticidade (confirmado nos PNGs):** clave-dó centrada na linha, punctum/virga, pes, clivis (flexus), torculus, porrectus (oblíqua), scandicus, climacus (losangos *inclinatum*), quilisma, salicus, resupinus/flexus, líquidas, episema/ictus/mora, custos de fim de linha, divisórias, justificação por sistema, letras em fonte serifada.
 
