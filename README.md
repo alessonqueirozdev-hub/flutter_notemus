@@ -51,6 +51,8 @@ Professional music notation rendering for Flutter with SMuFL-compliant engraving
   - [Octave Markings](#octave-markings)
   - [Volta Brackets](#volta-brackets)
   - [Polyphony and Multi-Voice](#polyphony-and-multi-voice)
+  - [Grand Staff, Choir, and Full Scores](#grand-staff-choir-and-full-scores)
+  - [Gregorian Chant (Greciliae)](#gregorian-chant-greciliae)
   - [Repeats](#repeats)
   - [Playing Techniques](#playing-techniques)
   - [Breath and Caesura](#breath-and-caesura)
@@ -186,11 +188,37 @@ For a full conformance audit see [`doc/MEI_V5_AUDIT.md`](doc/MEI_V5_AUDIT.md).
 
 ## Current Status
 
-- Current package release target: `2.6.0`
+- Current package release target: `2.7.0`
 - Previous pub.dev baseline before the new generation: `0.1.0`
-- Core notation rendering is production-ready.
-- MIDI mapping and `.mid` export are available in the package.
+- Core notation rendering is production-ready; **multi-staff / grand-staff and
+  cross-staff beaming** are now supported alongside single-staff `MusicScore`.
+- MIDI mapping and `.mid` export are available in the package (CMN and chant).
 - Android native audio backend is active; other native targets are configured and tracked as pending.
+
+### What's New in 2.7.0
+
+The library is no longer single-staff. This release adds a full multi-staff /
+score renderer, cross-staff beaming, a sweep of Behind-Bars CMN corrections,
+deeper MusicXML/MEI import, and Gregorian render-fidelity work. Everything is
+backward-compatible — existing `MusicScore` usage is unchanged. See the
+[CHANGELOG](CHANGELOG.md#270---2026-06-19) for the full list.
+
+- **Grand staff, choir, and full scores** — new [`GrandStaff`](#grand-staff-choir-and-full-scores)
+  and `ScoreView` widgets render a `StaffGroup`/`Score` on a shared horizontal
+  grid: piano grand staff, SATB, and multi-section systems, with SMuFL
+  brace/bracket glyphs, system-spanning barlines, **multi-system wrapping**
+  (clef/key restated per system), and **cross-staff beaming**.
+- **MusicXML import → scores** — each part becomes a braced/bracketed
+  `StaffGroup`; `<part-group>` section brackets and mid-beam `<staff>` changes
+  (auto cross-staff) are honored.
+- **CMN engraving** — chord-stem direction fix, Gould square-root /
+  inter-onset spacing, mid-system clef/key/time changes, cue-size clef changes,
+  cautionary/editorial accidentals, nested slurs, additive meters, tuplet
+  ratios, sloped tuplet brackets, chord articulations, cross-voice notehead
+  displacement, and more.
+- **Gregorian chant** — episema/mora rendered with Greciliae glyphs
+  (shape-specific episema), asymmetric divisio breathing, climacus/strophae
+  tucking, custos length by leap.
 
 ### What's New in 2.6.0
 
@@ -264,8 +292,21 @@ All pending work is tracked as GitHub issues, with the local index mirrored in [
 
 - Multiple voices in a single staff (`MultiVoiceMeasure`)
 - Multi-staff score support (`Score`, `StaffGroup`)
-- Grand staff scenarios (piano)
-- SATB-style aligned staff rendering
+- `GrandStaff` / `ScoreView` widgets rendering a group on a shared horizontal grid
+- Grand staff scenarios (piano) with SMuFL `brace` and system-spanning barline
+- SATB-style aligned staff rendering with `bracket` glyphs
+- **Cross-staff beaming** (`Note.crossStaffMove`) — beams that cross between staves
+- **Multi-system wrapping** with clef/key restated at each system start
+
+### Gregorian chant (square notation)
+
+- Greciliae font (SIL OFL) precomposed neumes — not geometry-built from CMN glyphs
+- Punctum, virga, podatus/clivis, torculus/porrectus, scandicus/climacus, quilisma
+- Liquescence, compound neumes, repeated notes, special neumes
+- Episema and *mora* (augmentation dot) rendered with shape-specific Greciliae glyphs
+- Divisio (minima/minor/maior/finalis) with asymmetric breathing space
+- Custos (line-end guide) sized by the leap to the next system
+- GABC import and `ChantScore` playback mapping
 
 ### Import and interoperability
 
@@ -290,7 +331,7 @@ Add dependency to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  flutter_notemus: ^2.5.1
+  flutter_notemus: ^2.7.0
 ```
 
 Install packages:
@@ -634,6 +675,112 @@ voice2.add(Note(
 measure.addVoice(voice1);
 measure.addVoice(voice2);
 ```
+
+### Grand Staff, Choir, and Full Scores
+
+`MusicScore` renders a single `Staff`. To render several staves **vertically
+stacked and aligned on a shared horizontal grid** — a piano grand staff, an
+SATB choir, or a full multi-section score — use the `GrandStaff` widget (one
+`StaffGroup`) or `ScoreView` (a whole `Score`).
+
+A `StaffGroup` is a list of staves plus the connector drawn at the left edge:
+
+| `BracketType` | Glyph | Typical use |
+| --- | --- | --- |
+| `brace`   | `{` (SMuFL `brace`) | Keyboard — piano, organ, harp |
+| `bracket` | `[` (SMuFL `bracketTop`/`bracketBottom`) | Choir (SATB), orchestral sections |
+| `line`    | `\|` | Multiple desks of the same instrument (Vln I & II) |
+| `none`    | — | Independent staves |
+
+```dart
+// Piano grand staff: two staves joined by a brace, barlines connected,
+// system-spanning start barline drawn automatically.
+GrandStaff(
+  group: StaffGroup.piano(trebleStaff, bassStaff),
+);
+
+// or explicitly:
+GrandStaff(
+  group: StaffGroup(
+    staves: [soprano, alto, tenor, bass],
+    bracket: BracketType.bracket, // choir
+    name: 'Choir',
+  ),
+);
+```
+
+There are convenience factories for common ensembles: `StaffGroup.piano`,
+`.organ`, `.harp`, `.choir`, `.strings`, `.woodwinds`, `.brass`, `.percussion`,
+and `.multipleInstruments`.
+
+**Full scores.** A `Score` holds multiple `StaffGroup`s. `ScoreView` lays every
+group out on a single unified grid (a true multi-section system):
+
+```dart
+final score = Score(staffGroups: [choir, piano]);
+ScoreView(score: score);
+```
+
+**Multi-system wrapping.** When the music is wider than the available width,
+`GrandStaff`/`ScoreView` break into stacked systems automatically, **restating
+the clef and key signature at the start of every system** and keeping all staves
+aligned on the same break points (ragged-right, Behind-Bars style).
+
+**Cross-staff beaming.** In keyboard music a beamed group can cross between the
+two staves. A note keeps its *home* staff (for voicing, beaming, and spacing)
+but its notehead is drawn on another staff via `Note.crossStaffMove`:
+
+```dart
+Note(
+  pitch: const Pitch(step: 'C', octave: 4),
+  duration: const Duration(DurationType.eighth),
+  beam: BeamType.begin,
+  crossStaffMove: -1, // draw this notehead one staff up; beam crosses the gap
+);
+```
+
+`0` = home staff, `-1` = one staff up, `+1` = one staff down. The grand-staff
+renderer routes the beam and stems across the staff gap to the displaced
+noteheads. Cross-staff beams are also produced automatically on MusicXML import
+when a `<staff>` change occurs mid-beam (see
+[Import](#import-from-json-musicxml-and-mei)).
+
+### Gregorian Chant (Greciliae)
+
+The library renders Gregorian **square notation** with the Greciliae font (SIL
+OFL) — precomposed neume glyphs, *not* shapes assembled from common-music
+noteheads. Use the `ChantScore` widget. The fastest path is GABC (the Gregorio
+project's plain-text chant format):
+
+```dart
+ChantScore.fromGabc(
+  '(c4) Ký(h)ri(h)e(hgh) *(,) e(hg)lé(hi)i(h)son.(g) (::)',
+);
+```
+
+`(c4)` is the clef (do/fa on a staff line), letters are pitches, `(,)`/`(::)`
+are divisiones (breath marks / final), and modifiers encode episema, *mora*,
+quilisma, liquescence, and compound neumes.
+
+You can also build chant element-by-element with `Neume` / `NeumeDivision` and
+render with an explicit clef:
+
+```dart
+ChantScore(
+  clef: const ChantClef(type: ChantClefType.doClef, line: 4),
+  elements: [
+    Neume(/* components: punctum, podatus, clivis, … */),
+    NeumeDivision(type: NeumeDivisionType.minor),
+  ],
+);
+```
+
+Rendering covers: punctum, virga, podatus/clivis, torculus/porrectus,
+scandicus/climacus, quilisma, liquescence, compound and repeated neumes,
+shape-specific horizontal episema and *mora* glyphs, asymmetric divisio
+breathing space, climacus/strophae tucking, and a custos (end-of-line guide)
+sized by the leap to the next system. Chant can be sent to MIDI with
+`ChantMidiMapper` (see [MIDI](#midi-mapping-and-export)).
 
 ### Repeats
 
