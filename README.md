@@ -4,10 +4,10 @@
 [![Flutter](https://img.shields.io/badge/Flutter-3.0+-blue.svg)](https://flutter.dev/)
 [![Dart](https://img.shields.io/badge/Dart-3.8.1+-blue.svg)](https://dart.dev/)
 [![SMuFL](https://img.shields.io/badge/SMuFL-1.40-green.svg)](https://w3c.github.io/smufl/latest/)
-[![MEI](https://img.shields.io/badge/MEI-v5%20100%25-brightgreen.svg)](https://music-encoding.org/guidelines/v5/content/index.html)
+[![MEI](https://img.shields.io/badge/MEI-v5%20CMN-green.svg)](https://music-encoding.org/guidelines/v5/content/index.html)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-Professional music notation rendering for Flutter with SMuFL-compliant engraving, Bravura glyph support, first-party notation-to-MIDI pipeline, and **full MEI v5 conformance**.
+Professional music notation rendering for Flutter with SMuFL-compliant engraving, Bravura glyph support, a first-party notation-to-MIDI pipeline, and a **broad MEI v5 data model with CMN import/export** (see the [conformance section](#mei-v5-conformance) for what is imported/rendered vs. modeled).
 
 ---
 
@@ -68,35 +68,44 @@ Professional music notation rendering for Flutter with SMuFL-compliant engraving
 
 ## MEI v5 Conformance
 
-flutter_notemus implements **100% of the MEI v5 (Music Encoding Initiative) specification**, covering all repertoires and analytical features defined in the [MEI v5 Guidelines](https://music-encoding.org/guidelines/v5/content/index.html).
+flutter_notemus ships a **notation-agnostic data model that covers the breadth of MEI v5 concepts** — from CMN through tablature, mensural, neume, harmonic analysis and figured bass — defined in the [MEI v5 Guidelines](https://music-encoding.org/guidelines/v5/content/index.html).
+
+**Important — what is actually imported/rendered vs. modeled.** MEI *import* and *rendering* focus on **Common Music Notation (CMN)**, which is well supported. Several advanced MEI modules exist in the data model (you can construct them in Dart) but are **not yet wired to the MEI parser/renderer** — they are marked *Model only* below. The table reflects what is genuinely imported and/or rendered, not just representable. (An adversarial audit found ~58% of catalogued items fully wired; the rest are model-only or partial.)
 
 ### Coverage by MEI v5 module
 
-| MEI v5 Module | Coverage | Key classes |
+Legend: ✅ modeled **and** imported/rendered · ◐ partial (see note) · ○ *model only* (classes exist; no MEI import/render yet).
+
+| MEI v5 Module | Status | Notes |
 |---|---|---|
-| **CMN — Pitch & Duration** | ✅ 100% | `Pitch`, `Duration`, `DurationType` (maxima → 2048th) |
-| **CMN — Events** | ✅ 100% | `Note`, `Rest`, `Chord`, `Space`, `MeasureSpace` |
-| **CMN — Measure & Staff** | ✅ 100% | `Measure` (with `@n`), `Staff` (configurable `lineCount`), `xml:id` on all elements |
-| **CMN — Clef / Key / Meter** | ✅ 100% | `Clef` (20 types), `KeySignature` (with `KeyMode`), `TimeSignature` (free + additive) |
-| **CMN — Articulation** | ✅ 100% | `ArticulationType` (17 types), `Articulation` |
-| **CMN — Dynamics** | ✅ 100% | `Dynamic`, `DynamicType` (44 types, hairpin) |
-| **CMN — Ornaments** | ✅ 100% | `Ornament`, `OrnamentType` (60+ types) |
-| **CMN — Slur / Tie / Beam** | ✅ 100% | `SlurType`, `TieType`, `BeamType`, `SlurEvent` (nested/numbered slurs) |
-| **CMN — Tuplets** | ✅ 100% | `Tuplet`, `TupletBracket`, nested tuplets |
-| **CMN — Polyphony** | ✅ 100% | `Voice`, `MultiVoiceMeasure`, `StemDirection` |
-| **CMN — Score structure** | ✅ 100% | `Score`, `StaffGroup`, `ScoreDefinition` (`<scoreDef>`) |
-| **CMN — Navigation** | ✅ 100% | `RepeatMark`, `VoltaBracket`, `BarlineType` (12 types) |
-| **Lyrics & Text** | ✅ 100% | `MusicText`, `Verse`, `Syllable`, `SyllableType` (MEI `<syl>`) |
-| **Metadata (meiHead)** | ✅ 100% | `MeiHeader`, `FileDescription`, `EncodingDescription`, `WorkList`, `ManifestationList`, `RevisionDescription` |
-| **Harmonic Analysis** | ✅ 100% | `HarmonicLabel`, `MelodicInterval`, `HarmonicInterval`, `ScaleDegree`, `ChordTable` |
-| **Figured Bass** | ✅ 100% | `FiguredBass`, `FigureElement` (MEI `<fb>/<f>`) |
-| **Microtonality** | ✅ 100% | `AccidentalType` (sagittal, koma, quarter-tone), `Pitch.pitchClass` |
-| **Solmization** | ✅ 100% | `Pitch.fromSolmization()`, `Pitch.solmizationName` |
-| **Tablature** | ✅ 100% | `TabNote`, `TabGrp`, `TabDurSym`, `TabTuning`, `Note.tabFret/tabString` |
-| **Mensural Notation** | ✅ 100% | `MensuralNote`, `Ligature`, `Mensur`, `ProportMark`, `MensuralRest` |
-| **Neume Notation** | ✅ 100% | `Neume`, `NeumeComponent`, `NeumeType`, `NeumeDivision` |
+| **CMN — Pitch & Duration** | ✅ | `Pitch`, `Duration`, `DurationType` (maxima → 2048th) |
+| **CMN — Events** | ✅ | `Note`, `Rest`, `Chord`, `Space`, `MeasureSpace` |
+| **CMN — Measure & Staff** | ✅ | `Measure` (`@n`), `Staff` (configurable `lineCount`), `xml:id` |
+| **CMN — Clef / Key / Meter** | ◐ | `Clef` (20 types) ✅; `KeyMode` and additive meter exist in the model but are **not parsed from MEI** yet |
+| **CMN — Articulation** | ✅ | `ArticulationType` (17 types) |
+| **CMN — Dynamics** | ◐ | `DynamicType` has 36 types; 9 are rendered, plus hairpins |
+| **CMN — Ornaments** | ◐ | `OrnamentType` has 43 types; 33 mapped to glyphs |
+| **CMN — Slur / Tie / Beam** | ✅ | `SlurType`, `TieType`, `BeamType`, `SlurEvent` (nested/numbered) |
+| **CMN — Tuplets** | ✅ | `Tuplet`, `TupletBracket`, nested tuplets |
+| **CMN — Polyphony** | ✅ | `Voice`, `MultiVoiceMeasure`, `StemDirection` |
+| **CMN — Score structure** | ✅ | `Score`, `StaffGroup`, `ScoreDefinition` (`<scoreDef>`) |
+| **CMN — Navigation** | ✅ | `RepeatMark`, `VoltaBracket`, `BarlineType` (15 types) |
+| **Lyrics & Text** | ◐ | `Syllable`/`SyllableType` imported & rendered; `Verse` grouping not populated by the parser yet |
+| **Metadata (meiHead / FRBR)** | ○ | `MeiHeader` & FRBR classes exist; **not parsed from MEI** |
+| **Harmonic Analysis** | ○ | `HarmonicLabel`, `ScaleDegree`, `ChordTable` exist; **not parsed/rendered** |
+| **Figured Bass** | ○ | `FiguredBass`, `FigureElement` exist; **not parsed/rendered** |
+| **Microtonality** | ✅ | `AccidentalType` (sagittal, koma, quarter-tone) — modeled & rendered |
+| **Solmization** | ✅ | `Pitch.fromSolmization()`, `Pitch.solmizationName` |
+| **Tablature** | ◐ | `Note.tabFret/tabString` modeled & rendered; MEI `@tab.*` **import not implemented** |
+| **Mensural Notation** | ○ | `MensuralNote`, `Ligature`, `Mensur` exist; **no MEI import/render** |
+| **Neume Notation** | ◐ | rendered via **GABC/Gregorian**; MEI `<neume>` import not implemented |
 
 ### Key MEI v5 features
+
+> These snippets show the **Dart model API** (constructing objects). For modules
+> marked *Model only* / ◐ above (figured bass, mensural, full `meiHead`, MEI
+> `<neume>`), the objects are constructible but are **not yet imported from MEI
+> XML or rendered** — see the status table.
 
 ```dart
 // xml:id on any element (MEI cross-referencing)
@@ -148,7 +157,7 @@ Neume(type: NeumeType.pes, components: [
   NeumeComponent(pitchName: 'G', octave: 3, form: NcForm.virga),
 ])
 
-// Full MEI header (meiHead)
+// MEI header (meiHead) — model API; not yet parsed from MEI XML
 Score(
   staffGroups: [...],
   meiHeader: MeiHeader(

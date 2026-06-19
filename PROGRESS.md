@@ -91,6 +91,7 @@ Clave, armadura (sustenidos/bemóis), fórmula (C/comum), cabeças, hastes, feix
   - **Renderização existe apenas para CMN.** Mensural, Neuma, Baixo cifrado e Análise harmônica são **classes de dados sem backend de renderização** (`grep` em `lib/src/rendering` retorna 0 ocorrências de `Neume`/`MensuralNote`).
   - **O parser MEI importa ~30% dos módulos.** Confirmei de primeira mão: **nenhum** parser referencia `lyric/verse/syl/neume/mensur/harm/fb/tab.fret/tabGrp`. Logo, **letras, neumas, mensural, baixo cifrado, análise harmônica e elementos de tablatura NÃO são importados de MEI/MusicXML**, apesar do "100%".
 - **Recomendação p/ o artigo:** trocar "100% MEI v5" por algo como *"modelo de dados abrangente alinhado ao MEI v5; renderização e importação cobrem CMN (notação comum); demais repertórios são modelados mas ainda não renderizados/importados"*.
+- **✅ RESOLVIDO (2026-06-19):** reauditoria adversarial (workflow, 5 agentes) cruzou as 137 linhas com o código → **79 conformes (~58%)**. README (badge, intro, tabela de conformidade) e `doc/MEI_V5_AUDIT.md` (cabeçalho, resumo, metodologia, score, conclusão, disclaimers por seção, flip ✅→○ nas seções só-modelo) corrigidos para refletir a realidade. O "100%" foi removido.
 
 ### H2 — Letras (lyrics) **não são importadas** de MusicXML nem MEI (CONFIRMADO) — ALTA
 - O modelo/API suporta `Syllable`/`Verse`, e a renderização desenha sílabas. Mas **a importação ignora `<lyric>` (MusicXML) e `<verse>/<syl>` (MEI) silenciosamente**.
