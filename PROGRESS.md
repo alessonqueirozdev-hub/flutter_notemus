@@ -302,6 +302,15 @@ Auditoria adversarial de I/O + MIDI: 41 lacunas confirmadas em 6 dimensões (doc
 | `fix(engraving):` ligaduras de acorde divergem | nota superior curva p/ cima, inferior p/ baixo (fanning). | #59 |
 | `fix(engraving):` folga do hairpin antes da dinâmica | a cunha para antes da letra (centrada) seguinte, sem sobrepô-la. | #33 (follow-up) |
 
+### Itens CMN grandes (frente atual)
+
+| Commit | Correção | Item backlog |
+|---|---|---|
+| `fix(spacing):` espaçamento por inter-onset | o espaço *antes* de uma nota reflete a duração da nota *anterior* (ocupação Gould), não a dela; notas longas ganham espaço, curtas se agrupam. | #26 |
+| `feat(engraving):` colisão entre vozes | cabeças de vozes a uma segunda/uníssono no mesmo onset deixam de se sobrepor (voz inferior deslocada uma cabeça). | #55 |
+
+Restam apenas os dois maiores/estruturais: **slurs aninhados/sobrepostos (#53)** — exige identidade/numeração de slur no modelo (hoje só `SlurType` start/inner/end) + parser + render; e **beam cross-staff (#50)** — exige espaço de coordenadas multi-pauta no nível de `Score` (engine hoje é por-`Staff`). Ambos são mudanças de arquitetura com risco alto.
+
 > **#35 (acidentes de ornamento) e #36 (linha de trinado estendida): REVERTIDOS.** O posicionamento relativo ao glifo do trinado (`ornamentTrill`, âncora `opticalCenter`) ficou visualmente incorreto (acidente brigando com o "tr"). Adiados — exigem trabalho dedicado de ancoragem por bbox do glifo. Campos do modelo também removidos.
 
 **Itens pequenos/médios do backlog de render CMN: essencialmente esgotados.** Restam apenas itens grandes/estruturais (espaçamento por inter-onset #26, slurs aninhados/sobrepostos #53, colisão entre vozes #55, beam cross-staff #50), nichos de baixo impacto (glifo SMuFL de hairpin, tamanho do acidente de armadura #60, melhorias finas de slur #8/#9), os ornamentos adiados (#35/#36), além de refinamentos gregorianos (melisma/multi-verso, pressus, episema por forma, fusões), documentados nos backlogs.
