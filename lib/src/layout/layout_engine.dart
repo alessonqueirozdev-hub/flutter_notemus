@@ -1516,16 +1516,18 @@ class LayoutEngine {
     // Base: spacing mínimo between notes (semínima as reference)
     const double baseSpacing = noteMinSpacing;
 
-    // Fatores de spacing PROPORCIONAIS (modelo √2 approximate)
-    // Progressão geométrica smooth for proporção visual correct
+    // Gould square-root spacing law (Behind Bars / Verovio): horizontal space
+    // is proportional to sqrt(duration), normalised to the quarter note (=1.0).
+    // The previous ad-hoc table was far too wide for short notes (16th 0.7 vs
+    // the correct 0.5, 64th 0.55 vs 0.25), flattening rhythmic proportion.
     final durationFactors = {
-      DurationType.whole: 2.0, // Semibreve: 2x
-      DurationType.half: 1.5, // Mínima: 1.5x (√2 ≈ 1.41)
-      DurationType.quarter: 1.0, // Semínima: 1x (base)
-      DurationType.eighth: 0.8, // Colcheia: 0.8x
-      DurationType.sixteenth: 0.7, // Semicolcheia: 0.7x
-      DurationType.thirtySecond: 0.6, // Fusa: 0.6x
-      DurationType.sixtyFourth: 0.55, // Semifusa: 0.55x
+      DurationType.whole: 2.0, // √4
+      DurationType.half: 1.414, // √2
+      DurationType.quarter: 1.0, // √1 (base)
+      DurationType.eighth: 0.707, // √0.5
+      DurationType.sixteenth: 0.5, // √0.25
+      DurationType.thirtySecond: 0.354, // √0.125
+      DurationType.sixtyFourth: 0.25, // √0.0625
     };
 
     // Get duração of the element current
