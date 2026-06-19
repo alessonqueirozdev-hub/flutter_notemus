@@ -560,13 +560,29 @@ class GregorianPainter extends CustomPainter {
     const halfH = 0.4; // note half-height in staff spaces (Punctum ≈ 0.4 sp)
     switch (type) {
       case _MarkType.mora:
-        canvas.drawCircle(
-            Offset(cx, ny), sp * 0.13, Paint()..color = theme.color);
+        // Engraved augmentum dot (Greciliae AuctumMora); fall back to a drawn
+        // dot if the glyph is unavailable.
+        if (font.has('AuctumMora')) {
+          final w = font.advanceUnits('AuctumMora') * _scale;
+          _glyph(canvas, 'AuctumMora', cx - w / 2, ny,
+              anchorUnits: font.centerYUnits('AuctumMora'));
+        } else {
+          canvas.drawCircle(
+              Offset(cx, ny), sp * 0.13, Paint()..color = theme.color);
+        }
         break;
       case _MarkType.episema:
         final y = ny - sp * (halfH + 0.18);
-        canvas.drawLine(
-            Offset(cx - sp * 0.34, y), Offset(cx + sp * 0.34, y), p);
+        // Engraved horizontal episema (Greciliae HEpisemaPunctum) — a thick
+        // Solesmes bar — instead of a thin geometric line; geometric fallback.
+        if (font.has('HEpisemaPunctum')) {
+          final w = font.advanceUnits('HEpisemaPunctum') * _scale;
+          _glyph(canvas, 'HEpisemaPunctum', cx - w / 2, y,
+              anchorUnits: font.centerYUnits('HEpisemaPunctum'));
+        } else {
+          canvas.drawLine(
+              Offset(cx - sp * 0.34, y), Offset(cx + sp * 0.34, y), p);
+        }
         break;
       case _MarkType.ictus:
         final y0 = ny + sp * (halfH + 0.04);
