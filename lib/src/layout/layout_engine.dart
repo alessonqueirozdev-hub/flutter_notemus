@@ -218,6 +218,7 @@ class LayoutEngine {
 
   // System de Intelligent spacing
   late final spacing.IntelligentSpacingEngine _spacingEngine;
+  late final spacing.SpacingPreferences _spacingPreferences;
 
   // System de Beaming Avançado
   late final BeamAnalyzer _beamAnalyzer;
@@ -263,8 +264,9 @@ class LayoutEngine {
     spacing.SpacingPreferences? spacingPreferences,
   }) {
     // Initialise spacing engine
+    _spacingPreferences = spacingPreferences ?? spacing.SpacingPreferences.normal;
     _spacingEngine = spacing.IntelligentSpacingEngine(
-      preferences: spacingPreferences ?? spacing.SpacingPreferences.normal,
+      preferences: _spacingPreferences,
     );
     _spacingEngine.initializeOpticalCompensator(staffSpace);
 
@@ -1532,9 +1534,10 @@ class LayoutEngine {
     final factor = durationFactors[currentDuration] ?? 1.0;
     double spacing = baseSpacing * factor * staffSpace;
 
-    // AJUSTE: Spacing added for paUsess (80% according to Gould)
+    // Rests take slightly LESS space than an equal-duration note (Gould ~0.8x),
+    // via the configurable restSpacingRatio rather than the old 1.15 widening.
     if (currentElement is Rest) {
-      spacing *= 1.15; // Pausas têm pouco mais ar
+      spacing *= _spacingPreferences.restSpacingRatio;
     }
 
     // Augmentation-dot space is now reserved on the dotted note's own trailing
