@@ -329,7 +329,9 @@ Auditoria adversarial de I/O + MIDI: 41 lacunas confirmadas em 6 dimensões (doc
 | **Glifos Bravura** | chave `{` (`brace`) **e** colchete `[` (`bracketTop`/`bracketBottom`) agora pela fonte — não mais geometria. |
 | **Goldens** | piano, ritmos-diferentes, cross-beam, SATB, multi-sistema, **multi-grupo**. |
 
-**Escopo atual / follow-ups:** import de `<part-group>` → colchetes de seção a partir do arquivo, e cross-staff automático no import (`<staff>` que muda no meio de um feixe). O renderizador de pauta/grade já cobre grand staff, SATB, partitura multi-seção, quebra multi-sistema e beam cross-staff.
+| **Import de `<part-group>`** | spans de `<part-group>`+`<group-symbol>` no `<part-list>` → partes agrupadas em `StaffGroup` bracketado (bracket/brace/line). Partitura orquestral/coral importada já chega com as seções bracketadas. |
+
+**Escopo atual / follow-up restante:** cross-staff automático no import (`<staff>` que muda no meio de um feixe → `crossStaffMove`) — único item de import multi-pauta pendente. O renderizador de pauta/grade cobre grand staff, SATB, partitura multi-seção, quebra multi-sistema, beam cross-staff, com chave/colchete da Bravura; o import produz `Score` com grupos bracketados (piano e `<part-group>`); `ScoreView` renderiza tudo de ponta a ponta.
 
 > **#35 (acidentes de ornamento) e #36 (linha de trinado estendida): REVERTIDOS.** O posicionamento relativo ao glifo do trinado (`ornamentTrill`, âncora `opticalCenter`) ficou visualmente incorreto (acidente brigando com o "tr"). Adiados — exigem trabalho dedicado de ancoragem por bbox do glifo. Campos do modelo também removidos.
 
