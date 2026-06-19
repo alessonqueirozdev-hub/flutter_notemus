@@ -308,8 +308,11 @@ Auditoria adversarial de I/O + MIDI: 41 lacunas confirmadas em 6 dimensões (doc
 |---|---|---|
 | `fix(spacing):` espaçamento por inter-onset | o espaço *antes* de uma nota reflete a duração da nota *anterior* (ocupação Gould), não a dela; notas longas ganham espaço, curtas se agrupam. | #26 |
 | `feat(engraving):` colisão entre vozes | cabeças de vozes a uma segunda/uníssono no mesmo onset deixam de se sobrepor (voz inferior deslocada uma cabeça). | #55 |
+| `feat(slurs):` slurs aninhados/sobrepostos | `SlurEvent {number,type}` + `Note.slurs`; casamento por número (stack), arco externo elevado pelo nível de aninhamento; import MusicXML `<slur number=>`. Slur único preservado. | #53 |
 
-Restam apenas os dois maiores/estruturais: **slurs aninhados/sobrepostos (#53)** — exige identidade/numeração de slur no modelo (hoje só `SlurType` start/inner/end) + parser + render; e **beam cross-staff (#50)** — exige espaço de coordenadas multi-pauta no nível de `Score` (engine hoje é por-`Staff`). Ambos são mudanças de arquitetura com risco alto.
+Resta apenas **beam cross-staff (#50)** — exige espaço de coordenadas multi-pauta no nível de `Score` (a engine renderiza uma pauta por vez; o widget `MusicScore` também). É uma refatoração arquitetural ampla, **não expressável de forma incremental segura** no pipeline atual — adiada como trabalho arquitetural dedicado.
+
+**3 dos 4 itens CMN grandes resolvidos (#26, #55, #53).** O #50 fica documentado como item de arquitetura.
 
 > **#35 (acidentes de ornamento) e #36 (linha de trinado estendida): REVERTIDOS.** O posicionamento relativo ao glifo do trinado (`ornamentTrill`, âncora `opticalCenter`) ficou visualmente incorreto (acidente brigando com o "tr"). Adiados — exigem trabalho dedicado de ancoragem por bbox do glifo. Campos do modelo também removidos.
 
