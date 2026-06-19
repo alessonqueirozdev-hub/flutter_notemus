@@ -1125,6 +1125,12 @@ class LayoutEngine {
         // CORRIGIDO: Spacing recomendado SMuFL is 0.25-0.3 staff spaces
         width += (accWidth + 0.3) * staffSpace;
       }
+      // Augmentation dots sit to the right of the notehead (DotRenderer: first
+      // dot at centre + 1.0 SS, each further +0.6 SS), extending ~0.7 SS past
+      // the notehead's right edge. Reserve it so dots never crowd the next note.
+      if (element.duration.dots > 0) {
+        width += (0.7 + (element.duration.dots - 1) * 0.6) * staffSpace;
+      }
       return width;
     }
 
@@ -1161,6 +1167,10 @@ class LayoutEngine {
 
       if (maxAccidentalWidth > 0) {
         width += (maxAccidentalWidth + 0.5) * staffSpace;
+      }
+      // Reserve augmentation-dot space (see the Note branch).
+      if (element.duration.dots > 0) {
+        width += (0.7 + (element.duration.dots - 1) * 0.6) * staffSpace;
       }
       return width;
     }
@@ -1527,14 +1537,8 @@ class LayoutEngine {
       spacing *= 1.15; // Pausas têm pouco mais ar
     }
 
-    // AJUSTE: Spacing added if elemento previous tem point de aumentação
-    if (previousElement is Note && previousElement.duration.dots > 0) {
-      spacing +=
-          staffSpace * 0.2 * previousElement.duration.dots; // REDUZIDO de 0.3
-    } else if (previousElement is Chord && previousElement.duration.dots > 0) {
-      spacing +=
-          staffSpace * 0.2 * previousElement.duration.dots; // REDUZIDO de 0.3
-    }
+    // Augmentation-dot space is now reserved on the dotted note's own trailing
+    // width (_getElementWidthSimple), so no extra leading gap is needed here.
 
     // AJUSTE: More spacing if elemento previous tem accidental
     if (previousElement is Note &&
