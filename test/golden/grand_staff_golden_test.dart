@@ -100,6 +100,77 @@ void main() {
     );
   });
 
+  Note nDur(String step, int octave, DurationType d, {BeamType? beam}) => Note(
+        pitch: Pitch(step: step, octave: octave),
+        duration: fn.Duration(d),
+        beam: beam,
+      );
+
+  testWidgets('grand staff with different rhythms — barlines still align',
+      (tester) async {
+    const size = Size(760, 320);
+    await tester.binding.setSurfaceSize(size);
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final treble = Staff(measures: [
+      Measure()
+        ..add(Clef(clefType: ClefType.treble))
+        ..add(TimeSignature(numerator: 4, denominator: 4))
+        ..add(nDur('C', 5, DurationType.eighth, beam: BeamType.start))
+        ..add(nDur('D', 5, DurationType.eighth, beam: BeamType.inner))
+        ..add(nDur('E', 5, DurationType.eighth, beam: BeamType.inner))
+        ..add(nDur('F', 5, DurationType.eighth, beam: BeamType.end))
+        ..add(nDur('G', 5, DurationType.quarter))
+        ..add(nDur('E', 5, DurationType.quarter)),
+    ]);
+    final bass = Staff(measures: [
+      Measure()
+        ..add(Clef(clefType: ClefType.bass))
+        ..add(TimeSignature(numerator: 4, denominator: 4))
+        ..add(nDur('C', 3, DurationType.half))
+        ..add(nDur('G', 2, DurationType.half)),
+    ]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: Scaffold(
+          backgroundColor: Colors.white,
+          body: Center(
+            child: RepaintBoundary(
+              key: kGoldenBoundaryKey,
+              child: Container(
+                width: size.width,
+                height: size.height,
+                color: Colors.white,
+                child: CustomPaint(
+                  size: size,
+                  painter: GrandStaffPainter(
+                    staffGroup: StaffGroup(
+                      staves: [treble, bass],
+                      bracket: BracketType.brace,
+                    ),
+                    staffSpace: 12.0,
+                    metadata: SmuflMetadata(),
+                    theme: const MusicScoreTheme(),
+                    availableWidth: size.width,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    await expectLater(
+      find.byKey(kGoldenBoundaryKey),
+      matchesGoldenFile('goldens/grand_staff_diff_rhythm.png'),
+    );
+  });
+
   testWidgets('public GrandStaff widget renders a StaffGroup', (tester) async {
     await tester.binding.setSurfaceSize(const Size(760, 320));
     addTearDown(() => tester.binding.setSurfaceSize(null));
