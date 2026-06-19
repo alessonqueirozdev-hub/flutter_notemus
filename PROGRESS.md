@@ -310,9 +310,10 @@ Auditoria adversarial de I/O + MIDI: 41 lacunas confirmadas em 6 dimensões (doc
 | `feat(engraving):` colisão entre vozes | cabeças de vozes a uma segunda/uníssono no mesmo onset deixam de se sobrepor (voz inferior deslocada uma cabeça). | #55 |
 | `feat(slurs):` slurs aninhados/sobrepostos | `SlurEvent {number,type}` + `Note.slurs`; casamento por número (stack), arco externo elevado pelo nível de aninhamento; import MusicXML `<slur number=>`. Slur único preservado. | #53 |
 
-Resta apenas **beam cross-staff (#50)** — exige espaço de coordenadas multi-pauta no nível de `Score` (a engine renderiza uma pauta por vez; o widget `MusicScore` também). É uma refatoração arquitetural ampla, **não expressável de forma incremental segura** no pipeline atual — adiada como trabalho arquitetural dedicado.
+| `feat(rendering):` **renderização multi-pauta (grand staff)** | `GrandStaffPainter` + widget público `GrandStaff`: empilha pautas de um `StaffGroup`, alinha num grid horizontal compartilhado (início de conteúdo e barras alinhados), chave/colchete e barras de sistema contínuas. A biblioteca **deixou de renderizar só uma pauta**. | fundação #50 |
+| `feat(rendering):` **beam cross-staff** | uma voz feixada atravessa as duas pautas: `Note.crossStaffMove`, skip por-pauta + desenho do feixe entre as pautas (cabeças na pauta-alvo, hastes até o feixe). Corrigido bug latente: reconstrução de nota feixada perdia campos novos. | #50 |
 
-**3 dos 4 itens CMN grandes resolvidos (#26, #55, #53).** O #50 fica documentado como item de arquitetura.
+**OS 4 ITENS CMN GRANDES RESOLVIDOS (#26, #55, #53, #50).** A biblioteca agora renderiza grand staff (piano/SATB) com chave, barras conectadas, notas alinhadas (ritmos iguais ou diferentes) e **beam cross-staff** (corre do agudo ao grave atravessando as pautas). Escopo atual do multi-pauta: um sistema (sem quebra de linha multi-pauta) — quebra multi-sistema é o próximo passo de arquitetura.
 
 > **#35 (acidentes de ornamento) e #36 (linha de trinado estendida): REVERTIDOS.** O posicionamento relativo ao glifo do trinado (`ornamentTrill`, âncora `opticalCenter`) ficou visualmente incorreto (acidente brigando com o "tr"). Adiados — exigem trabalho dedicado de ancoragem por bbox do glifo. Campos do modelo também removidos.
 
