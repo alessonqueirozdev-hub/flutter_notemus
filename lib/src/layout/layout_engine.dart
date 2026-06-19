@@ -522,6 +522,9 @@ class LayoutEngine {
     // JUSTIFICAÇÃO HORIZONTAL: Esticar measures for preencher width
     _justifyHorizontally(positionedElements, systemMeasures);
 
+    // Center a lone full-measure rest within its bar (Behind Bars p.158).
+    _centerFullMeasureRests(positionedElements, measureStartIndices);
+
     // Sincronizar _noteXPositions with as positions pós-justificação.
     // _justifyHorizontally modifica positionedElements mas not _noteXPositions,
     // causing desalinhamento between beams (that use _noteXPositions) and noteheads.
@@ -659,6 +662,64 @@ class LayoutEngine {
           );
         }
       }
+    }
+  }
+
+  /// Centers a measure that contains a single full-bar rest between its left
+  /// content edge and its closing barline (Behind Bars p.158: a whole-measure
+  /// rest sits centered regardless of meter). Runs after justification so the
+  /// barline X is final.
+  void _centerFullMeasureRests(
+    List<PositionedElement> elements,
+    Map<int, int> measureStartIndices,
+  ) {
+    final keys = measureStartIndices.keys.toList()..sort();
+    for (var ki = 0; ki < keys.length; ki++) {
+      final i = keys[ki];
+      final measure = staff.measures[i];
+      if (measure is MultiVoiceMeasure) continue;
+
+      final musical = measure.elements
+          .where((e) => e is Note || e is Rest || e is Chord)
+          .toList();
+      if (musical.length != 1 || musical.first is! Rest) continue;
+      final rest = musical.first as Rest;
+
+      // Only a true full-bar rest: a whole rest (used as a measure rest in any
+      // meter) or a rest whose value fills the measure.
+      final ts = measure.timeSignature ?? measure.inheritedTimeSignature;
+      final isFullBar = rest.duration.type == DurationType.whole ||
+          (ts != null &&
+              !ts.isFreeTime &&
+              rest.duration.realValue >= ts.measureValue - 1e-6);
+      if (!isFullBar) continue;
+
+      final start = measureStartIndices[i]!;
+      final end =
+          ki + 1 < keys.length ? measureStartIndices[keys[ki + 1]]! : elements.length;
+
+      var restIdx = -1;
+      double? barlineX;
+      for (var j = start; j < end; j++) {
+        final el = elements[j].element;
+        if (el is Rest && restIdx < 0) restIdx = j;
+        if (el is Barline) barlineX = elements[j].position.dx;
+      }
+      if (restIdx < 0 || barlineX == null) continue;
+
+      final positioned = elements[restIdx];
+      final restWidth = _getElementWidthSimple(positioned.element);
+      final leftBound = positioned.position.dx;
+      final available = barlineX - leftBound;
+      if (available <= restWidth) continue;
+
+      final newX = leftBound + (available - restWidth) / 2;
+      elements[restIdx] = PositionedElement(
+        positioned.element,
+        Offset(newX, positioned.position.dy),
+        system: positioned.system,
+        voiceNumber: positioned.voiceNumber,
+      );
     }
   }
 
