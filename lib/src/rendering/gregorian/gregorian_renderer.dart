@@ -93,7 +93,10 @@ class _Mark {
 
   /// Center-x of the mark within the neume box (px).
   final double dx;
-  _Mark(this.type, this.step, this.dx);
+
+  /// Notehead form under an episema, so the matching HEpisema glyph is chosen.
+  final NcForm form;
+  _Mark(this.type, this.step, this.dx, {this.form = NcForm.punctum});
 }
 
 class _NeumeBox {
@@ -296,7 +299,9 @@ _NeumeBox _emitNeume(
   for (var i = 0; i < comps.length && i < compX.length; i++) {
     final c = comps[i];
     final x = compX[i];
-    if (c.episema) marks.add(_Mark(_MarkType.episema, steps[i], x));
+    if (c.episema) {
+      marks.add(_Mark(_MarkType.episema, steps[i], x, form: c.form));
+    }
     if (c.ictus) {
       marks.add(_Mark(
           c.ictusAbove ? _MarkType.ictusAbove : _MarkType.ictus, steps[i], x));
@@ -572,7 +577,8 @@ class GregorianPainter extends CustomPainter {
   /// Draws a rhythmic mark centered on a note at screen (cx, ny): a horizontal
   /// episema above, a vertical episema (ictus) below (or above), or a mora
   /// (augmentum) dot to the right at note height.
-  void _drawMark(Canvas canvas, _MarkType type, double cx, double ny) {
+  void _drawMark(Canvas canvas, _MarkType type, double cx, double ny,
+      {NcForm form = NcForm.punctum}) {
     final sp = _sp;
     final p = Paint()
       ..color = theme.color
@@ -594,12 +600,20 @@ class GregorianPainter extends CustomPainter {
         break;
       case _MarkType.episema:
         final y = ny - sp * (halfH + 0.18);
-        // Engraved horizontal episema (Greciliae HEpisemaPunctum) — a thick
-        // Solesmes bar — instead of a thin geometric line; geometric fallback.
-        if (font.has('HEpisemaPunctum')) {
-          final w = font.advanceUnits('HEpisemaPunctum') * _scale;
-          _glyph(canvas, 'HEpisemaPunctum', cx - w / 2, y,
-              anchorUnits: font.centerYUnits('HEpisemaPunctum'));
+        // Shape-specific engraved episema (Greciliae HEpisema* matching the
+        // notehead form); geometric bar as fallback.
+        final name = switch (form) {
+          NcForm.virga => 'HEpisemaVirga',
+          NcForm.quilisma => 'HEpisemaQuilisma',
+          _ => 'HEpisemaPunctum',
+        };
+        final glyph = font.has(name)
+            ? name
+            : (font.has('HEpisemaPunctum') ? 'HEpisemaPunctum' : null);
+        if (glyph != null) {
+          final w = font.advanceUnits(glyph) * _scale;
+          _glyph(canvas, glyph, cx - w / 2, y,
+              anchorUnits: font.centerYUnits(glyph));
         } else {
           canvas.drawLine(
               Offset(cx - sp * 0.34, y), Offset(cx + sp * 0.34, y), p);
@@ -696,7 +710,7 @@ class GregorianPainter extends CustomPainter {
           // The mora dot belongs in a space; when the note sits on a line
           // (odd step in this grid) raise the dot into the space above it.
           if (mk.type == _MarkType.mora && mk.step.isOdd) ny -= _halfStep;
-          _drawMark(canvas, mk.type, box.startX + mk.dx, ny);
+          _drawMark(canvas, mk.type, box.startX + mk.dx, ny, form: mk.form);
         }
         if (box.syllable != null && box.syllable!.isNotEmpty) {
           // The syllable centres under the FIRST note of its neume (Solesmes
