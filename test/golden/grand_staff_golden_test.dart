@@ -171,6 +171,73 @@ void main() {
     );
   });
 
+  testWidgets('multi-system grand staff — wraps into stacked systems',
+      (tester) async {
+    const size = Size(620, 560);
+    await tester.binding.setSurfaceSize(size);
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    // Eight measures of four quarters each: too wide for one line at 620px,
+    // so the grand staff must wrap into several stacked systems.
+    Staff hand(ClefType clef, int baseOct) {
+      final measures = <Measure>[];
+      for (var mi = 0; mi < 8; mi++) {
+        final m = Measure();
+        if (mi == 0) {
+          m
+            ..add(Clef(clefType: clef))
+            ..add(TimeSignature(numerator: 4, denominator: 4));
+        }
+        for (final step in ['C', 'D', 'E', 'F']) {
+          m.add(n(step, baseOct));
+        }
+        measures.add(m);
+      }
+      return Staff(measures: measures);
+    }
+
+    final group = StaffGroup(
+      staves: [hand(ClefType.treble, 5), hand(ClefType.bass, 3)],
+      bracket: BracketType.brace,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: Scaffold(
+          backgroundColor: Colors.white,
+          body: Center(
+            child: RepaintBoundary(
+              key: kGoldenBoundaryKey,
+              child: Container(
+                width: size.width,
+                height: size.height,
+                color: Colors.white,
+                child: CustomPaint(
+                  size: size,
+                  painter: GrandStaffPainter(
+                    staffGroup: group,
+                    staffSpace: 11.0,
+                    metadata: SmuflMetadata(),
+                    theme: const MusicScoreTheme(),
+                    availableWidth: size.width,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    await expectLater(
+      find.byKey(kGoldenBoundaryKey),
+      matchesGoldenFile('goldens/grand_staff_multisystem.png'),
+    );
+  });
+
   testWidgets('SATB choir — four staves under one bracket', (tester) async {
     const size = Size(760, 520);
     await tester.binding.setSurfaceSize(size);

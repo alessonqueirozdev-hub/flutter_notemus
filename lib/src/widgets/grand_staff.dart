@@ -106,14 +106,6 @@ class _GrandStaffState extends State<GrandStaff> {
 
   double get _gap => widget.staffGap ?? widget.staffSpace * 11.0;
 
-  double get _height {
-    final n = widget.group.staves.length;
-    if (n == 0) return 0;
-    // First staff baseline at 5 SS; each further staff one gap below; plus the
-    // bottom staff's lower half and a margin.
-    return (n - 1) * _gap + widget.staffSpace * 5.0 + widget.staffSpace * 4.0;
-  }
-
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<void>(
@@ -134,22 +126,22 @@ class _GrandStaffState extends State<GrandStaff> {
             final width = constraints.hasBoundedWidth && constraints.maxWidth.isFinite
                 ? constraints.maxWidth
                 : 800.0;
-            return SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: SizedBox(
-                width: width,
-                height: _height,
-                child: CustomPaint(
-                  size: Size(width, _height),
-                  painter: GrandStaffPainter(
-                    staffGroup: widget.group,
-                    staffSpace: widget.staffSpace,
-                    metadata: _metadata,
-                    theme: widget.theme,
-                    availableWidth: width,
-                    staffGap: _gap,
-                  ),
-                ),
+            // Build the painter first so we can size to its (multi-system) height.
+            final painter = GrandStaffPainter(
+              staffGroup: widget.group,
+              staffSpace: widget.staffSpace,
+              metadata: _metadata,
+              theme: widget.theme,
+              availableWidth: width,
+              staffGap: _gap,
+            );
+            final height = painter.totalHeight;
+            return SizedBox(
+              width: width,
+              height: height,
+              child: CustomPaint(
+                size: Size(width, height),
+                painter: painter,
               ),
             );
           },

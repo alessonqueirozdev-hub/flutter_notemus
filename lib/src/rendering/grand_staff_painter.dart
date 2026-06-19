@@ -38,10 +38,23 @@ class GrandStaffPainter extends CustomPainter {
   /// Baseline-to-baseline vertical distance between adjacent staves.
   final double staffGap;
 
-  late final List<_StaffLayout> _layouts;
+  /// One aligned list of per-staff layouts per system (the group wraps into
+  /// systems when it doesn't fit on one line; every staff breaks at the same
+  /// measures so barlines line up).
+  late final List<List<_StaffLayout>> _systems;
 
   /// Left padding reserved for the brace/bracket (and group name).
   late final double _bracePad;
+
+  /// Total painted height (all systems stacked).
+  double get totalHeight =>
+      _systems.length * systemBlockHeight + staffSpace * 2.0;
+
+  /// Baseline-to-baseline distance between the tops of consecutive systems.
+  double get systemBlockHeight =>
+      (staffGroup.staves.length - 1) * staffGap +
+      staffSpace * 4.0 + // bottom staff lower half + margin
+      staffSpace * 6.0; // inter-system gap
 
   GrandStaffPainter({
     required this.staffGroup,
@@ -52,21 +65,121 @@ class GrandStaffPainter extends CustomPainter {
     double? staffGap,
   }) : staffGap = staffGap ?? staffSpace * 11.0 {
     _bracePad = staffSpace * 2.8;
-    _layouts = [
-      for (final staff in staffGroup.staves) _layoutStaff(staff),
+    final ranges = _computeSystemRanges();
+    _systems = [
+      for (final range in ranges) _layoutSystem(range.start, range.end),
     ];
-    _alignStaves(_layouts);
   }
 
-  _StaffLayout _layoutStaff(Staff staff) {
+  /// Lays out + aligns one system's measures (inclusive [a]..[b]) across staves.
+  List<_StaffLayout> _layoutSystem(int a, int b) {
+    final layouts = [
+      for (final staff in staffGroup.staves)
+        _layoutSubStaff(_systemStaff(staff, a, b)),
+    ];
+    _alignStaves(layouts);
+    return layouts;
+  }
+
+  _StaffLayout _layoutSubStaff(Staff staff) {
     final engine = LayoutEngine(
       staff,
-      availableWidth: availableWidth - _bracePad,
+      // Very wide so a system never wraps internally — breaks are decided here.
+      availableWidth: (availableWidth - _bracePad) * 1000,
       staffSpace: staffSpace,
       metadata: metadata,
     );
     final result = engine.layoutWithSignature();
     return _StaffLayout(result.elements, engine);
+  }
+
+  /// Builds a sub-[Staff] holding measures [a]..[b] of [staff]; for a system
+  /// that doesn't start the piece, the prevailing clef and key are restated at
+  /// the start (Gould/Verovio).
+  Staff _systemStaff(Staff staff, int a, int b) {
+    Clef? clef;
+    KeySignature? key;
+    for (var i = 0; i < a && i < staff.measures.length; i++) {
+      for (final e in staff.measures[i].elements) {
+        if (e is Clef) clef = e;
+        if (e is KeySignature) key = e;
+      }
+    }
+    final measures = <Measure>[];
+    for (var i = a; i <= b && i < staff.measures.length; i++) {
+      final orig = staff.measures[i];
+      if (i == a && a > 0) {
+        final m = Measure();
+        if (!orig.elements.any((e) => e is Clef) && clef != null) m.add(clef);
+        if (!orig.elements.any((e) => e is KeySignature) &&
+            key != null &&
+            key.count != 0) {
+          m.add(key);
+        }
+        for (final e in orig.elements) {
+          m.add(e);
+        }
+        measures.add(m);
+      } else {
+        measures.add(orig);
+      }
+    }
+    return Staff(measures: measures);
+  }
+
+  /// Per-measure widths laid out unwrapped, used to decide shared breaks.
+  List<double> _measureWidths(Staff staff) {
+    final engine = LayoutEngine(
+      staff,
+      availableWidth: 1000000,
+      staffSpace: staffSpace,
+      metadata: metadata,
+    );
+    final els = engine.layout();
+    final widths = <double>[];
+    var prev = 0.0;
+    for (final pe in els) {
+      if (pe.element is Barline) {
+        widths.add(pe.position.dx - prev);
+        prev = pe.position.dx;
+      }
+    }
+    return widths;
+  }
+
+  /// Greedy system breaks shared by all staves: pack measures (by their widest
+  /// per-staff width) into lines no wider than the usable width.
+  List<({int start, int end})> _computeSystemRanges() {
+    final nMeasures = staffGroup.staves
+        .map((s) => s.measures.length)
+        .fold<int>(0, (a, b) => a > b ? a : b);
+    if (nMeasures == 0) return [(start: 0, end: 0)];
+
+    final widths = List<double>.filled(nMeasures, 0);
+    for (final staff in staffGroup.staves) {
+      final w = _measureWidths(staff);
+      for (var i = 0; i < w.length && i < nMeasures; i++) {
+        if (w[i] > widths[i]) widths[i] = w[i];
+      }
+    }
+
+    final usable = (availableWidth - _bracePad) - staffSpace * 1.0;
+    final lead = staffSpace * 4.0; // restated clef+key allowance per new system
+    final ranges = <({int start, int end})>[];
+    var start = 0;
+    var running = 0.0;
+    for (var i = 0; i < nMeasures; i++) {
+      final w = widths[i];
+      if (i > start && running + w > usable) {
+        ranges.add((start: start, end: i - 1));
+        start = i;
+        running = lead + w;
+      } else {
+        running += w + (i == start && start > 0 ? lead : 0);
+      }
+    }
+    ranges.add((start: start, end: nMeasures - 1));
+    return ranges;
   }
 
   // --- Horizontal alignment -------------------------------------------------
@@ -163,19 +276,35 @@ class GrandStaffPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (metadata.isNotLoaded || _layouts.isEmpty) return;
+    if (metadata.isNotLoaded || _systems.isEmpty) return;
 
     // Shift the whole system right to leave room for the brace/bracket.
     canvas.translate(_bracePad, 0);
 
     final baseline0 = staffSpace * 5.0;
+    for (var sysIdx = 0; sysIdx < _systems.length; sysIdx++) {
+      final layouts = _systems[sysIdx];
+      if (layouts.isEmpty) continue;
+      canvas.save();
+      canvas.translate(0, sysIdx * systemBlockHeight);
+      _paintSystem(canvas, size, layouts, baseline0);
+      canvas.restore();
+    }
+  }
 
+  void _paintSystem(
+    Canvas canvas,
+    Size size,
+    List<_StaffLayout> layouts,
+    double baseline0,
+  ) {
     // Notes drawn by the cross-staff beam pass (skipped by their home staff).
     final skipPerStaff = [
-      for (var i = 0; i < _layouts.length; i++) _crossStaffNotesOf(i),
+      for (var i = 0; i < layouts.length; i++)
+        _crossStaffNotesOf(layouts, i),
     ];
 
-    for (var i = 0; i < _layouts.length; i++) {
+    for (var i = 0; i < layouts.length; i++) {
       canvas.save();
       canvas.translate(0, i * staffGap);
       final coords = StaffCoordinateSystem(
@@ -189,9 +318,9 @@ class GrandStaffPainter extends CustomPainter {
       );
       renderer.renderStaff(
         canvas,
-        _layouts[i].elements,
+        layouts[i].elements,
         size,
-        layoutEngine: _layouts[i].engine,
+        layoutEngine: layouts[i].engine,
         // Barlines are drawn once across the whole system below, so the staves
         // don't draw their own (which would double up and not connect).
         renderBarlines: false,
@@ -201,17 +330,17 @@ class GrandStaffPainter extends CustomPainter {
     }
 
     // Cross-staff beam groups, drawn after the staves so the beam sits between.
-    _drawCrossStaffBeams(canvas, baseline0);
+    _drawCrossStaffBeams(canvas, baseline0, layouts);
 
     // Vertical extent of the system: top line of the first staff to the bottom
     // line of the last staff (staff lines span 4 staff spaces around baseline).
     final topY = baseline0 - staffSpace * 2;
     final bottomY =
-        (_layouts.length - 1) * staffGap + baseline0 + staffSpace * 2;
+        (layouts.length - 1) * staffGap + baseline0 + staffSpace * 2;
 
     // Draw every barline once as a continuous line spanning the whole system,
     // so connected staves share unbroken barlines (and the final barline too).
-    for (final bl in _systemBarlines()) {
+    for (final bl in _systemBarlines(layouts)) {
       _drawSystemBarline(canvas, bl.x, bl.type, topY, bottomY);
     }
 
@@ -230,10 +359,12 @@ class GrandStaffPainter extends CustomPainter {
 
   /// The system's barlines (x + type), taken from the (aligned) first staff —
   /// all staves share the same measure structure in a group.
-  List<({double x, BarlineType type})> _systemBarlines() {
-    if (_layouts.isEmpty) return const [];
+  List<({double x, BarlineType type})> _systemBarlines(
+    List<_StaffLayout> layouts,
+  ) {
+    if (layouts.isEmpty) return const [];
     final out = <({double x, BarlineType type})>[];
-    for (final pe in _layouts.first.elements) {
+    for (final pe in layouts.first.elements) {
       if (pe.element is Barline) {
         out.add((x: pe.position.dx, type: (pe.element as Barline).type));
       }
@@ -288,9 +419,9 @@ class GrandStaffPainter extends CustomPainter {
 
   /// Notes of staff [home] that belong to a beam group containing a cross-staff
   /// note. The home staff skips drawing them; the cross-staff pass draws them.
-  Set<Note> _crossStaffNotesOf(int home) {
+  Set<Note> _crossStaffNotesOf(List<_StaffLayout> layouts, int home) {
     final out = <Note>{};
-    for (final g in _layouts[home].engine.advancedBeamGroups) {
+    for (final g in layouts[home].engine.advancedBeamGroups) {
       if (g.notes.any((n) => n.crossStaffMove != 0)) {
         out.addAll(g.notes);
       }
@@ -312,7 +443,11 @@ class GrandStaffPainter extends CustomPainter {
 
   /// Draws beam groups that straddle two staves: each notehead on its target
   /// staff, stems reaching a single beam placed between the staves.
-  void _drawCrossStaffBeams(Canvas canvas, double baseline0) {
+  void _drawCrossStaffBeams(
+    Canvas canvas,
+    double baseline0,
+    List<_StaffLayout> layouts,
+  ) {
     final ss = staffSpace;
     final noteheadChar = metadata.getCodepoint('noteheadBlack');
     final noteheadW =
@@ -325,9 +460,9 @@ class GrandStaffPainter extends CustomPainter {
       ..strokeWidth = stemW;
     final beamPaint = Paint()..color = theme.stemColor;
 
-    for (var home = 0; home < _layouts.length; home++) {
-      final noteX = _layouts[home].engine.noteXPositions;
-      for (final g in _layouts[home].engine.advancedBeamGroups) {
+    for (var home = 0; home < layouts.length; home++) {
+      final noteX = layouts[home].engine.noteXPositions;
+      for (final g in layouts[home].engine.advancedBeamGroups) {
         if (!g.notes.any((n) => n.crossStaffMove != 0)) continue;
 
         final pts = <({double x, double y, double stemX})>[];
