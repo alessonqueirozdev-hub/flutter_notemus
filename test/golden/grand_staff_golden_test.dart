@@ -99,4 +99,28 @@ void main() {
       matchesGoldenFile('goldens/grand_staff_piano.png'),
     );
   });
+
+  testWidgets('public GrandStaff widget renders a StaffGroup', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(760, 320));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: GrandStaff(
+            group: StaffGroup(
+              staves: [trebleStaff(), bassStaff()],
+              bracket: BracketType.brace,
+            ),
+            staffSpace: 12.0,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(tester.takeException(), isNull);
+    expect(find.byType(CustomPaint), findsWidgets);
+  });
 }
