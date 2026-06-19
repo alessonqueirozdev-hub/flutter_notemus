@@ -110,9 +110,73 @@ class OrnamentRenderer extends BaseGlyphRenderer {
             size: ornamentSize,
           ),
         );
+
+        _drawOrnamentAccidentals(canvas, ornament, ornamentX, ornamentY);
       }
     }
   }
+
+  /// Draws an ornament's auxiliary accidental(s) at reduced size, centered above
+  /// (and/or below) the ornament glyph (Gould: trill/turn/mordent accidentals).
+  void _drawOrnamentAccidentals(
+    Canvas canvas,
+    Ornament ornament,
+    double ornamentX,
+    double ornamentY,
+  ) {
+    if (ornament.accidentalAbove == null && ornament.accidentalBelow == null) {
+      return;
+    }
+    final color =
+        theme.accidentalColor ?? theme.ornamentColor ?? theme.noteheadColor;
+    final accSize = glyphSize * 0.55;
+    // Ornament glyphs (tr, turn) extend upward from their optical-centre anchor,
+    // so the above-accidental needs a larger gap to clear the glyph than the
+    // below-accidental.
+    final aboveGap = coordinates.staffSpace * 1.6;
+    final belowGap = coordinates.staffSpace * 0.9;
+    if (ornament.accidentalAbove != null) {
+      final g = _accidentalGlyphName(ornament.accidentalAbove!);
+      if (g != null) {
+        drawGlyphWithBBox(
+          canvas,
+          glyphName: g,
+          position: Offset(ornamentX, ornamentY - aboveGap),
+          color: color,
+          options: GlyphDrawOptions(
+            size: accSize,
+            centerVertically: true,
+            centerHorizontally: true,
+          ),
+        );
+      }
+    }
+    if (ornament.accidentalBelow != null) {
+      final g = _accidentalGlyphName(ornament.accidentalBelow!);
+      if (g != null) {
+        drawGlyphWithBBox(
+          canvas,
+          glyphName: g,
+          position: Offset(ornamentX, ornamentY + belowGap),
+          color: color,
+          options: GlyphDrawOptions(
+            size: accSize,
+            centerVertically: true,
+            centerHorizontally: true,
+          ),
+        );
+      }
+    }
+  }
+
+  String? _accidentalGlyphName(AccidentalType type) => switch (type) {
+        AccidentalType.sharp => 'accidentalSharp',
+        AccidentalType.flat => 'accidentalFlat',
+        AccidentalType.natural => 'accidentalNatural',
+        AccidentalType.doubleSharp => 'accidentalDoubleSharp',
+        AccidentalType.doubleFlat => 'accidentalDoubleFlat',
+        _ => null,
+      };
 
   void renderForChord(
     Canvas canvas,

@@ -265,6 +265,31 @@ Staff _articulations() {
   ]);
 }
 
+Staff _ornamentAccidentals() {
+  return _staff([
+    _measure([
+      Clef(clefType: ClefType.treble),
+      TimeSignature(numerator: 4, denominator: 4),
+      Note(
+        pitch: const Pitch(step: 'G', octave: 5),
+        duration: const Duration(DurationType.quarter),
+        ornaments: [
+          Ornament(type: OrnamentType.trill, accidentalAbove: AccidentalType.sharp),
+        ],
+      ),
+      Note(
+        pitch: const Pitch(step: 'E', octave: 5),
+        duration: const Duration(DurationType.quarter),
+        ornaments: [
+          Ornament(type: OrnamentType.turn, accidentalBelow: AccidentalType.flat),
+        ],
+      ),
+      _n('D', 5),
+      _n('C', 5),
+    ]),
+  ]);
+}
+
 Staff _chordTies() {
   Chord tiedChord(TieType tie) => Chord(
         notes: [
@@ -879,6 +904,13 @@ final List<CorpusCase> corpus = [
     build: _multiSystem,
     staffSpace: 13.0,
     size: const Size(460, 360),
+  ),
+  CorpusCase(
+    id: 'm04s_ornament_accidentals',
+    title: 'Ornament accidentals (trill sharp above, turn flat below)',
+    tier: 'intermediate',
+    exercises: 'reduced accidental above/below an ornament',
+    build: _ornamentAccidentals,
   ),
   CorpusCase(
     id: 'm04r_chord_ties',

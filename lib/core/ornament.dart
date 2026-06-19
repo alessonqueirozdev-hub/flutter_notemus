@@ -66,10 +66,20 @@ class Ornament extends MusicalElement {
   final String? text;
   final Pitch? alternatePitch;
 
+  /// Optional accidental drawn (reduced size) above the ornament — e.g. a trill
+  /// or turn that raises/lowers its auxiliary note. null = none.
+  final AccidentalType? accidentalAbove;
+
+  /// Optional accidental drawn below the ornament (turns can carry one). null =
+  /// none.
+  final AccidentalType? accidentalBelow;
+
   Ornament({
     required this.type,
     this.above = true,
     this.text,
     this.alternatePitch,
+    this.accidentalAbove,
+    this.accidentalBelow,
   });
 }
