@@ -1187,18 +1187,25 @@ class _MusicXmlImportParser {
       );
     }
 
-    final staves = <Staff>[];
+    // Each part becomes its own StaffGroup; a multi-staff part (piano) is
+    // braced as a grand staff.
+    final groups = <StaffGroup>[];
     if (isPartwise) {
       for (final part in root.findElements('part')) {
         final count = _partStaffCount(part);
+        final partStaves = <Staff>[];
         for (var s = 1; s <= count; s++) {
           final filter = count == 1 ? null : s;
           final staff = Staff();
           for (final m in part.findElements('measure')) {
             staff.add(_parseMeasure(m, staffFilter: filter));
           }
-          staves.add(staff);
+          partStaves.add(staff);
         }
+        groups.add(StaffGroup(
+          staves: partStaves,
+          bracket: count > 1 ? BracketType.brace : BracketType.none,
+        ));
       }
     } else {
       // Timewise: gather each part's measures across all <measure> wrappers.
@@ -1216,11 +1223,11 @@ class _MusicXmlImportParser {
         for (final m in partMeasures[p] ?? const <XmlElement>[]) {
           staff.add(_parseMeasure(m));
         }
-        staves.add(staff);
+        groups.add(StaffGroup(staves: [staff]));
       }
     }
 
-    if (staves.isEmpty) staves.add(Staff());
+    if (groups.isEmpty) groups.add(StaffGroup(staves: [Staff()]));
     return Score(
       title: root.findAllElements('work-title').firstOrNull?.innerText,
       composer: root
@@ -1228,7 +1235,7 @@ class _MusicXmlImportParser {
           .where((e) => e.getAttribute('type') == 'composer')
           .firstOrNull
           ?.innerText,
-      staffGroups: [StaffGroup(staves: staves)],
+      staffGroups: groups,
     );
   }
 

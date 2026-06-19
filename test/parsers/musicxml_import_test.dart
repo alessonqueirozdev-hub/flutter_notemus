@@ -109,6 +109,27 @@ void main() {
           s.measures.first.elements.whereType<Clef>().first;
       expect(clefOf(s1).actualClefType, ClefType.treble);
       expect(clefOf(s2).actualClefType, ClefType.bass);
+      // The piano part is one braced StaffGroup (grand staff).
+      expect(score.staffGroups.length, 1);
+      expect(score.staffGroups.single.bracket, BracketType.brace);
+      expect(score.staffGroups.single.staves.length, 2);
+    });
+
+    test('separate parts become separate staff groups', () {
+      const xml = '<score-partwise version="4.0"><part-list>'
+          '<score-part id="P1"><part-name>Soprano</part-name></score-part>'
+          '<score-part id="P2"><part-name>Bass</part-name></score-part>'
+          '</part-list>'
+          '<part id="P1"><measure number="1">'
+          '<note><pitch><step>C</step><octave>5</octave></pitch>'
+          '<duration>1</duration><type>quarter</type></note></measure></part>'
+          '<part id="P2"><measure number="1">'
+          '<note><pitch><step>C</step><octave>3</octave></pitch>'
+          '<duration>1</duration><type>quarter</type></note></measure></part>'
+          '</score-partwise>';
+      final score = MusicXMLParser.scoreFromMusicXML(xml);
+      expect(score.staffGroups.length, 2);
+      expect(score.staffGroups.every((g) => g.staves.length == 1), isTrue);
     });
   });
 
