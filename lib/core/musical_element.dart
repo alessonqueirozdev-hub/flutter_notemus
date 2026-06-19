@@ -19,6 +19,15 @@ enum TieType { start, inner, end }
 /// Definess if a note inicia or ends a slur (slur).
 enum SlurType { start, inner, end }
 
+/// A single numbered slur boundary on a note, enabling concurrent
+/// (nested/overlapping) slurs distinguished by [number] (MusicXML
+/// `<slur number=>` / MEI `@startid`/`@endid`).
+class SlurEvent {
+  final int number;
+  final SlurType type;
+  const SlurEvent({required this.number, required this.type});
+}
+
 /// Modos de beaming for control fino of the agrupamento
 enum BeamingMode {
   /// Beaming automático based na fórmula de measure (default)

@@ -584,6 +584,25 @@ Staff _twoVoice() {
   return _staff([m]);
 }
 
+Staff _nestedSlurs() {
+  Note nn(String s, int o, {List<SlurEvent> slurs = const []}) => Note(
+        pitch: Pitch(step: s, octave: o),
+        duration: const Duration(DurationType.quarter),
+        slurs: slurs,
+      );
+  return _staff([
+    _measure([
+      Clef(clefType: ClefType.treble),
+      TimeSignature(numerator: 4, denominator: 4),
+      // Outer phrase slur (1) over all four; inner slur (2) over the middle two.
+      nn('C', 5, slurs: const [SlurEvent(number: 1, type: SlurType.start)]),
+      nn('D', 5, slurs: const [SlurEvent(number: 2, type: SlurType.start)]),
+      nn('D', 5, slurs: const [SlurEvent(number: 2, type: SlurType.end)]),
+      nn('C', 5, slurs: const [SlurEvent(number: 1, type: SlurType.end)]),
+    ]),
+  ]);
+}
+
 Staff _twoVoiceSeconds() {
   // Two voices a second apart at each onset — noteheads must not overlap.
   final m = MultiVoiceMeasure();
@@ -1022,6 +1041,13 @@ final List<CorpusCase> corpus = [
     exercises: 'melisma line from a syllable over note-less notes (#13)',
     build: _melisma,
     size: const Size(900, 280),
+  ),
+  CorpusCase(
+    id: 'm08c_nested_slurs',
+    title: 'Nested slurs (outer phrase over inner slur)',
+    tier: 'complex',
+    exercises: 'concurrent numbered slurs; outer arch clears the inner',
+    build: _nestedSlurs,
   ),
   CorpusCase(
     id: 'm08b_two_voice_seconds',

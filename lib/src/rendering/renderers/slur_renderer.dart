@@ -79,10 +79,28 @@ class SlurRenderer {
     required Clef currentClef,
     Color color = Colors.black,
   }) {
-    for (final group in slurGroups.values) {
+    // Nesting level per group: how many other slurs it strictly encloses, so an
+    // enclosing (outer) slur arches farther from the notes than the inner ones
+    // (Gould p.110-112). Keyed by element-index span.
+    final groupList = slurGroups.values.where((g) => g.length >= 2).toList();
+    int nestLevel(List<int> g) {
+      var level = 0;
+      for (final other in groupList) {
+        if (identical(other, g)) continue;
+        final inside = g.first <= other.first && g.last >= other.last;
+        final isSmaller = other.first > g.first || other.last < g.last;
+        if (inside && isSmaller) level++;
+      }
+      return level;
+    }
+
+    const nestOffsetSS = 1.3;
+
+    for (final group in groupList) {
       if (group.length < 2) {
         continue;
       }
+      final nestOffset = nestLevel(group) * nestOffsetSS * staffSpace;
 
       final startElement = positions[group.first];
       final endElement = positions[group.last];
@@ -146,14 +164,23 @@ class SlurRenderer {
         stemUp: endNote.stemUp,
       );
 
+      // Raise (or lower) an enclosing slur so it clears the inner ones.
+      final dy = slurAbove ? -nestOffset : nestOffset;
+      final nestedStart = nestOffset == 0
+          ? startPoint
+          : Offset(startPoint.dx, startPoint.dy + dy);
+      final nestedEnd = nestOffset == 0
+          ? endPoint
+          : Offset(endPoint.dx, endPoint.dy + dy);
+
       final calculator = SlurCalculator(
         rules: rules,
         skylineCalculator: skylineCalculator,
       );
 
       final curve = calculator.calculateSlur(
-        startPoint: startPoint,
-        endPoint: endPoint,
+        startPoint: nestedStart,
+        endPoint: nestedEnd,
         placement: slurAbove,
         staffSpace: staffSpace,
       );

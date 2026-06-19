@@ -441,30 +441,63 @@ class GroupRenderer {
   }
 
   /// Identifica grupos de notes ligadas by slurs (público for SlurRenderer)
+  /// Slur boundary events on an element. Uses the numbered [Note.slurs] when
+  /// present (concurrent slurs); otherwise synthesizes a single number-0 event
+  /// from the unnumbered [Note.slur]/[Chord.slur].
+  List<SlurEvent> _slurEventsOf(dynamic element) {
+    if (element is Note) {
+      if (element.slurs.isNotEmpty) return element.slurs;
+      if (element.slur == SlurType.start) {
+        return const [SlurEvent(number: 0, type: SlurType.start)];
+      }
+      if (element.slur == SlurType.end) {
+        return const [SlurEvent(number: 0, type: SlurType.end)];
+      }
+      return const [];
+    }
+    if (element is Chord) {
+      SlurType? s = element.slur;
+      s ??= element.notes
+          .map((n) => n.slur)
+          .firstWhere((x) => x != null, orElse: () => null);
+      if (s == SlurType.start) {
+        return const [SlurEvent(number: 0, type: SlurType.start)];
+      }
+      if (s == SlurType.end) {
+        return const [SlurEvent(number: 0, type: SlurType.end)];
+      }
+    }
+    return const [];
+  }
+
+  /// Matches slur starts to ends by number (a stack/map keyed by slur number),
+  /// so nested and overlapping slurs are paired correctly instead of greedily.
+  /// Each returned group is the inclusive run of participating elements from a
+  /// start to its matching end.
   Map<int, List<int>> identifySlurGroups(List<PositionedElement> elements) {
     final groups = <int, List<int>>{};
     int groupId = 0;
+    final open = <int, int>{}; // slur number -> start element index
+
     for (int i = 0; i < elements.length; i++) {
       final element = elements[i].element;
-      if (!_elementHasSlurState(element, SlurType.start)) {
-        continue;
-      }
+      if (!_elementCanParticipateInSlur(element)) continue;
 
-      final group = <int>[i];
-      for (int j = i + 1; j < elements.length; j++) {
-        final nextElement = elements[j].element;
-        if (!_elementCanParticipateInSlur(nextElement)) {
-          continue;
+      for (final ev in _slurEventsOf(element)) {
+        if (ev.type == SlurType.start) {
+          open[ev.number] = i;
+        } else if (ev.type == SlurType.end) {
+          final startIdx = open.remove(ev.number);
+          if (startIdx != null && startIdx < i) {
+            final group = <int>[];
+            for (int j = startIdx; j <= i; j++) {
+              if (_elementCanParticipateInSlur(elements[j].element)) {
+                group.add(j);
+              }
+            }
+            if (group.length >= 2) groups[groupId++] = group;
+          }
         }
-
-        group.add(j);
-        if (_elementHasSlurState(nextElement, SlurType.end)) {
-          break;
-        }
-      }
-
-      if (group.length >= 2) {
-        groups[groupId++] = group;
       }
     }
     return groups;
@@ -579,19 +612,6 @@ class GroupRenderer {
         return true;
       }
       return element.notes.any((note) => note.tie == state);
-    }
-    return false;
-  }
-
-  bool _elementHasSlurState(dynamic element, SlurType state) {
-    if (element is Note) {
-      return element.slur == state;
-    }
-    if (element is Chord) {
-      if (element.slur == state) {
-        return true;
-      }
-      return element.notes.any((note) => note.slur == state);
     }
     return false;
   }

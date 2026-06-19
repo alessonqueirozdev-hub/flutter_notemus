@@ -49,6 +49,11 @@ class Note extends MusicalElement with BoundingBoxSupport {
   /// Optional: Definesss whether this note starts or ends a slur.
   final SlurType? slur;
 
+  /// Concurrent (nested/overlapping) slur boundaries on this note, each with a
+  /// number so starts and ends can be matched by id. When non-empty this is the
+  /// source of truth; otherwise [slur] (a single unnumbered slur) is used.
+  final List<SlurEvent> slurs;
+
   /// List of ornaments applied to the note.
   final List<Ornament> ornaments;
 
@@ -111,5 +116,6 @@ class Note extends MusicalElement with BoundingBoxSupport {
     this.tabString,
     this.syllables,
     this.accidentalParenthesis = AccidentalParenthesis.none,
+    this.slurs = const [],
   });
 }
