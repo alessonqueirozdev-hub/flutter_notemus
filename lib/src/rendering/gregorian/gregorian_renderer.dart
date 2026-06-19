@@ -738,7 +738,11 @@ class GregorianPainter extends CustomPainter {
         // the step like a note (the tail flourishes up/down from there), so it
         // uses the note anchor rather than the bbox center.
         final up = row.custosStep! >= 0;
-        final g0 = up ? 'CustosUpShort' : 'CustosDownShort';
+        // Pick the length variant by how far the next pitch reaches from the
+        // staff centre (Gregorio: short within the staff, longer for big leaps).
+        final reach = row.custosStep!.abs();
+        final size = reach <= 5 ? 'Short' : (reach <= 9 ? 'Medium' : 'Long');
+        final g0 = '${up ? 'CustosUp' : 'CustosDown'}$size';
         final g = font.has(g0) ? g0 : 'Punctum';
         _glyph(canvas, g, row.lineEnd - sp * 1.0, _stepY(cy, row.custosStep!));
       }
