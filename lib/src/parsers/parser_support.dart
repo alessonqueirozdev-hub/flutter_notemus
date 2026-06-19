@@ -1382,6 +1382,7 @@ class _MusicXmlImportParser {
         articulations: _musicXmlArticulations(noteElement),
         tie: _musicXmlTieType(noteElement),
         slur: _musicXmlSlurType(noteElement),
+        slurs: _musicXmlSlurEvents(noteElement),
         ornaments: _musicXmlOrnaments(noteElement),
         voice: voiceNumber,
         isGraceNote: isGrace,
@@ -1749,6 +1750,23 @@ SlurType? _musicXmlSlurType(XmlElement noteElement) {
     }
   }
   return slur;
+}
+
+/// All numbered `<slur>` boundaries on a note (MusicXML `<slur number=>`), so
+/// concurrent/nested slurs can be matched by id. Empty when the note carries no
+/// slur boundary.
+List<SlurEvent> _musicXmlSlurEvents(XmlElement noteElement) {
+  final events = <SlurEvent>[];
+  for (final notations in noteElement.findElements('notations')) {
+    for (final slurElement in notations.findElements('slur')) {
+      final type = _parseSlurType(slurElement.getAttribute('type'));
+      if (type == null) continue;
+      final number =
+          int.tryParse(slurElement.getAttribute('number') ?? '1') ?? 1;
+      events.add(SlurEvent(number: number, type: type));
+    }
+  }
+  return events;
 }
 
 BeamType? _musicXmlBeamType(XmlElement noteElement) {

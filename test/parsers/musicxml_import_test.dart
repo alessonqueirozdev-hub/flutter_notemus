@@ -12,6 +12,34 @@ void main() {
   List<Dynamic> dynamicsOf(Staff s) =>
       s.measures.expand((m) => m.elements).whereType<Dynamic>().toList();
 
+  group('MusicXML numbered (nested) slurs', () {
+    List<Note> notesOf(Staff s) =>
+        s.measures.expand((m) => m.elements).whereType<Note>().toList();
+
+    test('concurrent <slur number=> boundaries are imported by id', () {
+      final xml = score(
+        '<note><pitch><step>C</step><octave>5</octave></pitch>'
+        '<duration>1</duration><type>quarter</type>'
+        '<notations><slur type="start" number="1"/></notations></note>'
+        '<note><pitch><step>D</step><octave>5</octave></pitch>'
+        '<duration>1</duration><type>quarter</type>'
+        '<notations><slur type="start" number="2"/></notations></note>'
+        '<note><pitch><step>D</step><octave>5</octave></pitch>'
+        '<duration>1</duration><type>quarter</type>'
+        '<notations><slur type="stop" number="2"/></notations></note>'
+        '<note><pitch><step>C</step><octave>5</octave></pitch>'
+        '<duration>1</duration><type>quarter</type>'
+        '<notations><slur type="stop" number="1"/></notations></note>',
+      );
+      final notes = notesOf(MusicXMLParser.parseMusicXML(xml));
+      expect(notes[0].slurs.single.number, 1);
+      expect(notes[0].slurs.single.type, SlurType.start);
+      expect(notes[1].slurs.single.number, 2);
+      expect(notes[3].slurs.single.number, 1);
+      expect(notes[3].slurs.single.type, SlurType.end);
+    });
+  });
+
   group('MusicXML cautionary/editorial accidentals', () {
     List<Note> notesOf(Staff s) =>
         s.measures.expand((m) => m.elements).whereType<Note>().toList();
