@@ -324,9 +324,10 @@ Auditoria adversarial de I/O + MIDI: 41 lacunas confirmadas em 6 dimensões (doc
 | **Cross-staff beam** | feixe entre as pautas (skip por-pauta + desenho dedicado). |
 | **Import** | `scoreFromMusicXML`: cada parte vira um `StaffGroup`; parte multi-pauta (piano) ganha chave. |
 | **Widgets públicos** | `GrandStaff` (um grupo) e `ScoreView` (um `Score` inteiro). |
-| **Goldens** | piano, ritmos-diferentes, cross-beam, SATB. |
+| **Quebra multi-sistema** | grupos longos quebram em sistemas empilhados; pontos de quebra compartilhados entre pautas; clave+armadura restatadas por sistema. |
+| **Goldens** | piano, ritmos-diferentes, cross-beam, SATB, **multi-sistema**. |
 
-**Escopo atual / próximos passos:** um sistema por grupo (sem quebra de linha multi-pauta) — **quebra multi-sistema** é o próximo passo de arquitetura; grade unificada entre múltiplos grupos e import de `<part-group>`/cross-staff automático (`<staff>` que muda no meio de um feixe) também ficam como follow-ups.
+**Escopo atual / follow-ups:** grade horizontal unificada entre múltiplos grupos (orquestra com várias seções), import de `<part-group>`/colchetes de seção, e cross-staff automático no import (`<staff>` que muda no meio de um feixe). O grand staff/SATB de um grupo, com quebra multi-sistema e beam cross-staff, está funcional.
 
 > **#35 (acidentes de ornamento) e #36 (linha de trinado estendida): REVERTIDOS.** O posicionamento relativo ao glifo do trinado (`ornamentTrill`, âncora `opticalCenter`) ficou visualmente incorreto (acidente brigando com o "tr"). Adiados — exigem trabalho dedicado de ancoragem por bbox do glifo. Campos do modelo também removidos.
 
