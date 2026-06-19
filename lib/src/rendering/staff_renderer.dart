@@ -851,7 +851,30 @@ class StaffRenderer {
     } else if (element is RepeatMark) {
       symbolAndTextRenderer.renderRepeatMark(canvas, element, basePosition);
     } else if (element is Dynamic) {
-      symbolAndTextRenderer.renderDynamic(canvas, element, basePosition);
+      // A hairpin with no explicit length spans to the next dynamic or barline
+      // in the same system (Behind Bars), leaving a small gap before it.
+      double? lengthOverride;
+      if (element.isHairpin && element.length == null) {
+        double? stopX;
+        for (int j = index + 1; j < allElements.length; j++) {
+          final pe = allElements[j];
+          if (pe.system != positioned.system) break;
+          if (pe.element is Dynamic || pe.element is Barline) {
+            stopX = pe.position.dx;
+            break;
+          }
+        }
+        if (stopX != null) {
+          final span = stopX - basePosition.dx - coordinates.staffSpace * 0.5;
+          if (span >= coordinates.staffSpace * 2) lengthOverride = span;
+        }
+      }
+      symbolAndTextRenderer.renderDynamic(
+        canvas,
+        element,
+        basePosition,
+        lengthOverride: lengthOverride,
+      );
     } else if (element is MusicText) {
       symbolAndTextRenderer.renderMusicText(canvas, element, basePosition);
     } else if (element is TempoMark) {

@@ -279,6 +279,7 @@ class SymbolAndTextRenderer {
     Dynamic dynamic,
     Offset basePosition, {
     double verticalOffset = 0.0,
+    double? lengthOverride,
   }) {
     if (dynamic.isHairpin) {
       _renderHairpin(
@@ -286,6 +287,7 @@ class SymbolAndTextRenderer {
         dynamic,
         basePosition,
         verticalOffset: verticalOffset,
+        lengthOverride: lengthOverride,
       );
       return;
     }
@@ -330,8 +332,12 @@ class SymbolAndTextRenderer {
     Dynamic dynamic,
     Offset basePosition, {
     double verticalOffset = 0.0,
+    double? lengthOverride,
   }) {
-    final length = dynamic.length ?? coordinates.staffSpace * 6;
+    // Precedence: explicit model length, then the computed span to the next
+    // dynamic/barline, then a 6-SS default stub.
+    final length =
+        dynamic.length ?? lengthOverride ?? coordinates.staffSpace * 6;
     // Fix: Use same Y position that dynamic
     // Fix: LACERDA: Add verticalOffset for avoid overlap
     final hairpinY =

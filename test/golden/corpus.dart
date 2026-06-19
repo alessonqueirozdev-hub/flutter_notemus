@@ -265,6 +265,22 @@ Staff _articulations() {
   ]);
 }
 
+Staff _hairpinSpan() {
+  return _staff([
+    _measure([
+      Clef(clefType: ClefType.treble),
+      TimeSignature(numerator: 4, denominator: 4),
+      Dynamic(type: DynamicType.piano),
+      _n('C', 5),
+      Dynamic(type: DynamicType.crescendo, isHairpin: true),
+      _n('E', 5),
+      _n('G', 5),
+      Dynamic(type: DynamicType.forte),
+      _n('C', 6),
+    ]),
+  ]);
+}
+
 Staff _additiveMeter() {
   return _staff([
     _measure([
@@ -801,6 +817,13 @@ final List<CorpusCase> corpus = [
     build: _multiSystem,
     staffSpace: 13.0,
     size: const Size(460, 360),
+  ),
+  CorpusCase(
+    id: 'm04o_hairpin_span',
+    title: 'Hairpin spans to the next dynamic (p < f)',
+    tier: 'intermediate',
+    exercises: 'crescendo hairpin spans from its note to the forte',
+    build: _hairpinSpan,
   ),
   CorpusCase(
     id: 'm04n_additive_meter',
