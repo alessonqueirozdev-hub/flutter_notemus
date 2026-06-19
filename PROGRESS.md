@@ -293,8 +293,15 @@ Auditoria adversarial de I/O + MIDI: 41 lacunas confirmadas em 6 dimensões (doc
 | `feat(engraving):` clave de mudança em tamanho cue | clave após conteúdo musical no sistema renderiza a ~72% (vs abertura/restatement em tamanho cheio). | #18 |
 | `feat(engraving):` razão de quiáltera + multi-dígito | compõe `numberText` glifo a glifo (dígitos `tuplet0..9`); razão "a:b" com dois-pontos desenhado manualmente (Bravura empacotada não cobre `tupletColon`); meter nulo = simples (tercina mostra "3"). | #37/#38 |
 | `fix(spacing):` lei √t de Gould | fatores de espaçamento proporcionais a √duração (16ª 0.5 vs 0.7 antigo, etc.) — proporção rítmica correta em passagens densas. | #51 (mín.) |
+| `feat(engraving):` pausa de compasso inteiro centralizada | pós-passo centraliza a pausa-de-semibreve entre o conteúdo e a barra. | #39 |
+| `feat(engraving):` metros aditivos (3+2+2) | numerador agrupado com `timeSigPlus` entre grupos. | #71 |
+| `feat(engraving):` hairpin com spanning | crescendo/dim. estende-se até a próxima dinâmica/barra (varredura adiante). | #33 |
+| `feat(engraving):` bracket de quiáltera inclinado | bracket paralelo à tendência das notas (clamp `maxSlope`), com número no ponto médio. | #41 |
+| `feat(accidentals):` cautelares/editoriais | `Note.accidentalParenthesis` (parênteses/colchetes), render + import + export MusicXML (round-trip). | #70 |
+| `fix(engraving):` marcato sempre acima | marcato forçado acima da nota mesmo com haste para cima (Behind Bars p.117). | #62 |
+| `fix(engraving):` ligaduras de acorde divergem | nota superior curva p/ cima, inferior p/ baixo (fanning). | #59 |
 
-Restam itens médio/baixo de polimento de render (hairpin por glifo SMuFL + spanning, espaçamento por inter-onset #26, centralização de pausa de compasso inteiro #39, bracket de quiáltera inclinado #41, acidentes cautelares #70, metros aditivos #71) e refinamentos gregorianos (modelo de melisma/multi-verso, pressus), documentados nos backlogs.
+Restam itens de polimento (espaçamento por inter-onset #26, glifo SMuFL de hairpin, tamanho do acidente de armadura #60, melhorias de slur #8/#9, accidentais de ornamento #35, linha de trinado estendida #36) e itens grandes (slurs aninhados #53, colisão entre vozes #55, beam cross-staff #50), além de refinamentos gregorianos (melisma/multi-verso, pressus), documentados nos backlogs.
 
 **Renderiza com autenticidade (confirmado nos PNGs):** clave-dó centrada na linha, punctum/virga, pes, clivis (flexus), torculus, porrectus (oblíqua), scandicus, climacus (losangos *inclinatum*), quilisma, salicus, resupinus/flexus, líquidas, episema/ictus/mora, custos de fim de linha, divisórias, justificação por sistema, letras em fonte serifada.
 
