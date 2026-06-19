@@ -81,7 +81,7 @@ flutter_notemus implements **100% of the MEI v5 (Music Encoding Initiative) spec
 | **CMN — Articulation** | ✅ 100% | `ArticulationType` (17 types), `Articulation` |
 | **CMN — Dynamics** | ✅ 100% | `Dynamic`, `DynamicType` (44 types, hairpin) |
 | **CMN — Ornaments** | ✅ 100% | `Ornament`, `OrnamentType` (60+ types) |
-| **CMN — Slur / Tie / Beam** | ✅ 100% | `SlurType`, `TieType`, `BeamType`, `AdvancedSlur` |
+| **CMN — Slur / Tie / Beam** | ✅ 100% | `SlurType`, `TieType`, `BeamType`, `SlurEvent` (nested/numbered slurs) |
 | **CMN — Tuplets** | ✅ 100% | `Tuplet`, `TupletBracket`, nested tuplets |
 | **CMN — Polyphony** | ✅ 100% | `Voice`, `MultiVoiceMeasure`, `StemDirection` |
 | **CMN — Score structure** | ✅ 100% | `Score`, `StaffGroup`, `ScoreDefinition` (`<scoreDef>`) |

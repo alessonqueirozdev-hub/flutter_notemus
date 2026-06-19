@@ -270,7 +270,8 @@ Todos os 20+ tipos de clave MEI implementados em `ClefType`: treble, bass, alto,
 |---|---|---|
 | `tie="i/m/t"` | `TieType.start/inner/end` | ✅ |
 | `slur="i/m/t"` | `SlurType.start/inner/end` | ✅ |
-| `AdvancedSlur` com direção e voz | `AdvancedSlur.direction`, `.voiceNumber` | ✅ |
+| Slurs sobrepostos/numerados (`slur@n`) | `SlurEvent` (`Note.slurs`, casados por número) | ✅ |
+| Direção forçada de slur (`@curvedir`) | derivada automaticamente; não há override no modelo ainda (#30) | ⚠️ |
 
 ---
 
