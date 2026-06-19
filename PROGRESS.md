@@ -227,8 +227,10 @@ Meta do autor: **suporte completo a canto gregoriano** (renderização nível-ed
 | `feat(gregorian):` quilisma+Ancus | Glifo do quilisma preservado em grupos ascendentes (era perdido p/ scandicus/pes plano); climacus líquido → Ancus pré-composto. | golden `chant_special_neumes` |
 | `feat(gregorian):` letras sob 1ª nota | Sílaba centrada sob a 1ª nota do neuma (underlay Solesmes). | goldens de canto |
 | `feat(gregorian):` hifenização | Sílabas da mesma palavra unidas por hífen (detecção de fronteira de palavra no GABC); campo aditivo `Neume.hyphenAfter`. | golden `chant_from_gabc` (Sal-ve, Re-gí-na) |
+| `feat(gregorian):` episema/mora por glifo | Episema horizontal → glifo `HEpisemaPunctum` (barra Solesmes grossa); mora → glifo `AuctumMora` (ponto engravado), com fallback geométrico. | #5, #15 (parcial); goldens de canto |
+| `feat(gregorian):` respiração nas divisórias | Espaço assimétrico (mais depois da barra que antes) escalado pelo peso (minima<minor<maior<finalis), contabilizado na justificação. | #7; goldens de canto |
 
-**Auditoria adversarial SOTA gregoriana:** 59 lacunas confirmadas (doc/GREGORIAN_AUDIT_BACKLOG.md). Atacados os itens de maior impacto: âncora à clave (#1), quilisma/Ancus, hifenização, alinhamento de letras. Restantes (médio/baixo): modelo completo de sílaba (melisma/multi-verso), pressus, glifos de episema por forma, linhas de fusão, renderização de cabeçalhos (modo/título) — refinamentos.
+**Auditoria adversarial SOTA gregoriana:** 59 lacunas confirmadas (doc/GREGORIAN_AUDIT_BACKLOG.md). Atacados os de maior impacto: âncora à clave (#1), quilisma/Ancus, hifenização, alinhamento de letras, **episema/mora por glifo Greciliae (#5/#15)**, **respiração de divisória (#7)**. Restantes (médio/baixo): modelo completo de sílaba (melisma/multi-verso), pressus, episema por forma para virga/quilisma/inclinatum (só punctum por ora), linhas de fusão, cabeçalhos (modo/título), espaçamento contextual proporcional — refinamentos.
 
 ### Fase 3 — Biblioteca inteira (CMN) ao estado da arte (em andamento)
 
