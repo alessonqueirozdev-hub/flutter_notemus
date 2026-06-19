@@ -328,4 +328,32 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.byType(CustomPaint), findsWidgets);
   });
+
+  testWidgets('ScoreView renders an imported piano Score end-to-end',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(760, 360));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    const xml = '<score-partwise version="4.0"><part-list>'
+        '<score-part id="P1"><part-name>Piano</part-name></score-part>'
+        '</part-list><part id="P1"><measure number="1">'
+        '<attributes><divisions>1</divisions><staves>2</staves>'
+        '<clef number="1"><sign>G</sign><line>2</line></clef>'
+        '<clef number="2"><sign>F</sign><line>4</line></clef></attributes>'
+        '<note><pitch><step>E</step><octave>5</octave></pitch>'
+        '<duration>1</duration><type>quarter</type><staff>1</staff></note>'
+        '<note><pitch><step>C</step><octave>3</octave></pitch>'
+        '<duration>1</duration><type>quarter</type><staff>2</staff></note>'
+        '</measure></part></score-partwise>';
+    final score = MusicXMLParser.scoreFromMusicXML(xml);
+
+    await tester.pumpWidget(
+      MaterialApp(home: Scaffold(body: ScoreView(score: score))),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(tester.takeException(), isNull);
+    expect(find.byType(CustomPaint), findsWidgets);
+  });
 }

@@ -11,6 +11,48 @@ import '../rendering/grand_staff_painter.dart';
 import '../smufl/smufl_metadata_loader.dart';
 import '../theme/music_score_theme.dart';
 
+/// Renders a whole [Score] — each of its [StaffGroup]s as a [GrandStaff],
+/// stacked vertically. A single-group score (piano, SATB) renders as one
+/// grand staff; a multi-group score (e.g. choir + piano) stacks the groups.
+///
+/// ```dart
+/// ScoreView(score: MusicXMLParser.scoreFromMusicXML(xml));
+/// ```
+class ScoreView extends StatelessWidget {
+  final Score score;
+  final MusicScoreTheme theme;
+  final double staffSpace;
+
+  const ScoreView({
+    super.key,
+    required this.score,
+    this.theme = const MusicScoreTheme(),
+    this.staffSpace = 12.0,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final groups = score.staffGroups;
+    if (groups.isEmpty) return const SizedBox.shrink();
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (var i = 0; i < groups.length; i++)
+            Padding(
+              padding: EdgeInsets.only(top: i == 0 ? 0 : staffSpace * 2),
+              child: GrandStaff(
+                group: groups[i],
+                theme: theme,
+                staffSpace: staffSpace,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Renders a [StaffGroup] as a vertically-stacked, horizontally-aligned system
 /// (e.g. a piano grand staff or an SATB / ensemble group).
 ///
