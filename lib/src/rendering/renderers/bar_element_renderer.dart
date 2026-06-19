@@ -23,7 +23,12 @@ class BarElementRenderer {
     this.collisionDetector, // CORREÇÃO: Parâmetro opcional
   });
 
-  void renderClef(Canvas canvas, Clef clef, Offset basePosition) {
+  void renderClef(
+    Canvas canvas,
+    Clef clef,
+    Offset basePosition, {
+    double sizeFactor = 1.0,
+  }) {
     final glyphName = clef.glyphName;
     double yOffset = 0;
 
@@ -71,7 +76,7 @@ class BarElementRenderer {
       canvas,
       glyphName: glyphName,
       position: Offset(basePosition.dx, coordinates.staffBaseline.dy + yOffset),
-      size: glyphSize,
+      size: glyphSize * sizeFactor,
       color: theme.clefColor,
       centerVertically: true,
     );

@@ -265,6 +265,26 @@ Staff _articulations() {
   ]);
 }
 
+Staff _midClefChange() {
+  return _staff([
+    _measure([
+      Clef(clefType: ClefType.treble),
+      TimeSignature(numerator: 4, denominator: 4),
+      _n('G', 4),
+      _n('A', 4),
+      _n('B', 4),
+      _n('C', 5),
+    ]),
+    _measure([
+      Clef(clefType: ClefType.bass), // mid-system clef change -> cue size
+      _n('D', 3),
+      _n('E', 3),
+      _n('F', 3),
+      _n('G', 3),
+    ]),
+  ]);
+}
+
 Staff _heavyBarlines() {
   return _staff([
     _measure([
@@ -744,6 +764,13 @@ final List<CorpusCase> corpus = [
     build: _multiSystem,
     staffSpace: 13.0,
     size: const Size(460, 360),
+  ),
+  CorpusCase(
+    id: 'm04l_mid_clef_change',
+    title: 'Mid-system clef change (cue size)',
+    tier: 'intermediate',
+    exercises: 'clef change after notes renders at ~72% cue size',
+    build: _midClefChange,
   ),
   CorpusCase(
     id: 'm04k_heavy_barlines',

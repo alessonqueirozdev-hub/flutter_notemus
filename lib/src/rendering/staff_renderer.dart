@@ -784,7 +784,26 @@ class StaffRenderer {
 
     if (element is Clef) {
       currentClef = element;
-      barElementRenderer.renderClef(canvas, element, basePosition);
+      // A clef appearing after musical content in the same system is a change,
+      // drawn at cue size (~72%, Behind Bars/Verovio); the opening or restated
+      // clef at a system start stays full size.
+      var isCueClef = false;
+      for (int j = index - 1; j >= 0; j--) {
+        final prev = allElements[j];
+        if (prev.system != positioned.system) break;
+        if (prev.element is Note ||
+            prev.element is Rest ||
+            prev.element is Chord) {
+          isCueClef = true;
+          break;
+        }
+      }
+      barElementRenderer.renderClef(
+        canvas,
+        element,
+        basePosition,
+        sizeFactor: isCueClef ? 0.72 : 1.0,
+      );
     } else if (element is KeySignature && currentClef != null) {
       barElementRenderer.renderKeySignature(
         canvas,
