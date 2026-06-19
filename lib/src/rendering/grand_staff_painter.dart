@@ -1,13 +1,11 @@
 // lib/src/rendering/grand_staff_painter.dart
 //
-// Multi-staff (grand-staff / system) rendering. Lays out each staff of a
-// [StaffGroup] independently, then aligns them on a shared horizontal grid so
-// the content start and every barline line up across staves, stacks them
-// vertically, and draws the connecting brace/bracket and barlines.
-//
-// Scope: a single system (no mid-system wrapping). Grand-staff examples and the
-// common keyboard/SATB layouts fit on one line; multi-system wrapping is a
-// follow-up.
+// Multi-staff rendering for one or more [StaffGroup]s (grand staff, SATB, or a
+// full multi-section score). Lays out each staff, aligns them on a shared
+// horizontal grid (content start and barlines line up across all staves),
+// stacks them vertically, wraps into stacked systems when the music is too wide
+// for one line, and draws each group's brace/bracket plus continuous system
+// barlines (and cross-staff beams).
 
 import 'package:flutter/material.dart';
 
@@ -27,9 +25,14 @@ class _StaffLayout {
   _StaffLayout(this.elements, this.engine);
 }
 
-/// Renders a [StaffGroup] as a vertically-stacked, horizontally-aligned system.
+/// Renders one or more [StaffGroup]s as a unified, vertically-stacked,
+/// horizontally-aligned system (a grand staff, an SATB choir, or a full
+/// multi-section score). All staves across all groups share one horizontal
+/// grid; each group carries its own brace/bracket.
 class GrandStaffPainter extends CustomPainter {
-  final StaffGroup staffGroup;
+  /// The staff groups, top to bottom. A single group is the common grand-staff
+  /// case; multiple groups form an orchestral/ensemble score.
+  final List<StaffGroup> groups;
   final double staffSpace;
   final SmuflMetadata metadata;
   final MusicScoreTheme theme;
@@ -46,24 +49,31 @@ class GrandStaffPainter extends CustomPainter {
   /// Left padding reserved for the brace/bracket (and group name).
   late final double _bracePad;
 
+  /// All staves across all groups, top to bottom.
+  List<Staff> get _allStaves => [for (final g in groups) ...g.staves];
+
   /// Total painted height (all systems stacked).
   double get totalHeight =>
       _systems.length * systemBlockHeight + staffSpace * 2.0;
 
   /// Baseline-to-baseline distance between the tops of consecutive systems.
   double get systemBlockHeight =>
-      (staffGroup.staves.length - 1) * staffGap +
+      (_allStaves.length - 1) * staffGap +
       staffSpace * 4.0 + // bottom staff lower half + margin
       staffSpace * 6.0; // inter-system gap
 
   GrandStaffPainter({
-    required this.staffGroup,
+    StaffGroup? staffGroup,
+    List<StaffGroup>? groups,
     required this.staffSpace,
     required this.metadata,
     required this.theme,
     required this.availableWidth,
     double? staffGap,
-  }) : staffGap = staffGap ?? staffSpace * 11.0 {
+  })  : assert(staffGroup != null || groups != null,
+            'Provide either staffGroup or groups'),
+        groups = groups ?? [staffGroup!],
+        staffGap = staffGap ?? staffSpace * 11.0 {
     _bracePad = staffSpace * 2.8;
     final ranges = _computeSystemRanges();
     _systems = [
@@ -74,7 +84,7 @@ class GrandStaffPainter extends CustomPainter {
   /// Lays out + aligns one system's measures (inclusive [a]..[b]) across staves.
   List<_StaffLayout> _layoutSystem(int a, int b) {
     final layouts = [
-      for (final staff in staffGroup.staves)
+      for (final staff in _allStaves)
         _layoutSubStaff(_systemStaff(staff, a, b)),
     ];
     _alignStaves(layouts);
@@ -150,13 +160,13 @@ class GrandStaffPainter extends CustomPainter {
   /// Greedy system breaks shared by all staves: pack measures (by their widest
   /// per-staff width) into lines no wider than the usable width.
   List<({int start, int end})> _computeSystemRanges() {
-    final nMeasures = staffGroup.staves
+    final nMeasures = _allStaves
         .map((s) => s.measures.length)
         .fold<int>(0, (a, b) => a > b ? a : b);
     if (nMeasures == 0) return [(start: 0, end: 0)];
 
     final widths = List<double>.filled(nMeasures, 0);
-    for (final staff in staffGroup.staves) {
+    for (final staff in _allStaves) {
       final w = _measureWidths(staff);
       for (var i = 0; i < w.length && i < nMeasures; i++) {
         if (w[i] > widths[i]) widths[i] = w[i];
@@ -344,7 +354,7 @@ class GrandStaffPainter extends CustomPainter {
       _drawSystemBarline(canvas, bl.x, bl.type, topY, bottomY);
     }
 
-    // Brace / bracket on the left edge connecting the staves.
+    // Each group carries its own brace/bracket, spanning only its own staves.
     final bracket = BracketRenderer(
       coordinates: StaffCoordinateSystem(
         staffSpace: staffSpace,
@@ -354,7 +364,26 @@ class GrandStaffPainter extends CustomPainter {
       metadata: metadata,
     );
     final leftX = staffSpace * 0.6; // system left origin (matches systemMargin)
-    bracket.render(canvas, staffGroup, topY, bottomY, leftX);
+    var staffIdx = 0;
+    for (final g in groups) {
+      final gTop = baseline0 + staffIdx * staffGap - staffSpace * 2;
+      final gBottom =
+          baseline0 + (staffIdx + g.staves.length - 1) * staffGap +
+              staffSpace * 2;
+      bracket.render(canvas, g, gTop, gBottom, leftX);
+      staffIdx += g.staves.length;
+    }
+
+    // With more than one group, a thin system barline at the left edge joins
+    // every staff (the orchestral "system start" line).
+    if (groups.length > 1) {
+      final paint = Paint()
+        ..color = theme.barlineColor
+        ..strokeWidth =
+            metadata.getEngravingDefault('thinBarlineThickness', 0.16) *
+                staffSpace;
+      canvas.drawLine(Offset(leftX, topY), Offset(leftX, bottomY), paint);
+    }
   }
 
   /// The system's barlines (x + type), taken from the (aligned) first staff —
@@ -430,10 +459,10 @@ class GrandStaffPainter extends CustomPainter {
   }
 
   Clef _clefOf(int staffIndex) {
-    if (staffIndex < 0 || staffIndex >= staffGroup.staves.length) {
+    if (staffIndex < 0 || staffIndex >= _allStaves.length) {
       return Clef(clefType: ClefType.treble);
     }
-    for (final m in staffGroup.staves[staffIndex].measures) {
+    for (final m in _allStaves[staffIndex].measures) {
       for (final e in m.elements) {
         if (e is Clef) return e;
       }
@@ -470,7 +499,7 @@ class GrandStaffPainter extends CustomPainter {
           final x = noteX[note];
           if (x == null) continue;
           final target = (home + note.crossStaffMove)
-              .clamp(0, staffGroup.staves.length - 1);
+              .clamp(0, _allStaves.length - 1);
           final pos =
               StaffPositionCalculator.calculate(note.pitch, _clefOf(target));
           final y = baseline0 + target * staffGap - pos * ss * 0.5;
@@ -524,7 +553,7 @@ class GrandStaffPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant GrandStaffPainter oldDelegate) {
-    return oldDelegate.staffGroup != staffGroup ||
+    return !identical(oldDelegate.groups, groups) ||
         oldDelegate.staffSpace != staffSpace ||
         oldDelegate.availableWidth != availableWidth;
   }

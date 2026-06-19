@@ -171,6 +171,75 @@ void main() {
     );
   });
 
+  testWidgets('multi-group score — unified grid, per-group brackets',
+      (tester) async {
+    const size = Size(760, 620);
+    await tester.binding.setSurfaceSize(size);
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    Staff line(ClefType clef, List<({String s, int o})> ps) {
+      final m = Measure()
+        ..add(Clef(clefType: clef))
+        ..add(TimeSignature(numerator: 4, denominator: 4));
+      for (final p in ps) {
+        m.add(n(p.s, p.o));
+      }
+      return Staff(measures: [m]);
+    }
+
+    // A bracketed two-voice section over a braced piano — all on one grid.
+    final voices = StaffGroup(
+      staves: [
+        line(ClefType.treble, [(s: 'G', o: 5), (s: 'A', o: 5), (s: 'G', o: 5), (s: 'F', o: 5)]),
+        line(ClefType.treble, [(s: 'C', o: 5), (s: 'C', o: 5), (s: 'B', o: 4), (s: 'A', o: 4)]),
+      ],
+      bracket: BracketType.bracket,
+    );
+    final piano = StaffGroup(
+      staves: [
+        line(ClefType.treble, [(s: 'E', o: 4), (s: 'F', o: 4), (s: 'G', o: 4), (s: 'A', o: 4)]),
+        line(ClefType.bass, [(s: 'C', o: 3), (s: 'G', o: 2), (s: 'C', o: 3), (s: 'E', o: 3)]),
+      ],
+      bracket: BracketType.brace,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: Scaffold(
+          backgroundColor: Colors.white,
+          body: Center(
+            child: RepaintBoundary(
+              key: kGoldenBoundaryKey,
+              child: Container(
+                width: size.width,
+                height: size.height,
+                color: Colors.white,
+                child: CustomPaint(
+                  size: size,
+                  painter: GrandStaffPainter(
+                    groups: [voices, piano],
+                    staffSpace: 12.0,
+                    metadata: SmuflMetadata(),
+                    theme: const MusicScoreTheme(),
+                    availableWidth: size.width,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    await expectLater(
+      find.byKey(kGoldenBoundaryKey),
+      matchesGoldenFile('goldens/grand_staff_multigroup.png'),
+    );
+  });
+
   testWidgets('multi-system grand staff — wraps into stacked systems',
       (tester) async {
     const size = Size(620, 560);

@@ -34,22 +34,8 @@ class ScoreView extends StatelessWidget {
   Widget build(BuildContext context) {
     final groups = score.staffGroups;
     if (groups.isEmpty) return const SizedBox.shrink();
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          for (var i = 0; i < groups.length; i++)
-            Padding(
-              padding: EdgeInsets.only(top: i == 0 ? 0 : staffSpace * 2),
-              child: GrandStaff(
-                group: groups[i],
-                theme: theme,
-                staffSpace: staffSpace,
-              ),
-            ),
-        ],
-      ),
-    );
+    // All groups on one unified horizontal grid (a true multi-section system).
+    return GrandStaff(groups: groups, theme: theme, staffSpace: staffSpace);
   }
 }
 
@@ -65,11 +51,15 @@ class ScoreView extends StatelessWidget {
 /// )
 /// ```
 ///
-/// Scope: a single system (no mid-system wrapping) — the common grand-staff and
-/// short-example layout. For a single staff use [MusicScore] instead.
+/// Wraps into stacked systems when the music is wider than one line. For a
+/// single staff use [MusicScore] instead; for a whole [Score] use [ScoreView].
 class GrandStaff extends StatefulWidget {
-  /// The staves (and their brace/bracket) to render together.
-  final StaffGroup group;
+  /// The staves (and their brace/bracket) to render together. Provide this or
+  /// [groups].
+  final StaffGroup? group;
+
+  /// Multiple groups rendered on one unified grid (ensemble / full score).
+  final List<StaffGroup>? groups;
 
   /// Visual theme.
   final MusicScoreTheme theme;
@@ -83,11 +73,15 @@ class GrandStaff extends StatefulWidget {
 
   const GrandStaff({
     super.key,
-    required this.group,
+    this.group,
+    this.groups,
     this.theme = const MusicScoreTheme(),
     this.staffSpace = 12.0,
     this.staffGap,
-  });
+  }) : assert(group != null || groups != null,
+            'Provide either group or groups');
+
+  List<StaffGroup> get _groups => groups ?? [group!];
 
   @override
   State<GrandStaff> createState() => _GrandStaffState();
@@ -117,7 +111,7 @@ class _GrandStaffState extends State<GrandStaff> {
         if (snapshot.hasError) {
           return Center(child: Text('Failed to load metadata: ${snapshot.error}'));
         }
-        if (widget.group.staves.isEmpty) {
+        if (widget._groups.every((g) => g.staves.isEmpty)) {
           return const SizedBox.shrink();
         }
 
@@ -128,7 +122,7 @@ class _GrandStaffState extends State<GrandStaff> {
                 : 800.0;
             // Build the painter first so we can size to its (multi-system) height.
             final painter = GrandStaffPainter(
-              staffGroup: widget.group,
+              groups: widget._groups,
               staffSpace: widget.staffSpace,
               metadata: _metadata,
               theme: widget.theme,

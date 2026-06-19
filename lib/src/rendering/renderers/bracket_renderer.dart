@@ -259,35 +259,68 @@ class BracketRenderer {
     double height,
     BracketRenderConfig config,
   ) {
-    final paint = Paint()
-      ..color = theme.barlineColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = coordinates.staffSpace * config.thickness
-      ..strokeCap = StrokeCap.square;
-
+    final ss = coordinates.staffSpace;
     final bottomY = topY + height;
-    final tipWidth = config.tipWidth * coordinates.staffSpace;
+    final spineW = ss * config.thickness;
 
-    // Vertical line
+    // Thick vertical spine.
     canvas.drawLine(
       Offset(x, topY),
       Offset(x, bottomY),
-      paint,
+      Paint()
+        ..color = theme.barlineColor
+        ..strokeWidth = spineW
+        ..strokeCap = StrokeCap.butt,
     );
 
-    // Top tip (horizontal line pointing right)
-    canvas.drawLine(
-      Offset(x, topY),
-      Offset(x + tipWidth, topY),
-      paint,
-    );
+    // SMuFL serif caps (bracketTop/bracketBottom), the typographically correct
+    // orchestral-bracket ends; fall back to plain horizontal tips if the font
+    // lacks them.
+    final md = metadata;
+    if (md != null &&
+        md.hasGlyph('bracketTop') &&
+        md.hasGlyph('bracketBottom') &&
+        _drawBracketCap(canvas, 'bracketTop', x, topY) &&
+        _drawBracketCap(canvas, 'bracketBottom', x, bottomY)) {
+      return;
+    }
 
-    // Bottom tip (horizontal line pointing right)
-    canvas.drawLine(
-      Offset(x, bottomY),
-      Offset(x + tipWidth, bottomY),
-      paint,
-    );
+    final tipWidth = config.tipWidth * ss;
+    final tip = Paint()
+      ..color = theme.barlineColor
+      ..strokeWidth = spineW
+      ..strokeCap = StrokeCap.square;
+    canvas.drawLine(Offset(x, topY), Offset(x + tipWidth, topY), tip);
+    canvas.drawLine(Offset(x, bottomY), Offset(x + tipWidth, bottomY), tip);
+  }
+
+  /// Draws a bracket serif cap glyph anchored at its alphabetic baseline, with
+  /// the spine join at [x],[baselineY]. Returns false if the glyph is missing.
+  bool _drawBracketCap(
+    Canvas canvas,
+    String glyphName,
+    double x,
+    double baselineY,
+  ) {
+    final character = metadata!.getCodepoint(glyphName);
+    if (character.isEmpty) return false;
+    final painter = TextPainter(
+      text: TextSpan(
+        text: character,
+        style: TextStyle(
+          fontFamily: 'Bravura',
+          package: 'flutter_notemus',
+          fontSize: coordinates.staffSpace * 4.0,
+          color: theme.barlineColor,
+          height: 1.0,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    final baselineFromTop =
+        painter.computeDistanceToActualBaseline(TextBaseline.alphabetic);
+    painter.paint(canvas, Offset(x, baselineY - baselineFromTop));
+    return true;
   }
 
   /// Render simple vertical line |
