@@ -265,6 +265,22 @@ Staff _articulations() {
   ]);
 }
 
+Staff _chordArticulations() {
+  Chord chord(List<Note> notes, List<ArticulationType> artic) =>
+      Chord(notes: notes, duration: const Duration(DurationType.half),
+          articulations: artic);
+  return _staff([
+    _measure([
+      Clef(clefType: ClefType.treble),
+      TimeSignature(numerator: 4, denominator: 4),
+      // Low chord -> stem up -> articulation below the bottom notehead.
+      chord([_n('E', 4), _n('G', 4), _n('C', 5)], [ArticulationType.staccato]),
+      // High chord -> stem down -> articulation above the top notehead.
+      chord([_n('C', 5), _n('E', 5), _n('G', 5)], [ArticulationType.accent]),
+    ]),
+  ]);
+}
+
 Staff _dynamics() {
   return _staff([
     _measure([
@@ -678,6 +694,13 @@ final List<CorpusCase> corpus = [
     build: _multiSystem,
     staffSpace: 13.0,
     size: const Size(460, 360),
+  ),
+  CorpusCase(
+    id: 'm04h_chord_articulations',
+    title: 'Chord-level articulations (accent, staccato)',
+    tier: 'intermediate',
+    exercises: 'articulation on the stem-far outer notehead of a chord',
+    build: _chordArticulations,
   ),
   CorpusCase(
     id: 'm05_slurs_ties',

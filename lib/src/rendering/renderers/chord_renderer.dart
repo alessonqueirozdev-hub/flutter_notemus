@@ -90,10 +90,14 @@ class ChordRenderer extends BaseGlyphRenderer {
       return chord.voice!.isOdd;
     }
 
+    // Behind Bars: stem direction follows the note furthest from the middle
+    // line — if it is below the middle (negative position) the stem points up,
+    // otherwise down. This mirrors the single-note rule (staffPosition < 0) and
+    // resolves the middle-line case to stem-down.
     final mostExtremePos = positions.reduce(
       (left, right) => left.abs() > right.abs() ? left : right,
     );
-    return mostExtremePos > 0;
+    return mostExtremePos < 0;
   }
 
   /// Assigns chord accidentals to columns (0 = closest to the chord) by greedy
@@ -365,6 +369,23 @@ class ChordRenderer extends BaseGlyphRenderer {
       (minCenterX + maxCenterX) * 0.5,
       basePosition.dy,
     );
+
+    // Chord-level articulations (Behind Bars): a single staccato/accent/tenuto/
+    // marcato attaches to the outermost notehead on the side opposite the stem.
+    if (chord.articulations.isNotEmpty) {
+      final lowestNoteY = noteCenters
+          .map((c) => c.dy)
+          .reduce((a, b) => a > b ? a : b);
+      final highestNoteY = noteCenters
+          .map((c) => c.dy)
+          .reduce((a, b) => a < b ? a : b);
+      noteRenderer.articulationRenderer.render(
+        canvas,
+        chord.articulations,
+        Offset(chordCenter.dx, stemUp ? lowestNoteY : highestNoteY),
+        stemUp: stemUp,
+      );
+    }
 
     if (chord.ornaments.isNotEmpty) {
       // For arpeggio positioning: use a stable anchor at the chord's base
