@@ -882,16 +882,27 @@ class StaffRenderer {
       double? lengthOverride;
       if (element.isHairpin && element.length == null) {
         double? stopX;
+        var stopIsDynamic = false;
         for (int j = index + 1; j < allElements.length; j++) {
           final pe = allElements[j];
           if (pe.system != positioned.system) break;
-          if (pe.element is Dynamic || pe.element is Barline) {
+          if (pe.element is Dynamic) {
+            stopX = pe.position.dx;
+            stopIsDynamic = true;
+            break;
+          }
+          if (pe.element is Barline) {
             stopX = pe.position.dx;
             break;
           }
         }
         if (stopX != null) {
-          final span = stopX - basePosition.dx - coordinates.staffSpace * 0.5;
+          // The next dynamic letter is drawn centered on its X, so leave room
+          // for its left half plus a margin; a barline only needs a small gap.
+          final gap = stopIsDynamic
+              ? coordinates.staffSpace * 1.4
+              : coordinates.staffSpace * 0.5;
+          final span = stopX - basePosition.dx - gap;
           if (span >= coordinates.staffSpace * 2) lengthOverride = span;
         }
       }
