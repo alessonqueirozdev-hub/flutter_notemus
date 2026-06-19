@@ -265,6 +265,23 @@ Staff _articulations() {
   ]);
 }
 
+Staff _heavyBarlines() {
+  return _staff([
+    _measure([
+      Clef(clefType: ClefType.treble),
+      TimeSignature(numerator: 4, denominator: 4),
+      _n('C', 5, dur: DurationType.half),
+      _n('E', 5, dur: DurationType.half),
+      Barline(type: BarlineType.heavyLight), // reverse-final (section start)
+    ]),
+    _measure([
+      _n('G', 5, dur: DurationType.half),
+      _n('E', 5, dur: DurationType.half),
+      Barline(type: BarlineType.heavyHeavy), // heavy-heavy
+    ]),
+  ]);
+}
+
 Staff _keyCancellation() {
   return _staff([
     _measure([
@@ -727,6 +744,13 @@ final List<CorpusCase> corpus = [
     build: _multiSystem,
     staffSpace: 13.0,
     size: const Size(460, 360),
+  ),
+  CorpusCase(
+    id: 'm04k_heavy_barlines',
+    title: 'Heavy barlines (reverse-final, heavy-heavy)',
+    tier: 'intermediate',
+    exercises: 'heavyLight -> barlineReverseFinal, heavyHeavy -> barlineHeavyHeavy',
+    build: _heavyBarlines,
   ),
   CorpusCase(
     id: 'm04j_key_cancellation',

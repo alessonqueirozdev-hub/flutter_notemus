@@ -1082,9 +1082,12 @@ class StaffRenderer {
       case BarlineType.dashed:
         return 'barlineDashed';
       case BarlineType.heavy:
-      case BarlineType.heavyHeavy:
-      case BarlineType.heavyLight:
         return 'barlineHeavy';
+      case BarlineType.heavyHeavy:
+        return 'barlineHeavyHeavy';
+      case BarlineType.heavyLight:
+        // Reverse-final (heavy then light) — used at section starts.
+        return 'barlineReverseFinal';
       case BarlineType.tick:
         return 'barlineTick';
       case BarlineType.short_:
