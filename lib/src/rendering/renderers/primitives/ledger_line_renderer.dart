@@ -38,9 +38,13 @@ class LedgerLineRenderer extends BaseGlyphRenderer {
     // Check if a note needs de ledger lines
     if (!StaffPositionCalculator.needsLedgerLines(staffPosition)) return;
 
+    // Ledger lines are drawn heavier than staff lines: SMuFL legerLineThickness
+    // (0.16 SS) vs staffLineThickness (0.13 SS), per Bravura/Verovio.
     final paint = Paint()
       ..color = theme.staffLineColor
-      ..strokeWidth = staffLineThickness;
+      ..strokeWidth =
+          metadata.getEngravingDefault('legerLineThickness', 0.16) *
+          coordinates.staffSpace;
 
     // Fix: CRÍTICA: Calculate centre horizontal Correct of the note
     // notePosition is a borda Left of the glifo (according to drawGlyphWithBBox)
@@ -64,8 +68,10 @@ class LedgerLineRenderer extends BaseGlyphRenderer {
         bbox?.widthInPixels(coordinates.staffSpace) ??
         (coordinates.staffSpace * 1.18);
 
-    // Fix: SMuFL: Use legerLineExtension of the metadata (0.4 staff spaces)
-    final extension = coordinates.staffSpace * 0.4;
+    // SMuFL legerLineExtension (0.4 SS) read from the loaded metadata.
+    final extension =
+        metadata.getEngravingDefault('legerLineExtension', 0.4) *
+        coordinates.staffSpace;
     final totalWidth = noteWidth + (2 * extension);
 
     // Get positions das ledger lines

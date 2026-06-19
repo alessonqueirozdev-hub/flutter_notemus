@@ -446,15 +446,21 @@ class ChordRenderer extends BaseGlyphRenderer {
       return;
     }
 
+    // Ledger lines use SMuFL legerLineThickness (0.16 SS), heavier than the
+    // staff lines, with legerLineExtension (0.4 SS) — both read from metadata.
     final paint = Paint()
       ..color = theme.staffLineColor
-      ..strokeWidth = staffLineThickness;
+      ..strokeWidth =
+          metadata.getEngravingDefault('legerLineThickness', 0.16) *
+          coordinates.staffSpace;
     final noteheadInfo = metadata.getGlyphInfo(noteheadGlyph);
     final bbox = noteheadInfo?.boundingBox;
     final noteWidthPixels =
         bbox?.widthInPixels(coordinates.staffSpace) ??
         (coordinates.staffSpace * 1.18);
-    final extension = coordinates.staffSpace * 0.4;
+    final extension =
+        metadata.getEngravingDefault('legerLineExtension', 0.4) *
+        coordinates.staffSpace;
     final totalWidth = noteWidthPixels + (2 * extension);
     final ledgerPositions = StaffPositionCalculator.getLedgerLinePositions(
       staffPosition,
