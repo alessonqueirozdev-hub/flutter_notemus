@@ -1266,6 +1266,37 @@ class _MusicXmlImportParser {
     );
   }
 
+  /// Maps each `<note>` element to its beam-group home staff and the resulting
+  /// cross-staff move. A beam group's home staff is the staff of its first
+  /// (beam=begin) note; notes that change `<staff>` within the group keep that
+  /// home and get `move = ownStaff - homeStaff`.
+  Map<XmlElement, ({int home, int move})> _crossStaffMap(
+    XmlElement measureElement,
+  ) {
+    final map = <XmlElement, ({int home, int move})>{};
+    final groupHome = <int, int>{}; // voice -> home staff while beam group open
+    for (final note in measureElement.findElements('note')) {
+      final staff = _asInt(_childText(note, 'staff')) ?? 1;
+      final voice = _asInt(_childText(note, 'voice')) ?? 1;
+      final beam =
+          note.findElements('beam').firstOrNull?.innerText.trim().toLowerCase();
+      int home;
+      if (beam == 'begin') {
+        groupHome[voice] = staff;
+        home = staff;
+      } else if ((beam == 'continue' || beam == 'end') &&
+          groupHome.containsKey(voice)) {
+        home = groupHome[voice]!;
+        if (beam == 'end') groupHome.remove(voice);
+      } else {
+        home = staff;
+        groupHome.remove(voice);
+      }
+      map[note] = (home: home, move: staff - home);
+    }
+    return map;
+  }
+
   /// Reads `<part-group>` spans from the `<part-list>`: maps each part id to the
   /// id of the innermost group it belongs to (or null), and each group id to its
   /// bracket type (from `<group-symbol>`).
@@ -1375,6 +1406,11 @@ class _MusicXmlImportParser {
     final Map<int, _VoiceAccumulator> voices = <int, _VoiceAccumulator>{};
     final List<MusicalElement> metadataElements = <MusicalElement>[];
     TimeSignature? currentTimeSignature;
+    // Cross-staff routing (multi-staff parts only): a beamed voice whose notes
+    // change <staff> mid-beam is kept on its home (beam-start) staff with a
+    // crossStaffMove so the beam survives.
+    final crossStaff =
+        staffFilter != null ? _crossStaffMap(measureElement) : null;
 
     _VoiceAccumulator voice(int number) {
       return voices.putIfAbsent(number, () => _VoiceAccumulator(number));
@@ -1409,14 +1445,21 @@ class _MusicXmlImportParser {
           }
           break;
         case 'note':
+          var move = 0;
           if (staffFilter != null) {
+            final cs = crossStaff![child];
             final noteStaff = _asInt(_childText(child, 'staff')) ?? 1;
-            if (noteStaff != staffFilter) break;
+            final home = cs?.home ?? noteStaff;
+            // Route the note to its home staff (cross-staff notes follow their
+            // beam, not their own <staff>).
+            if (home != staffFilter) break;
+            move = cs?.move ?? 0;
           }
           _parseMusicXmlNoteNode(
             child,
             voiceForNumber: voice,
             currentTimeSignature: currentTimeSignature,
+            crossStaffMove: move,
           );
           break;
         case 'backup':
@@ -1451,6 +1494,7 @@ class _MusicXmlImportParser {
     XmlElement noteElement, {
     required _VoiceAccumulator Function(int number) voiceForNumber,
     required TimeSignature? currentTimeSignature,
+    int crossStaffMove = 0,
   }) {
     final int voiceNumber = _asInt(_childText(noteElement, 'voice')) ?? 1;
     final accumulator = voiceForNumber(voiceNumber);
@@ -1480,6 +1524,7 @@ class _MusicXmlImportParser {
         isGraceNote: isGrace,
         syllables: _parseMusicXmlLyrics(noteElement),
         accidentalParenthesis: _musicXmlAccidentalParenthesis(noteElement),
+        crossStaffMove: crossStaffMove,
       );
       if (isChordTone) {
         if (!accumulator.mergeChordNote(note)) {

@@ -132,6 +132,36 @@ void main() {
       expect(score.staffGroups.every((g) => g.staves.length == 1), isTrue);
     });
 
+    test('a beam crossing staves routes notes to the home staff', () {
+      String e8(String s, int o, String beam, int staff) =>
+          '<note><pitch><step>$s</step><octave>$o</octave></pitch>'
+          '<duration>1</duration><type>eighth</type><voice>1</voice>'
+          '<beam number="1">$beam</beam><staff>$staff</staff></note>';
+      final xml = '<score-partwise version="4.0"><part-list>'
+          '<score-part id="P1"><part-name>Piano</part-name></score-part>'
+          '</part-list><part id="P1"><measure number="1">'
+          '<attributes><divisions>1</divisions><staves>2</staves>'
+          '<clef number="1"><sign>G</sign><line>2</line></clef>'
+          '<clef number="2"><sign>F</sign><line>4</line></clef></attributes>'
+          '${e8('C', 5, 'begin', 1)}${e8('A', 4, 'continue', 1)}'
+          '${e8('A', 3, 'continue', 2)}${e8('F', 3, 'end', 2)}'
+          '</measure></part></score-partwise>';
+      final score = MusicXMLParser.scoreFromMusicXML(xml);
+      final group = score.staffGroups.single; // braced piano
+      List<Note> notesOf(Staff s) =>
+          s.measures.expand((m) => m.elements).whereType<Note>().toList();
+      final home = notesOf(group.staves[0]); // treble = beam home
+      final bass = notesOf(group.staves[1]);
+      // All four notes routed to the home staff so the beam survives.
+      expect(home.length, 4);
+      expect(bass.length, 0);
+      // The two notes written on staff 2 carry a cross-staff move of +1.
+      expect(home[0].crossStaffMove, 0);
+      expect(home[1].crossStaffMove, 0);
+      expect(home[2].crossStaffMove, 1);
+      expect(home[3].crossStaffMove, 1);
+    });
+
     test('a <part-group> brackets its member parts into one group', () {
       const xml = '<score-partwise version="4.0"><part-list>'
           '<part-group type="start" number="1">'
