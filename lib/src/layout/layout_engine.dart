@@ -667,14 +667,13 @@ class LayoutEngine {
     int musicalElementCount = 0;
 
     for (final element in measure.elements) {
-      if (!isFirstInSystem && _isSystemElement(element)) {
-        continue;
-      }
       // Floating elements don't contribute to measure width.
       if (_isAboveOrBelowStaffElement(element)) {
         continue;
       }
 
+      // System elements (clef/key/time) now always render when present in a
+      // measure (opening or mid-line change), so they must count toward width.
       totalWidth += _getElementWidthSimple(element);
 
       if (element is Note || element is Rest || element is Chord) {
