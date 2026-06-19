@@ -465,6 +465,71 @@ void main() {
     expect(find.byType(CustomPaint), findsWidgets);
   });
 
+  testWidgets('imported cross-staff beam renders across the staves',
+      (tester) async {
+    const size = Size(760, 320);
+    await tester.binding.setSurfaceSize(size);
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    String e8(String s, int o, String beam, int staff) =>
+        '<note><pitch><step>$s</step><octave>$o</octave></pitch>'
+        '<duration>1</duration><type>eighth</type><voice>1</voice>'
+        '<beam number="1">$beam</beam><staff>$staff</staff></note>';
+    final xml = '<score-partwise version="4.0"><part-list>'
+        '<score-part id="P1"><part-name>Piano</part-name></score-part>'
+        '</part-list><part id="P1"><measure number="1">'
+        '<attributes><divisions>1</divisions><staves>2</staves>'
+        '<clef number="1"><sign>G</sign><line>2</line></clef>'
+        '<clef number="2"><sign>F</sign><line>4</line></clef></attributes>'
+        '${e8('C', 5, 'begin', 1)}${e8('A', 4, 'continue', 1)}'
+        '${e8('A', 3, 'continue', 2)}${e8('F', 3, 'end', 2)}'
+        '<note><pitch><step>G</step><octave>4</octave></pitch>'
+        '<duration>2</duration><type>half</type><voice>1</voice>'
+        '<staff>1</staff></note>'
+        '<backup><duration>4</duration></backup>'
+        '<note><pitch><step>C</step><octave>3</octave></pitch>'
+        '<duration>4</duration><type>whole</type><voice>2</voice>'
+        '<staff>2</staff></note>'
+        '</measure></part></score-partwise>';
+    final score = MusicXMLParser.scoreFromMusicXML(xml);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: Scaffold(
+          backgroundColor: Colors.white,
+          body: Center(
+            child: RepaintBoundary(
+              key: kGoldenBoundaryKey,
+              child: Container(
+                width: size.width,
+                height: size.height,
+                color: Colors.white,
+                child: CustomPaint(
+                  size: size,
+                  painter: GrandStaffPainter(
+                    groups: score.staffGroups,
+                    staffSpace: 12.0,
+                    metadata: SmuflMetadata(),
+                    theme: const MusicScoreTheme(),
+                    availableWidth: size.width,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    await expectLater(
+      find.byKey(kGoldenBoundaryKey),
+      matchesGoldenFile('goldens/grand_staff_imported_crossbeam.png'),
+    );
+  });
+
   testWidgets('ScoreView renders an imported piano Score end-to-end',
       (tester) async {
     await tester.binding.setSurfaceSize(const Size(760, 360));

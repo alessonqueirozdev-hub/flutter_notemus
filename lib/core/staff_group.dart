@@ -262,7 +262,7 @@ class BracketRenderConfig {
     return const BracketRenderConfig(
       thickness: 0.16,
       glyphName: 'brace', // SMuFL glyph for curly brace
-      horizontalOffset: 1.5,
+      horizontalOffset: 0.4, // small gap to the left of the staff lines
     );
   }
 
@@ -271,7 +271,7 @@ class BracketRenderConfig {
     return const BracketRenderConfig(
       thickness: 0.5, // bold vertical (orchestral/choral bracket), not a hairline
       tipWidth: 0.5,
-      horizontalOffset: 1.0,
+      horizontalOffset: 0.4,
     );
   }
 
@@ -280,7 +280,7 @@ class BracketRenderConfig {
     return const BracketRenderConfig(
       thickness: 0.08, // Thinner than bracket
       tipWidth: 0.0, // No tips
-      horizontalOffset: 0.8,
+      horizontalOffset: 0.4,
     );
   }
 }

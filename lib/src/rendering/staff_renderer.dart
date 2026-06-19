@@ -296,7 +296,15 @@ class StaffRenderer {
 
       // Pular beams simples if temos advanced beams
       if (layoutEngine == null || layoutEngine.advancedBeamGroups.isEmpty) {
-        groupRenderer.renderBeams(canvas, elements, currentClef!);
+        // Exclude skipped (cross-staff) notes so their beam isn't drawn here —
+        // the grand-staff cross-staff pass draws it between the staves.
+        final beamElements = _skipNotes.isEmpty
+            ? elements
+            : elements
+                .where((pe) =>
+                    !(pe.element is Note && _skipNotes.contains(pe.element)))
+                .toList();
+        groupRenderer.renderBeams(canvas, beamElements, currentClef!);
       }
 
       // Build skyline from positioned elements for slur collision avoidance

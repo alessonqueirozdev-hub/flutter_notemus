@@ -74,7 +74,7 @@ class GrandStaffPainter extends CustomPainter {
             'Provide either staffGroup or groups'),
         groups = groups ?? [staffGroup!],
         staffGap = staffGap ?? staffSpace * 11.0 {
-    _bracePad = staffSpace * 2.8;
+    _bracePad = staffSpace * 1.6;
     final ranges = _computeSystemRanges();
     _systems = [
       for (final range in ranges) _layoutSystem(range.start, range.end),
@@ -363,7 +363,15 @@ class GrandStaffPainter extends CustomPainter {
       theme: theme,
       metadata: metadata,
     );
-    final leftX = staffSpace * 0.6; // system left origin (matches systemMargin)
+    // Left edge of the actual staff lines (leftmost positioned element), so the
+    // brace/bracket sits just to its left rather than floating far away.
+    var leftX = double.infinity;
+    for (final l in layouts) {
+      for (final pe in l.elements) {
+        if (pe.position.dx < leftX) leftX = pe.position.dx;
+      }
+    }
+    if (!leftX.isFinite) leftX = staffSpace * 0.6;
     var staffIdx = 0;
     for (final g in groups) {
       final gTop = baseline0 + staffIdx * staffGap - staffSpace * 2;
@@ -450,12 +458,41 @@ class GrandStaffPainter extends CustomPainter {
   /// note. The home staff skips drawing them; the cross-staff pass draws them.
   Set<Note> _crossStaffNotesOf(List<_StaffLayout> layouts, int home) {
     final out = <Note>{};
-    for (final g in layouts[home].engine.advancedBeamGroups) {
-      if (g.notes.any((n) => n.crossStaffMove != 0)) {
-        out.addAll(g.notes);
-      }
+    for (final g in _crossStaffGroups(layouts[home].elements)) {
+      out.addAll(g);
     }
     return out;
+  }
+
+  /// Beam runs (note.beam start..end) among positioned elements that contain a
+  /// cross-staff note. Works regardless of whether the beam was rendered via the
+  /// advanced or the simple path.
+  List<List<Note>> _crossStaffGroups(List<PositionedElement> els) {
+    final groups = <List<Note>>[];
+    List<Note>? cur;
+    for (final pe in els) {
+      final e = pe.element;
+      if (e is! Note) continue;
+      switch (e.beam) {
+        case BeamType.start:
+          cur = [e];
+          break;
+        case BeamType.inner:
+          cur?.add(e);
+          break;
+        case BeamType.end:
+          if (cur != null) {
+            cur.add(e);
+            if (cur.any((n) => n.crossStaffMove != 0)) groups.add(cur);
+            cur = null;
+          }
+          break;
+        case null:
+          cur = null;
+          break;
+      }
+    }
+    return groups;
   }
 
   Clef _clefOf(int staffIndex) {
@@ -490,12 +527,14 @@ class GrandStaffPainter extends CustomPainter {
     final beamPaint = Paint()..color = theme.stemColor;
 
     for (var home = 0; home < layouts.length; home++) {
-      final noteX = layouts[home].engine.noteXPositions;
-      for (final g in layouts[home].engine.advancedBeamGroups) {
-        if (!g.notes.any((n) => n.crossStaffMove != 0)) continue;
-
-        final pts = <({double x, double y, double stemX})>[];
-        for (final note in g.notes) {
+      // Note X positions from the (aligned) positioned elements.
+      final noteX = <Note, double>{};
+      for (final pe in layouts[home].elements) {
+        if (pe.element is Note) noteX[pe.element as Note] = pe.position.dx;
+      }
+      for (final g in _crossStaffGroups(layouts[home].elements)) {
+        final pts = <({double x, double y})>[];
+        for (final note in g) {
           final x = noteX[note];
           if (x == null) continue;
           final target = (home + note.crossStaffMove)
@@ -503,7 +542,7 @@ class GrandStaffPainter extends CustomPainter {
           final pos =
               StaffPositionCalculator.calculate(note.pitch, _clefOf(target));
           final y = baseline0 + target * staffGap - pos * ss * 0.5;
-          pts.add((x: x, y: y, stemX: x + noteheadW * 0.5));
+          pts.add((x: x, y: y));
 
           // Notehead glyph (noteheadBlack is ~baseline-centred vertically).
           if (noteheadChar.isNotEmpty) {
@@ -534,15 +573,21 @@ class GrandStaffPainter extends CustomPainter {
         }
         final beamY = (minY + maxY) / 2;
 
+        // Stems attach at the notehead edge nearest the beam: a note below the
+        // beam stems up (right edge); a note above stems down (left edge).
+        double stemXof(({double x, double y}) p) => p.y > beamY
+            ? p.x + noteheadW - stemW * 0.5
+            : p.x + stemW * 0.5;
         for (final p in pts) {
-          canvas.drawLine(Offset(p.stemX, p.y), Offset(p.stemX, beamY), stemPaint);
+          final sx = stemXof(p);
+          canvas.drawLine(Offset(sx, p.y), Offset(sx, beamY), stemPaint);
         }
-        final xs = pts.map((p) => p.stemX).toList()..sort();
+        final xs = pts.map(stemXof).toList()..sort();
         canvas.drawRect(
           Rect.fromLTRB(
-            xs.first,
+            xs.first - stemW * 0.5,
             beamY - beamThick / 2,
-            xs.last,
+            xs.last + stemW * 0.5,
             beamY + beamThick / 2,
           ),
           beamPaint,
