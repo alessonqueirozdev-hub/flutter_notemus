@@ -229,8 +229,11 @@ Meta do autor: **suporte completo a canto gregoriano** (renderização nível-ed
 | `feat(gregorian):` hifenização | Sílabas da mesma palavra unidas por hífen (detecção de fronteira de palavra no GABC); campo aditivo `Neume.hyphenAfter`. | golden `chant_from_gabc` (Sal-ve, Re-gí-na) |
 | `feat(gregorian):` episema/mora por glifo | Episema horizontal → glifo `HEpisemaPunctum` (barra Solesmes grossa); mora → glifo `AuctumMora` (ponto engravado), com fallback geométrico. | #5, #15 (parcial); goldens de canto |
 | `feat(gregorian):` respiração nas divisórias | Espaço assimétrico (mais depois da barra que antes) escalado pelo peso (minima<minor<maior<finalis), contabilizado na justificação. | #7; goldens de canto |
+| `feat(gregorian):` episema por forma | Episema escolhe `HEpisemaVirga`/`HEpisemaQuilisma`/`HEpisemaPunctum` conforme a forma da nota. | #15 |
+| `feat(gregorian):` aninhamento do climacus | *Inclinata* descendentes do climacus tucam sob a cabeça (avanço 0.72) — lê como um neuma, não puncta soltos. | #13 |
+| `feat(gregorian):` strophae repetidas | Distropha/tristropha de mesma altura aninham (0.78) como grupo de repetidas. | #3/#10 |
 
-**Auditoria adversarial SOTA gregoriana:** 59 lacunas confirmadas (doc/GREGORIAN_AUDIT_BACKLOG.md). Atacados os de maior impacto: âncora à clave (#1), quilisma/Ancus, hifenização, alinhamento de letras, **episema/mora por glifo Greciliae (#5/#15)**, **respiração de divisória (#7)**. Restantes (médio/baixo): modelo completo de sílaba (melisma/multi-verso), pressus, episema por forma para virga/quilisma/inclinatum (só punctum por ora), linhas de fusão, cabeçalhos (modo/título), espaçamento contextual proporcional — refinamentos.
+**Auditoria adversarial SOTA gregoriana:** 59 lacunas confirmadas (doc/GREGORIAN_AUDIT_BACKLOG.md). Atacados os de maior impacto: âncora à clave (#1), quilisma/Ancus, hifenização, alinhamento de letras, episema/mora por glifo Greciliae (#5/#15), respiração de divisória (#7), **episema por forma (#15)**, **aninhamento de climacus (#13)** e **strophae repetidas (#3/#10)**. Restantes (médio/estrutural): modelo completo de sílaba (melisma/multi-verso), pressus/oriscus-flexus (#17), linhas de fusão (#14), cabeçalhos (modo/título), espaçamento contextual proporcional (#21) — refinamentos.
 
 ### Fase 3 — Biblioteca inteira (CMN) ao estado da arte (em andamento)
 
