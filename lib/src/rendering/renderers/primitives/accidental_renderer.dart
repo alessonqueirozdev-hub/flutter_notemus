@@ -59,12 +59,43 @@ class AccidentalRenderer extends BaseGlyphRenderer {
         notePosition.dy + (accidentalPosition.dy * coordinates.staffSpace);
 
     // Desenhar accidental
+    final accColor = theme.accidentalColor ?? theme.noteheadColor;
+
     drawGlyphWithBBox(
       canvas,
       glyphName: accidentalGlyph,
       position: Offset(accidentalX, accidentalY),
-      color: theme.accidentalColor ?? theme.noteheadColor,
+      color: accColor,
       options: const GlyphDrawOptions(),
     );
+
+    // Cautionary/editorial brackets around the accidental.
+    if (note.accidentalParenthesis != AccidentalParenthesis.none) {
+      final isBracket =
+          note.accidentalParenthesis == AccidentalParenthesis.brackets;
+      final leftGlyph =
+          isBracket ? 'accidentalBracketLeft' : 'accidentalParensLeft';
+      final rightGlyph =
+          isBracket ? 'accidentalBracketRight' : 'accidentalParensRight';
+      final accWidth = metadata.getGlyphAdvanceWidth(accidentalGlyph) ?? 1.0;
+      final gap = 0.18 * coordinates.staffSpace;
+      drawGlyphWithBBox(
+        canvas,
+        glyphName: leftGlyph,
+        position: Offset(accidentalX - gap, accidentalY),
+        color: accColor,
+        options: const GlyphDrawOptions(),
+      );
+      drawGlyphWithBBox(
+        canvas,
+        glyphName: rightGlyph,
+        position: Offset(
+          accidentalX + accWidth * coordinates.staffSpace + gap,
+          accidentalY,
+        ),
+        color: accColor,
+        options: const GlyphDrawOptions(),
+      );
+    }
   }
 }

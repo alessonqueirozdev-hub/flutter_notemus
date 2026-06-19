@@ -30,6 +30,13 @@ enum ArticulationType {
   halfStopped,      // Half-stopped (brass)
 }
 
+/// How a (cautionary/editorial) accidental is bracketed when displayed.
+enum AccidentalParenthesis {
+  none, // normal accidental
+  parentheses, // cautionary, e.g. (♯)
+  brackets, // editorial, e.g. [♯]
+}
+
 /// Represents a musical note with pitch and duration.
 class Note extends MusicalElement with BoundingBoxSupport {
   final Pitch pitch;
@@ -65,6 +72,10 @@ class Note extends MusicalElement with BoundingBoxSupport {
   /// Indicates whether this note is a grace note.
   final bool isGraceNote;
 
+  /// Cautionary/editorial bracketing of the displayed accidental (MusicXML
+  /// `cautionary`/`editorial`/`parentheses`/`bracket`). Default = none.
+  final AccidentalParenthesis accidentalParenthesis;
+
   /// Alternate pitch for grace notes with a specific pitch.
   final Pitch? alternatePitch;
 
@@ -99,5 +110,6 @@ class Note extends MusicalElement with BoundingBoxSupport {
     this.tabFret,
     this.tabString,
     this.syllables,
+    this.accidentalParenthesis = AccidentalParenthesis.none,
   });
 }

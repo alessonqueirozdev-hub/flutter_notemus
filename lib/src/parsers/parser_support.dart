@@ -1386,6 +1386,7 @@ class _MusicXmlImportParser {
         voice: voiceNumber,
         isGraceNote: isGrace,
         syllables: _parseMusicXmlLyrics(noteElement),
+        accidentalParenthesis: _musicXmlAccidentalParenthesis(noteElement),
       );
       if (isChordTone) {
         if (!accumulator.mergeChordNote(note)) {
@@ -1628,6 +1629,20 @@ SyllableType _musicXmlSyllabicType(String? syllabic) {
     default:
       return SyllableType.single;
   }
+}
+
+/// Reads MusicXML cautionary/editorial accidental display from the
+/// `<accidental>` element's attributes. bracket/editorial -> brackets,
+/// parentheses/cautionary -> parentheses.
+AccidentalParenthesis _musicXmlAccidentalParenthesis(XmlElement noteElement) {
+  final acc = noteElement.findElements('accidental').firstOrNull;
+  if (acc == null) return AccidentalParenthesis.none;
+  bool yes(String attr) => acc.getAttribute(attr)?.toLowerCase() == 'yes';
+  if (yes('bracket') || yes('editorial')) return AccidentalParenthesis.brackets;
+  if (yes('parentheses') || yes('cautionary')) {
+    return AccidentalParenthesis.parentheses;
+  }
+  return AccidentalParenthesis.none;
 }
 
 Pitch? _musicXmlPitch(XmlElement noteElement) {

@@ -12,6 +12,30 @@ void main() {
   List<Dynamic> dynamicsOf(Staff s) =>
       s.measures.expand((m) => m.elements).whereType<Dynamic>().toList();
 
+  group('MusicXML cautionary/editorial accidentals', () {
+    List<Note> notesOf(Staff s) =>
+        s.measures.expand((m) => m.elements).whereType<Note>().toList();
+
+    test('cautionary/parentheses -> parentheses; bracket/editorial -> brackets',
+        () {
+      final xml = score(
+        '<note><pitch><step>C</step><octave>5</octave><alter>1</alter></pitch>'
+        '<duration>1</duration><type>quarter</type>'
+        '<accidental cautionary="yes">sharp</accidental></note>'
+        '<note><pitch><step>A</step><octave>4</octave><alter>-1</alter></pitch>'
+        '<duration>1</duration><type>quarter</type>'
+        '<accidental bracket="yes">flat</accidental></note>'
+        '<note><pitch><step>G</step><octave>4</octave><alter>1</alter></pitch>'
+        '<duration>1</duration><type>quarter</type>'
+        '<accidental>sharp</accidental></note>',
+      );
+      final notes = notesOf(MusicXMLParser.parseMusicXML(xml));
+      expect(notes[0].accidentalParenthesis, AccidentalParenthesis.parentheses);
+      expect(notes[1].accidentalParenthesis, AccidentalParenthesis.brackets);
+      expect(notes[2].accidentalParenthesis, AccidentalParenthesis.none);
+    });
+  });
+
   group('MusicXML multi-part / multi-staff import', () {
     List<Note> staffNotes(Staff s) =>
         s.measures.expand((m) => m.elements).whereType<Note>().toList();

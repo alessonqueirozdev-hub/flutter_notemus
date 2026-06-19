@@ -265,6 +265,25 @@ Staff _articulations() {
   ]);
 }
 
+Staff _cautionaryAccidentals() {
+  Note acc(String step, int oct, double alter, AccidentalParenthesis paren) =>
+      Note(
+        pitch: Pitch(step: step, octave: oct, alter: alter),
+        duration: const Duration(DurationType.quarter),
+        accidentalParenthesis: paren,
+      );
+  return _staff([
+    _measure([
+      Clef(clefType: ClefType.treble),
+      TimeSignature(numerator: 4, denominator: 4),
+      acc('F', 5, 1.0, AccidentalParenthesis.none), // plain sharp
+      acc('C', 5, 1.0, AccidentalParenthesis.parentheses), // cautionary (♯)
+      acc('A', 4, -1.0, AccidentalParenthesis.brackets), // editorial [♭]
+      acc('G', 4, 1.0, AccidentalParenthesis.none),
+    ]),
+  ]);
+}
+
 Staff _hairpinSpan() {
   return _staff([
     _measure([
@@ -817,6 +836,13 @@ final List<CorpusCase> corpus = [
     build: _multiSystem,
     staffSpace: 13.0,
     size: const Size(460, 360),
+  ),
+  CorpusCase(
+    id: 'm04p_cautionary_accidentals',
+    title: 'Cautionary (parens) and editorial (brackets) accidentals',
+    tier: 'intermediate',
+    exercises: 'accidental wrapped in parentheses / brackets',
+    build: _cautionaryAccidentals,
   ),
   CorpusCase(
     id: 'm04o_hairpin_span',
