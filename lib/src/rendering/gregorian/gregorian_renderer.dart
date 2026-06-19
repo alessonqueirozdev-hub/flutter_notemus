@@ -287,9 +287,14 @@ _NeumeBox _emitNeume(
         o.add(_GlyphOp(g, steps[i], cx));
         cxs.add(cx + w / 2);
         // A climacus's descending inclinata tuck under the head/each other so
-        // the run reads as one neume rather than detached puncta.
+        // the run reads as one neume rather than detached puncta; same-pitch
+        // repeated strophae (di/tristropha) also sit closer than puncta.
         final nextDescends = i + 1 < steps.length && steps[i + 1] < steps[i];
-        cx += w * (nextDescends ? 0.72 : 0.98);
+        final nextSameStropha = i + 1 < steps.length &&
+            steps[i + 1] == steps[i] &&
+            forms[i] == NcForm.stropha;
+        cx += w *
+            (nextDescends ? 0.72 : (nextSameStropha ? 0.78 : 0.98));
       }
       ops = o;
       compX = cxs;
