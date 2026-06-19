@@ -313,7 +313,20 @@ Auditoria adversarial de I/O + MIDI: 41 lacunas confirmadas em 6 dimensões (doc
 | `feat(rendering):` **renderização multi-pauta (grand staff)** | `GrandStaffPainter` + widget público `GrandStaff`: empilha pautas de um `StaffGroup`, alinha num grid horizontal compartilhado (início de conteúdo e barras alinhados), chave/colchete e barras de sistema contínuas. A biblioteca **deixou de renderizar só uma pauta**. | fundação #50 |
 | `feat(rendering):` **beam cross-staff** | uma voz feixada atravessa as duas pautas: `Note.crossStaffMove`, skip por-pauta + desenho do feixe entre as pautas (cabeças na pauta-alvo, hastes até o feixe). Corrigido bug latente: reconstrução de nota feixada perdia campos novos. | #50 |
 
-**OS 4 ITENS CMN GRANDES RESOLVIDOS (#26, #55, #53, #50).** A biblioteca agora renderiza grand staff (piano/SATB) com chave, barras conectadas, notas alinhadas (ritmos iguais ou diferentes) e **beam cross-staff** (corre do agudo ao grave atravessando as pautas). Escopo atual do multi-pauta: um sistema (sem quebra de linha multi-pauta) — quebra multi-sistema é o próximo passo de arquitetura.
+**OS 4 ITENS CMN GRANDES RESOLVIDOS (#26, #55, #53, #50).** A biblioteca agora renderiza grand staff (piano/SATB) com chave, barras conectadas, notas alinhadas (ritmos iguais ou diferentes) e **beam cross-staff** (corre do agudo ao grave atravessando as pautas).
+
+### Multi-pauta — história completa de ponta a ponta
+
+| Camada | Estado |
+|---|---|
+| **Modelo** | `StaffGroup`/`Score` (já existiam) + `Note.crossStaffMove`. |
+| **Render** | `GrandStaffPainter`: N pautas empilhadas, grid horizontal compartilhado, chave `{`/colchete `[` corretos (proporcionais), barras de sistema contínuas, cabeças alinhadas. |
+| **Cross-staff beam** | feixe entre as pautas (skip por-pauta + desenho dedicado). |
+| **Import** | `scoreFromMusicXML`: cada parte vira um `StaffGroup`; parte multi-pauta (piano) ganha chave. |
+| **Widgets públicos** | `GrandStaff` (um grupo) e `ScoreView` (um `Score` inteiro). |
+| **Goldens** | piano, ritmos-diferentes, cross-beam, SATB. |
+
+**Escopo atual / próximos passos:** um sistema por grupo (sem quebra de linha multi-pauta) — **quebra multi-sistema** é o próximo passo de arquitetura; grade unificada entre múltiplos grupos e import de `<part-group>`/cross-staff automático (`<staff>` que muda no meio de um feixe) também ficam como follow-ups.
 
 > **#35 (acidentes de ornamento) e #36 (linha de trinado estendida): REVERTIDOS.** O posicionamento relativo ao glifo do trinado (`ornamentTrill`, âncora `opticalCenter`) ficou visualmente incorreto (acidente brigando com o "tr"). Adiados — exigem trabalho dedicado de ancoragem por bbox do glifo. Campos do modelo também removidos.
 
