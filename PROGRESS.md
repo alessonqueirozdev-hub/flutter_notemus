@@ -371,3 +371,32 @@ Auditoria adversarial de I/O + MIDI: 41 lacunas confirmadas em 6 dimensões (doc
 - **R4** (unificar referência de fonte Bravura) — remove a fragilidade dos 2 nomes.
 - **V4** (agrupamento de feixe em 4/4) — `beam_grouper`/`beat_position_calculator`.
 - **Onda B** (letras MusicXML/MEI) — exige resolver render de texto no harness.
+
+---
+
+## Consolidação do release 2.6.0 (2026-06-19)
+
+- **Versão:** o pub.dev está em **2.5.1** (a 2.6.0 nunca foi publicada). Todo o
+  trabalho não publicado (arco multi-pauta/chant/CMN + o pass anterior de
+  correção tipográfica) foi **consolidado numa única release 2.6.0** (decisão do
+  usuário: release incremental a partir do 2.5.1, em vez de 2.7.0). `pubspec`,
+  `CHANGELOG`, `README` e rótulos do exemplo ajustados para 2.6.0.
+- **`dart pub publish --dry-run`:** ✅ **0 warnings, 0 hints** (validação limpa,
+  incremental). Publicação em si é do usuário (irreversível + auth pub.dev).
+- **Push:** branch `sprint/engraving-quality` enviada ao remoto (`origin`).
+- **README:** seções extensas novas — "Grand Staff, Choir, and Full Scores"
+  (`GrandStaff`/`ScoreView`, tabela de `BracketType`, `Note.crossStaffMove`) e
+  "Gregorian Chant (Greciliae)" (`ChantScore.fromGabc`); "What's New" e
+  highlights reescritos.
+- **Exemplos (GitHub Pages):** novos `GrandStaffExample` (piano/brace, beam
+  cross-staff, SATB, `ScoreView`) e `GregorianChantExample` (GABC: Kyrie,
+  episema/mora, quilisma/composto, fa-clave c/ custos); registrados no catálogo;
+  demo multi-staff legado local removido do catálogo. Smoke tests cobrem os dois.
+- **#25 (hífen de palavra) RESOLVIDO:** hífen interno repetido em vãos longos
+  (comportamento GregorioTeX), `gregorian_renderer.dart::_hyphen`; golden
+  `chant_repeated_hyphen`.
+- **Jianpu:** registrado no CHANGELOG como **work in progress / experimental**
+  (render básico funciona e está na galeria; cobertura parcial, API pode mudar).
+- **Backlog:** auditoria adversarial (workflow) cruzando os 3 backlogs com o
+  código para marcar itens resolvidos/parciais — ver os próprios backlogs.
+- Suíte: **593 testes da lib + 24 do exemplo** verdes; `dart analyze` limpo.

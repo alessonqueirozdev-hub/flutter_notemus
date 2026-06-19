@@ -1,5 +1,31 @@
 # Gregorian SOTA audit backlog (59 confirmed)
 
+> **2.6.0 audit status (2026-06-19).** Cross-checked against the code by a
+> two-pass automated audit (classify, then adversarial verify). An item is
+> listed **RESOLVED** only when *both* passes agreed the desired behavior is
+> implemented; items only partly implemented are **PARTIAL**; the rest stay open.
+> Confirmed against 59 items. This is a status overlay — the per-item
+> descriptions below are unchanged.
+
+- **RESOLVED (2):**
+  - **#1** — Vertical placement uses clef-absolute positioning
+  - **#25** — Syllable hyphenation between neumes of same word
+- **PARTIAL (14):**
+  - **#4** — Quilisma-scandicus and quilisma-torculus precomposed glyphs
+  - **#5** — Augmentum mora dot uses AuctumMora glyph
+  - **#6** — Lyric/syllable anchored under first note of neume
+  - **#7** — Divisiones with asymmetric spacing and virgula type
+  - **#8** — Custos with variants, space reserve, and pre-clef-change
+  - **#12** — Punctum-mora dot binding at neume level
+  - **#13** — Climacus as precomposed glyph or proper assembly
+  - **#15** — Horizontal episema as shape-specific HEpisema glyphs
+  - **#17** — Quilisma and oriscus rhythmic treatment; pressus/oriscus-...
+  - **#20** — Custos orientation and vertical seating by glyph anchor
+  - **#28** — Accent-based lyric centering (explicit {..} or heuristic)
+  - **#35** — Mark anchor offsets per neume sub-glyph (not uniform spread)
+  - **#40** — Bivirga/trivirga spacing tuned; virga strata uses oriscus...
+  - **#46** — Clef/initial spacing reserve and clef-flat glyph rendering
+
 ## 1. [HIGH/large [MODEL CHANGE]] (pitch-clef-modal) Vertical placement ignores the clef entirely (median-centred, not clef-absolute)
 **Desejado:** In square notation the staff position is absolute: a c4 do-clef fixes DO on the 4th line, and every pitch is read off that anchored line by line/space. The note's vertical position must be derived from (pitch slot - clef-line slot), independent of the melody's median. This is what makes the clef line, accidentals, custos pitch, and clef changes all line up consistently.
 **Como:** The parser already resolves the absolute staff slot in GabcParser._slotToPitch (clefSlot = 2*line+1, slot indices a..m). Carry the staff SLOT (or the diatonic number plus the clef anchor) through to the renderer instead of recomputing a median. Replace `ref = median` with `ref = clefAnchorDiatonic` so step 0 = clef line; then _stepY places notes absolutely. The GABC research note in doc/GREGORIAN_RESEARCH.json states 'the renderer places a note at staff-slot(letter)'.

@@ -1,5 +1,39 @@
 # Import/Export + MIDI audit backlog (41 confirmed)
 
+> **2.6.0 audit status (2026-06-19).** Cross-checked against the code by a
+> two-pass automated audit (classify, then adversarial verify). An item is
+> listed **RESOLVED** only when *both* passes agreed the desired behavior is
+> implemented; items only partly implemented are **PARTIAL**; the rest stay open.
+> Confirmed against 41 items. This is a status overlay — the per-item
+> descriptions below are unchanged.
+
+- **RESOLVED (5):**
+  - **#1** — Crescendo/diminuendo wedges not imported
+  - **#4** — MEI beam/tuplet container children dropped
+  - **#8** — Lyrics (syllables) never exported
+  - **#9** — Beams never exported
+  - **#19** — Ornaments and grace notes dropped on export
+- **PARTIAL (19):**
+  - **#2** — Tuplets silently dropped on export
+  - **#3** — MEI scoreDef/staffDef clef/key/meter lost
+  - **#5** — Only one MusicXML part imported; multi-staff collapses
+  - **#6** — MEI control events (slur/tie/dynam) with @startid/@endid ...
+  - **#10** — Clef line mapping wrong for treble/bass and missing octav...
+  - **#11** — Ties only emit start/stop, not continuation; <tied> notat...
+  - **#12** — Grace-note kind (acc/unacc) collapsed to generic flag
+  - **#14** — TempoMark.beatUnit ignored in playback
+  - **#16** — MusicXML divisions ignored; type-less notes default to qu...
+  - **#17** — Slur/tie <number> (id) ignored; overlapping slurs collapse
+  - **#18** — Multi-voice measures export empty
+  - **#20** — Barlines and repeats not exported
+  - **#24** — Crescendo/diminuendo produce no velocity ramp; reset velo...
+  - **#25** — Grace notes add time instead of stealing it
+  - **#28** — backup/forward are no-ops; multi-voice/cross-staff timing...
+  - **#29** — Ornaments never expanded into note stream
+  - **#33** — Grace-note slash (acciaccatura vs appoggiatura) not captured
+  - **#37** — Only first <beam> level read; secondary beams lost
+  - **#38** — MusicXML <duration> hardcoded to 1
+
 ## 1. [HIGH/medium] (musicxml-import) Crescendo/diminuendo wedges (<wedge>) are not imported
 **Current:** _parseMusicXmlDirections (parser_support.dart:1365) only handles direction-type children dynamics, words, metronome, segno, coda, rehearsal, and octave-shift. There is no case for <wedge>, so hairpin crescendo/diminuendo spanners are dropped entirely. The model supports them: Dynamic has isHairpin and length (lib/core/dynamic.dart:55-66) and DynamicType has crescendo/diminuendo (parser_support.dart:522-524), but only literal <dynamics> abbreviations and the words 'crescendo'/'diminuendo' ever reach it.
 **Desired:** Map <wedge type="crescendo"|"diminuendo"> to Dynamic(type: crescendo/diminuendo, isHairpin: true) on start and close it on type="stop". Hairpins are extremely common in any expressive score.

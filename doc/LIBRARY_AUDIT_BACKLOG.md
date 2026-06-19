@@ -1,5 +1,57 @@
 # Library CMN rendering audit backlog (72 confirmed)
 
+> **2.6.0 audit status (2026-06-19).** Cross-checked against the code by a
+> two-pass automated audit (classify, then adversarial verify). An item is
+> listed **RESOLVED** only when *both* passes agreed the desired behavior is
+> implemented; items only partly implemented are **PARTIAL**; the rest stay open.
+> Confirmed against 72 items. This is a status overlay — the per-item
+> descriptions below are unchanged.
+
+- **RESOLVED (15):**
+  - **#1** — Multi-digit time signatures
+  - **#2** — Within-measure accidental persistence
+  - **#3** — Clef repeated at system start
+  - **#5** — Last system not justified
+  - **#7** — Rest spacing ratio applied
+  - **#10** — Key signature cancellation width reserved
+  - **#12** — Chord articulations rendered
+  - **#19** — Key sig cancellation width (duplicate)
+  - **#20** — Free-time signature renders nothing
+  - **#21** — Middle-line stem DOWN (not UP)
+  - **#37** — Tuplet ratio display
+  - **#38** — Multi-digit tuplet numbers
+  - **#39** — Whole-measure rest centered
+  - **#64** — Heavy-light barline type
+  - **#71** — Additive meter display (3+2+2 format)
+- **PARTIAL (27):**
+  - **#6** — Dot width reserved in layout
+  - **#11** — MusicXML alter without accidental
+  - **#13** — Multiple articulations stack
+  - **#14** — Articulation types extended
+  - **#15** — Hairpin niente support
+  - **#16** — Dotted rests render with dots
+  - **#17** — C-clefs on correct staff lines
+  - **#22** — MEI tuplet container nesting
+  - **#23** — MusicXML export lyrics
+  - **#24** — Beamed stems use SMuFL anchor
+  - **#27** — Accidental width on leading side
+  - **#28** — System-break width estimate
+  - **#29** — Slur skyline uses pitch Y
+  - **#31** — Chord accidental column width
+  - **#45** — MEI beam/tuplet containers
+  - **#46** — MusicXML tuplet export
+  - **#47** — MusicXML divisions/duration
+  - **#49** — MusicXML export beams/grace/ornaments
+  - **#50** — Cross-staff beaming
+  - **#53** — Nested slurs with id
+  - **#55** — Cross-voice collision (second/unison)
+  - **#57** — Two-note beam slant
+  - **#60** — Key sig accidental size consistency
+  - **#62** — Marcato always above staff
+  - **#65** — Time sig numerator/denominator centered
+  - **#66** — Ledger line thickness from metadata
+  - **#69** — Tuplet width from member durations
+
 ## 1. [HIGH/small] (clefs-meter-barlines) Multi-digit time signatures (12/8, 16, 10/4, etc.) render as nothing
 **Current:** bar_element_renderer.dart:200-215 `renderTimeSignature` builds the glyph name as `'timeSig${ts.numerator}'` and `'timeSig${ts.denominator}'`. SMuFL only defines single-digit glyphs timeSig0..timeSig9 (confirmed: glyphnames.json has no `timeSig12`/`timeSig16`). For any numerator or denominator >= 10, `metadata.getCodepoint` returns empty and `_drawGlyph` early-returns (bar_element_renderer.dart:231-232), so the time signature is silently omitted. 12/8 — one of the most common compound meters — draws no glyph at all.
 **Desired:** Decompose each of numerator and denominator into individual digits, render the digit glyphs left-to-right, then horizontally center the numerator stack over the denominator stack (per SMuFL/Behind Bars).
