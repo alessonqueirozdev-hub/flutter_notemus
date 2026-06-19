@@ -265,6 +265,21 @@ Staff _articulations() {
   ]);
 }
 
+Staff _marcatoAlwaysAbove() {
+  return _staff([
+    _measure([
+      Clef(clefType: ClefType.treble),
+      TimeSignature(numerator: 4, denominator: 4),
+      // Low notes -> stem up. Marcato must still sit ABOVE the note; the
+      // staccato note shows the normal opposite-the-stem placement (below).
+      _n('E', 4, artic: [ArticulationType.marcato]),
+      _n('G', 4, artic: [ArticulationType.staccato]),
+      _n('C', 4, artic: [ArticulationType.marcato]),
+      _n('D', 4, artic: [ArticulationType.marcato]),
+    ]),
+  ]);
+}
+
 Staff _cautionaryAccidentals() {
   Note acc(String step, int oct, double alter, AccidentalParenthesis paren) =>
       Note(
@@ -836,6 +851,13 @@ final List<CorpusCase> corpus = [
     build: _multiSystem,
     staffSpace: 13.0,
     size: const Size(460, 360),
+  ),
+  CorpusCase(
+    id: 'm04q_marcato_above',
+    title: 'Marcato always above (even with stem up)',
+    tier: 'intermediate',
+    exercises: 'marcato forced above; staccato stays opposite the stem',
+    build: _marcatoAlwaysAbove,
   ),
   CorpusCase(
     id: 'm04p_cautionary_accidentals',

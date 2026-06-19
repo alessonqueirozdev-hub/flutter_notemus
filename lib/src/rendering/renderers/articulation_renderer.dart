@@ -24,7 +24,11 @@ class ArticulationRenderer extends BaseGlyphRenderer {
   }) {
     if (articulations.isEmpty) return;
 
-    final articulationAbove = !stemUp;
+    // Marcato is always placed above the note (Behind Bars p.117), regardless
+    // of stem direction; otherwise articulations sit opposite the stem.
+    final hasMarcato = articulations.any((a) =>
+        a == ArticulationType.marcato || a == ArticulationType.strongAccent);
+    final articulationAbove = hasMarcato ? true : !stemUp;
 
     // Stack multiple articulations outward from the notehead (Behind Bars):
     // dot/tenuto closest, accent/marcato outside, bowing/mutes outermost.
