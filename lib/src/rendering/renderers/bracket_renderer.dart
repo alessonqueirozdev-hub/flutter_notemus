@@ -158,12 +158,17 @@ class BracketRenderer {
 
     // SMuFL fonts use 1 em == 4 staff spaces; rendering at that font size makes
     // metadata staff-space metrics map to staffSpace px directly.
-    final double fontSize = coordinates.staffSpace * 4.0;
-    final double naturalHeightPx = bbox.heightInPixels(coordinates.staffSpace);
-    final double naturalWidthPx = bbox.widthInPixels(coordinates.staffSpace);
+    final double ss = coordinates.staffSpace;
+    final double fontSize = ss * 4.0;
+    final double naturalHeightPx = bbox.heightInPixels(ss);
+    final double naturalWidthPx = bbox.widthInPixels(ss);
     if (naturalHeightPx <= 0) return false;
 
     final double scaleY = height / naturalHeightPx;
+    // Scale the width proportionally so a taller brace is correspondingly
+    // bolder (a Y-only stretch leaves it spindly). Capped so very tall systems
+    // don't get an absurdly wide brace.
+    final double scaleX = scaleY.clamp(1.0, 4.5);
 
     final painter = TextPainter(
       text: TextSpan(
@@ -179,13 +184,22 @@ class BracketRenderer {
       textDirection: TextDirection.ltr,
     )..layout();
 
+    // The glyph is anchored at its alphabetic baseline. In SMuFL Y-up metrics
+    // it spans [bBoxSwY, bBoxNeY] staff spaces above the baseline, so on screen
+    // (Y-down) the glyph bottom sits bBoxSwY*ss below the baseline. Placing the
+    // baseline at `baselineY` and scaling Y makes the glyph span exactly
+    // [topY, topY+height].
+    final double bottomY = topY + height;
+    final double baselineY = bottomY + (bbox.bBoxSwY * ss * scaleY);
+    final double baselineFromTop =
+        painter.computeDistanceToActualBaseline(TextBaseline.alphabetic);
+
     canvas.save();
-    // Place the glyph's right edge at x, top at topY, then stretch on Y only.
-    canvas.translate(x - naturalWidthPx, topY);
-    canvas.scale(1.0, scaleY);
-    // Compensate the glyph's own top bearing so it starts exactly at topY.
-    final double topBearingPx = bbox.bBoxNeY * coordinates.staffSpace;
-    painter.paint(canvas, Offset(0, -topBearingPx - painter.height * 0.5));
+    // Anchor the (scaled) glyph's right edge at x so the brace tips face the
+    // staves, then stretch both axes.
+    canvas.translate(x - naturalWidthPx * scaleX, baselineY);
+    canvas.scale(scaleX, scaleY);
+    painter.paint(canvas, Offset(0, -baselineFromTop));
     canvas.restore();
     return true;
   }

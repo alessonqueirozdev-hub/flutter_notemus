@@ -340,6 +340,13 @@ class LayoutEngine {
   /// ✅ Expor positions Y das notes for Rendering de stems
   Map<Note, double> get noteYPositions => Map.unmodifiable(_noteYPositions);
 
+  /// Overrides a note's horizontal position after layout (used by the
+  /// multi-staff aligner so beams follow re-aligned noteheads). No-op for notes
+  /// the engine never positioned.
+  void overrideNoteX(Note note, double x) {
+    if (_noteXPositions.containsKey(note)) _noteXPositions[note] = x;
+  }
+
   List<PositionedElement> layout() {
     return _layoutInternal();
   }
