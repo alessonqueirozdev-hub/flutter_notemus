@@ -1598,44 +1598,48 @@ class LayoutEngine {
       DurationType.sixtyFourth: 0.25, // √0.0625
     };
 
-    // Get duração of the element current
-    DurationType? currentDuration;
-    if (currentElement is Note) {
-      currentDuration = currentElement.duration.type;
-    } else if (currentElement is Chord) {
-      currentDuration = currentElement.duration.type;
-    } else if (currentElement is Rest) {
-      currentDuration = currentElement.duration.type;
+    // Inter-onset spacing (Gould): the gap BEFORE this element reflects how much
+    // horizontal space the PREVIOUS element occupies — proportional to its
+    // (sqrt) duration — not this element's own duration. So a long note gets a
+    // wide gap after it and short notes cluster tightly.
+    DurationType? prevDuration;
+    if (previousElement is Note) {
+      prevDuration = previousElement.duration.type;
+    } else if (previousElement is Chord) {
+      prevDuration = previousElement.duration.type;
+    } else if (previousElement is Rest) {
+      prevDuration = previousElement.duration.type;
     }
 
-    // If not for elemento musical rhythmic, Use spacing base
-    if (currentDuration == null) {
+    // No previous rhythmic element (start of measure/system): use base spacing.
+    if (prevDuration == null) {
       return baseSpacing * staffSpace;
     }
 
-    // Appliesr fator de duração
-    final factor = durationFactors[currentDuration] ?? 1.0;
+    // Appliesr fator de duração (do elemento anterior)
+    final factor = durationFactors[prevDuration] ?? 1.0;
     double spacing = baseSpacing * factor * staffSpace;
 
-    // Rests take slightly LESS space than an equal-duration note (Gould ~0.8x),
-    // via the configurable restSpacingRatio rather than the old 1.15 widening.
-    if (currentElement is Rest) {
+    // A rest occupies slightly LESS space than an equal-duration note
+    // (Gould ~0.8x) via the configurable restSpacingRatio.
+    if (previousElement is Rest) {
       spacing *= _spacingPreferences.restSpacingRatio;
     }
 
-    // Augmentation-dot space is now reserved on the dotted note's own trailing
+    // Augmentation-dot space is reserved on the dotted note's own trailing
     // width (_getElementWidthSimple), so no extra leading gap is needed here.
 
-    // AJUSTE: More spacing if elemento previous tem accidental
-    if (previousElement is Note &&
-        previousElement.pitch.accidentalGlyph != null) {
-      spacing += staffSpace * 0.15; // REDUZIDO de 0.2
-    } else if (previousElement is Chord) {
-      final hasAccidental = previousElement.notes.any(
+    // Leading space for the CURRENT element's accidental, which hangs to the
+    // left of its notehead into this gap.
+    if (currentElement is Note &&
+        currentElement.pitch.accidentalGlyph != null) {
+      spacing += staffSpace * 0.15;
+    } else if (currentElement is Chord) {
+      final hasAccidental = currentElement.notes.any(
         (note) => note.pitch.accidentalGlyph != null,
       );
       if (hasAccidental) {
-        spacing += staffSpace * 0.15; // REDUZIDO de 0.2
+        spacing += staffSpace * 0.15;
       }
     }
 
