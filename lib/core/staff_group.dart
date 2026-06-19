@@ -269,7 +269,7 @@ class BracketRenderConfig {
   /// Factory: Configurestion for bracket [ rendering
   factory BracketRenderConfig.bracket() {
     return const BracketRenderConfig(
-      thickness: 0.16,
+      thickness: 0.5, // bold vertical (orchestral/choral bracket), not a hairline
       tipWidth: 0.5,
       horizontalOffset: 1.0,
     );
