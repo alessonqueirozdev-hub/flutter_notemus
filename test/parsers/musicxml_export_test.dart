@@ -150,6 +150,31 @@ void main() {
     });
   });
 
+  group('MusicXML cautionary accidental round-trip', () {
+    test('parentheses/brackets survive export -> import', () {
+      final staff = Staff(measures: [
+        Measure()
+          ..add(Clef(clefType: ClefType.treble))
+          ..add(TimeSignature(numerator: 4, denominator: 4))
+          ..add(Note(
+              pitch: const Pitch(step: 'C', octave: 5, alter: 1.0),
+              duration: const Duration(DurationType.quarter),
+              accidentalParenthesis: AccidentalParenthesis.parentheses))
+          ..add(Note(
+              pitch: const Pitch(step: 'A', octave: 4, alter: -1.0),
+              duration: const Duration(DurationType.quarter),
+              accidentalParenthesis: AccidentalParenthesis.brackets)),
+      ]);
+      final xml = MusicXMLParser.staffToMusicXML(staff);
+      expect(xml.contains('cautionary="yes"'), isTrue);
+      expect(xml.contains('bracket="yes"'), isTrue);
+
+      final notes = notesOf(MusicXMLParser.parseMusicXML(xml));
+      expect(notes[0].accidentalParenthesis, AccidentalParenthesis.parentheses);
+      expect(notes[1].accidentalParenthesis, AccidentalParenthesis.brackets);
+    });
+  });
+
   group('MusicXML tuplet round-trip', () {
     test('a triplet survives export -> import', () {
       final staff = Staff(measures: [

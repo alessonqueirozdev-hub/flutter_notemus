@@ -413,6 +413,24 @@ void _buildNoteXml(XmlBuilder builder, Note note,
       for (int index = 0; index < note.duration.dots; index++) {
         builder.element('dot');
       }
+      // Cautionary/editorial accidental display (round-trips the parenthesis).
+      if (note.accidentalParenthesis != AccidentalParenthesis.none) {
+        final accName = _accidentalNameFromAlter(note.pitch.alter);
+        if (accName != null) {
+          builder.element(
+            'accidental',
+            nest: () {
+              if (note.accidentalParenthesis ==
+                  AccidentalParenthesis.parentheses) {
+                builder.attribute('cautionary', 'yes');
+              } else {
+                builder.attribute('bracket', 'yes');
+              }
+              builder.text(accName);
+            },
+          );
+        }
+      }
       if (tuplet != null) {
         builder.element(
           'time-modification',
@@ -520,6 +538,16 @@ String? _ornamentToString(OrnamentType type) => switch (type) {
       OrnamentType.turn => 'turn',
       OrnamentType.turnInverted || OrnamentType.invertedTurn => 'inverted-turn',
       OrnamentType.turnSlash => 'turn',
+      _ => null,
+    };
+
+/// MusicXML <accidental> name for a chromatic alteration in semitones.
+String? _accidentalNameFromAlter(double alter) => switch (alter) {
+      2.0 => 'double-sharp',
+      1.0 => 'sharp',
+      0.0 => 'natural',
+      -1.0 => 'flat',
+      -2.0 => 'flat-flat',
       _ => null,
     };
 
