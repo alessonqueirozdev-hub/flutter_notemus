@@ -288,8 +288,13 @@ Auditoria adversarial de I/O + MIDI: 41 lacunas confirmadas em 6 dimensões (doc
 | `fix(engraving):` tempo livre não desenha `0/4` | `isFreeTime` → nenhum glifo + 0 de largura. | #20 |
 | `fix(engraving):` barras pesadas | heavyLight → `barlineReverseFinal`, heavyHeavy → `barlineHeavyHeavy` (antes ambas viravam `barlineHeavy`). | #64 |
 | `fix(engraving):` linhas suplementares via metadata | `legerLineThickness` (0.16) + `legerLineExtension` (0.4) do metadata SMuFL (antes 0.13/0.4 hardcoded). | #66/#67 |
+| `fix(spacing):` não justificar último sistema/subpreenchido | última linha e sistemas <70% ficam em espaçamento natural (ragged-right, Behind Bars), não esticados até a borda. **Decisão do usuário: ragged-right.** | #5 |
+| `fix(layout):` largura de mudança no meio do sistema na quebra | `_calculateMeasureWidthCursor` conta clave/armadura/fórmula de mudança (consistência com o render). | follow-up |
+| `feat(engraving):` clave de mudança em tamanho cue | clave após conteúdo musical no sistema renderiza a ~72% (vs abertura/restatement em tamanho cheio). | #18 |
+| `feat(engraving):` razão de quiáltera + multi-dígito | compõe `numberText` glifo a glifo (dígitos `tuplet0..9`); razão "a:b" com dois-pontos desenhado manualmente (Bravura empacotada não cobre `tupletColon`); meter nulo = simples (tercina mostra "3"). | #37/#38 |
+| `fix(spacing):` lei √t de Gould | fatores de espaçamento proporcionais a √duração (16ª 0.5 vs 0.7 antigo, etc.) — proporção rítmica correta em passagens densas. | #51 (mín.) |
 
-Restam itens médio/baixo de polimento de render (hairpin por glifo SMuFL, justificação do último sistema, mudança de clave no meio do sistema em tamanho cue, centralização de pausa de compasso inteiro, modelo de spacing √t) e refinamentos gregorianos (modelo de melisma/multi-verso, pressus), documentados nos backlogs.
+Restam itens médio/baixo de polimento de render (hairpin por glifo SMuFL + spanning, espaçamento por inter-onset #26, centralização de pausa de compasso inteiro #39, bracket de quiáltera inclinado #41, acidentes cautelares #70, metros aditivos #71) e refinamentos gregorianos (modelo de melisma/multi-verso, pressus), documentados nos backlogs.
 
 **Renderiza com autenticidade (confirmado nos PNGs):** clave-dó centrada na linha, punctum/virga, pes, clivis (flexus), torculus, porrectus (oblíqua), scandicus, climacus (losangos *inclinatum*), quilisma, salicus, resupinus/flexus, líquidas, episema/ictus/mora, custos de fim de linha, divisórias, justificação por sistema, letras em fonte serifada.
 
