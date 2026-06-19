@@ -300,10 +300,11 @@ Auditoria adversarial de I/O + MIDI: 41 lacunas confirmadas em 6 dimensões (doc
 | `feat(accidentals):` cautelares/editoriais | `Note.accidentalParenthesis` (parênteses/colchetes), render + import + export MusicXML (round-trip). | #70 |
 | `fix(engraving):` marcato sempre acima | marcato forçado acima da nota mesmo com haste para cima (Behind Bars p.117). | #62 |
 | `fix(engraving):` ligaduras de acorde divergem | nota superior curva p/ cima, inferior p/ baixo (fanning). | #59 |
-| `feat(ornaments):` acidentes de ornamento | sustenido/bemol acima/abaixo de trinado/grupeto (campo aditivo). | #35 |
-| `feat(ornaments):` linha de trinado estendida | `tr~~~~` ladrilhando `wiggleTrill` até a próxima nota (campo aditivo `extended`). | #36 |
+| `fix(engraving):` folga do hairpin antes da dinâmica | a cunha para antes da letra (centrada) seguinte, sem sobrepô-la. | #33 (follow-up) |
 
-**Itens pequenos/médios do backlog de render CMN: essencialmente esgotados.** Restam apenas itens grandes/estruturais (espaçamento por inter-onset #26, slurs aninhados/sobrepostos #53, colisão entre vozes #55, beam cross-staff #50) e nichos de baixo impacto (glifo SMuFL de hairpin, tamanho do acidente de armadura #60, melhorias finas de slur #8/#9), além de refinamentos gregorianos (melisma/multi-verso, pressus, episema por forma, fusões), documentados nos backlogs.
+> **#35 (acidentes de ornamento) e #36 (linha de trinado estendida): REVERTIDOS.** O posicionamento relativo ao glifo do trinado (`ornamentTrill`, âncora `opticalCenter`) ficou visualmente incorreto (acidente brigando com o "tr"). Adiados — exigem trabalho dedicado de ancoragem por bbox do glifo. Campos do modelo também removidos.
+
+**Itens pequenos/médios do backlog de render CMN: essencialmente esgotados.** Restam apenas itens grandes/estruturais (espaçamento por inter-onset #26, slurs aninhados/sobrepostos #53, colisão entre vozes #55, beam cross-staff #50), nichos de baixo impacto (glifo SMuFL de hairpin, tamanho do acidente de armadura #60, melhorias finas de slur #8/#9), os ornamentos adiados (#35/#36), além de refinamentos gregorianos (melisma/multi-verso, pressus, episema por forma, fusões), documentados nos backlogs.
 
 **Renderiza com autenticidade (confirmado nos PNGs):** clave-dó centrada na linha, punctum/virga, pes, clivis (flexus), torculus, porrectus (oblíqua), scandicus, climacus (losangos *inclinatum*), quilisma, salicus, resupinus/flexus, líquidas, episema/ictus/mora, custos de fim de linha, divisórias, justificação por sistema, letras em fonte serifada.
 

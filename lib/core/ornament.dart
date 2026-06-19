@@ -66,25 +66,10 @@ class Ornament extends MusicalElement {
   final String? text;
   final Pitch? alternatePitch;
 
-  /// Optional accidental drawn (reduced size) above the ornament — e.g. a trill
-  /// or turn that raises/lowers its auxiliary note. null = none.
-  final AccidentalType? accidentalAbove;
-
-  /// Optional accidental drawn below the ornament (turns can carry one). null =
-  /// none.
-  final AccidentalType? accidentalBelow;
-
-  /// When true (for trills), a wavy extension line (tr~~~~) is drawn after the
-  /// ornament glyph, spanning to the next note/barline.
-  final bool extended;
-
   Ornament({
     required this.type,
     this.above = true,
     this.text,
     this.alternatePitch,
-    this.accidentalAbove,
-    this.accidentalBelow,
-    this.extended = false,
   });
 }
