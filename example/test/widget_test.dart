@@ -11,9 +11,10 @@ import 'package:flutter_notemus_example/examples/complete_music_piece.dart';
 import 'package:flutter_notemus_example/examples/dots_and_ledgers_example.dart';
 import 'package:flutter_notemus_example/examples/dynamics_example.dart';
 import 'package:flutter_notemus_example/examples/grace_notes_example.dart';
+import 'package:flutter_notemus_example/examples/grand_staff_example.dart';
+import 'package:flutter_notemus_example/examples/gregorian_chant_example.dart';
 import 'package:flutter_notemus_example/examples/key_signatures_example.dart';
 import 'package:flutter_notemus_example/examples/lyrics_text_example.dart';
-import 'package:flutter_notemus_example/examples/multi_staff_example.dart';
 import 'package:flutter_notemus_example/examples/octave_marks_example.dart';
 import 'package:flutter_notemus_example/examples/ornaments_example.dart';
 import 'package:flutter_notemus_example/examples/polyphony_example.dart';
@@ -37,12 +38,23 @@ void main() {
   testWidgets('example app shows the initial score gallery screen', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const MusicNotationApp());
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 2));
+    // Use a wide surface so the persistent catalog sidebar is shown
+    // (the app collapses it behind a button below 1120px logical px).
+    tester.view.physicalSize = const Size(1400, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
 
+    // Render the catalog screen directly. The app's bootstrap gate uses a
+    // FutureBuilder over real asset I/O that does not resolve under the
+    // fake-async test clock, so we exercise MainScreen itself here.
+    await tester.pumpWidget(const MaterialApp(home: MainScreen()));
+    await tester.pump();
+
+    // The persistent catalog sidebar is shown with its header.
     expect(find.text('Curated Showcase'), findsOneWidget);
-    expect(find.byIcon(CupertinoIcons.sidebar_left), findsOneWidget);
+    // The first (selected) catalog entry is visible near the top.
+    expect(find.text('Clefs'), findsWidgets);
   });
 
   final pages = <String, Widget Function()>{
@@ -63,7 +75,8 @@ void main() {
     'Lyrics and Text': () => const LyricsTextExample(),
     'Repeats': () => const RepeatsExample(),
     'Polyphony': () => const PolyphonyExampleWidget(),
-    'Multi-Staff': () => const MultiStaffDemoApp(),
+    'Grand Staff & Scores': () => const GrandStaffExample(),
+    'Gregorian Chant': () => const GregorianChantExample(),
     'Octave Marks': () => const OctaveMarksExample(),
     'Volta Brackets': () => const VoltaBracketsExample(),
     'Complete Piece': () => const CompleteMusicPieceExample(),
