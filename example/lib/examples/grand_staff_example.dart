@@ -1,6 +1,6 @@
 // example/lib/examples/grand_staff_example.dart
 //
-// Showcases the multi-staff rendering added in 2.7.0: the public [GrandStaff]
+// Showcases the multi-staff rendering added in 2.6.0: the public [GrandStaff]
 // and [ScoreView] widgets, brace/bracket connectors, system-spanning barlines,
 // and cross-staff beaming (Note.crossStaffMove).
 
@@ -25,7 +25,7 @@ class GrandStaffExample extends StatelessWidget {
       accentColor: _accent,
       children: [
         const ShowcaseInfoBanner(
-          title: 'New in 2.7.0',
+          title: 'New in 2.6.0',
           description:
               'GrandStaff renders one StaffGroup; ScoreView renders a whole '
               'Score. Both align every staff on one grid, draw the SMuFL '

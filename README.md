@@ -188,20 +188,22 @@ For a full conformance audit see [`doc/MEI_V5_AUDIT.md`](doc/MEI_V5_AUDIT.md).
 
 ## Current Status
 
-- Current package release target: `2.7.0`
-- Previous pub.dev baseline before the new generation: `0.1.0`
+- Current package release target: `2.6.0`
+- Previous pub.dev baseline: `2.5.1`
 - Core notation rendering is production-ready; **multi-staff / grand-staff and
   cross-staff beaming** are now supported alongside single-staff `MusicScore`.
 - MIDI mapping and `.mid` export are available in the package (CMN and chant).
 - Android native audio backend is active; other native targets are configured and tracked as pending.
 
-### What's New in 2.7.0
+### What's New in 2.6.0
 
 The library is no longer single-staff. This release adds a full multi-staff /
 score renderer, cross-staff beaming, a sweep of Behind-Bars CMN corrections,
-deeper MusicXML/MEI import, and Gregorian render-fidelity work. Everything is
-backward-compatible — existing `MusicScore` usage is unchanged. See the
-[CHANGELOG](CHANGELOG.md#270---2026-06-19) for the full list.
+deeper MusicXML/MEI import, and Gregorian render-fidelity work — and also
+consolidates the earlier engraving/typographic correctness pass that had not
+yet reached pub.dev. Everything is backward-compatible — existing `MusicScore`
+usage is unchanged. See the [CHANGELOG](CHANGELOG.md#260---2026-06-19) for the
+full list.
 
 - **Grand staff, choir, and full scores** — new [`GrandStaff`](#grand-staff-choir-and-full-scores)
   and `ScoreView` widgets render a `StaffGroup`/`Score` on a shared horizontal
@@ -219,16 +221,16 @@ backward-compatible — existing `MusicScore` usage is unchanged. See the
 - **Gregorian chant** — episema/mora rendered with Greciliae glyphs
   (shape-specific episema), asymmetric divisio breathing, climacus/strophae
   tucking, custos length by leap.
-
-### What's New in 2.6.0
-
-- Engraving/typographic correctness pass closing issues [#3](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/3), [#4](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/4), [#5](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/5), [#8](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/8), [#9](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/9), and [#12](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/12).
-- Staff-group braces now use the scalable SMuFL `brace` glyph (vertically stretched to the group height) with the legacy custom path kept as an automatic fallback.
-- `repeatBoth` barlines render reliably even when the combined `repeatLeftRight` glyph is missing, by composing `repeatRight` + `repeatLeft` from SMuFL advance metrics.
-- Stem/flag attachment is derived from the SMuFL stem anchor + half `stemThickness`, scaled by `staffSpace`; the hardcoded raw-pixel offset constants were removed so primitives stay proportional at every score size.
-- `Chord` elements now render `Note.syllables` with the same typography as single notes (`NoteRenderer.renderSyllables` is now public; `ChordRenderer.lyricNoteFor` selects the lyric note).
-- `SpacingResult` (`getShortestNoteDuration`/`getMaxWidth`) accounts for `Chord` and `Tuplet` (ratio-aware, recursive for nested tuplets); a misleading dead `Duration.tuplet` TODO in `MeasureValidator` was removed.
-- New regression suites for spacing/validation of chords & tuplets, stem/flag scaling, repeat barlines, the brace glyph, and chord lyrics.
+- **Earlier engraving/typography pass** (also shipping here) — SMuFL `brace`
+  glyph for staff-group braces, robust `repeatBoth` barlines, chord lyrics via
+  the public `NoteRenderer.renderSyllables`, SMuFL-anchored stem/flag
+  attachment, and `Chord`/`Tuplet`-aware spacing — closing issues
+  [#3](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/3),
+  [#4](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/4),
+  [#5](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/5),
+  [#8](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/8),
+  [#9](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/9), and
+  [#12](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/12).
 
 ### What's New in 2.5.1
 
@@ -331,7 +333,7 @@ Add dependency to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  flutter_notemus: ^2.7.0
+  flutter_notemus: ^2.6.0
 ```
 
 Install packages:

@@ -158,7 +158,7 @@ class _BootstrapLoadingView extends StatelessWidget {
             const CupertinoActivityIndicator(radius: 16),
             const SizedBox(height: 18),
             Text(
-              'Preparing the 2.7.0 showcase...',
+              'Preparing the 2.6.0 showcase...',
               style: theme.textTheme.navTitleTextStyle.copyWith(
                 color: const Color(0xFF111827),
               ),
@@ -708,7 +708,7 @@ class _CatalogHeader extends StatelessWidget {
               borderRadius: BorderRadius.circular(999),
             ),
             child: Text(
-              'Release 2.7.0',
+              'Release 2.6.0',
               style: textTheme.tabLabelTextStyle.copyWith(
                 color: const Color(0xFFFFFFFF),
                 fontWeight: FontWeight.w700,
@@ -726,7 +726,7 @@ class _CatalogHeader extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            'A curated catalog spanning the fundamentals, expression, multi-staff scores, and alternative notation systems — refreshed for the 2.7.0 release.',
+            'A curated catalog spanning the fundamentals, expression, multi-staff scores, and alternative notation systems — refreshed for the 2.6.0 release.',
             style: textTheme.textStyle.copyWith(
               color: const Color(0xF2FFFFFF),
               fontSize: 15,
