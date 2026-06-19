@@ -706,10 +706,12 @@ class LayoutEngine {
         manualBeamGroups: measure.manualBeamGroups,
       );
 
-      // Voice 2+ never renders system elements (clef/key/time sig belong to voice 1)
+      // Voice 2+ never renders system elements (clef/key/time sig belong to
+      // voice 1). The lead voice renders every system element it carries —
+      // those are author-placed openings or genuine mid-line changes.
       final elementsToRender = processedElements.where((element) {
         if (!isLeadVoice && _isSystemElement(element)) return false;
-        return isFirstInSystem || !_isSystemElement(element);
+        return true;
       }).toList();
 
       bool seenFirstMusicElement =
@@ -868,9 +870,13 @@ class LayoutEngine {
       manualBeamGroups: measure.manualBeamGroups,
     );
 
-    final elementsToRender = processedElements.where((element) {
-      return isFirstInSystem || !_isSystemElement(element);
-    }).toList();
+    // Render every element the measure actually carries. System elements
+    // (clef/key/time) only appear in a measure's data when the author placed
+    // them — the opening measure, or a genuine mid-line change — so they must
+    // draw regardless of position in the system. Inherited restatements at
+    // system starts are injected separately by the caller (so they are NOT in
+    // measure.elements and won't double up here).
+    final elementsToRender = processedElements;
 
     if (elementsToRender.isEmpty) return;
 
@@ -1065,11 +1071,23 @@ class LayoutEngine {
     }
 
     if (element is KeySignature) {
-      if (element.count == 0) return 0.5 * staffSpace;
+      // Reserve width for cancellation naturals of the outgoing key, which the
+      // renderer draws before the new accidentals: previousCount.abs() naturals
+      // at 0.8 SS each + a 0.5 SS gap (mirrors bar_element_renderer).
+      double width = 0;
+      final prev = element.previousCount;
+      if (prev != null && prev != 0) {
+        width += (prev.abs() * 0.8 + 0.5) * staffSpace;
+      }
+      if (element.count == 0) {
+        // C major: only the cancellation naturals (if any), else a small pad.
+        return width == 0 ? 0.5 * staffSpace : width;
+      }
       final accidentalWidth = element.count > 0
           ? accidentalSharpWidth
           : accidentalFlatWidth;
-      return (element.count.abs() * 0.8 + accidentalWidth) * staffSpace;
+      width += (element.count.abs() * 0.8 + accidentalWidth) * staffSpace;
+      return width;
     }
 
     if (element is TimeSignature) {

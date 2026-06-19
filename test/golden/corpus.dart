@@ -265,6 +265,26 @@ Staff _articulations() {
   ]);
 }
 
+Staff _keyCancellation() {
+  return _staff([
+    _measure([
+      Clef(clefType: ClefType.treble),
+      KeySignature(3), // A major: 3 sharps
+      _n('A', 4),
+      _n('B', 4),
+      _n('C', 5, alter: 1.0),
+      _n('D', 5),
+    ]),
+    _measure([
+      KeySignature(0, previousCount: 3), // cancel the 3 sharps -> C major
+      _n('C', 5),
+      _n('D', 5),
+      _n('E', 5),
+      _n('F', 5),
+    ]),
+  ]);
+}
+
 Staff _freeTime() {
   return _staff([
     _measure([
@@ -707,6 +727,14 @@ final List<CorpusCase> corpus = [
     build: _multiSystem,
     staffSpace: 13.0,
     size: const Size(460, 360),
+  ),
+  CorpusCase(
+    id: 'm04j_key_cancellation',
+    title: 'Key change with cancellation naturals (3# -> C)',
+    tier: 'intermediate',
+    exercises: 'cancellation naturals reserve width; no collision with notes',
+    build: _keyCancellation,
+    size: const Size(900, 240),
   ),
   CorpusCase(
     id: 'm04i_free_time',
