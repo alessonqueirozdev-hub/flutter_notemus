@@ -395,22 +395,43 @@ class GregorianLayout {
 
     final fullWidth = hardWidth > 0 ? hardWidth : maxContent + rightPad;
 
+    // Asymmetric breathing space around a divisio (Solesmes): more after the
+    // bar than before, scaled by the bar's weight.
+    double breathAfter(Object o) {
+      if (o is! _Divisio) return 0;
+      switch (o.type) {
+        case NeumeDivisionType.minima:
+          return sp * 0.35;
+        case NeumeDivisionType.minor:
+          return sp * 0.6;
+        case NeumeDivisionType.maior:
+          return sp * 0.95;
+        case NeumeDivisionType.finalis:
+          return sp * 1.1;
+      }
+    }
+
+    double breathBefore(Object o) => breathAfter(o) * 0.4;
+
     for (var r = 0; r < rows.length; r++) {
       final items = rows[r].items;
       final isLast = r == rows.length - 1;
       final sumW = items.fold<double>(0, (a, o) => a + itemWidth(o));
+      final breath = items.fold<double>(
+          0, (a, o) => a + breathBefore(o) + breathAfter(o));
       final avail = (fullWidth - rightPad) - notesStartX;
-      final g = (!isLast && items.length > 1 && avail > sumW)
-          ? (avail - sumW) / items.length
+      final g = (!isLast && items.length > 1 && avail > sumW + breath)
+          ? (avail - sumW - breath) / items.length
           : gap;
       var x = notesStartX;
       for (final o in items) {
+        x += breathBefore(o);
         if (o is _NeumeBox) {
           o.startX = x;
         } else if (o is _Divisio) {
           o.x = x;
         }
-        x += itemWidth(o) + g;
+        x += itemWidth(o) + g + breathAfter(o);
       }
       rows[r].lineEnd = isLast ? (x - g + rightPad * 0.4) : fullWidth;
     }
