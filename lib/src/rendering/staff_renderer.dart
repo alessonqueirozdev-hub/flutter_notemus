@@ -826,6 +826,32 @@ class StaffRenderer {
         accidentalDisplay:
             _accidentalDecisions[element] ?? AccidentalDisplay.show,
       );
+      // Extended trill: draw the wavy line to the next note/barline.
+      if (element.ornaments.any((o) => o.extended)) {
+        double? stopX;
+        for (int j = index + 1; j < allElements.length; j++) {
+          final pe = allElements[j];
+          if (pe.system != positioned.system) break;
+          if (pe.element is Note ||
+              pe.element is Chord ||
+              pe.element is Barline) {
+            stopX = pe.position.dx;
+            break;
+          }
+        }
+        if (stopX != null) {
+          final staffPosition =
+              StaffPositionCalculator.calculate(element.pitch, currentClef!);
+          noteRenderer.ornamentRenderer.renderTrillExtension(
+            canvas,
+            element,
+            basePosition,
+            staffPosition,
+            stopX - coordinates.staffSpace * 0.4,
+            voiceNumber: positioned.voiceNumber,
+          );
+        }
+      }
     } else if (element is Rest) {
       restRenderer.render(
         canvas,

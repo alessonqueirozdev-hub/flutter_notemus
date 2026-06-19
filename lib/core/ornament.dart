@@ -74,6 +74,10 @@ class Ornament extends MusicalElement {
   /// none.
   final AccidentalType? accidentalBelow;
 
+  /// When true (for trills), a wavy extension line (tr~~~~) is drawn after the
+  /// ornament glyph, spanning to the next note/barline.
+  final bool extended;
+
   Ornament({
     required this.type,
     this.above = true,
@@ -81,5 +85,6 @@ class Ornament extends MusicalElement {
     this.alternatePitch,
     this.accidentalAbove,
     this.accidentalBelow,
+    this.extended = false,
   });
 }

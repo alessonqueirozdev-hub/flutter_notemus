@@ -178,6 +178,71 @@ class OrnamentRenderer extends BaseGlyphRenderer {
         _ => null,
       };
 
+  static bool _isTrillType(OrnamentType type) =>
+      type == OrnamentType.trill ||
+      type == OrnamentType.trillNatural ||
+      type == OrnamentType.trillSharp ||
+      type == OrnamentType.trillFlat;
+
+  /// Draws a trill's wavy extension line (tr~~~~) from after the trill glyph to
+  /// [endX], at the trill's vertical level, by tiling the wiggleTrill glyph.
+  void renderTrillExtension(
+    Canvas canvas,
+    Note note,
+    Offset notePos,
+    int staffPosition,
+    double endX, {
+    int? voiceNumber,
+  }) {
+    final trill = note.ornaments
+        .where((o) => o.extended && _isTrillType(o.type))
+        .firstOrNull;
+    if (trill == null) return;
+
+    final noteStemUp = _resolveStemUp(note, staffPosition, voiceNumber);
+    final ornamentAbove = _isOrnamentAbove(note, trill, voiceNumber);
+    final ornamentY = _calculateOrnamentY(
+      notePos.dy,
+      ornamentAbove,
+      staffPosition,
+      stemUp: noteStemUp,
+    );
+    final glyphName = _getOrnamentGlyph(trill.type) ?? 'ornamentTrill';
+    final ornamentX = _getOrnamentHorizontalPosition(
+      note,
+      notePos.dx,
+      ornamentAbove: ornamentAbove,
+      stemUp: noteStemUp,
+      voiceNumber: voiceNumber,
+    );
+
+    final trillWidth =
+        (metadata.getGlyphAdvanceWidth(glyphName) ?? 1.0) *
+        coordinates.staffSpace *
+        0.85;
+    final tileW =
+        (metadata.getGlyphAdvanceWidth('wiggleTrill') ?? 0.95) *
+        coordinates.staffSpace *
+        0.85;
+    if (tileW <= 0) return;
+
+    var x = ornamentX + trillWidth * 0.7;
+    final color = theme.ornamentColor ?? theme.noteheadColor;
+    while (x + tileW <= endX) {
+      drawGlyphWithBBox(
+        canvas,
+        glyphName: 'wiggleTrill',
+        position: Offset(x, ornamentY),
+        color: color,
+        options: GlyphDrawOptions(
+          size: glyphSize * 0.85,
+          centerVertically: true,
+        ),
+      );
+      x += tileW;
+    }
+  }
+
   void renderForChord(
     Canvas canvas,
     Chord chord,
