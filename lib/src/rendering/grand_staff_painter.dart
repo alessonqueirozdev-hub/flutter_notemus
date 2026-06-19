@@ -74,7 +74,7 @@ class GrandStaffPainter extends CustomPainter {
             'Provide either staffGroup or groups'),
         groups = groups ?? [staffGroup!],
         staffGap = staffGap ?? staffSpace * 11.0 {
-    _bracePad = staffSpace * 1.6;
+    _bracePad = staffSpace * 2.2;
     final ranges = _computeSystemRanges();
     _systems = [
       for (final range in ranges) _layoutSystem(range.start, range.end),
@@ -363,15 +363,10 @@ class GrandStaffPainter extends CustomPainter {
       theme: theme,
       metadata: metadata,
     );
-    // Left edge of the actual staff lines (leftmost positioned element), so the
-    // brace/bracket sits just to its left rather than floating far away.
-    var leftX = double.infinity;
-    for (final l in layouts) {
-      for (final pe in l.elements) {
-        if (pe.position.dx < leftX) leftX = pe.position.dx;
-      }
-    }
-    if (!leftX.isFinite) leftX = staffSpace * 0.6;
+    // Staff lines are drawn from x = 0 (the coordinate origin), so the
+    // brace/bracket caps them there and extends left into the reserved _bracePad
+    // margin (the whole system is already translated right by _bracePad).
+    const leftX = 0.0;
     var staffIdx = 0;
     for (final g in groups) {
       final gTop = baseline0 + staffIdx * staffGap - staffSpace * 2;
