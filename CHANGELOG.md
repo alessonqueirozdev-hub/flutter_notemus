@@ -4,6 +4,72 @@ All notable changes to Flutter Notemus are documented in this file.
 
 The format is based on Keep a Changelog and this project follows Semantic Versioning.
 
+## [2.7.0] - 2026-06-19
+
+A large engraving release: **multi-staff / grand-staff rendering** (the library
+is no longer single-staff), **cross-staff beaming**, a sweep of Behind-Bars CMN
+corrections, deeper MusicXML/MEI import, and Gregorian chant render-fidelity
+work. All additions are backward-compatible (new widgets, model fields, and
+parser paths); existing single-staff `MusicScore` usage is unchanged.
+
+### Added — multi-staff & score rendering
+
+- `GrandStaff` widget and `GrandStaffPainter`: render a `StaffGroup` (piano
+  grand staff, SATB choir, N-staff systems) on a shared horizontal grid, with
+  the SMuFL `brace` and `bracketTop`/`bracketBottom` glyphs, a system-start
+  barline joining the staves, continuous per-measure system barlines, and
+  vertically-aligned noteheads.
+- `ScoreView` widget: render a whole `Score` (multiple `StaffGroup`s) on one
+  unified grid — a full multi-section/orchestral system.
+- **Multi-system wrapping** for the grand staff: long groups wrap into stacked
+  systems with shared break points and the clef + key restated each system.
+- **Cross-staff beaming**: a beamed voice can straddle two staves
+  (`Note.crossStaffMove`); the beam is drawn between the staves with stems
+  reaching it.
+- MusicXML import → `Score`: each part becomes a `StaffGroup` (multi-staff
+  parts are braced as a grand staff); `<part-group>`/`<group-symbol>` spans are
+  imported as section brackets; a beam that changes `<staff>` mid-group is kept
+  on its home staff with an automatic cross-staff move.
+
+### Added — common-music notation
+
+- Cautionary (parenthesised) and editorial (bracketed) accidentals
+  (`Note.accidentalParenthesis`), imported and exported via MusicXML.
+- Nested / overlapping slurs with numbered identity (`SlurEvent`,
+  `Note.slurs`), matched by number and arched concentrically; MusicXML
+  `<slur number=>` import.
+- Additive meters (e.g. `3+2+2`) rendered with `timeSigPlus`; free-time
+  (senza misura) draws no glyph.
+- Tuplet ratios (`a:b`) and multi-digit tuplet numbers; sloped tuplet brackets.
+- Chord-level articulations; ledger lines from SMuFL metadata; heavy-light /
+  heavy-heavy barlines with the correct glyphs.
+
+### Changed — engraving (Behind Bars)
+
+- Chord stem direction corrected (was inverted).
+- Inter-note spacing now uses the Gould square-root law keyed to the previous
+  note's duration (inter-onset), with augmentation-dot and cancellation-natural
+  widths reserved; rests use ~0.8× spacing.
+- Mid-system clef/key/time changes now render (and clef changes draw at cue
+  size); the last/underfull system is no longer stretched.
+- Cross-voice second/unison noteheads are displaced so they no longer overlap;
+  chord ties fan outward; a lone full-measure rest is centred; marcato always
+  sits above the note.
+- Hairpins span to the next dynamic/barline.
+
+### Changed — Gregorian chant
+
+- Horizontal episema and augmentum (mora) dot rendered with the Greciliae
+  `HEpisema*` / `AuctumMora` glyphs (shape-specific episema for virga/quilisma);
+  asymmetric breathing space around divisiones; climacus inclinata and repeated
+  same-pitch strophae tucked into single neumes; custos length by leap distance.
+
+### Fixed
+
+- Brace/bracket no longer overlaps the staff; the orchestral bracket uses the
+  Bravura serif glyphs instead of drawn tips; beam-processing no longer drops
+  newly added note fields.
+
 ## [2.6.0] - 2026-05-17
 
 This release closes a cluster of engraving and typographic correctness issues
