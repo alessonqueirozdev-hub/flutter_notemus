@@ -265,6 +265,27 @@ Staff _articulations() {
   ]);
 }
 
+Staff _tupletRatio() {
+  return _staff([
+    _measure([
+      Clef(clefType: ClefType.treble),
+      TimeSignature(numerator: 4, denominator: 4),
+      Tuplet(
+        actualNotes: 5,
+        normalNotes: 4,
+        numberConfig: const TupletNumber(showAsRatio: true),
+        elements: [
+          _n('C', 5, dur: DurationType.sixteenth),
+          _n('D', 5, dur: DurationType.sixteenth),
+          _n('E', 5, dur: DurationType.sixteenth),
+          _n('F', 5, dur: DurationType.sixteenth),
+          _n('G', 5, dur: DurationType.sixteenth),
+        ],
+      ),
+    ]),
+  ]);
+}
+
 Staff _midClefChange() {
   return _staff([
     _measure([
@@ -764,6 +785,13 @@ final List<CorpusCase> corpus = [
     build: _multiSystem,
     staffSpace: 13.0,
     size: const Size(460, 360),
+  ),
+  CorpusCase(
+    id: 'm04m_tuplet_ratio',
+    title: 'Tuplet ratio display (5:4 with colon)',
+    tier: 'intermediate',
+    exercises: 'ratio numberText renders digits + tupletColon glyph',
+    build: _tupletRatio,
   ),
   CorpusCase(
     id: 'm04l_mid_clef_change',

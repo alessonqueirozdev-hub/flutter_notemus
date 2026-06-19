@@ -58,9 +58,11 @@ class TupletNumber {
   
   /// Checks if is a razão comum and inequívoca
   static bool isCommonRatio(int numerator, int denominator, TimeSignature? timeSig) {
-    if (timeSig == null) return false;
-    
-    if (timeSig.isSimple) {
+    // With no meter context, assume simple meter (the common default) so a
+    // plain triplet/quintuplet shows just its number, not a full ratio.
+    final isSimpleMeter = timeSig?.isSimple ?? true;
+
+    if (isSimpleMeter) {
       // Tempo simples: razões comuns
       if (numerator == 3 && denominator == 2) return true; // Tercina
       if (numerator == 5 && denominator == 4) return true; // Quintina
