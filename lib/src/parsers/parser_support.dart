@@ -1188,9 +1188,13 @@ class _MusicXmlImportParser {
     }
 
     // Each part becomes its own StaffGroup; a multi-staff part (piano) is
-    // braced as a grand staff.
+    // braced as a grand staff. <part-group> spans in the <part-list> override
+    // this by bracketing their member parts together.
     final groups = <StaffGroup>[];
     if (isPartwise) {
+      final partList = _parsePartList(root);
+      // Build each part's staves first, keeping its id.
+      final partsData = <({String? id, List<Staff> staves, int count})>[];
       for (final part in root.findElements('part')) {
         final count = _partStaffCount(part);
         final partStaves = <Staff>[];
@@ -1202,10 +1206,33 @@ class _MusicXmlImportParser {
           }
           partStaves.add(staff);
         }
-        groups.add(StaffGroup(
-          staves: partStaves,
-          bracket: count > 1 ? BracketType.brace : BracketType.none,
-        ));
+        partsData.add(
+          (id: part.getAttribute('id'), staves: partStaves, count: count),
+        );
+      }
+      // Group consecutive parts that share a <part-group>.
+      var i = 0;
+      while (i < partsData.length) {
+        final gid = partList.groupOf[partsData[i].id];
+        if (gid == null) {
+          groups.add(StaffGroup(
+            staves: partsData[i].staves,
+            bracket:
+                partsData[i].count > 1 ? BracketType.brace : BracketType.none,
+          ));
+          i++;
+        } else {
+          final staves = <Staff>[];
+          while (i < partsData.length &&
+              partList.groupOf[partsData[i].id] == gid) {
+            staves.addAll(partsData[i].staves);
+            i++;
+          }
+          groups.add(StaffGroup(
+            staves: staves,
+            bracket: partList.bracket[gid] ?? BracketType.bracket,
+          ));
+        }
       }
     } else {
       // Timewise: gather each part's measures across all <measure> wrappers.
@@ -1237,6 +1264,64 @@ class _MusicXmlImportParser {
           ?.innerText,
       staffGroups: groups,
     );
+  }
+
+  /// Reads `<part-group>` spans from the `<part-list>`: maps each part id to the
+  /// id of the innermost group it belongs to (or null), and each group id to its
+  /// bracket type (from `<group-symbol>`).
+  ({Map<String, int?> groupOf, Map<int, BracketType> bracket}) _parsePartList(
+    XmlElement root,
+  ) {
+    final groupOf = <String, int?>{};
+    final bracket = <int, BracketType>{};
+    final partList = root.findElements('part-list').firstOrNull;
+    if (partList == null) return (groupOf: groupOf, bracket: bracket);
+
+    final open = <({int number, int id})>[];
+    var nextId = 0;
+    for (final child in partList.children.whereType<XmlElement>()) {
+      switch (child.name.local) {
+        case 'part-group':
+          final type = child.getAttribute('type');
+          final number =
+              int.tryParse(child.getAttribute('number') ?? '1') ?? 1;
+          if (type == 'start') {
+            final id = nextId++;
+            bracket[id] = _groupSymbolBracket(
+              child.findElements('group-symbol').firstOrNull?.innerText.trim(),
+            );
+            open.add((number: number, id: id));
+          } else if (type == 'stop') {
+            for (var i = open.length - 1; i >= 0; i--) {
+              if (open[i].number == number) {
+                open.removeAt(i);
+                break;
+              }
+            }
+          }
+          break;
+        case 'score-part':
+          final id = child.getAttribute('id');
+          if (id != null) groupOf[id] = open.isNotEmpty ? open.last.id : null;
+          break;
+      }
+    }
+    return (groupOf: groupOf, bracket: bracket);
+  }
+
+  BracketType _groupSymbolBracket(String? symbol) {
+    switch (symbol) {
+      case 'brace':
+        return BracketType.brace;
+      case 'line':
+        return BracketType.line;
+      case 'bracket':
+      case 'square':
+        return BracketType.bracket;
+      default:
+        // A part-group with no explicit symbol still groups; default to bracket.
+        return BracketType.bracket;
+    }
   }
 
   /// Number of staves in a part (max `staves` or per-note `staff`; default 1).

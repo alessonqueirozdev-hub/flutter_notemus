@@ -131,6 +131,27 @@ void main() {
       expect(score.staffGroups.length, 2);
       expect(score.staffGroups.every((g) => g.staves.length == 1), isTrue);
     });
+
+    test('a <part-group> brackets its member parts into one group', () {
+      const xml = '<score-partwise version="4.0"><part-list>'
+          '<part-group type="start" number="1">'
+          '<group-symbol>bracket</group-symbol></part-group>'
+          '<score-part id="P1"><part-name>Violin I</part-name></score-part>'
+          '<score-part id="P2"><part-name>Violin II</part-name></score-part>'
+          '<part-group type="stop" number="1"/>'
+          '</part-list>'
+          '<part id="P1"><measure number="1">'
+          '<note><pitch><step>G</step><octave>4</octave></pitch>'
+          '<duration>1</duration><type>quarter</type></note></measure></part>'
+          '<part id="P2"><measure number="1">'
+          '<note><pitch><step>D</step><octave>4</octave></pitch>'
+          '<duration>1</duration><type>quarter</type></note></measure></part>'
+          '</score-partwise>';
+      final score = MusicXMLParser.scoreFromMusicXML(xml);
+      expect(score.staffGroups.length, 1);
+      expect(score.staffGroups.single.bracket, BracketType.bracket);
+      expect(score.staffGroups.single.staves.length, 2);
+    });
   });
 
   group('MusicXML <wedge> import', () {
