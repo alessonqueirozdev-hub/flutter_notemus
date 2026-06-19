@@ -265,6 +265,22 @@ Staff _articulations() {
   ]);
 }
 
+Staff _additiveMeter() {
+  return _staff([
+    _measure([
+      Clef(clefType: ClefType.treble),
+      TimeSignature.additive(groups: [3, 2, 2], denominator: 8), // 3+2+2 / 8
+      _n('C', 5, dur: DurationType.eighth, beam: BeamType.start),
+      _n('D', 5, dur: DurationType.eighth, beam: BeamType.inner),
+      _n('E', 5, dur: DurationType.eighth, beam: BeamType.end),
+      _n('F', 5, dur: DurationType.eighth, beam: BeamType.start),
+      _n('G', 5, dur: DurationType.eighth, beam: BeamType.end),
+      _n('A', 5, dur: DurationType.eighth, beam: BeamType.start),
+      _n('G', 5, dur: DurationType.eighth, beam: BeamType.end),
+    ]),
+  ]);
+}
+
 Staff _tupletRatio() {
   return _staff([
     _measure([
@@ -785,6 +801,13 @@ final List<CorpusCase> corpus = [
     build: _multiSystem,
     staffSpace: 13.0,
     size: const Size(460, 360),
+  ),
+  CorpusCase(
+    id: 'm04n_additive_meter',
+    title: 'Additive meter (3+2+2 / 8)',
+    tier: 'intermediate',
+    exercises: 'grouped numerator with timeSigPlus separators',
+    build: _additiveMeter,
   ),
   CorpusCase(
     id: 'm04m_tuplet_ratio',

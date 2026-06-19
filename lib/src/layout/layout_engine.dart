@@ -1171,10 +1171,17 @@ class LayoutEngine {
       if (element.isFreeTime) return 0;
       // Width scales with the widest of the numerator/denominator digit counts
       // so multi-digit meters (12/8, 16, …) reserve enough room.
-      final digits = element.numerator.toString().length >
-              element.denominator.toString().length
-          ? element.numerator.toString().length
-          : element.denominator.toString().length;
+      final denDigits = element.denominator.toString().length;
+      int numDigits;
+      if (element.isAdditive) {
+        // Group digits + one '+' separator slot per inter-group gap.
+        final groups = element.additiveGroups!;
+        numDigits = groups.fold<int>(0, (a, g) => a + g.numerator.toString().length) +
+            (groups.length - 1);
+      } else {
+        numDigits = element.numerator.toString().length;
+      }
+      final digits = numDigits > denDigits ? numDigits : denDigits;
       return (1.6 + 1.4 * digits) * staffSpace;
     }
 

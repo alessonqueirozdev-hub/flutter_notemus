@@ -194,6 +194,13 @@ class BarElementRenderer {
     // the literal '0/4' that TimeSignature.free() would otherwise produce.
     if (ts.isFreeTime) return;
 
+    // Additive meters (e.g. 3+2+2 over 8): render the grouped numerator with a
+    // timeSigPlus glyph between groups, centred over the denominator.
+    if (ts.isAdditive) {
+      _drawAdditiveTimeSignature(canvas, ts, basePosition);
+      return;
+    }
+
     if (ts.numerator == 4 &&
         ts.denominator == 4 &&
         metadata.hasGlyph('timeSigCommon')) {
@@ -233,6 +240,53 @@ class BarElementRenderer {
         coordinates.getStaffLineY(4));
     _drawDigits(canvas, denStr, basePosition.dx + (maxW - denW) / 2,
         coordinates.getStaffLineY(2));
+  }
+
+  /// Renders an additive numerator (group digits joined by timeSigPlus) over
+  /// the denominator, with both rows horizontally centred on the wider one.
+  void _drawAdditiveTimeSignature(
+    Canvas canvas,
+    TimeSignature ts,
+    Offset basePosition,
+  ) {
+    final groups = ts.additiveGroups!;
+    // Build the numerator row as alternating digit-strings and '+' separators.
+    final tokens = <String>[];
+    for (var g = 0; g < groups.length; g++) {
+      if (g > 0) tokens.add('+');
+      tokens.add(groups[g].numerator.toString());
+    }
+    double tokenWidth(String t) =>
+        t == '+' ? _glyphAdvancePx('timeSigPlus') : _digitsWidth(t);
+
+    final rowW = tokens.fold<double>(0.0, (a, t) => a + tokenWidth(t));
+    final denStr = ts.denominator.toString();
+    final denW = _digitsWidth(denStr);
+    final maxW = rowW > denW ? rowW : denW;
+
+    var nx = basePosition.dx + (maxW - rowW) / 2;
+    final numY = coordinates.getStaffLineY(4);
+    for (final t in tokens) {
+      if (t == '+') {
+        _drawGlyph(
+          canvas,
+          glyphName: 'timeSigPlus',
+          position: Offset(nx, numY),
+          size: glyphSize,
+          color: theme.timeSignatureColor,
+          centerVertically: true,
+        );
+      } else {
+        _drawDigits(canvas, t, nx, numY);
+      }
+      nx += tokenWidth(t);
+    }
+    _drawDigits(
+      canvas,
+      denStr,
+      basePosition.dx + (maxW - denW) / 2,
+      coordinates.getStaffLineY(2),
+    );
   }
 
   /// Pixel advance of a Bravura glyph (SMuFL advance is in staff spaces; falls
