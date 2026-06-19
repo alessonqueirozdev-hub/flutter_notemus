@@ -170,16 +170,16 @@ class TupletRenderer extends BaseGlyphRenderer {
     return averageY >= staffCenterY;
   }
 
-  double _calculateBracketY(
-    List<Offset> notePositions, {
+  /// Bracket line endpoints (at [startX]/[endX]) sloped to parallel the note
+  /// trend (Gould p.205-207), clamped to TupletBracket.maxSlope, while clearing
+  /// every note by the same offset the flat bracket would use.
+  ({double startY, double endY}) _bracketLine(
+    List<Offset> notePositions,
+    double startX,
+    double endX, {
     required int beamCount,
   }) {
     final stemUp = _stemUp(notePositions);
-
-    final extremeY = stemUp
-        ? notePositions.map((position) => position.dy).reduce(math.min)
-        : notePositions.map((position) => position.dy).reduce(math.max);
-
     final stemLength = coordinates.staffSpace * 3.5;
     final beamThickness = coordinates.staffSpace * 0.5;
     final beamGap = coordinates.staffSpace * 0.25;
@@ -187,18 +187,35 @@ class TupletRenderer extends BaseGlyphRenderer {
         ? 0.0
         : beamThickness + ((beamCount - 1) * (beamThickness + beamGap));
     final clearance = coordinates.staffSpace * (beamCount > 0 ? 0.95 : 0.75);
+    final off = stemLength + beamStackDepth + clearance;
 
-    if (stemUp) {
-      final beamTopY = extremeY - stemLength - beamStackDepth;
-      final unclamped = beamTopY - clearance;
-      final minY = coordinates.getStaffLineY(5) - coordinates.staffSpace * 2.6;
-      return unclamped < minY ? minY : unclamped;
+    final firstX = notePositions.first.dx;
+    final lastX = notePositions.last.dx;
+    final span = endX - startX;
+    double slope = (lastX - firstX).abs() < 1e-6
+        ? 0.0
+        : (notePositions.last.dy - notePositions.first.dy) / (lastX - firstX);
+    // Clamp the total rise across the bracket to maxSlope.
+    final maxRise = TupletBracket.maxSlope * coordinates.staffSpace;
+    if (span.abs() > 1e-6 && (slope * span).abs() > maxRise) {
+      slope = (slope.isNegative ? -1 : 1) * (maxRise / span.abs());
     }
 
-    final beamBottomY = extremeY + stemLength + beamStackDepth;
-    final unclamped = beamBottomY + clearance;
-    final maxY = coordinates.getStaffLineY(1) + coordinates.staffSpace * 2.6;
-    return unclamped > maxY ? maxY : unclamped;
+    // Fit the intercept so the sloped line clears every note by `off`.
+    double? yStart;
+    for (final p in notePositions) {
+      final target = stemUp ? p.dy - off : p.dy + off;
+      final candidate = target - slope * (p.dx - startX);
+      if (yStart == null) {
+        yStart = candidate;
+      } else if (stemUp) {
+        if (candidate < yStart) yStart = candidate; // highest (smallest Y)
+      } else {
+        if (candidate > yStart) yStart = candidate; // lowest (largest Y)
+      }
+    }
+    yStart ??= stemUp ? -off : off;
+    return (startY: yStart, endY: yStart + slope * span);
   }
 
   void _drawTupletBracket(
@@ -218,7 +235,16 @@ class TupletRenderer extends BaseGlyphRenderer {
         ? notePositions
         : anchorPositions;
     final stemUp = _stemUp(referenceNotes);
-    final bracketY = _calculateBracketY(referenceNotes, beamCount: beamCount);
+    final line = _bracketLine(
+      referenceNotes,
+      startX,
+      endX,
+      beamCount: beamCount,
+    );
+    final span = endX - startX;
+    double yAt(double x) => span.abs() < 1e-6
+        ? line.startY
+        : line.startY + (line.endY - line.startY) * ((x - startX) / span);
 
     final paint = Paint()
       ..color = theme.tupletColor ?? theme.stemColor
@@ -246,22 +272,26 @@ class TupletRenderer extends BaseGlyphRenderer {
 
     final hookLength = coordinates.staffSpace * 0.5;
 
-    canvas.drawLine(Offset(startX, bracketY), Offset(leftEnd, bracketY), paint);
     canvas.drawLine(
-      Offset(rightStart, bracketY),
-      Offset(endX, bracketY),
+      Offset(startX, yAt(startX)),
+      Offset(leftEnd, yAt(leftEnd)),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(rightStart, yAt(rightStart)),
+      Offset(endX, yAt(endX)),
       paint,
     );
 
     final hookDirection = stemUp ? hookLength : -hookLength;
     canvas.drawLine(
-      Offset(startX, bracketY),
-      Offset(startX, bracketY + hookDirection),
+      Offset(startX, yAt(startX)),
+      Offset(startX, yAt(startX) + hookDirection),
       paint,
     );
     canvas.drawLine(
-      Offset(endX, bracketY),
-      Offset(endX, bracketY + hookDirection),
+      Offset(endX, yAt(endX)),
+      Offset(endX, yAt(endX) + hookDirection),
       paint,
     );
   }
@@ -283,7 +313,14 @@ class TupletRenderer extends BaseGlyphRenderer {
         ? notePositions
         : anchorPositions;
     final stemUp = _stemUp(referenceNotes);
-    final bracketY = _calculateBracketY(referenceNotes, beamCount: beamCount);
+    final line = _bracketLine(
+      referenceNotes,
+      startX,
+      endX,
+      beamCount: beamCount,
+    );
+    // Number sits at the sloped bracket's midpoint.
+    final bracketY = (line.startY + line.endY) / 2;
     final centerX = (startX + endX) / 2;
 
     final numberOffset = stemUp
