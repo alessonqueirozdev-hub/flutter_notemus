@@ -375,6 +375,71 @@ void main() {
     );
   });
 
+  testWidgets('golden chant_repeated_hyphen', (tester) async {
+    // Two syllables of one word ("Ký-ri") separated by a long melisma. A single
+    // centred dash would leave a big blank that splits the word, so the
+    // word-internal hyphen is repeated across the gap (GregorioTeX behaviour).
+    Neume mel(String s, int o) =>
+        Neume(type: NeumeType.punctum, components: [nc(s, o)]);
+    final elements = <MusicalElement>[
+      // first syllable, then a run of text-less melisma notes
+      Neume(
+        type: NeumeType.punctum,
+        components: [nc('G', 4)],
+        syllable: 'Ký',
+        hyphenAfter: true,
+      ),
+      mel('A', 4), mel('G', 4), mel('F', 4), mel('G', 4), mel('A', 4),
+      mel('G', 4),
+      // second syllable of the same word, far to the right
+      Neume(type: NeumeType.punctum, components: [nc('G', 4)], syllable: 'ri'),
+      // a separate word for contrast (normal single hyphen would not apply)
+      Neume(type: NeumeType.punctum, components: [nc('F', 4)], syllable: 'e'),
+      NeumeDivision(type: NeumeDivisionType.finalis),
+    ];
+
+    // Wide enough to keep everything on one row so the hyphen run is exercised.
+    await tester.binding.setSurfaceSize(const Size(760, 240));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: textFontAvailable ? ThemeData(fontFamily: kTextFontFamily) : null,
+        home: Scaffold(
+          backgroundColor: Colors.white,
+          body: Center(
+            child: RepaintBoundary(
+              key: kGoldenBoundaryKey,
+              child: Container(
+                width: 760,
+                height: 240,
+                color: Colors.white,
+                child: ChantScore(
+                  elements: elements,
+                  clef: const ChantClef(
+                      type: ChantClefType.doClef, line: 2),
+                  theme: GregorianTheme(
+                    lyricSize: 14,
+                    color: const Color(0xFF101010),
+                    lyricTextFamily: serifFontAvailable ? kSerifFamily : null,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    await expectLater(
+      find.byKey(kGoldenBoundaryKey),
+      matchesGoldenFile('goldens/chant_repeated_hyphen.png'),
+    );
+  });
+
   testWidgets('golden chant_clef_flat', (tester) async {
     // A clef-flat (cb4): a soft B-flat drawn just after the do-clef.
     const gabc = '''

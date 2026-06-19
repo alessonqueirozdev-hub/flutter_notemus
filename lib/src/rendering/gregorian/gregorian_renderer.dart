@@ -563,7 +563,13 @@ class GregorianPainter extends CustomPainter {
     return null;
   }
 
-  /// Draws a word-internal hyphen centred between two syllables at [topY].
+  /// Draws the word-internal hyphen(s) between two syllables of the same word.
+  ///
+  /// For a normal gap a single centred '-' is drawn. When the two syllables sit
+  /// far apart (a long melisma between them), one dash leaves a large blank that
+  /// visually splits the word, so — following GregorioTeX — the hyphen is
+  /// repeated at a roughly constant pitch across the gap to keep the word
+  /// together. [x1] and [x2] are the centres of the two syllable texts.
   void _hyphen(Canvas canvas, double x1, double x2, double topY) {
     final tp = TextPainter(
       text: TextSpan(
@@ -579,7 +585,35 @@ class GregorianPainter extends CustomPainter {
       ),
       textDirection: TextDirection.ltr,
     )..layout();
-    tp.paint(canvas, Offset((x1 + x2) / 2 - tp.width / 2, topY));
+
+    final w = tp.width;
+    final sp = _sp;
+    void paintAt(double cx) => tp.paint(canvas, Offset(cx - w / 2, topY));
+
+    // Normal gap: a single centred hyphen (GregorioTeX's default).
+    if (x2 - x1 <= sp * 5.0) {
+      paintAt((x1 + x2) / 2);
+      return;
+    }
+
+    // Far apart: repeat the hyphen across the gap. Inset from the syllable
+    // centres so dashes don't sit under the glyphs, then place dashes at a
+    // roughly constant pitch, distributed evenly edge-to-edge of the span.
+    final spanStart = x1 + sp * 1.5;
+    final spanEnd = x2 - sp * 1.5;
+    final span = spanEnd - spanStart;
+    if (span <= w) {
+      paintAt((x1 + x2) / 2);
+      return;
+    }
+
+    const pitchInSp = 3.0; // staff spaces between consecutive hyphens
+    var count = (span / (sp * pitchInSp)).round() + 1;
+    if (count < 2) count = 2;
+    final step = span / (count - 1);
+    for (var i = 0; i < count; i++) {
+      paintAt(spanStart + step * i);
+    }
   }
 
   /// Draws a rhythmic mark centered on a note at screen (cx, ny): a horizontal
