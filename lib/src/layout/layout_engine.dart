@@ -603,6 +603,14 @@ class LayoutEngine {
   ) {
     final usableWidth = availableWidth - (systemMargin * staffSpace * 2);
 
+    // The last system must keep natural spacing (Behind Bars), and any system
+    // that fills less than this fraction of the line is left at natural width
+    // instead of being stretched edge-to-edge.
+    const double fillThreshold = 0.7;
+    final int lastSystem = systemMeasures.keys.isEmpty
+        ? -1
+        : systemMeasures.keys.reduce((a, b) => a > b ? a : b);
+
     for (final entry in systemMeasures.entries) {
       final system = entry.key;
       final measures = entry.value;
@@ -622,6 +630,12 @@ class LayoutEngine {
 
       final usedWidth = maxX - minX;
       final extraSpace = usableWidth - usedWidth;
+
+      // Don't stretch the last system, nor any sparsely-filled system.
+      final isLastSystem = system == lastSystem;
+      final fillsEnough =
+          usableWidth > 0 && (usedWidth / usableWidth) >= fillThreshold;
+      if (isLastSystem || !fillsEnough) continue;
 
       // If há space extra, distribuir proporcionalmente
       if (extraSpace > 0 && measures.length > 1) {
