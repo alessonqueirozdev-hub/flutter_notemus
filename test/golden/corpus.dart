@@ -265,6 +265,19 @@ Staff _articulations() {
   ]);
 }
 
+Staff _freeTime() {
+  return _staff([
+    _measure([
+      Clef(clefType: ClefType.treble),
+      TimeSignature.free(), // senza misura: must draw NO meter glyph
+      _n('C', 5),
+      _n('D', 5),
+      _n('E', 5),
+      _n('F', 5),
+    ]),
+  ]);
+}
+
 Staff _chordArticulations() {
   Chord chord(List<Note> notes, List<ArticulationType> artic) =>
       Chord(notes: notes, duration: const Duration(DurationType.half),
@@ -694,6 +707,13 @@ final List<CorpusCase> corpus = [
     build: _multiSystem,
     staffSpace: 13.0,
     size: const Size(460, 360),
+  ),
+  CorpusCase(
+    id: 'm04i_free_time',
+    title: 'Free time / senza misura (no meter glyph)',
+    tier: 'intermediate',
+    exercises: 'free-time signature draws nothing instead of 0/4',
+    build: _freeTime,
   ),
   CorpusCase(
     id: 'm04h_chord_articulations',

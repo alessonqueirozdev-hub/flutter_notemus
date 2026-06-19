@@ -1073,6 +1073,8 @@ class LayoutEngine {
     }
 
     if (element is TimeSignature) {
+      // Free time draws nothing, so it reserves no width.
+      if (element.isFreeTime) return 0;
       // Width scales with the widest of the numerator/denominator digit counts
       // so multi-digit meters (12/8, 16, …) reserve enough room.
       final digits = element.numerator.toString().length >

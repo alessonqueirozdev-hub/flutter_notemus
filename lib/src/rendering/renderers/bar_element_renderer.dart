@@ -185,6 +185,10 @@ class BarElementRenderer {
     TimeSignature ts,
     Offset basePosition,
   ) {
+    // Free time (senza misura) is an open meter — draw no glyph rather than
+    // the literal '0/4' that TimeSignature.free() would otherwise produce.
+    if (ts.isFreeTime) return;
+
     if (ts.numerator == 4 &&
         ts.denominator == 4 &&
         metadata.hasGlyph('timeSigCommon')) {
