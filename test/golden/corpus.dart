@@ -265,6 +265,34 @@ Staff _articulations() {
   ]);
 }
 
+Staff _chordTies() {
+  Chord tiedChord(TieType tie) => Chord(
+        notes: [
+          Note(
+              pitch: const Pitch(step: 'E', octave: 4),
+              duration: const Duration(DurationType.half),
+              tie: tie),
+          Note(
+              pitch: const Pitch(step: 'G', octave: 4),
+              duration: const Duration(DurationType.half),
+              tie: tie),
+          Note(
+              pitch: const Pitch(step: 'C', octave: 5),
+              duration: const Duration(DurationType.half),
+              tie: tie),
+        ],
+        duration: const Duration(DurationType.half),
+      );
+  return _staff([
+    _measure([
+      Clef(clefType: ClefType.treble),
+      TimeSignature(numerator: 4, denominator: 4),
+      tiedChord(TieType.start),
+      tiedChord(TieType.end),
+    ]),
+  ]);
+}
+
 Staff _marcatoAlwaysAbove() {
   return _staff([
     _measure([
@@ -851,6 +879,13 @@ final List<CorpusCase> corpus = [
     build: _multiSystem,
     staffSpace: 13.0,
     size: const Size(460, 360),
+  ),
+  CorpusCase(
+    id: 'm04r_chord_ties',
+    title: 'Chord ties fan outward (top up, bottom down)',
+    tier: 'intermediate',
+    exercises: 'ties in a chord diverge by vertical rank',
+    build: _chordTies,
   ),
   CorpusCase(
     id: 'm04q_marcato_above',

@@ -174,8 +174,24 @@ class SlurRenderer {
       final endElement = positions[group.last];
       final tiePairs = _resolveTiePairs(startElement, endElement, currentClef);
 
+      // In a chord, ties fan outward from the notehead column: notes above the
+      // chord's vertical midpoint curve up, those below curve down (Gould
+      // p.62-64). A single tie follows the stem rule.
+      double? midPos;
+      if (tiePairs.length > 1) {
+        var maxP = tiePairs.first.start.staffPosition;
+        var minP = maxP;
+        for (final p in tiePairs) {
+          if (p.start.staffPosition > maxP) maxP = p.start.staffPosition;
+          if (p.start.staffPosition < minP) minP = p.start.staffPosition;
+        }
+        midPos = (maxP + minP) / 2;
+      }
+
       for (final pair in tiePairs) {
-        final tieAbove = !pair.start.stemUp;
+        final tieAbove = midPos != null
+            ? pair.start.staffPosition >= midPos
+            : !pair.start.stemUp;
         final (startPoint, endPoint) = _calculateTieEndpoints(
           pair.start.noteOrigin,
           pair.start.note,
