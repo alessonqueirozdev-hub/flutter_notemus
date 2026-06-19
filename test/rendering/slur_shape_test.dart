@@ -4,7 +4,6 @@
 // descending) slurs folded back on themselves and drew as two disjoint humps.
 
 import 'dart:math';
-import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_notemus/src/layout/slur_calculator.dart';

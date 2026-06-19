@@ -9,7 +9,6 @@
 // versions, so committed goldens are pinned to the platform that generated
 // them. CI must run goldens on that same platform (documented in PROGRESS.md).
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '_harness.dart';

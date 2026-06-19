@@ -541,7 +541,7 @@ String? _ornamentToString(OrnamentType type) => switch (type) {
       _ => null,
     };
 
-/// MusicXML <accidental> name for a chromatic alteration in semitones.
+/// MusicXML `<accidental>` name for a chromatic alteration in semitones.
 String? _accidentalNameFromAlter(double alter) => switch (alter) {
       2.0 => 'double-sharp',
       1.0 => 'sharp',
