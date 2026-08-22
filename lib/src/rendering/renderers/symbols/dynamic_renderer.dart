@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/core.dart';
 import '../../../theme/music_score_theme.dart';
 import '../base_glyph_renderer.dart';
+import '../../text_font.dart';
 
 /// Renderer especializado Only for dynamics musicais (p, f, mf, crescendo, etc).
 ///
@@ -128,7 +129,7 @@ class DynamicRenderer extends BaseGlyphRenderer {
         );
 
     final textPainter = TextPainter(
-      text: TextSpan(text: text, style: textStyle),
+      text: TextSpan(text: text, style: textStyle.withMusicTextFallback()),
       textDirection: TextDirection.ltr,
     );
     textPainter.layout();

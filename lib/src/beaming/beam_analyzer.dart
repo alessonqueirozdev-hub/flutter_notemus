@@ -225,16 +225,16 @@ class BeamAnalyzer {
       noteStaffPositions: groupStaffPositions,
       stemUp: stemUp,
     );
-    if (group.notes.length == 2) {
-      // Short automatic pairs look unstable when they inherit a strong slant.
-      // Keep them visually closer to the flatter beam style already used by
-      // the stable beam showcase examples.
-      const maxTwoNoteAutoSlantSpaces = 0.25;
-      beamAngleSpaces = beamAngleSpaces.clamp(
-        -maxTwoNoteAutoSlantSpaces,
-        maxTwoNoteAutoSlantSpaces,
-      );
-    }
+    // No extra clamp for pairs.
+    //
+    // There used to be one at 0.25 staff spaces, justified as keeping short
+    // groups "visually closer to the flatter beam style already used by the
+    // stable beam showcase examples" — a number calibrated against this
+    // package's own screenshots rather than against a reference. Combined with
+    // `maximumBeamSlant = 0.5` it flattened everything: an ascending 2nd, an
+    // ascending 6th and a two-octave leap all came out at exactly 0.25 spaces.
+    // `calculateBeamAngle` now reads Gould's interval table, which gives pairs
+    // and longer groups the same treatment.
     final beamAnglePixels = beamAngleSpaces * staffSpace;
 
     final xDistance = group.rightX - group.leftX;

@@ -11,6 +11,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/core.dart';
+import '../layout/onset_grid.dart';
 import '../layout/layout_engine.dart';
 import '../smufl/smufl_metadata_loader.dart';
 import '../theme/music_score_theme.dart';
@@ -65,7 +66,9 @@ class GrandStaffPainter extends CustomPainter {
       ];
 
   /// Number of wrapped systems this painter produced.
-  @visibleForTesting
+  ///
+  /// Public because the PDF rasterizer reports it on each page it emits; it was
+  /// `@visibleForTesting` when only tests read it.
   int get systemCount => _systems.length;
 
   /// Total painted height (all systems stacked), including the headroom the
@@ -169,22 +172,68 @@ class GrandStaffPainter extends CustomPainter {
     for (var i = a; i <= b && i < staff.measures.length; i++) {
       final orig = staff.measures[i];
       if (i == a && a > 0) {
-        final m = Measure();
-        if (!orig.elements.any((e) => e is Clef) && clef != null) m.add(clef);
-        if (!orig.elements.any((e) => e is KeySignature) &&
-            key != null &&
-            key.count != 0) {
-          m.add(key);
-        }
-        for (final e in orig.elements) {
-          m.add(e);
-        }
-        measures.add(m);
+        measures.add(_restated(orig, clef: clef, key: key));
       } else {
         measures.add(orig);
       }
     }
-    return Staff(measures: measures);
+    return Staff(measures: measures, lineCount: staff.lineCount);
+  }
+
+  /// A copy of [orig] with the prevailing [clef] and [key] restated in front.
+  ///
+  /// Three things this must get right, all of which the previous version got
+  /// wrong:
+  ///
+  /// 1. **It must not validate.** It used to copy with `Measure.add`, which
+  ///    checks bar capacity and throws [MeasureCapacityException]. Importers
+  ///    legitimately produce over-full bars — `Measure.elements`' own dartdoc
+  ///    says so — and an over-full bar that happened to land first in a wrapped
+  ///    system took the whole widget down from this painter's CONSTRUCTOR.
+  ///    Validating imported music is the importer's job, not the painter's.
+  ///
+  /// 2. **It must carry the measure's configuration over.** A fresh `Measure()`
+  ///    silently reset `autoBeaming`, `beamingMode`, `manualBeamGroups` and
+  ///    `number`, so an author who turned auto-beaming off saw it honoured in
+  ///    the first system and quietly overridden in every wrapped one.
+  ///
+  /// 3. **It must preserve polyphony.** For a [MultiVoiceMeasure] the old copy
+  ///    walked `orig.elements` only, which holds the bar's system elements —
+  ///    every voice, and therefore every note, was dropped.
+  Measure _restated(Measure orig, {Clef? clef, KeySignature? key}) {
+    final hasClef = orig.allElements.any((e) => e is Clef);
+    final hasKey = orig.allElements.any((e) => e is KeySignature);
+
+    final restated = <MusicalElement>[
+      if (!hasClef && clef != null) clef,
+      if (!hasKey && key != null && key.count != 0) key,
+    ];
+
+    if (orig is MultiVoiceMeasure) {
+      final copy = MultiVoiceMeasure()
+        ..autoBeaming = orig.autoBeaming
+        ..beamingMode = orig.beamingMode
+        ..manualBeamGroups = orig.manualBeamGroups
+        ..inheritedTimeSignature = orig.inheritedTimeSignature
+        ..number = orig.number;
+      copy.elements.addAll(restated);
+      copy.elements.addAll(orig.elements);
+      for (final voice in orig.sortedVoices) {
+        copy.addVoice(voice);
+      }
+      return copy;
+    }
+
+    final copy = Measure(
+      autoBeaming: orig.autoBeaming,
+      beamingMode: orig.beamingMode,
+      manualBeamGroups: orig.manualBeamGroups,
+      inheritedTimeSignature: orig.inheritedTimeSignature,
+      number: orig.number,
+    );
+    copy.elements.addAll(restated);
+    copy.elements.addAll(orig.elements);
+    return copy;
   }
 
   /// Per-measure widths laid out unwrapped, used to decide shared breaks.
@@ -263,7 +312,14 @@ class GrandStaffPainter extends CustomPainter {
           e is Barline;
       if (!counts) continue;
       // Quantise so floating-point noise never splits one musical instant.
-      final key = (pe.onset * 1024).round() / 1024.0;
+      //
+      // The grid is 1/8192 of a whole note. It used to be 1/1024, which is the
+      // value of a 1024th note, so a 2048th note advanced the onset by HALF a
+      // grid step and consecutive 2048ths collapsed onto the same key: sixteen
+      // distinct onsets produced nine keys. 8192 resolves every duration the
+      // model can express (down to 1/2048) with a factor of four to spare for
+      // nested-tuplet arithmetic.
+      final key = (pe.onset * kOnsetGrid).round() / kOnsetGrid;
       final current = byOnset[key];
       if (current == null || pe.position.dx < current) {
         byOnset[key] = pe.position.dx;
@@ -367,14 +423,7 @@ class GrandStaffPainter extends CustomPainter {
       final remapped = <PositionedElement>[];
       for (final pe in layouts[s].elements) {
         final nx = remap(pe.position.dx);
-        remapped.add(PositionedElement(
-          pe.element,
-          Offset(nx, pe.position.dy),
-          system: pe.system,
-          voiceNumber: pe.voiceNumber,
-          onset: pe.onset,
-          measureIndex: pe.measureIndex,
-        ));
+        remapped.add(pe.movedTo(Offset(nx, pe.position.dy)));
         // Keep the engine's note-X map (used by beams) in sync.
         if (pe.element is Note) {
           layouts[s].engine.overrideNoteX(pe.element as Note, nx);

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/core.dart';
 import '../../../theme/music_score_theme.dart';
 import '../base_glyph_renderer.dart';
+import '../../text_font.dart';
 
 /// Renderer especializado Only for textos musicais.
 class TextRenderer extends BaseGlyphRenderer {
@@ -35,7 +36,8 @@ class TextRenderer extends BaseGlyphRenderer {
         : (theme.textStyle ?? const TextStyle());
 
     final textPainter = TextPainter(
-      text: TextSpan(text: text.text, style: textStyle),
+      text: TextSpan(
+          text: text.text, style: textStyle.withMusicTextFallback()),
       textDirection: TextDirection.ltr,
     );
     textPainter.layout();

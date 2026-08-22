@@ -96,9 +96,36 @@ class BeamGrouper {
       default:
         return _groupBySubdivisions(
           items,
-          _beamGroupSubdivisions(timeSignature),
+          _beamGroupSubdivisions(
+            timeSignature,
+            shortestBeamedValue: _shortestBeamedValue(items),
+          ),
         );
     }
+  }
+
+  /// Shortest beamable value in [items], in whole notes (an eighth is `0.125`).
+  ///
+  /// Beam grouping is not a property of the meter alone: Behind Bars p.157
+  /// allows quavers in 4/4 to be amalgamated across the half bar, but requires
+  /// anything SHORTER to be grouped by the beat so the metre stays readable.
+  /// The old table ignored this and applied the half-bar rule to every value,
+  /// so a bar of sixteen semiquavers in 4/4 came out as two beams of eight
+  /// instead of four beams of four — while 3/4, which has no half-bar rule,
+  /// was already correct at four-per-beat. The inconsistency was the tell.
+  ///
+  /// Augmentation dots are deliberately ignored (`duration.type.value`, not
+  /// `realValue`): a dotted quaver is still a quaver for grouping purposes.
+  static double _shortestBeamedValue(List<_BeamingItem> items) {
+    var shortest = 1.0;
+    for (final item in items) {
+      if (!item.isBeamable) continue;
+      final note = item.note;
+      if (note == null) continue;
+      final value = note.duration.type.value;
+      if (value < shortest) shortest = value;
+    }
+    return shortest;
   }
 
   /// A note can carry a beam when it is an eighth note or shorter.
@@ -115,7 +142,18 @@ class BeamGrouper {
   /// Each entry is one macro-beat that a beam must not cross. Simple, compound
   /// and irregular meters all describe themselves through this single list, so
   /// there is only one grouping algorithm to keep correct.
-  static List<double> _beamGroupSubdivisions(TimeSignature timeSignature) {
+  /// [shortestBeamedValue] is the shortest beamable value present in the bar,
+  /// in whole notes; it decides whether the half-bar amalgamation of 4/4 and
+  /// alla breve applies (see [_shortestBeamedValue]).
+  ///
+  /// INVARIANT: the returned subdivisions must sum to `timeSignature.measureValue`.
+  /// The old table broke it for 5/4, where `[0.5, 0.5]` covered only four of the
+  /// five crotchets; the fifth fell through the walker and produced a stray
+  /// trailing group (measured: `4-4-2` for ten quavers instead of `2-2-2-2-2`).
+  static List<double> _beamGroupSubdivisions(
+    TimeSignature timeSignature, {
+    required double shortestBeamedValue,
+  }) {
     if (timeSignature.isFreeTime) return const <double>[];
 
     final numerator = timeSignature.numerator;
@@ -130,11 +168,18 @@ class BeamGrouper {
       return additiveGroups.map((group) => group.numerator * unit).toList();
     }
 
-    // Compound meters (6/8, 9/8, 12/8, 6/16, ...): groups of three units.
+    // Compound meters (6/8, 9/8, 12/8, 6/16, 6/4, ...): the beat is three units.
     // 3/8 is deliberately excluded - it is a single beat, not a compound bar.
-    if ((denominator == 8 || denominator == 16) &&
-        numerator > 3 &&
-        numerator % 3 == 0) {
+    if (numerator > 3 && numerator % 3 == 0) {
+      // In 6/4 and 9/4 the compound beat is a DOTTED MINIM, so a beam of
+      // twelve semiquavers would run for half a bar. Those meters fall back to
+      // their unit (the crotchet) for short values. 6/8 and 6/16 keep their
+      // groups of three units: six semiquavers to a dotted crotchet is the
+      // standard grouping (Behind Bars p.160) and must not change.
+      if ((denominator == 4 || denominator == 2) &&
+          shortestBeamedValue <= 0.0625 + 1e-9) {
+        return List<double>.filled(numerator, unit);
+      }
       return List<double>.filled(numerator ~/ 3, 3 * unit);
     }
 
@@ -143,17 +188,8 @@ class BeamGrouper {
       return <double>[3 * unit];
     }
 
-    // 4/4 beams across the half bar (the Behind Bars preference).
-    if (numerator == 4 && denominator == 4) {
-      return const <double>[0.5, 0.5];
-    }
-
-    // Other simple meters, including 2/2 (alla breve): one group per unit.
-    if ([2, 3, 4].contains(numerator) && [2, 4, 8].contains(denominator)) {
-      return List<double>.filled(numerator, unit);
-    }
-
-    // Known irregular meters.
+    // Known irregular meters written in eighths, where the accent pattern is
+    // conventional rather than derivable.
     switch ('$numerator/$denominator') {
       case '5/8':
         return <double>[2 * unit, 3 * unit];
@@ -161,23 +197,35 @@ class BeamGrouper {
         return <double>[2 * unit, 2 * unit, 3 * unit];
       case '8/8':
         return <double>[3 * unit, 3 * unit, 2 * unit];
-      case '5/4':
-        return const <double>[0.5, 0.5];
+      case '11/8':
+        return <double>[3 * unit, 3 * unit, 3 * unit, 2 * unit];
     }
 
-    // Fallback: groups of three units while three units remain.
-    final subdivisions = <double>[];
-    var remaining = numerator;
-    while (remaining > 0) {
-      if (remaining >= 3) {
-        subdivisions.add(3 * unit);
-        remaining -= 3;
-      } else {
-        subdivisions.add(remaining * unit);
-        remaining = 0;
-      }
+    // ---- Simple and irregular meters: one group per BEAT ------------------
+    //
+    // This is the general case and it always covers the whole bar, which is
+    // what the old per-meter table failed to guarantee.
+    const double eighth = 0.125;
+    const double sixteenth = 0.0625;
+    const double tolerance = 1e-9;
+
+    // Behind Bars p.157: in 4/4 quavers may be amalgamated across the half bar.
+    // The amalgamation is a QUAVER licence only - semiquavers and shorter are
+    // grouped by the crotchet so the beat stays visible.
+    if (numerator == 4 &&
+        denominator == 4 &&
+        shortestBeamedValue >= eighth - tolerance) {
+      return const <double>[0.5, 0.5];
     }
-    return subdivisions;
+
+    // Alla breve family (x/2): the beat is the minim, which is right for
+    // quavers, but semiquavers under one beam of eight are unreadable - split
+    // each minim into its two crotchets.
+    if (denominator == 2 && shortestBeamedValue <= sixteenth + tolerance) {
+      return List<double>.filled(numerator * 2, unit / 2);
+    }
+
+    return List<double>.filled(numerator, unit);
   }
 
   /// Groups a rhythmic timeline into beams, breaking only at [subdivisions].

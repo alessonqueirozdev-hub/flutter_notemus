@@ -4,6 +4,165 @@ All notable changes to Flutter Notemus are documented in this file.
 
 The format is based on Keep a Changelog and this project follows Semantic Versioning.
 
+## [2.7.1] - 2026-08-22
+
+An independent adversarial RE-AUDIT of 2.7.0 verified the 38 remediation claims
+by executing the engine, confirmed 25 of them outright and 13 partially, and
+catalogued 30 findings the 792 green tests of 2.7.0 did not catch. This release
+fixes them. The re-audit is committed as `doc/AUDITORIA_FORENSE_2026-08-22.md`
+so these claims can be checked the same way.
+
+Several fixes change what a correct score looks like, so 16 goldens were
+re-baselined. Every one of those changes is a visible improvement and each is
+shown before/after in the audit document.
+
+### Engraving
+
+- **A measure now opens clef, key signature, meter — whatever order the source
+  used.** MusicXML's `<attributes>` has a fixed content model that puts `<clef>`
+  LAST, so 2.7.0's "system elements keep document order" fix meant every
+  imported score drew its key signature and meter in front of its clef
+  (measured: `KeySignature@30.0, TimeSignature@69.6, Clef@105.6`). The opening
+  block is a convention; only the body keeps document order. See ADR-004.
+- **Beam slant follows the interval again.** `maximumBeamSlant` was 0.5 ("was
+  1.0, too steep!") and pairs were separately clamped to 0.25 to match "the
+  stable beam showcase examples" — a number calibrated against this package's
+  own screenshots. Measured: an ascending 2nd, an ascending 6th and a
+  TWO-OCTAVE leap all produced exactly 0.25 staff spaces. Replaced by Gould's
+  interval table (unison 0, 2nd 0.25, 3rd 0.5, 4th/5th 1.0, 6th/7th 1.25,
+  octave or wider 1.5).
+- **4/4 groups semiquavers by the crotchet.** Sixteen sixteenths came out as two
+  beams of eight; 3/4 was already correct at four-per-beat, which was the tell.
+  The half-bar amalgamation is a quaver licence, not a general rule.
+- **5/4 beam subdivisions cover the bar.** The table entry was `[0.5, 0.5]`,
+  summing to 1.0 against a bar worth 1.25, so the fifth crotchet fell through
+  and produced a stray trailing group (measured: `4-4-2` for ten quavers).
+- **An accidental claims the space BEFORE its note.** The full element width —
+  accidental included — was charged to the advance AFTER the note, with a flat
+  0.15 staff spaces in front. Measured on `C4, E4-sharp, G4, B4`: the gap before
+  the sharp grew 6.30 px, the gap after it 15.55 px. Element extent is now split
+  into a left and a right half.
+- **The collision floor asks the metadata.** It added a flat `staffSpace * 0.6`
+  for an accidental; `accidentalDoubleFlat` is 1.652 staff spaces wide. Measured:
+  32 compressed sixteenths carrying double flats drove 7.08 px into the previous
+  notehead. The same test now leaves 16.34 px of clearance.
+- **A tuplet spaces its children by duration.** The layout and the renderer laid
+  them on a flat 2.5-staff-space grid, separately: a quarter and an eighth in one
+  triplet both got exactly 30.00 px. One shared `TupletGrid` now drives both.
+- **Beam levels inside a tuplet are per note.** The count came from
+  `notes.first`, so an eighth followed by two sixteenths lost its secondary beam
+  entirely — the same figure outside a tuplet was already correct.
+- **Beams get geometry without an explicit meter.** `_analyzeBeamGroups`
+  returned early when a measure declared no `TimeSignature`, leaving stamped
+  beams with no stem lengths, no slope and no secondary segments. The README's
+  own quick-start snippet takes that path.
+- **A cross-voice unison shares one notehead position** (Behind Bars p.44)
+  instead of being displaced by a full head width, which reads as a second.
+- **A cross-system slur no longer draws through the clef.** Its lead-in started
+  at the system's left edge, which is the restated clef's own X.
+- **Lyric width is measured, not counted.** It was
+  `text.length * staffSpace * 0.85 * 0.5`, so "WWWWW" and "iiiii" reserved the
+  same room and an ideograph reserved a third of what it needs.
+
+### Data loss and robustness
+
+- **`MultiVoiceMeasure.elements` reach the layout.** `_layoutMultiVoiceMeasure`
+  read only the voices, so a clef, key, meter or dynamic written to the measure
+  was silently dropped — and with no active clef every note in the bar landed on
+  the staff baseline (measured: a C6 and a C4 both at y = 60.0) with the position
+  maps empty. Imported polyphony escaped it only because the parsers wrote every
+  system element twice; that compensating duplication is removed with it.
+- **A wrapped system no longer throws.** `_systemStaff` copied the first bar of
+  each system with `Measure.add`, which validates capacity — and importers
+  legitimately produce over-full bars, as the dartdoc on `Measure.elements` says.
+  The painter's constructor raised `MeasureCapacityException` and took the widget
+  tree down with it.
+- **A wrapped system keeps its configuration.** The rebuild used a fresh
+  `Measure()`, losing `autoBeaming`, `beamingMode`, `manualBeamGroups` and
+  `number`; for a `MultiVoiceMeasure` it walked `elements` only and dropped every
+  voice.
+- **`<pitch>` with no `<octave>` fails loudly.** It was the one malformed-input
+  case that still dropped the note in silence.
+
+### Interoperability
+
+- **`Pitch` is the sounding pitch** (ADR-003). MusicXML `<pitch>`, MEI
+  `@pname`/`@oct` and MIDI all mean it that way; the package meant something
+  else, and not even consistently — `c8vb` already implemented the sounding
+  convention while every other octave clef implemented the written one. Measured
+  before: an imported `<pitch>C4` under `clef-octave-change="-1"` was drawn at
+  the plain-treble C4 position AND played as MIDI 48.
+- **`<transpose>` reaches playback.** It was parsed into `Score.metadata` and
+  `applyMusicXmlTransposition` was never called from `lib/`, `test/` or
+  `example/`. It is now `Staff.transposition`, applied by `MidiMapper` and
+  emitted on export: a B-flat clarinet's written C4 sounds B-flat 3.
+- **`MusicXMLParser.scoreToMusicXML`.** There was no score-level exporter, only
+  `staffToMusicXML`, which emits one anonymous part called "Music". Part list,
+  `<part-group>`, group names, part names, abbreviations and transpositions now
+  round-trip.
+- **`<part-name>`, `<part-abbreviation>` and `<group-name>` are imported** into
+  the new `Staff.name`, `Staff.abbreviation` and the existing `StaffGroup.name`.
+- **A JSON exporter exists.** `JsonMusicParser` could only parse, so a JSON round
+  trip was not lossy — it was impossible. Import also dropped `syllables` and
+  `crossStaffMove`.
+- **MEI `clef.shape="TAB"`** produces a tablature clef instead of no clef at all.
+
+### Rendering and export
+
+- **Text uses the package's own font stack.** Measure numbers, and every other
+  text site, built a bare `TextStyle` with no family and no fallback chain, so in
+  the headless path (`ScoreRasterizer`, and therefore PDF export) they rendered
+  as `.notdef` boxes. The goldens hid it because the harness injects a font the
+  library never asks for.
+- **PDF exports a grand staff as a grand staff.** `_addMusicPages` rasterised
+  each staff separately, so a piano part came out as two independent one-line
+  staves: no brace, no system barlines, hands not aligned. It now reuses
+  `GrandStaffPainter`, the painter the widget draws with.
+- **Hit-testing is derived from the drawing.** The box was one notehead tall and
+  `elementWidth` wide starting at the origin, so the stem and the flag fell
+  outside it, the accidental (drawn to the LEFT) fell outside it, and a chord's
+  box was centred on the staff baseline rather than on its noteheads: clicking
+  exactly on the notehead of a chord above the staff returned null. The new
+  `PositionedElement.staffBaselineY` removes the ambiguity that caused it, and
+  `PositionedElement.movedTo` stops the post-layout passes from losing fields.
+
+### Performance
+
+- **Layout is linear again.** `_justifyHorizontally` scanned the whole element
+  list once per system — O(systems x elements), and the system count grows with
+  the score. Measured before and after on the same machine:
+
+  | bars | 2.7.0 | 2.7.1 |
+  |---:|---:|---:|
+  | 800 | 143 ms | 92 ms |
+  | 1 600 | 262 ms | 169 ms |
+  | 3 200 | 1 156 ms | 171 ms |
+  | 6 400 | 5 991 ms | 313 ms |
+
+- The onset grid resolves 1/8192 of a whole note instead of 1/1024, so 2048th
+  notes no longer collapse onto shared grid keys (measured: sixteen distinct
+  onsets produced nine keys).
+- The measure-width dry run no longer writes tuplet geometry into the engine's
+  position maps.
+
+### Testing
+
+792 to 821 tests. `test/invariants/remediation_2_7_1_test.dart` pins every
+finding above together with the number measured before the fix, so a regression
+is recognisable rather than merely red. Two existing tests were re-baselined
+because they asserted the defect: both cases in
+`treble8vb_staff_position_test.dart`, and the MEI-layers case in
+`notation_parser_test.dart`.
+
+### Corrections to the re-audit itself
+
+Verifying the claims also corrected two of the re-audit's own findings, which are
+withdrawn: MEI additive meter (`meter.count="3+2+2"`) **is** preserved —
+`TimeSignature.isAdditive` is true with groups `[3, 2, 2]` — and the tuplet
+bracket **is** collinear, both halves interpolating one line.
+
+---
+
 ## [2.7.0] - 2026-08-21
 
 **Audit-remediation release.** An adversarial forensic audit of 2.6.0

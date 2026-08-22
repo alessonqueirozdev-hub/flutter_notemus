@@ -92,7 +92,14 @@ class MusicXMLParser {
               'score-part',
               nest: () {
                 builder.attribute('id', 'P1');
-                builder.element('part-name', nest: 'Music');
+                // The staff's real name, not a hardcoded 'Music': part labels
+                // were invented on export and dropped on import, so a name
+                // could not survive a round trip in either direction.
+                builder.element('part-name', nest: staff.name ?? 'Music');
+                if (staff.abbreviation != null) {
+                  builder.element('part-abbreviation',
+                      nest: staff.abbreviation);
+                }
               },
             );
           },
@@ -104,7 +111,8 @@ class MusicXMLParser {
             builder.attribute('id', 'P1');
             for (int index = 0; index < staff.measures.length; index++) {
               _buildMeasureXml(builder, staff.measures[index], index + 1,
-                  staffLines: staff.lineCount);
+                  staffLines: staff.lineCount,
+                  transposition: staff.transposition);
             }
           },
         );
@@ -112,6 +120,119 @@ class MusicXMLParser {
     );
     return builder.buildDocument().toXmlString(pretty: true);
   }
+
+  /// Converts a whole [Score] to MusicXML partwise, preserving the part list,
+  /// the `<part-group>` structure, part names and instrument transpositions.
+  ///
+  /// There was no score-level exporter: only [staffToMusicXML], which emits a
+  /// single anonymous part called `Music`. A conductor score could therefore be
+  /// IMPORTED with its groups and labels and never written back out — the
+  /// round trip was structurally impossible, not merely lossy.
+  static String scoreToMusicXML(Score score) {
+    final builder = XmlBuilder();
+    builder.processing('xml', 'version="1.0" encoding="UTF-8"');
+
+    // Flatten to (group, staff) pairs, keeping the group boundaries so
+    // <part-group> can bracket them again.
+    final parts = <({StaffGroup group, Staff staff, String id})>[];
+    var partNumber = 0;
+    for (final group in score.staffGroups) {
+      for (final staff in group.staves) {
+        partNumber++;
+        parts.add((group: group, staff: staff, id: 'P$partNumber'));
+      }
+    }
+
+    builder.element(
+      'score-partwise',
+      nest: () {
+        builder.attribute('version', '4.0');
+
+        if (score.title != null || score.composer != null) {
+          builder.element('work', nest: () {
+            if (score.title != null) {
+              builder.element('work-title', nest: score.title);
+            }
+          });
+          if (score.composer != null) {
+            builder.element('identification', nest: () {
+              builder.element('creator', nest: () {
+                builder.attribute('type', 'composer');
+                builder.text(score.composer!);
+              });
+            });
+          }
+        }
+
+        builder.element('part-list', nest: () {
+          StaffGroup? open;
+          var groupNumber = 0;
+          for (var i = 0; i < parts.length; i++) {
+            final part = parts[i];
+            final startsGroup = !identical(part.group, open);
+            if (startsGroup) {
+              if (open != null) {
+                builder.element('part-group', nest: () {
+                  builder.attribute('type', 'stop');
+                  builder.attribute('number', groupNumber.toString());
+                });
+              }
+              // A group of one staff with no bracket is just a part.
+              if (part.group.staves.length > 1 ||
+                  part.group.bracket != BracketType.none) {
+                groupNumber++;
+                builder.element('part-group', nest: () {
+                  builder.attribute('type', 'start');
+                  builder.attribute('number', groupNumber.toString());
+                  builder.element('group-symbol',
+                      nest: _groupSymbolName(part.group.bracket));
+                  if (part.group.name != null) {
+                    builder.element('group-name', nest: part.group.name);
+                  }
+                });
+                open = part.group;
+              } else {
+                open = null;
+              }
+            }
+            builder.element('score-part', nest: () {
+              builder.attribute('id', part.id);
+              builder.element('part-name',
+                  nest: part.staff.name ?? part.group.name ?? 'Part ${i + 1}');
+              if (part.staff.abbreviation != null) {
+                builder.element('part-abbreviation',
+                    nest: part.staff.abbreviation);
+              }
+            });
+          }
+          if (open != null) {
+            builder.element('part-group', nest: () {
+              builder.attribute('type', 'stop');
+              builder.attribute('number', groupNumber.toString());
+            });
+          }
+        });
+
+        for (final part in parts) {
+          builder.element('part', nest: () {
+            builder.attribute('id', part.id);
+            for (var m = 0; m < part.staff.measures.length; m++) {
+              _buildMeasureXml(builder, part.staff.measures[m], m + 1,
+                  staffLines: part.staff.lineCount,
+                  transposition: part.staff.transposition);
+            }
+          });
+        }
+      },
+    );
+    return builder.buildDocument().toXmlString(pretty: true);
+  }
+
+  static String _groupSymbolName(BracketType bracket) => switch (bracket) {
+        BracketType.brace => 'brace',
+        BracketType.line => 'line',
+        _ => 'bracket',
+      };
 
   static bool validateMusicXML(String xmlContent) {
     try {
@@ -182,7 +303,12 @@ class MusicXMLParser {
                 'score-part',
                 nest: () {
                   builder.attribute('id', 'P${index + 1}');
-                  builder.element('part-name', nest: 'Part ${index + 1}');
+                  builder.element('part-name',
+                      nest: staffs[index].name ?? 'Part ${index + 1}');
+                  if (staffs[index].abbreviation != null) {
+                    builder.element('part-abbreviation',
+                        nest: staffs[index].abbreviation);
+                  }
                 },
               );
             }
@@ -204,6 +330,7 @@ class MusicXMLParser {
                   staffs[index].measures[measureIndex],
                   measureIndex + 1,
                   staffLines: staffs[index].lineCount,
+                  transposition: staffs[index].transposition,
                 );
               }
             },
@@ -226,7 +353,7 @@ int _durationDivisions(Duration d, [double factor = 1.0]) {
 }
 
 void _buildMeasureXml(XmlBuilder builder, Measure measure, int number,
-    {int staffLines = 5}) {
+    {int staffLines = 5, Transposition? transposition}) {
   builder.element(
     'measure',
     nest: () {
@@ -316,6 +443,25 @@ void _buildMeasureXml(XmlBuilder builder, Measure measure, int number,
               builder.element(
                 'staff-details',
                 nest: () => builder.element('staff-lines', nest: staffLines),
+              );
+            }
+            // <transpose> follows <staff-details>. It used to be dropped on
+            // export entirely, so a B-flat clarinet part exported as a concert
+            // instrument and sounded a major second wrong on re-import.
+            if (number == 1 &&
+                transposition != null &&
+                !transposition.isConcertPitch) {
+              builder.element(
+                'transpose',
+                nest: () {
+                  builder.element('diatonic', nest: transposition.diatonic);
+                  builder.element('chromatic', nest: transposition.chromatic);
+                  if (transposition.octaveChange != 0) {
+                    builder.element('octave-change',
+                        nest: transposition.octaveChange);
+                  }
+                  if (transposition.doubled) builder.element('double');
+                },
               );
             }
           },

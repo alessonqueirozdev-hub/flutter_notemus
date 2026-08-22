@@ -207,7 +207,7 @@ For a full conformance audit see [`doc/MEI_V5_AUDIT.md`](doc/MEI_V5_AUDIT.md).
 
 ## Current Status
 
-- Current package release target: `2.7.0`
+- Current package release target: `2.7.1`
 - Previous pub.dev baseline: `2.6.0`
 - **2.7.0 is an audit-remediation release.** An adversarial forensic audit of
   2.6.0 executed the engine against 40+ probe cases and catalogued 42 findings,
@@ -223,10 +223,38 @@ For a full conformance audit see [`doc/MEI_V5_AUDIT.md`](doc/MEI_V5_AUDIT.md).
   **no-op stubs** (`nativeIsReady` returns `false`) — tracked as
   [#1](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/1)/[#15](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/15).
 
+### What's New in 2.7.1
+
+An independent adversarial **re-audit** of 2.7.0 verified its 38 remediation
+claims by executing the engine — 25 confirmed outright, 13 partially, none
+false — and found 30 defects the 792 green tests had not caught. All of them are
+fixed here; see the [CHANGELOG](CHANGELOG.md#271---2026-08-22) and
+[`doc/AUDITORIA_FORENSE_2026-08-22.md`](doc/AUDITORIA_FORENSE_2026-08-22.md).
+
+The headline items:
+
+- **Every imported score drew its key signature in front of its clef.**
+  MusicXML's `<attributes>` puts `<clef>` last, and 2.7.0 had started honouring
+  document order everywhere. The opening block is a convention
+  ([ADR-004](doc/adr/ADR-004-opening-block-is-a-convention.md)).
+- **`Pitch` is now the sounding pitch**, as MusicXML, MEI and MIDI mean it
+  ([ADR-003](doc/adr/ADR-003-pitch-is-the-sounding-pitch.md)). An imported tenor
+  part on a treble-8vb clef used to be drawn an octave low *and* played an
+  octave low.
+- **Beam slant follows Gould's interval table.** A 2nd, a 6th and a two-octave
+  leap all produced the same 0.25-staff-space slant before.
+- **`MultiVoiceMeasure.elements` were silently dropped by the layout**, which
+  also left every note in such a bar sitting on the staff baseline.
+- **A grand staff with an over-full bar crashed the painter**; over-full bars are
+  what importers produce.
+- **Layout is linear again**: 6 400 bars went from 5 991 ms to 313 ms.
+- **PDF exports a grand staff as a grand staff**, and text no longer rasterises
+  as `.notdef` boxes.
+
 ### What's New in 2.7.0
 
-**Engraving corrections** (output changes on purpose; 30 of 54 goldens were
-re-baselined):
+**Engraving corrections** (output changes on purpose; 39 of the 52 existing
+goldens were re-baselined and one was added, for 53 in total):
 
 - **Compound meters beam in threes.** 3/8, 6/8, 9/8 and 12/8 used to group the
   beat-completing note into the next group and orphan the last note of the bar.
@@ -324,10 +352,10 @@ not against intent. `SUPPORTED` means it survives the whole path
 |---|---|---|
 | Measure numbers | **SUPPORTED** | engraved at every system start; `Measure.number` honoured (2.7.0) |
 | Courtesy / editorial accidentals | **SUPPORTED** | resolved *and* drawn with SMuFL parentheses/brackets (2.7.0) |
-| Instrument / group names | **SUPPORTED** | `StaffGroup.name`, drawn beside the brace/bracket |
-| Transposing instruments | **PARTIAL** | octave-transposing clefs apply to playback (2.7.0); MusicXML `<transpose>` import is limited |
+| Instrument / group names | **SUPPORTED** | `StaffGroup.name` and `Staff.name`/`abbreviation`, drawn beside the brace/bracket; imported from `<part-name>`/`<group-name>` and exported since 2.7.1 |
+| Transposing instruments | **SUPPORTED** | `Staff.transposition` is imported, applied by `MidiMapper` and exported (2.7.1). `Pitch` is the SOUNDING pitch and octave clefs are applied on the drawing side only — see [ADR-003](doc/adr/ADR-003-pitch-is-the-sounding-pitch.md). Concert-pitch RESPELLING is still missing |
 | Cue notes | **NOT SUPPORTED** | `<cue/>` is not modelled; cue-*size* is used only for mid-system clef changes |
-| Rehearsal marks | **MODEL ONLY** | `TextType.rehearsal` is imported from MusicXML but nothing draws it |
+| Rehearsal marks | **SUPPORTED** | imported from MusicXML and engraved in a SMuFL box (2.7.0); the golden is `m04s_rehearsal_marks` |
 | Page numbers | **NOT SUPPORTED** | there is no page model; PDF export paginates by system |
 | Ossia staves | **NOT SUPPORTED** | |
 | Hidden / invisible notes | **NOT SUPPORTED** | no `print-object` equivalent |

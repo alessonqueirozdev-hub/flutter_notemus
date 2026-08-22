@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import '../../core/core.dart';
 import '../layout/layout_engine.dart';
 import '../rendering/staff_coordinate_system.dart';
+import '../rendering/grand_staff_painter.dart';
 import '../rendering/staff_renderer.dart';
 import '../smufl/smufl_metadata_loader.dart';
 import '../theme/music_score_theme.dart';
@@ -340,6 +341,77 @@ class ScoreRasterizer {
   /// The geometry deliberately mirrors `MusicScorePainter.paint`: one
   /// [StaffRenderer] per system, with its baseline at
   /// `system * staffSpace * 10 + staffSpace * 5`.
+  /// Rasterizes a multi-staff [StaffGroup] as a real grand staff, using the
+  /// SAME [GrandStaffPainter] the widget draws with.
+  ///
+  /// `PdfExporter` used to loop over `group.staves` and rasterize each staff on
+  /// its own through the single-staff path, so a piano part came out of the
+  /// exporter as two independent one-line staves with headings: no brace, no
+  /// system barlines, and the two hands not aligned with each other. Reusing
+  /// the painter means the printed page and the screen cannot disagree — the
+  /// alternative is a second implementation of the multi-staff geometry, which
+  /// is the defect this whole remediation exists to remove.
+  ///
+  /// Returns null when there is nothing to draw.
+  static Future<RasterizedStaffPage?> renderGroupToPage({
+    required StaffGroup group,
+    required SmuflMetadata metadata,
+    required double width,
+    double staffSpace = 12.0,
+    MusicScoreTheme theme = const MusicScoreTheme(),
+    double pixelRatio = 2.0,
+    Color background = const Color(0xFFFFFFFF),
+  }) async {
+    if (metadata.isNotLoaded) return null;
+    if (group.staves.isEmpty) return null;
+    if (group.staves.every((staff) => staff.measures.isEmpty)) return null;
+
+    final painter = GrandStaffPainter(
+      staffGroup: group,
+      staffSpace: staffSpace,
+      metadata: metadata,
+      theme: theme,
+      availableWidth: width,
+    );
+
+    final ratio = pixelRatio.isFinite && pixelRatio > 0 ? pixelRatio : 1.0;
+    final height = math.max(1.0, painter.totalHeight);
+
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    canvas.scale(ratio);
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, width, height),
+      Paint()..color = background,
+    );
+    painter.paint(canvas, Size(width, height));
+
+    final picture = recorder.endRecording();
+    try {
+      final image = await picture.toImage(
+        math.max(1, (width * ratio).ceil()),
+        math.max(1, (height * ratio).ceil()),
+      );
+      try {
+        final data = await image.toByteData(format: ui.ImageByteFormat.png);
+        if (data == null) return null;
+        return RasterizedStaffPage(
+          pngBytes: data.buffer.asUint8List(),
+          pixelWidth: image.width,
+          pixelHeight: image.height,
+          logicalWidth: width,
+          logicalHeight: height,
+          firstSystem: 0,
+          systemCount: painter.systemCount,
+        );
+      } finally {
+        image.dispose();
+      }
+    } finally {
+      picture.dispose();
+    }
+  }
+
   static Future<ui.Image> _rasterizeBand({
     required StaffRasterLayout layout,
     required SmuflMetadata metadata,

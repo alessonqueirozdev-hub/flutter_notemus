@@ -47,18 +47,30 @@ class StaffPositionCalculator {
     // baseOctave: oitava dessa note
     final ClefReference ref = _getClefReference(clef.actualClefType);
 
-    // Calculate distance diatônica of the note reference
-    // Clefs with deslocamento de oitava (e.g., treble8vb) alteram a height
-    // sonora, mas NAO alteram a escrita no staff.
-    // By isso, o calculo visual Uses only a oitava escrita of the note.
+    // Diatonic distance from the clef's reference note.
     final octaveAdjust = pitch.octave - ref.baseOctave;
     final diatonicDistance = (pitchStep - ref.baseStep) + (octaveAdjust * 7);
 
-    // Convertsr distance diatônica for staff position
-    // staffPosition aumenta for Top (valores positivos = above the centre)
-    // Fix: Somar diatonicDistance (not subtrair) for that notes more agudas
-    // tenham staffPosition more alto
-    return ref.basePosition + diatonicDistance;
+    // Octave-transposing clefs (8va/8vb/15ma/15mb).
+    //
+    // [Pitch] is the SOUNDING pitch — the same thing MusicXML `<pitch>`, MEI
+    // `@pname/@oct` and MIDI all mean (ADR-003). A clef that sounds an octave
+    // LOWER therefore has to PRINT a given sounding pitch an octave HIGHER on
+    // the staff, which is 7 half-space positions up per octave of shift.
+    //
+    // This used to be skipped with the comment "alteram a altura sonora, mas
+    // NÃO alteram a escrita no staff", and `MidiMapper` compensated by shifting
+    // the MIDI number instead. That is a self-consistent convention on its own,
+    // but it is NOT the convention the interchange formats use, so importing a
+    // tenor part on a treble-8vb clef drew it an octave low and played it an
+    // octave low too. It was not even applied consistently: `c8vb` baked the
+    // shift into its own ClefReference (`baseOctave: 3`) and so already
+    // implemented the sounding convention while every other octave clef
+    // implemented the written one.
+    final octaveShiftPositions = clef.octaveShift * 7;
+
+    // staffPosition grows UPWARD (positive = above the middle line).
+    return ref.basePosition + diatonicDistance - octaveShiftPositions;
   }
 
   /// Checks if a position needs de ledger lines
@@ -172,7 +184,14 @@ class StaffPositionCalculator {
         return ClefReference(baseStep: 0, baseOctave: 4, basePosition: 4);
       case ClefType.c8vb:
         // C clef sounding an octave lower; same line as tenor by convention.
-        return ClefReference(baseStep: 0, baseOctave: 3, basePosition: 2);
+        //
+        // The reference is plain C4, like every other C clef: the octave shift
+        // is applied once, uniformly, in [calculate]. It used to be baked in
+        // here as `baseOctave: 3`, which made this the ONLY clef that honoured
+        // the sounding convention — leaving it would now shift c8vb twice.
+        // Observable output is unchanged: a sounding C3 still lands on
+        // position 2.
+        return ClefReference(baseStep: 0, baseOctave: 4, basePosition: 2);
 
       // Clef DE PERCUSSÃO
       case ClefType.percussion:

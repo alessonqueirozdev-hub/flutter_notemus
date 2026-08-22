@@ -1116,7 +1116,55 @@ class _JsonImportParser {
       tremoloStrokes: _asInt(map['tremoloStrokes']) ?? 0,
       isGraceNote: isGrace,
       alternatePitch: _parsePitch(map['alternatePitch']),
+      // Lyrics and cross-staff routing used to be dropped on the floor here:
+      // a note round-tripped through JSON came back with `syllables == null`
+      // and `crossStaffMove == 0` however it went in.
+      syllables: _parseSyllableList(map['syllables']),
+      crossStaffMove: _asInt(map['crossStaffMove']) ?? 0,
+      tabFret: _asInt(map['tabFret']),
+      tabString: _asInt(map['tabString']),
     );
+  }
+
+  /// `[{"text": "Ky-", "type": "initial", "italic": false}, ...]`, or a bare
+  /// list of strings for the simple case.
+  List<Syllable>? _parseSyllableList(dynamic raw) {
+    final list = _asList(raw);
+    if (list.isEmpty) return null;
+    final result = <Syllable>[];
+    for (final dynamic entry in list) {
+      if (entry is String) {
+        result.add(Syllable(text: entry));
+        continue;
+      }
+      final map = _asMap(entry);
+      if (map == null) continue;
+      final text = map['text'];
+      if (text is! String) continue;
+      result.add(
+        Syllable(
+          text: text,
+          type: _parseSyllableType(map['type']),
+          italic: _asBool(map['italic']) ?? false,
+        ),
+      );
+    }
+    return result.isEmpty ? null : result;
+  }
+
+  SyllableType _parseSyllableType(dynamic raw) {
+    switch (_normalizeToken(raw?.toString())) {
+      case 'initial':
+      case 'begin':
+        return SyllableType.initial;
+      case 'middle':
+        return SyllableType.middle;
+      case 'end':
+      case 'terminal':
+        return SyllableType.terminal;
+      default:
+        return SyllableType.single;
+    }
   }
 
   Rest _parseRest(Map<String, dynamic> map) {
@@ -1271,6 +1319,7 @@ class _MusicXmlImportParser {
   /// default of 1 at the start of each part/staff pass (F-06).
   int _divisions = 1;
 
+
   Staff parse(XmlDocument document) {
     final root = document.rootElement;
     switch (root.name.local) {
@@ -1319,14 +1368,23 @@ class _MusicXmlImportParser {
           // <staff-details><staff-lines> decides the staff size (1 = percussion,
           // 6 = guitar tablature); Staff.lineCount is final, so it has to be
           // known before the measures are added.
+          final partId = part.getAttribute('id');
+          final transposition = _musicXmlTranspose(part, staffNumber: filter);
           final staff = Staff(
             lineCount: _musicXmlStaffLines([part], staffNumber: filter),
+            // <part-name>/<part-abbreviation> used to be dropped on the floor:
+            // `StaffGroup.name` came back null and `Staff` had no name at all,
+            // so every instrument label of an imported conductor score was
+            // lost. A multi-staff part names its GROUP, not each staff.
+            name: count == 1 ? partList.partName[partId] : null,
+            abbreviation:
+                count == 1 ? partList.partAbbreviation[partId] : null,
+            transposition: _transpositionOf(transposition),
           );
           _divisions = 1; // <divisions> is per-part state; restart each pass.
           for (final m in part.findElements('measure')) {
             staff.add(_parseMeasure(m, staffFilter: filter));
           }
-          final transposition = _musicXmlTranspose(part, staffNumber: filter);
           if (transposition != null) {
             transpositions.add(_musicXmlTranspositionMetadata(
               transposition,
@@ -1350,6 +1408,14 @@ class _MusicXmlImportParser {
             staves: partsData[i].staves,
             bracket:
                 partsData[i].count > 1 ? BracketType.brace : BracketType.none,
+            // A multi-staff part (a piano) is one instrument: its <part-name>
+            // labels the GROUP, drawn once beside the brace.
+            name: partsData[i].count > 1
+                ? partList.partName[partsData[i].id]
+                : null,
+            abbreviation: partsData[i].count > 1
+                ? partList.partAbbreviation[partsData[i].id]
+                : null,
           ));
           i++;
         } else {
@@ -1362,6 +1428,7 @@ class _MusicXmlImportParser {
           groups.add(StaffGroup(
             staves: staves,
             bracket: partList.bracket[gid] ?? BracketType.bracket,
+            name: partList.groupName[gid],
           ));
         }
       }
@@ -1378,7 +1445,14 @@ class _MusicXmlImportParser {
       }
       for (var p = 0; p < partCount; p++) {
         final partElements = partMeasures[p] ?? const <XmlElement>[];
-        final staff = Staff(lineCount: _musicXmlStaffLines(partElements));
+        final staff = Staff(
+          lineCount: _musicXmlStaffLines(partElements),
+          transposition: _transpositionOf(
+            partElements.isEmpty
+                ? null
+                : _musicXmlTranspose(partElements.first),
+          ),
+        );
         _divisions = 1;
         for (final m in partElements) {
           staff.add(_parseMeasure(m));
@@ -1451,13 +1525,28 @@ class _MusicXmlImportParser {
   /// Reads `<part-group>` spans from the `<part-list>`: maps each part id to the
   /// id of the innermost group it belongs to (or null), and each group id to its
   /// bracket type (from `<group-symbol>`).
-  ({Map<String, int?> groupOf, Map<int, BracketType> bracket}) _parsePartList(
-    XmlElement root,
-  ) {
+  ({
+    Map<String, int?> groupOf,
+    Map<int, BracketType> bracket,
+    Map<int, String> groupName,
+    Map<String, String> partName,
+    Map<String, String> partAbbreviation,
+  }) _parsePartList(XmlElement root) {
     final groupOf = <String, int?>{};
     final bracket = <int, BracketType>{};
+    final groupName = <int, String>{};
+    final partName = <String, String>{};
+    final partAbbreviation = <String, String>{};
     final partList = root.findElements('part-list').firstOrNull;
-    if (partList == null) return (groupOf: groupOf, bracket: bracket);
+    if (partList == null) {
+      return (
+        groupOf: groupOf,
+        bracket: bracket,
+        groupName: groupName,
+        partName: partName,
+        partAbbreviation: partAbbreviation,
+      );
+    }
 
     final open = <({int number, int id})>[];
     var nextId = 0;
@@ -1472,6 +1561,9 @@ class _MusicXmlImportParser {
             bracket[id] = _groupSymbolBracket(
               child.findElements('group-symbol').firstOrNull?.innerText.trim(),
             );
+            final label =
+                child.findElements('group-name').firstOrNull?.innerText.trim();
+            if (label != null && label.isNotEmpty) groupName[id] = label;
             open.add((number: number, id: id));
           } else if (type == 'stop') {
             for (var i = open.length - 1; i >= 0; i--) {
@@ -1484,11 +1576,41 @@ class _MusicXmlImportParser {
           break;
         case 'score-part':
           final id = child.getAttribute('id');
-          if (id != null) groupOf[id] = open.isNotEmpty ? open.last.id : null;
+          if (id != null) {
+            groupOf[id] = open.isNotEmpty ? open.last.id : null;
+            final label =
+                child.findElements('part-name').firstOrNull?.innerText.trim();
+            if (label != null && label.isNotEmpty) partName[id] = label;
+            final abbr = child
+                .findElements('part-abbreviation')
+                .firstOrNull
+                ?.innerText
+                .trim();
+            if (abbr != null && abbr.isNotEmpty) partAbbreviation[id] = abbr;
+          }
           break;
       }
     }
-    return (groupOf: groupOf, bracket: bracket);
+    return (
+      groupOf: groupOf,
+      bracket: bracket,
+      groupName: groupName,
+      partName: partName,
+      partAbbreviation: partAbbreviation,
+    );
+  }
+
+  /// Converts a parsed `<transpose>` declaration into the model's
+  /// [Transposition], or null when the part sounds at concert pitch.
+  Transposition? _transpositionOf(MusicXmlTransposition? raw) {
+    if (raw == null) return null;
+    final value = Transposition(
+      diatonic: raw.diatonic,
+      chromatic: raw.chromatic,
+      octaveChange: raw.octaveChange,
+      doubled: raw.doubled,
+    );
+    return value.isConcertPitch ? null : value;
   }
 
   BracketType _groupSymbolBracket(String? symbol) {
@@ -1530,10 +1652,17 @@ class _MusicXmlImportParser {
     }
 
     final part = parts[partIndex];
-    // GAP: a <transpose> on this part cannot be surfaced through a bare Staff
-    // (neither Staff nor Note carries a transposition field). Use
-    // parseMusicXmlScore, which records it in Score.metadata['transpositions'].
-    final staff = Staff(lineCount: _musicXmlStaffLines([part]));
+    final partId = part.getAttribute('id');
+    final partList = _parsePartList(root);
+    final staff = Staff(
+      lineCount: _musicXmlStaffLines([part]),
+      name: partList.partName[partId],
+      abbreviation: partList.partAbbreviation[partId],
+      // `<transpose>` used to be unreachable through a bare Staff — the dartdoc
+      // said so and pointed at `Score.metadata`, which nothing read either.
+      // `Staff.transposition` closes both halves of that gap.
+      transposition: _transpositionOf(_musicXmlTranspose(part)),
+    );
     _divisions = 1;
     for (final measureElement in part.findElements('measure')) {
       staff.add(_parseMeasure(measureElement));
@@ -1704,15 +1833,39 @@ class _MusicXmlImportParser {
     }
 
     final measure = MultiVoiceMeasure();
-    for (final element in metadataElements.where(_isSystemElement)) {
-      _appendElementToMeasure(measure, element);
-    }
 
     final voiceNumbers = voices.keys.toList()..sort();
     for (final number in voiceNumbers) {
       final accumulator = voices[number]!;
       accumulator.finishTuplet();
-      measure.addVoice(Voice(number: number, elements: accumulator.elements));
+      var elements = accumulator.elements;
+
+      if (number == voiceNumbers.first) {
+        // The bar's OPENING BLOCK is hoisted into the measure itself, and only
+        // there.
+        //
+        // System elements used to be written to BOTH `metadataElements` (which
+        // became `measure.elements`) and voice 1. That duplication existed to
+        // compensate for `LayoutEngine._layoutMultiVoiceMeasure` ignoring
+        // `measure.elements` entirely; now that it reads them, keeping both
+        // copies draws the clef, key and meter TWICE (measured: clefs=2,
+        // keys=2, times=2 on a two-voice import). The pair had to be undone
+        // together.
+        //
+        // Only the LEADING run is hoisted. A clef/key/meter change that comes
+        // after the first rhythmic event is an event in time and stays with the
+        // voice that carries it — hoisting those is exactly the F-01 defect.
+        var lead = 0;
+        while (lead < elements.length && _isSystemElement(elements[lead])) {
+          lead++;
+        }
+        for (var i = 0; i < lead; i++) {
+          _appendElementToMeasure(measure, elements[i]);
+        }
+        elements = elements.sublist(lead);
+      }
+
+      measure.addVoice(Voice(number: number, elements: elements));
     }
     return measure;
   }
@@ -2242,6 +2395,12 @@ Pitch? _musicXmlUnpitchedDisplayPitch(XmlElement noteElement) {
   return Pitch(step: step, octave: octave);
 }
 
+/// Reads `<pitch>` verbatim.
+///
+/// No octave conversion happens here: `Pitch` IS the MusicXML `<pitch>`, i.e.
+/// the pitch as it sounds through the clef (ADR-003). An octave-transposing
+/// clef is honoured on the DRAWING side by `StaffPositionCalculator`, so the
+/// importer has nothing to correct.
 Pitch? _musicXmlPitch(XmlElement noteElement) {
   final pitchElement = noteElement.findElements('pitch').firstOrNull;
   if (pitchElement == null) {
@@ -2252,7 +2411,21 @@ Pitch? _musicXmlPitch(XmlElement noteElement) {
 
   final rawStep = _childText(pitchElement, 'step');
   final octave = _asInt(_childText(pitchElement, 'octave'));
-  if (rawStep == null || octave == null) return null;
+
+  // A <pitch> that exists but is incomplete is malformed input, not a note to
+  // be skipped. Returning null here dropped the note WITHOUT A WORD — the one
+  // malformed-input case that still failed silently after F-10.
+  if (rawStep == null) {
+    throw const FormatException(
+      'MusicXML <pitch> is missing its <step> element',
+    );
+  }
+  if (octave == null) {
+    throw const FormatException(
+      'MusicXML <pitch> is missing a readable <octave> element',
+    );
+  }
+
   final step = _validatePitchStep(rawStep, 'MusicXML <pitch><step>');
   _validatePitchOctave(octave, 'MusicXML <pitch><octave>');
 
@@ -3033,15 +3206,39 @@ class _MeiImportParser {
     }
 
     final measure = MultiVoiceMeasure();
-    for (final element in metadataElements.where(_isSystemElement)) {
-      _appendElementToMeasure(measure, element);
-    }
 
     final voiceNumbers = voices.keys.toList()..sort();
     for (final number in voiceNumbers) {
       final accumulator = voices[number]!;
       accumulator.finishTuplet();
-      measure.addVoice(Voice(number: number, elements: accumulator.elements));
+      var elements = accumulator.elements;
+
+      if (number == voiceNumbers.first) {
+        // The bar's OPENING BLOCK is hoisted into the measure itself, and only
+        // there.
+        //
+        // System elements used to be written to BOTH `metadataElements` (which
+        // became `measure.elements`) and voice 1. That duplication existed to
+        // compensate for `LayoutEngine._layoutMultiVoiceMeasure` ignoring
+        // `measure.elements` entirely; now that it reads them, keeping both
+        // copies draws the clef, key and meter TWICE (measured: clefs=2,
+        // keys=2, times=2 on a two-voice import). The pair had to be undone
+        // together.
+        //
+        // Only the LEADING run is hoisted. A clef/key/meter change that comes
+        // after the first rhythmic event is an event in time and stays with the
+        // voice that carries it — hoisting those is exactly the F-01 defect.
+        var lead = 0;
+        while (lead < elements.length && _isSystemElement(elements[lead])) {
+          lead++;
+        }
+        for (var i = 0; i < lead; i++) {
+          _appendElementToMeasure(measure, elements[i]);
+        }
+        elements = elements.sublist(lead);
+      }
+
+      measure.addVoice(Voice(number: number, elements: elements));
     }
     return measure;
   }
@@ -3245,6 +3442,16 @@ Clef? _meiDefClef(XmlElement def) {
     );
   }
   if (s == 'perc') return Clef(clefType: ClefType.percussion);
+  // MEI `clef.shape="TAB"` (and the older "TAB.lute" family). The staff's own
+  // `lines` attribute decides between the 6- and 4-string forms; a `<staffDef>`
+  // that declares TAB without lines is a guitar tablature by convention.
+  // This used to fall through and return null, so a tablature staff imported
+  // with NO CLEF AT ALL — and a staff with no clef in force places every note
+  // on the baseline.
+  if (s == 'tab' || s.startsWith('tab')) {
+    final lines = _asInt(def.getAttribute('lines'));
+    return Clef(clefType: lines == 4 ? ClefType.tab4 : ClefType.tab6);
+  }
   return null;
 }
 

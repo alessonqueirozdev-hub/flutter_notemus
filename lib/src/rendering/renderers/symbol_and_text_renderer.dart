@@ -8,6 +8,7 @@ import '../../layout/collision_detector.dart'; // CORREÇÃO: Import collision d
 import '../../smufl/smufl_metadata_loader.dart';
 import '../../theme/music_score_theme.dart';
 import '../staff_coordinate_system.dart';
+import '../text_font.dart';
 
 class HairpinGeometry {
   final Offset upperStart;
@@ -31,12 +32,10 @@ class SymbolAndTextRenderer {
   /// SMuFL reference metadata; they are *text* faces, unrelated to the music
   /// font, which is never named here (see BaseGlyphRenderer, "Font
   /// independence") and always comes from `metadata.font`.
-  static const List<String> smuflTextFontFallback = [
-    'Academico',
-    'Century Schoolbook',
-    'Edwin',
-    'serif',
-  ];
+  ///
+  /// Canonical list lives in `lib/src/rendering/text_font.dart` so every text
+  /// site in the package shares one chain; this stays as the published name.
+  static const List<String> smuflTextFontFallback = kMusicTextFontFallback;
 
   final StaffCoordinateSystem coordinates;
   final SmuflMetadata metadata;
@@ -270,14 +269,16 @@ class SymbolAndTextRenderer {
               fontWeight: FontWeight.w600,
               fontFamilyFallback: smuflTextFontFallback,
             ))
-        .copyWith(color: baseColor, fontFamilyFallback: smuflTextFontFallback);
+        .copyWith(color: baseColor, fontFamilyFallback: smuflTextFontFallback)
+        .withMusicTextFallback();
   }
 
   TextStyle _repeatCountStyle() {
     final baseColor = theme.repeatColor ?? theme.noteheadColor;
     return (theme.repeatTextStyle ??
             const TextStyle(fontSize: 16, fontWeight: FontWeight.w700))
-        .copyWith(color: baseColor);
+        .copyWith(color: baseColor)
+        .withMusicTextFallback();
   }
 
   void renderDynamic(
@@ -502,7 +503,8 @@ class SymbolAndTextRenderer {
               (theme.dynamicTextStyle?.fontSize ??
               theme.expressionTextStyle?.fontSize ??
               (glyphSize * fontScale)),
-        );
+        )
+        .withMusicTextFallback();
   }
 
   TextStyle _resolveMusicTextStyle(MusicText text) {
@@ -562,14 +564,16 @@ class SymbolAndTextRenderer {
       fontWeight = FontWeight.w700;
     }
 
-    return baseStyle.copyWith(
-      color: baseStyle.color ?? baseColor,
-      fontFamily: text.fontFamily ?? baseStyle.fontFamily,
-      fontFamilyFallback: smuflTextFontFallback,
-      fontSize: text.fontSize ?? baseStyle.fontSize,
-      fontStyle: fontStyle,
-      fontWeight: fontWeight,
-    );
+    return baseStyle
+        .copyWith(
+          color: baseStyle.color ?? baseColor,
+          fontFamily: text.fontFamily ?? baseStyle.fontFamily,
+          fontFamilyFallback: smuflTextFontFallback,
+          fontSize: text.fontSize ?? baseStyle.fontSize,
+          fontStyle: fontStyle,
+          fontWeight: fontWeight,
+        )
+        .withMusicTextFallback();
   }
 
   double _resolveMusicTextY(MusicText text) {
@@ -774,7 +778,8 @@ class SymbolAndTextRenderer {
         .copyWith(
           color: theme.tempoTextStyle?.color ?? baseColor,
           fontFamilyFallback: smuflTextFontFallback,
-        );
+        )
+        .withMusicTextFallback();
   }
 
   double _tempoMarkCenterY() {

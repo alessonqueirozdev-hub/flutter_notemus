@@ -25,6 +25,7 @@ import 'primitives/flag_renderer.dart';
 import 'primitives/ledger_line_renderer.dart';
 import 'primitives/stem_renderer.dart';
 import 'symbol_and_text_renderer.dart';
+import '../text_font.dart';
 
 class NoteRenderer extends BaseGlyphRenderer {
   final MusicScoreTheme theme;
@@ -343,7 +344,8 @@ class NoteRenderer extends BaseGlyphRenderer {
     );
 
     final painter = TextPainter(
-      text: TextSpan(text: displayText, style: textStyle),
+      text: TextSpan(
+          text: displayText, style: textStyle.withMusicTextFallback()),
       textDirection: TextDirection.ltr,
     )..layout();
 

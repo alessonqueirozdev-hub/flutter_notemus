@@ -115,11 +115,18 @@ class SMuFLPositioningEngine {
     accidentalToNoteheadDistance = 0.25;
     accidentalMinimumClearance = 0.12;
 
-    // Beam angles - based on Behind Bars (conservative values)
-    // Behind Bars recommends relatively flat beams
-    minimumBeamSlant = 0.15; // More subtle minimum angle
-    maximumBeamSlant = 0.5; // Reduced maximum (was 1.0, too steep!)
-    twoNoteBeamMaxSlant = 0.5; // Behind Bars recommended value for 2-note beams
+    // Beam slant - Behind Bars pp.19-25, via [kBeamSlantByDiatonicStep].
+    //
+    // These three were tuned by eye against the package's own screenshots and
+    // ended up encoding only the DIRECTION of the melodic line, not its size:
+    // `maximumBeamSlant` was 0.5 ("was 1.0, too steep!") and `BeamAnalyzer`
+    // clamped pairs to 0.25 to match "the stable beam showcase examples".
+    // Measured: an ascending 2nd, an ascending 6th and a TWO-OCTAVE leap all
+    // produced a slant of exactly 0.25 staff spaces. They are kept as the floor
+    // and the ceiling of the real table.
+    minimumBeamSlant = 0.25;
+    maximumBeamSlant = 2.0;
+    twoNoteBeamMaxSlant = 2.0;
 
     // Ornaments and articulations - standard typographic values
     articulationToNoteDistance = 0.5;
@@ -393,6 +400,31 @@ class SMuFLPositioningEngine {
 
   /// Calculates the angle of a beam based on note positions.
   /// Follows the rules of Ted Ross and Elaine Gould.
+  /// Beam slant, in staff spaces, for the interval between the FIRST and LAST
+  /// note of a beam group (Gould, *Behind Bars*, pp. 19-25).
+  ///
+  /// Indexed by the diatonic interval in steps: 0 = unison, 1 = 2nd, 2 = 3rd,
+  /// … 7 = octave. Anything wider than an octave uses the last entry. One staff
+  /// position is one diatonic step, so the index is `|lastPos - firstPos|`.
+  ///
+  /// This replaces a linear interpolation between two eyeballed constants
+  /// (`minimumBeamSlant = 0.15`, `maximumBeamSlant = 0.5`, the latter carrying
+  /// the comment "was 1.0, too steep!") plus a separate clamp of 0.25 for
+  /// two-note groups in `BeamAnalyzer`, justified in its own comment as
+  /// matching "the stable beam showcase examples". Between them they encoded
+  /// only the DIRECTION of the line: measured, an ascending 2nd, an ascending
+  /// 6th and a two-octave leap all produced a slant of exactly 0.25 spaces.
+  static const List<double> kBeamSlantByDiatonicStep = <double>[
+    0.00, // unison — a flat beam
+    0.25, // 2nd
+    0.50, // 3rd
+    1.00, // 4th
+    1.00, // 5th
+    1.25, // 6th
+    1.25, // 7th
+    1.50, // octave or wider
+  ];
+
   double calculateBeamAngle({
     required List<int> noteStaffPositions,
     required bool stemUp,
@@ -402,32 +434,18 @@ class SMuFLPositioningEngine {
     final int firstPos = noteStaffPositions.first;
     final int lastPos = noteStaffPositions.last;
     final int positionDifference = (lastPos - firstPos).abs();
+    if (positionDifference == 0) return 0.0;
 
-    // For only two notes, limit the angle
-    if (noteStaffPositions.length == 2) {
-      final double slant = (positionDifference * 0.5).clamp(
-        0.0,
-        twoNoteBeamMaxSlant,
-      );
-      return stemUp
-          ? (lastPos > firstPos ? slant : -slant)
-          : (lastPos > firstPos ? -slant : slant);
-    }
+    final index = positionDifference >= kBeamSlantByDiatonicStep.length
+        ? kBeamSlantByDiatonicStep.length - 1
+        : positionDifference;
+    double slant = kBeamSlantByDiatonicStep[index];
 
-    // For multiple notes, calculate the angle based on position difference
-    double slant;
-    if (positionDifference <= 1) {
-      slant = minimumBeamSlant;
-    } else if (positionDifference >= 7) {
-      slant = maximumBeamSlant;
-    } else {
-      // Linear interpolation between min and max
-      slant =
-          minimumBeamSlant +
-          (positionDifference - 1) * (maximumBeamSlant - minimumBeamSlant) / 6;
-    }
-
-    slant = slant.clamp(minimumBeamSlant, maximumBeamSlant);
+    // A pair carries the same slant as any other group of the same interval;
+    // Behind Bars gives two-note beams no separate table.
+    final ceiling =
+        noteStaffPositions.length == 2 ? twoNoteBeamMaxSlant : maximumBeamSlant;
+    slant = slant.clamp(minimumBeamSlant, ceiling);
 
     return stemUp
         ? (lastPos > firstPos ? slant : -slant)

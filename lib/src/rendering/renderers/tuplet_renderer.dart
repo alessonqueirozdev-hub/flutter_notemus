@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../../core/core.dart';
+import '../../layout/tuplet_grid.dart';
 import '../../theme/music_score_theme.dart';
 import '../smufl_positioning_engine.dart';
 import '../staff_position_calculator.dart';
@@ -41,11 +42,15 @@ class TupletRenderer extends BaseGlyphRenderer {
     Clef currentClef,
   ) {
     double currentX = basePosition.dx;
-    final spacing = coordinates.staffSpace * 2.5;
-    // The layout engine mirrors this same grid in `_registerTupletGeometry`, so
-    // beams, accidental decisions and the public position API all agree on
-    // where a tuplet's inner notes are. Keep the two in step: if you change the
-    // grid here, change `LayoutEngine.tupletInnerSpacing` too.
+    // Slot widths come from [TupletGrid], the SAME source `LayoutEngine` reads
+    // when it registers the inner notes' geometry — so beams, accidental
+    // decisions, hit-testing and the drawing cannot drift apart.
+    //
+    // The grid used to be a flat `staffSpace * 2.5` per child, duplicated here
+    // and in the engine. A quarter and an eighth inside one triplet received
+    // exactly the same 30.00 px.
+    double slotOf(MusicalElement element) =>
+        TupletGrid.slotWidth(element, coordinates.staffSpace);
 
     final allPositions = <Offset>[];
     final noteOnlyPositions = <Offset>[];
@@ -83,7 +88,7 @@ class TupletRenderer extends BaseGlyphRenderer {
         notes.add(element);
         spanStartX ??= currentX;
         spanEndX = currentX + noteHeadWidth;
-        currentX += spacing;
+        currentX += slotOf(element);
       } else if (element is Rest) {
         final restAnchorX = resolveTupletElementAnchorX(
           element: element,
@@ -98,7 +103,7 @@ class TupletRenderer extends BaseGlyphRenderer {
         allPositions.add(Offset(restAnchorX, basePosition.dy));
         spanStartX ??= restAnchorX - (noteHeadWidth * 0.5);
         spanEndX = restAnchorX + (noteHeadWidth * 0.5);
-        currentX += spacing;
+        currentX += slotOf(element);
       } else if (element is Chord) {
         // A chord inside a tuplet used to fall through every branch and simply
         // NOT BE DRAWN — silent loss of music, not just of a symbol.
@@ -134,13 +139,13 @@ class TupletRenderer extends BaseGlyphRenderer {
         }
         spanStartX ??= currentX;
         spanEndX = currentX + noteHeadWidth;
-        currentX += spacing;
+        currentX += slotOf(element);
       } else if (element is Tuplet) {
         // Nested tuplet (e.g. a triplet inside a quintuplet). It used to be
         // skipped entirely; now it is drawn recursively and its own bracket and
         // ratio number are placed by this same routine one level down.
         render(canvas, element, Offset(currentX, basePosition.dy), currentClef);
-        final innerWidth = element.elements.length * spacing;
+        final innerWidth = TupletGrid.totalWidth(element, coordinates.staffSpace);
         allPositions.add(
           Offset(currentX + innerWidth / 2, basePosition.dy),
         );
@@ -477,7 +482,12 @@ class TupletRenderer extends BaseGlyphRenderer {
       );
     });
 
-    final beamCount = _resolveBeamCount(notes.first.duration.type);
+    // Beam HEIGHT still uses the deepest level in the group, so the beam stack
+    // clears the noteheads; which levels actually get drawn is decided per note
+    // further down.
+    final beamCount = notes
+        .map((note) => beamCountFor(note.duration.type))
+        .reduce((a, b) => a > b ? a : b);
     final staffPositions = notePositions
         .map((position) => coordinates.getStaffPosition(position.dy))
         .toList();
@@ -517,22 +527,64 @@ class TupletRenderer extends BaseGlyphRenderer {
       return beamBaseY + (beamSlope * (x - firstStemX));
     }
 
-    for (int level = 0; level < beamCount; level++) {
+    // Beam levels are decided PER NOTE, not by the first note of the group.
+    //
+    // `beamCount` used to be `_resolveBeamCount(notes.first.duration.type)` and
+    // was applied to the whole span, so an eighth followed by two sixteenths
+    // drew ONE beam and the secondary beam of the sixteenths simply vanished —
+    // while the same figure outside a tuplet, which goes through `BeamAnalyzer`,
+    // got it right. Level 1 spans the whole group; each higher level is drawn
+    // only across the runs of adjacent notes that actually need it, with a
+    // fractional stub for a run of one (Behind Bars p.30).
+    final levels = <int>[
+      for (final note in notes) beamCountFor(note.duration.type),
+    ];
+    final maxLevel = levels.reduce((a, b) => a > b ? a : b);
+
+    void drawBeamRun(int level, double startX, double endX) {
       final yOffset = stemUp ? (level * beamSpacing) : -(level * beamSpacing);
-      final startX = firstStemX;
-      final endX = lastStemX;
       final startY = getBeamY(startX) + yOffset;
       final endY = getBeamY(endX) + yOffset;
-
       final thicknessDirection = stemUp ? beamThickness : -beamThickness;
-      final path = Path()
-        ..moveTo(startX, startY)
-        ..lineTo(endX, endY)
-        ..lineTo(endX, endY + thicknessDirection)
-        ..lineTo(startX, startY + thicknessDirection)
-        ..close();
+      canvas.drawPath(
+        Path()
+          ..moveTo(startX, startY)
+          ..lineTo(endX, endY)
+          ..lineTo(endX, endY + thicknessDirection)
+          ..lineTo(startX, startY + thicknessDirection)
+          ..close(),
+        paint,
+      );
+    }
 
-      canvas.drawPath(path, paint);
+    // Primary beam: the whole group.
+    drawBeamRun(0, firstStemX, lastStemX);
+
+    final stubLength = coordinates.staffSpace * 1.0;
+    for (int level = 1; level < maxLevel; level++) {
+      var runStart = -1;
+      for (var i = 0; i <= levels.length; i++) {
+        final inRun = i < levels.length && levels[i] > level;
+        if (inRun && runStart < 0) {
+          runStart = i;
+        } else if (!inRun && runStart >= 0) {
+          final last = i - 1;
+          if (last > runStart) {
+            drawBeamRun(level, stemXs[runStart], stemXs[last]);
+          } else {
+            // A lone shorter note carries a fractional beam pointing INTO the
+            // group (towards the neighbour it belongs to rhythmically).
+            final x = stemXs[runStart];
+            final pointsRight = runStart == 0;
+            drawBeamRun(
+              level,
+              pointsRight ? x : x - stubLength,
+              pointsRight ? x + stubLength : x,
+            );
+          }
+          runStart = -1;
+        }
+      }
     }
 
     final stemPaint = Paint()
@@ -560,15 +612,24 @@ class TupletRenderer extends BaseGlyphRenderer {
     }
   }
 
-  int _resolveBeamCount(DurationType durationType) {
+  /// Number of beams a single duration needs.
+  static int beamCountFor(DurationType durationType) {
     return switch (durationType) {
       DurationType.eighth => 1,
       DurationType.sixteenth => 2,
       DurationType.thirtySecond => 3,
       DurationType.sixtyFourth => 4,
+      DurationType.oneHundredTwentyEighth => 5,
+      DurationType.twoHundredFiftySixth => 6,
+      DurationType.fiveHundredTwelfth => 7,
+      DurationType.thousandTwentyFourth => 8,
+      DurationType.twoThousandFortyEighth => 9,
       _ => 1,
     };
   }
+
+  int _resolveBeamCount(DurationType durationType) =>
+      beamCountFor(durationType);
 
   /// Assigns beam membership to the notes of a tuplet **in place**.
   ///

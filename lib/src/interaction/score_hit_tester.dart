@@ -114,41 +114,149 @@ class ScoreHitTester {
     this.engine,
   });
 
-  /// Box a given element occupies. Musical elements get a notehead-tall box
-  /// centred on their notehead; staff furniture spans the full staff height.
+  /// Standard stem length, in staff spaces (Behind Bars p.13).
+  static const double _stemLengthSpaces = 3.5;
+
+  /// Extra reach of a flag past the end of the stem, in staff spaces.
+  static const double _flagReachSpaces = 0.6;
+
+  /// Half-height of a notehead, in staff spaces.
+  static const double _noteheadHalfSpaces = 0.7;
+
+  /// Box a given element occupies, derived from what is actually DRAWN.
+  ///
+  /// The box used to be an independent estimate and it was wrong in three ways
+  /// a user could feel:
+  ///
+  /// * it was `elementWidth` wide starting at `x`, but `elementWidth` INCLUDES
+  ///   the accidental, which is drawn to the LEFT of the notehead — so the box
+  ///   was about an accidental too wide on the right and an accidental short on
+  ///   the left, and clicking an accidental selected nothing;
+  /// * it was one notehead tall, so the STEM and the flag were outside it;
+  /// * for a [Chord] it was centred on `position.dy`, which for a chord is the
+  ///   STAFF BASELINE and not the noteheads. A C6-E6-G6 chord got a box drawn
+  ///   around the staff while its noteheads sat far above: clicking exactly on
+  ///   a notehead returned null.
+  ///
+  /// Everything below now comes from the same numbers the renderers use —
+  /// `LayoutEngine.noteYPositions` for where a notehead really is,
+  /// `noteStaffPositions` for stem direction, and the engine's own left/right
+  /// extents for the horizontal span.
   Rect boundsOf(PositionedElement positioned) {
     final element = positioned.element;
-    final width = engine?.elementWidth(element) ?? staffSpace * 1.2;
     final x = positioned.position.dx;
-    final y = positioned.position.dy;
+    final air = staffSpace * 0.2;
 
-    if (element is Note || element is Chord) {
-      // Chords are anchored on the staff baseline, notes on their notehead.
-      final height =
-          element is Chord ? staffSpace * 6 : staffSpace * 1.4;
-      return Rect.fromLTWH(
-        x - staffSpace * 0.2,
-        y - height / 2,
-        width + staffSpace * 0.4,
-        height,
+    if (element is Note) {
+      final span = _horizontalSpan(element, x);
+      final y = engine?.noteYPositions[element] ?? positioned.position.dy;
+      final vertical = _verticalSpan(
+        highestNoteY: y,
+        lowestNoteY: y,
+        stemUp: _stemPointsUp([element]),
+        duration: element.duration.type,
+        hasBeamOrFlag: element.duration.type.value <= 0.125,
       );
+      return Rect.fromLTRB(span.left, vertical.top, span.right, vertical.bottom);
     }
+
+    if (element is Chord) {
+      final span = _horizontalSpan(element, x);
+      var highest = double.infinity;
+      var lowest = double.negativeInfinity;
+      for (final note in element.notes) {
+        final y = engine?.noteYPositions[note];
+        if (y == null) continue;
+        if (y < highest) highest = y;
+        if (y > lowest) lowest = y;
+      }
+      if (!highest.isFinite || !lowest.isFinite) {
+        // No geometry registered (a chord laid out with no clef in force):
+        // fall back to the staff, which is the only thing we know.
+        highest = positioned.staffBaselineY - staffSpace * 2;
+        lowest = positioned.staffBaselineY + staffSpace * 2;
+      }
+      final vertical = _verticalSpan(
+        highestNoteY: highest,
+        lowestNoteY: lowest,
+        stemUp: _stemPointsUp(element.notes),
+        duration: element.duration.type,
+        hasBeamOrFlag: element.duration.type.value <= 0.125,
+      );
+      return Rect.fromLTRB(span.left, vertical.top, span.right, vertical.bottom);
+    }
+
+    final width = engine?.elementWidth(element) ?? staffSpace * 1.2;
     if (element is Rest) {
       return Rect.fromLTWH(
-        x - staffSpace * 0.2,
-        y - staffSpace * 2,
-        width + staffSpace * 0.4,
+        x - air,
+        positioned.position.dy - staffSpace * 2,
+        width + air * 2,
         staffSpace * 4,
       );
     }
+
     // Clefs, key/time signatures, barlines, brackets: full staff height plus a
-    // little air above and below.
+    // little air above and below, measured from the staff this element sits on.
     return Rect.fromLTWH(
-      x - staffSpace * 0.2,
-      y - staffSpace * 3,
-      width + staffSpace * 0.4,
+      x - air,
+      positioned.position.dy - staffSpace * 3,
+      width + air * 2,
       staffSpace * 6,
     );
+  }
+
+  /// Horizontal reach of a note or chord: the accidental hangs to the LEFT of
+  /// the origin, the notehead and its dots to the right.
+  ({double left, double right}) _horizontalSpan(
+    MusicalElement element,
+    double x,
+  ) {
+    final air = staffSpace * 0.2;
+    final total = engine?.elementWidth(element) ?? staffSpace * 1.2;
+    final left = engine?.elementLeftExtent(element) ?? 0.0;
+    return (left: x - left - air, right: x + (total - left) + air);
+  }
+
+  /// Stem direction under Behind Bars' rule: the note furthest from the middle
+  /// line decides, and the middle line itself takes a downward stem.
+  bool _stemPointsUp(List<Note> notes) {
+    final positions = engine?.noteStaffPositions;
+    if (positions == null) return true;
+    var furthest = 0;
+    var seen = false;
+    for (final note in notes) {
+      final p = positions[note];
+      if (p == null) continue;
+      if (!seen || p.abs() > furthest.abs()) {
+        furthest = p;
+        seen = true;
+      }
+    }
+    return seen ? furthest < 0 : true;
+  }
+
+  ({double top, double bottom}) _verticalSpan({
+    required double highestNoteY,
+    required double lowestNoteY,
+    required bool stemUp,
+    required DurationType duration,
+    required bool hasBeamOrFlag,
+  }) {
+    var top = highestNoteY - staffSpace * _noteheadHalfSpaces;
+    var bottom = lowestNoteY + staffSpace * _noteheadHalfSpaces;
+
+    // A whole note or breve carries no stem.
+    if (duration.value >= 1.0) return (top: top, bottom: bottom);
+
+    final reach =
+        staffSpace * (_stemLengthSpaces + (hasBeamOrFlag ? _flagReachSpaces : 0));
+    if (stemUp) {
+      top = highestNoteY - reach;
+    } else {
+      bottom = lowestNoteY + reach;
+    }
+    return (top: top, bottom: bottom);
   }
 
   /// Nearest element to [point], or null when nothing is within [tolerance]

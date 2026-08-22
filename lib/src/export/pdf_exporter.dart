@@ -257,6 +257,31 @@ class PdfExporter {
         groupIndex < score.staffGroups.length;
         groupIndex++) {
       final group = score.staffGroups[groupIndex];
+
+      // A group of two or more staves is ONE instrument on a braced system, not
+      // a sequence of independent staves.
+      //
+      // This loop used to rasterize each staff separately through the
+      // single-staff path, so a piano part was exported as two one-line staves
+      // with headings: no brace, no system barlines, hands not aligned. The
+      // grand-staff path reuses `GrandStaffPainter`, the same painter the
+      // widget draws with, so the page and the screen agree by construction.
+      if (group.staves.length > 1) {
+        final added = await _addGrandStaffPages(
+          pdf,
+          group: group,
+          metadata: resolvedMetadata,
+          heading: group.name,
+          label: group.name ?? 'Group ${groupIndex + 1}',
+          layoutWidth: layoutWidth,
+          usableWidth: usableWidth,
+          usableHeight: usableHeight,
+          pixelRatio: pixelRatio,
+        );
+        addedAnyPage = addedAnyPage || added;
+        continue;
+      }
+
       for (var staffIndex = 0; staffIndex < group.staves.length; staffIndex++) {
         final added = await _addStaffPages(
           pdf,
@@ -274,6 +299,78 @@ class PdfExporter {
     }
 
     return addedAnyPage;
+  }
+
+  /// Engraves a multi-staff [group] as a braced grand staff and appends it.
+  ///
+  /// The whole group is rendered in one image so the brace, the system barlines
+  /// and the shared horizontal time grid survive into the PDF.
+  Future<bool> _addGrandStaffPages(
+    pw.Document pdf, {
+    required StaffGroup group,
+    required SmuflMetadata metadata,
+    required String? heading,
+    required String label,
+    required double layoutWidth,
+    required double usableWidth,
+    required double usableHeight,
+    required double pixelRatio,
+  }) async {
+    final page = await ScoreRasterizer.renderGroupToPage(
+      group: group,
+      metadata: metadata,
+      width: layoutWidth,
+      staffSpace: staffSpace,
+      theme: theme,
+      pixelRatio: pixelRatio,
+    );
+    if (page == null) {
+      warnings.add(
+        '$label could not be rasterized. Rendering notation to PDF requires a '
+        'live Flutter engine (a running app or flutter_test); it is not '
+        'available in a plain Dart VM.',
+      );
+      return false;
+    }
+
+    final scale = usableWidth / page.logicalWidth;
+    final headingHeight = heading == null ? 0.0 : 22.0;
+    final imageHeight = math.min(
+      page.logicalHeight * scale,
+      usableHeight - headingHeight,
+    );
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: pageFormat,
+        build: (context) => pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          mainAxisAlignment: pw.MainAxisAlignment.start,
+          children: [
+            if (heading != null)
+              pw.Container(
+                height: headingHeight,
+                alignment: pw.Alignment.centerLeft,
+                child: pw.Text(
+                  heading,
+                  style: pw.TextStyle(
+                    fontSize: 14,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+              ),
+            pw.Image(
+              pw.MemoryImage(page.pngBytes),
+              width: usableWidth,
+              height: imageHeight,
+              fit: pw.BoxFit.fitWidth,
+              alignment: pw.Alignment.topLeft,
+            ),
+          ],
+        ),
+      ),
+    );
+    return true;
   }
 
   /// Engraves one [staff] and appends its pages to [pdf].

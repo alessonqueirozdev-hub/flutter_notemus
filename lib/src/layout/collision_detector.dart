@@ -333,12 +333,11 @@ class CollisionDetector {
       );
 
       // add elemento otimizado
-      final optimizedElement = PositionedElement(
-        element.element,
-        newPosition,
-        system: element.system,
-      );
-      optimized.add(optimizedElement);
+      //
+      // `movedTo` keeps voice, onset, measure index and staff baseline; the
+      // hand-written copy this replaced dropped all four, so anything routed
+      // through the collision optimiser lost its selection metadata.
+      optimized.add(element.movedTo(newPosition));
 
       // Registrar região ocupada
       registerElement(

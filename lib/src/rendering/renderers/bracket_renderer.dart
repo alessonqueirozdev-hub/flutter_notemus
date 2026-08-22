@@ -5,6 +5,7 @@ import '../../../core/staff_group.dart';
 import '../../smufl/smufl_metadata_loader.dart';
 import '../staff_coordinate_system.dart';
 import '../../theme/music_score_theme.dart';
+import '../text_font.dart';
 
 /// Renderer for staff group brackets and braces
 ///
@@ -93,15 +94,16 @@ class BracketRenderer {
     final textPainter = TextPainter(
       text: TextSpan(
         text: name,
-        style: theme.textStyle?.copyWith(
-              fontSize: coordinates.staffSpace * 1.2,
-              fontWeight: FontWeight.w500,
-            ) ??
-            TextStyle(
-              fontSize: coordinates.staffSpace * 1.2,
-              fontWeight: FontWeight.w500,
-              color: theme.textColor,
-            ),
+        style: (theme.textStyle?.copyWith(
+                  fontSize: coordinates.staffSpace * 1.2,
+                  fontWeight: FontWeight.w500,
+                ) ??
+                TextStyle(
+                  fontSize: coordinates.staffSpace * 1.2,
+                  fontWeight: FontWeight.w500,
+                  color: theme.textColor,
+                ))
+            .withMusicTextFallback(),
       ),
       textDirection: TextDirection.ltr,
     );

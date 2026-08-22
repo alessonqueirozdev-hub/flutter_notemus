@@ -291,19 +291,43 @@ void main() {
       final measure = staff.measures.single as MultiVoiceMeasure;
 
       expect(measure.voiceCount, 2);
+
+      // The bar's OPENING BLOCK belongs to the MEASURE, not to voice 1, and it
+      // is stored exactly once.
+      //
+      // This used to assert that voice 1 carried the clef, key and meter — and
+      // it did, but so did `measure.elements`: the parser wrote every system
+      // element twice. That duplication was invisible only because
+      // `LayoutEngine._layoutMultiVoiceMeasure` ignored `measure.elements`
+      // altogether. Once the layout started reading them the clef, key and
+      // meter were drawn twice (measured: clefs=2, keys=2, times=2), so the
+      // parser stopped duplicating and this expectation moved with it.
       expect(
-        measure.voice1!.elements.whereType<Clef>().single.actualClefType,
+        measure.elements.whereType<Clef>().single.actualClefType,
         ClefType.treble,
       );
+      expect(measure.elements.whereType<KeySignature>().single.count, 2);
       expect(
-        measure.voice1!.elements.whereType<KeySignature>().single.count,
-        2,
-      );
-      expect(
-        measure.voice1!.elements.whereType<TimeSignature>().single.denominator,
+        measure.elements.whereType<TimeSignature>().single.denominator,
         4,
       );
-      expect(measure.voice1!.elements.whereType<TempoMark>().single.bpm, 104);
+      expect(
+        measure.voice1!.elements.whereType<Clef>(),
+        isEmpty,
+        reason: 'the opening clef must not be duplicated into voice 1',
+      );
+      expect(measure.voice1!.elements.whereType<KeySignature>(), isEmpty);
+      expect(measure.voice1!.elements.whereType<TimeSignature>(), isEmpty);
+
+      // `allElements` still sees the whole bar, opening block included.
+      expect(measure.allElements.whereType<Clef>(), hasLength(1));
+
+      // A tempo mark at the head of the bar is system-level too (the parser's
+      // `_isSystemElement` counts it), so it rides with the opening block
+      // rather than with a voice. It is still reachable through `allElements`,
+      // which is the one iteration path documented to see everything.
+      expect(measure.allElements.whereType<TempoMark>().single.bpm, 104);
+      expect(measure.allElements.whereType<TempoMark>(), hasLength(1));
       expect(
         measure.voice1!.elements.whereType<Dynamic>().single.type,
         DynamicType.mf,

@@ -61,7 +61,7 @@ void main() {
       }
     });
 
-    test('keeps legacy beam rendering for groups without time signature', () {
+    test('analyses beam geometry even without an explicit time signature', () {
       final measure = Measure()
         ..add(Clef(clefType: ClefType.treble))
         ..add(
@@ -95,7 +95,19 @@ void main() {
 
       engine.layoutWithSignature();
 
-      expect(engine.advancedBeamGroups, isEmpty);
+      // This used to assert `isEmpty`, pinning finding N-09: `_analyzeBeamGroups`
+      // returned early when the measure declared no meter, so the beams that
+      // `_processBeamsWithAnacrusis` had already stamped (it defaults to 4/4)
+      // got NO geometry - no stem lengths, no slope, no secondary segments -
+      // and `StaffRenderer` fell through to the crude fallback drawer. The
+      // README's own quick-start snippet takes exactly this path.
+      expect(engine.advancedBeamGroups, hasLength(1));
+      expect(engine.advancedBeamGroups.single.notes, hasLength(3));
+      expect(
+        engine.advancedBeamGroups.single.beamSegments,
+        isNotEmpty,
+        reason: 'a beamed group must carry at least its primary beam segment',
+      );
     });
 
     test('creates advanced beam groups when time signature is present', () {

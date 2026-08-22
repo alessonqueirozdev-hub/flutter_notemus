@@ -22,12 +22,16 @@ import 'midi_models.dart';
 
 /// Converts a [Staff]/[Score] into a playable [MidiSequence].
 ///
-/// Octave-transposing clefs (8va/8vb/15ma/15mb): `Pitch.octave` is the WRITTEN
-/// octave; the active [Clef]'s `octaveShift` is applied to obtain the SOUNDING
-/// pitch. This mirrors StaffPositionCalculator, which places notes by written
-/// octave. The active clef is tracked in element order, so a mid-measure clef
-/// change takes effect from that element on; when no clef has been declared no
-/// shift is applied.
+/// Pitch convention (ADR-003): [Pitch] is the SOUNDING pitch, exactly as
+/// MusicXML `<pitch>`, MEI `@pname`/`@oct` and MIDI mean it.
+///
+/// Octave-transposing clefs (8va/8vb/15ma/15mb) change only where a note is
+/// PRINTED and are handled by `StaffPositionCalculator`; applying them here as
+/// well made every imported tenor part sound an octave low (N-15).
+///
+/// Instrument transposition (`Staff.transposition`, MusicXML `<transpose>`) IS
+/// applied here: it is the one offset that separates a written note from the
+/// note it sounds.
 class MidiMapper {
   static MidiSequence fromStaff(
     Staff staff, {
@@ -262,6 +266,7 @@ _TrackBuildResult _buildTrackFromStaff({
     baseVelocity: instrument.velocity,
     staffAudible: staffAudible,
     onlyVoice: onlyVoice,
+    transposition: staff.transposition,
   );
 
   builder.events.add(
@@ -306,7 +311,12 @@ class _TrackEventBuilder {
     required this.baseVelocity,
     this.staffAudible = true,
     this.onlyVoice,
+    this.transposition,
   });
+
+  /// Written-to-sounding transposition of the instrument on this staff
+  /// (MusicXML `<transpose>`), or null at concert pitch.
+  final Transposition? transposition;
 
   final int channel;
   final int baseVelocity;
@@ -328,8 +338,13 @@ class _TrackEventBuilder {
   final Map<_TieKey, _TieState> _openTies = <_TieKey, _TieState>{};
 
   /// Clef in force at the current element, tracked in reading order (a clef may
-  /// change mid-measure). Null while no clef has been declared, in which case
-  /// no octave transposition is applied.
+  /// change mid-measure).
+  ///
+  /// Playback no longer derives pitch from it (see the class dartdoc), but the
+  /// tracking is kept because percussion mapping and staff-line-addressed
+  /// instruments need clef context, and re-deriving it later would mean walking
+  /// the measure twice.
+  // ignore: unused_field
   Clef? _activeClef;
 
   /// Deduplicates the out-of-range warnings (a repeated section would otherwise
@@ -347,14 +362,24 @@ class _TrackEventBuilder {
   /// Converts a WRITTEN [pitch] into the SOUNDING MIDI number by applying the
   /// active clef's octave transposition (8va/8vb/15ma/15mb), clamped to 0..127.
   int _soundingMidi(Pitch pitch) {
-    final clef = _activeClef;
-    final shift = clef?.octaveShift ?? 0;
-    final raw = pitch.midiNumber + shift * 12;
+    // The CLEF's octave shift is deliberately NOT applied here.
+    //
+    // [Pitch] is the sounding pitch (ADR-003), so an 8va/8vb clef is already
+    // accounted for; it only changes where the note is PRINTED, which is
+    // `StaffPositionCalculator`'s job. Applying it again here was the second
+    // half of finding N-15: an imported tenor part sounded an octave low.
+    //
+    // The INSTRUMENT's transposition is a different axis and does belong here:
+    // a B-flat clarinet's written C4 sounds B-flat 3. That declaration used to
+    // be parsed into `Score.metadata` and read by nobody —
+    // `applyMusicXmlTransposition` was never called anywhere in the package.
+    final instrument = transposition?.semitones ?? 0;
+    final raw = pitch.midiNumber + instrument;
     final clamped = raw.clamp(0, 127);
-    if (shift != 0 && raw != clamped) {
+    if (instrument != 0 && raw != clamped) {
       final warning =
-          'Note $pitch in ${_clefLabel(clef!)} transposes out of MIDI range; '
-          'clamped.';
+          'Note $pitch transposed by $instrument semitones falls outside the '
+          'MIDI range; clamped.';
       if (_reportedWarnings.add(warning)) warnings.add(warning);
     }
     return clamped;
@@ -882,25 +907,6 @@ class _TrackEventBuilder {
   }
 }
 
-/// Name of a clef for warning messages, e.g. `treble8vb`.
-///
-/// [Clef.actualClefType] already drops the octave marker of the G/F clefs, but
-/// keeps it for `c8vb`, so the base name is normalised before the marker of the
-/// current [Clef.octaveShift] is appended.
-String _clefLabel(Clef clef) {
-  final base = clef.actualClefType.name.replaceAll(
-    RegExp(r'(8va|8vb|15ma|15mb)$'),
-    '',
-  );
-  final suffix = switch (clef.octaveShift) {
-    2 => '15ma',
-    1 => '8va',
-    -1 => '8vb',
-    -2 => '15mb',
-    _ => '',
-  };
-  return '$base$suffix';
-}
 
 /// Duration "gate" fraction for an articulation (how much of the written
 /// duration actually sounds): staccato shortens, tenuto is near-full.

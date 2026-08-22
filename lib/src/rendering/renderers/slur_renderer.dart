@@ -392,6 +392,7 @@ class SlurRenderer {
     final right = <int, double>{};
     final musicLeft = <int, double>{};
     final barlineRight = <int, double>{};
+    final headerRight = <int, double>{};
 
     for (final positioned in positions) {
       final system = positioned.system;
@@ -410,6 +411,10 @@ class SlurRenderer {
         final known = musicLeft[system];
         musicLeft[system] = known == null ? x : math.min(known, x);
       }
+      if (element is Clef || element is KeySignature || element is TimeSignature) {
+        final known = headerRight[system];
+        headerRight[system] = known == null ? x : math.max(known, x);
+      }
     }
 
     return {
@@ -421,6 +426,7 @@ class SlurRenderer {
             barlineRight[system] ?? right[system]!,
           ),
           musicLeft: musicLeft[system] ?? left[system]!,
+          headerRight: headerRight[system] ?? left[system]!,
         ),
     };
   }
@@ -439,12 +445,28 @@ class SlurRenderer {
     if (extent == null) {
       return anchorX - staffSpace * 1.5;
     }
-    final lead = math.max(
-      extent.left,
-      extent.musicLeft - (systemBreakLeadInSpaces * staffSpace),
-    );
+
+    // The lead-in must start in the GAP between the system's header (restated
+    // clef, key signature, meter) and its first note — never at the header's
+    // own left edge.
+    //
+    // It used to be `max(extent.left, musicLeft - leadIn)`, and `extent.left`
+    // is the X of the restated CLEF. Whenever the header was wider than
+    // `systemBreakLeadInSpaces`, the max picked the clef's own origin and the
+    // curve was drawn straight through the clef glyph. Visible in any
+    // rasterised multi-system score with a tie across the break.
+    //
+    // Anchoring at the midpoint of the header-to-note gap is self-normalising:
+    // `musicLeft` is by construction already clear of the header, so half of
+    // that gap always is too, however wide the header happens to be.
+    final headerGap = extent.musicLeft - extent.headerRight;
+    final leadIn = headerGap > 0
+        ? math.min(systemBreakLeadInSpaces * staffSpace, headerGap * 0.5)
+        : systemBreakLeadInSpaces * staffSpace;
+    final lead = extent.musicLeft - leadIn;
+
     // Degenerate case: the closing note IS the leftmost element of the system,
-    // so there is no clef to start after — fall back to a fixed lead-in.
+    // so there is no header to start after — fall back to a fixed lead-in.
     return (anchorX - lead) < staffSpace ? anchorX - staffSpace * 1.5 : lead;
   }
 
@@ -1263,10 +1285,15 @@ class _SystemExtent {
   /// X of the first note/chord/rest, i.e. where the clef/key restatement ends.
   final double musicLeft;
 
+  /// X of the RIGHTMOST system element (clef, key signature or meter) of this
+  /// system — the head of the gap a cross-system slur may lead in through.
+  final double headerRight;
+
   const _SystemExtent({
     required this.left,
     required this.right,
     required this.musicLeft,
+    required this.headerRight,
   });
 }
 

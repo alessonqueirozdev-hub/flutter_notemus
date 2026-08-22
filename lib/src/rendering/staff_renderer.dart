@@ -27,6 +27,7 @@ import 'renderers/tuplet_renderer.dart';
 import 'smufl_positioning_engine.dart';
 import 'staff_coordinate_system.dart';
 import 'staff_position_calculator.dart';
+import 'text_font.dart';
 
 class StaffRenderer {
   // CONSTANTES DE AJUSTE MANUAL
@@ -411,7 +412,8 @@ class StaffRenderer {
 
     double measure(String text, bool italic) {
       final tp = TextPainter(
-        text: TextSpan(text: text, style: styleFor(italic)),
+        text: TextSpan(
+            text: text, style: styleFor(italic).withMusicTextFallback()),
         textDirection: TextDirection.ltr,
       )..layout();
       return tp.width;
@@ -434,7 +436,9 @@ class StaffRenderer {
             final midX = (prevRight + curLeft) / 2;
             final lyricY = firstLineY + verse * lineHeight;
             final hp = TextPainter(
-              text: TextSpan(text: '-', style: styleFor(prevSyl.italic)),
+              text: TextSpan(
+                  text: '-',
+                  style: styleFor(prevSyl.italic).withMusicTextFallback()),
               textDirection: TextDirection.ltr,
             )..layout();
             hp.paint(
@@ -479,11 +483,14 @@ class StaffRenderer {
       final tp = TextPainter(
         text: TextSpan(
           text: text,
-          style: base.copyWith(
-            fontSize: base.fontSize ?? fontSize,
-            fontStyle:
-                italic ? FontStyle.italic : (base.fontStyle ?? FontStyle.normal),
-          ),
+          style: base
+              .copyWith(
+                fontSize: base.fontSize ?? fontSize,
+                fontStyle: italic
+                    ? FontStyle.italic
+                    : (base.fontStyle ?? FontStyle.normal),
+              )
+              .withMusicTextFallback(),
         ),
         textDirection: TextDirection.ltr,
       )..layout();
@@ -634,7 +641,8 @@ class StaffRenderer {
               color: theme.ornamentColor ?? theme.noteheadColor,
             );
         final label = TextPainter(
-          text: TextSpan(text: 'gliss.', style: labelStyle),
+          text: TextSpan(
+              text: 'gliss.', style: labelStyle.withMusicTextFallback()),
           textDirection: TextDirection.ltr,
         )..layout();
 
@@ -762,7 +770,7 @@ class StaffRenderer {
       if (number == null || number <= 1) continue;
 
       final painter = TextPainter(
-        text: TextSpan(text: '$number', style: style),
+        text: TextSpan(text: '$number', style: style.withMusicTextFallback()),
         textDirection: TextDirection.ltr,
       )..layout();
 
