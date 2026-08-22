@@ -3,7 +3,6 @@
 import 'dart:math' as math;
 
 import '../../core/core.dart';
-import 'spacing/spacing.dart' as spacing;
 
 /// Horizontal placement of the children of a [Tuplet], as offsets in pixels
 /// from the tuplet's own origin.
@@ -20,9 +19,16 @@ import 'spacing/spacing.dart' as spacing;
 /// quarter-plus-eighth triplet is one of the most common figures in the
 /// repertoire.
 ///
-/// The offsets are now duration-proportional, using the same square-root law
-/// [spacing.IntelligentSpacingEngine] applies everywhere else, and BOTH callers
-/// read them from here.
+/// The offsets are now duration-proportional and BOTH callers read them from
+/// here.
+///
+/// The law is deliberately FIXED to Gould's square root rather than delegating
+/// to the configured `SpacingModel`. The renderer has no spacing engine, so a
+/// delegating grid would compute one curve in the layout and another in the
+/// renderer for any app that selected a non-default model — which is the very
+/// divergence this class exists to remove. Tuplet-internal spacing is therefore
+/// model-independent by construction; the tuplet's placement in the outer flow
+/// still follows the configured model.
 class TupletGrid {
   /// Minimum slot width, in staff spaces.
   ///
@@ -43,15 +49,11 @@ class TupletGrid {
   /// [tuplet] — plus a final entry holding the tuplet's total width.
   ///
   /// `offsets.length == tuplet.elements.length + 1`.
-  static List<double> offsets(
-    Tuplet tuplet,
-    double staffSpace, {
-    spacing.IntelligentSpacingEngine? engine,
-  }) {
+  static List<double> offsets(Tuplet tuplet, double staffSpace) {
     final result = <double>[0.0];
     var x = 0.0;
     for (final child in tuplet.elements) {
-      x += slotWidth(child, staffSpace, engine: engine);
+      x += slotWidth(child, staffSpace);
       result.add(x);
     }
     return result;
@@ -62,15 +64,11 @@ class TupletGrid {
   /// A nested [Tuplet] contributes its OWN content width rather than a single
   /// slot, so an inner triplet widens its parent instead of being squeezed into
   /// one position.
-  static double slotWidth(
-    MusicalElement child,
-    double staffSpace, {
-    spacing.IntelligentSpacingEngine? engine,
-  }) {
+  static double slotWidth(MusicalElement child, double staffSpace) {
     if (child is Tuplet) {
       var total = 0.0;
       for (final inner in child.elements) {
-        total += slotWidth(inner, staffSpace, engine: engine);
+        total += slotWidth(inner, staffSpace);
       }
       return total == 0 ? minimumSlotSpaces * staffSpace : total;
     }
@@ -82,21 +80,14 @@ class TupletGrid {
     // whole group's musical value, and the group already occupies its scaled
     // width in the parent flow. What matters here is the children's duration
     // relative to EACH OTHER.
-    final factor = engine == null
-        ? _squareRootFactor(duration)
-        : engine.durationShapeFactor(duration);
-    final width = quarterSlotSpaces * factor * staffSpace;
+    final width = quarterSlotSpaces * _squareRootFactor(duration) * staffSpace;
     final floor = minimumSlotSpaces * staffSpace;
     return width < floor ? floor : width;
   }
 
   /// Total width of [tuplet] in pixels.
-  static double totalWidth(
-    Tuplet tuplet,
-    double staffSpace, {
-    spacing.IntelligentSpacingEngine? engine,
-  }) =>
-      offsets(tuplet, staffSpace, engine: engine).last;
+  static double totalWidth(Tuplet tuplet, double staffSpace) =>
+      offsets(tuplet, staffSpace).last;
 
   static Duration? _durationOf(MusicalElement element) {
     if (element is Note) return element.duration;
@@ -107,9 +98,8 @@ class TupletGrid {
 
   /// Gould's square-root law, normalised to the quarter note.
   ///
-  /// Used when no [spacing.IntelligentSpacingEngine] is available (the renderer
-  /// does not hold one). It is the same curve `SpacingModel.squareRoot`
-  /// computes, so both paths agree.
+  /// Identical to what `SpacingModel.squareRoot` computes (`sqrt(t)` with
+  /// `t = duration / quarter`), which is the package default.
   static double _squareRootFactor(Duration duration) {
     final absolute = duration.absoluteValue;
     if (absolute <= 0) return 1.0;

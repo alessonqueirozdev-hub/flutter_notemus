@@ -1485,7 +1485,7 @@ class LayoutEngine {
   double _reanchorTupletX(Tuplet tuplet, double startX) {
     var x = startX;
     for (final inner in tuplet.elements) {
-      final step = TupletGrid.slotWidth(inner, staffSpace, engine: _spacingEngine);
+      final step = TupletGrid.slotWidth(inner, staffSpace);
       if (inner is Note) {
         if (_noteXPositions.containsKey(inner)) _noteXPositions[inner] = x;
       } else if (inner is Chord) {
@@ -1522,7 +1522,7 @@ class LayoutEngine {
 
     var x = startX;
     for (final inner in tuplet.elements) {
-      final step = TupletGrid.slotWidth(inner, staffSpace, engine: _spacingEngine);
+      final step = TupletGrid.slotWidth(inner, staffSpace);
       if (inner is Note) {
         place(inner, x);
       } else if (inner is Chord) {
@@ -1879,7 +1879,7 @@ class LayoutEngine {
     if (element is Tuplet) {
       // Width comes from the inner content laid out on the SHARED grid, so the
       // measure width, the note positions and the drawing all agree.
-      return TupletGrid.totalWidth(element, staffSpace, engine: _spacingEngine);
+      return TupletGrid.totalWidth(element, staffSpace);
     }
 
     if (element is TempoMark) {
