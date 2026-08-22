@@ -1,35 +1,74 @@
-/// Motor principal de intelligent spacing
+/// Motor principal de intelligent spacing.
 ///
-/// Implementa o algoritmo dual (textual + duracional) with combinação adaptativa
-/// following os princípios de MuseScore MS21, Dorico and Lime/ACM.
+/// # Production path vs. analysis path
+///
+/// This class has two clearly separated halves. Read this before adding tests:
+/// a green test that only exercises the second half proves nothing about what
+/// the renderer draws.
+///
+/// **Production path** — the single source of truth for the horizontal
+/// rhythmic law used by `LayoutEngine`:
+///   * [interNoteSpacing] — Gould's square-root law, COMPUTED (never looked up
+///     from a partial table), normalised to the quarter note.
+///   * [opticalAdjustment] — context-sensitive optical compensation, added on
+///     top of the base gap. Returns `0.0` when disabled in the preferences.
+///   * [durationShapeFactor] — the bare model factor behind [interNoteSpacing].
+///
+/// **Analysis path** — offline/diagnostic tooling that the renderer does NOT
+/// call: [analyzeMeasure] (a measurement report), plus the dual-algorithm
+/// experiment [computeTextualSpacing] / [computeDurationalSpacing] /
+/// [combineSpacings] / [applyOpticalCompensation].
 library;
 
 import 'dart:math';
+
+import 'package:flutter/rendering.dart' show Rect;
+import 'package:flutter_notemus/core/core.dart'
+    show Chord, Duration, DurationType, MusicalElement, Note, Rest;
+
+import 'collision_detector.dart';
+import 'optical_compensation.dart';
 import 'spacing_model.dart';
 import 'spacing_preferences.dart';
-import 'optical_compensation.dart';
+import 'spacing_result.dart';
 
 /// Spacing engine inteligente
 ///
 /// Processes measures in nível de system (not individual) for ensure
 /// consistência de spacing according to a Regra Dourada de Gould.
 class IntelligentSpacingEngine {
+  /// Default base gap between two consecutive quarter notes, in staff spaces.
+  ///
+  /// Mirrors `LayoutEngine.noteMinSpacing`. Kept as a named constant so the
+  /// engine and the layout cannot drift apart silently.
+  static const double defaultBaseSpacing = 3.5;
+
   /// Preferences de spacing
   final SpacingPreferences preferences;
 
-  /// Calculatora de durational spacing
+  /// Calculatora de durational spacing (analysis path — applies
+  /// [SpacingPreferences.spacingFactor]).
   late final SpacingCalculator _calculator;
+
+  /// Model shape evaluator with a UNIT ratio.
+  ///
+  /// Production spacing must not be multiplied by
+  /// [SpacingPreferences.spacingFactor] a second time: the base gap already
+  /// carries the global scale. This calculator therefore returns the pure
+  /// shape of the configured [SpacingModel].
+  late final SpacingCalculator _shapeCalculator;
 
   /// Compensador óptico
   OpticalCompensator? _compensator;
-
-  // Collisiwheretector disponível for uso futuro
-  // final Collisiwheretector _collisiwheretector;
 
   IntelligentSpacingEngine({this.preferences = SpacingPreferences.normal}) {
     _calculator = SpacingCalculator(
       model: preferences.model,
       spacingRatio: preferences.spacingFactor,
+    );
+    _shapeCalculator = SpacingCalculator(
+      model: preferences.model,
+      spacingRatio: 1.0,
     );
   }
 
@@ -42,6 +81,308 @@ class IntelligentSpacingEngine {
     );
   }
 
+  // ===========================================================================
+  // PRODUCTION PATH
+  // ===========================================================================
+
+  /// Horizontal gap to leave before an element, given the element that
+  /// precedes it. **This is the rhythmic law of the engraver.**
+  ///
+  /// ```text
+  /// factor  = shape(previousDuration.absoluteValue / DurationType.quarter.value)
+  /// spacing = baseSpacing * factor * staffSpace
+  /// spacing = spacing * restSpacingRatio      // only when previousIsRest
+  /// ```
+  ///
+  /// With the default [SpacingModel.squareRoot] the shape is `sqrt(t)`, i.e.
+  /// Gould's square-root law. The factor is **computed**, never looked up:
+  /// a table that only covered `whole`..`sixtyFourth` and fell back to `1.0`
+  /// inverted the rhythmic proportion at both ends of the range (a breve was
+  /// spaced like a quarter — narrower than a whole note — and a 128th got more
+  /// space than a 64th). Being computed, all 15 [DurationType] values from
+  /// [DurationType.maxima] to [DurationType.twoThousandFortyEighth] are
+  /// covered, and augmentation dots are honoured because
+  /// [Duration.absoluteValue] includes them.
+  ///
+  /// Reference values with `staffSpace = 1` and `baseSpacing = 3.5`:
+  ///
+  /// | previous duration | factor | spacing |
+  /// |---|---|---|
+  /// | breve   | 2.828 | 9.90 |
+  /// | whole   | 2.0   | 7.00 |
+  /// | half    | 1.414 | 4.95 |
+  /// | quarter | 1.0   | 3.50 |
+  /// | eighth  | 0.707 | 2.47 |
+  /// | 16th    | 0.5   | 1.75 |
+  ///
+  /// A configured model other than [SpacingModel.squareRoot] is respected, but
+  /// the default reproduces the shipped layout bit for bit.
+  ///
+  /// Pure function: no state is read or written. Callers add their own
+  /// accidental lead-in, lyric overhang, anti-collision floor and per-measure
+  /// compression scale on top of this value.
+  ///
+  /// - [previousDuration]: written duration of the preceding note/rest/chord.
+  /// - [previousIsRest]: `true` when the preceding element is a rest, which
+  ///   Gould spaces at ~80% of an equivalent note
+  ///   ([SpacingPreferences.restSpacingRatio]).
+  /// - [staffSpace]: one staff space in pixels.
+  /// - [baseSpacing]: gap between two quarter notes, in staff spaces.
+  double interNoteSpacing({
+    required Duration previousDuration,
+    required bool previousIsRest,
+    required double staffSpace,
+    double baseSpacing = defaultBaseSpacing,
+  }) {
+    final double factor = durationShapeFactor(previousDuration);
+    double spacing = baseSpacing * factor * staffSpace;
+
+    if (previousIsRest) {
+      spacing *= preferences.restSpacingRatio;
+    }
+
+    return spacing;
+  }
+
+  /// The dimensionless spacing factor of [duration], normalised so that a
+  /// quarter note yields `1.0` under [SpacingModel.squareRoot].
+  ///
+  /// Defined for every [DurationType] (`maxima`..`2048th`) and for any number
+  /// of augmentation dots. Never negative: the logarithmic model would
+  /// otherwise go below zero for very short values.
+  double durationShapeFactor(Duration duration) {
+    final double absolute = duration.absoluteValue;
+    if (absolute <= 0) return 0.0;
+
+    final double factor = _shapeCalculator.calculateSpace(
+      absolute,
+      DurationType.quarter.value,
+    );
+    return factor > 0.0 ? factor : 0.0;
+  }
+
+  /// Context-sensitive optical compensation to ADD to the base gap returned by
+  /// [interNoteSpacing], in pixels.
+  ///
+  /// Implements the rules of [OpticalCompensator] (alternating stems, rest
+  /// before a stem-up note, duration transitions, accidentals, augmentation
+  /// dots, beamed neighbours). Returns `0.0` when
+  /// [SpacingPreferences.enableOpticalSpacing] is `false`, when there is no
+  /// preceding element, or when either element is not a rhythmic symbol
+  /// (clef, barline, …) — those carry their own dedicated spacing.
+  ///
+  /// [previousStemUp] / [currentStemUp] are optional because stem direction is
+  /// a layout decision that the core model does not carry; when omitted the
+  /// stem rule simply contributes nothing. [localDensity] defaults to
+  /// [SpacingPreferences.densityPreference].
+  ///
+  /// The compensator is created lazily for [staffSpace] (and reused while the
+  /// staff space does not change), so [initializeOpticalCompensator] is
+  /// optional for this entry point.
+  double opticalAdjustment({
+    required MusicalElement? previous,
+    required MusicalElement current,
+    required double staffSpace,
+    bool? previousStemUp,
+    bool? currentStemUp,
+    double? localDensity,
+  }) {
+    if (!preferences.enableOpticalSpacing) return 0.0;
+    if (previous == null) return 0.0;
+
+    final OpticalContext? previousContext = _opticalContextFor(
+      previous,
+      previousStemUp,
+    );
+    final OpticalContext? currentContext = _opticalContextFor(
+      current,
+      currentStemUp,
+    );
+    if (previousContext == null || currentContext == null) return 0.0;
+
+    final OpticalCompensator compensator = _compensatorFor(staffSpace);
+    if (!compensator.enabled) return 0.0;
+
+    return compensator.calculateCompensation(
+      previousContext,
+      currentContext,
+      localDensity: localDensity ?? preferences.densityPreference,
+    );
+  }
+
+  /// Measures one measure with the production law and reports the result.
+  ///
+  /// This is the **analysis** entry point: it answers "how wide would this
+  /// measure be, and does anything collide?" without mutating anything and
+  /// without being part of the render pass. It is built on the very same
+  /// [interNoteSpacing]/[opticalAdjustment] used in production, so its numbers
+  /// track the renderer instead of describing a parallel universe.
+  ///
+  /// Non-rhythmic elements (clefs, barlines, …) are skipped — their spacing is
+  /// owned by the layout engine, not by the rhythmic law.
+  SpacingResult analyzeMeasure({
+    required List<MusicalElement> elements,
+    required double staffSpace,
+    double baseSpacing = defaultBaseSpacing,
+  }) {
+    final List<ElementSpacing> placed = <ElementSpacing>[];
+    final List<Rect> boxes = <Rect>[];
+
+    double cursor = 0.0;
+    double shortest = double.infinity;
+    MusicalElement? previous;
+    Duration? previousDuration;
+
+    final double staffHeight = staffSpace * 4.0;
+
+    for (int i = 0; i < elements.length; i++) {
+      final MusicalElement element = elements[i];
+      final Duration? duration = _rhythmicDurationOf(element);
+      if (duration == null) continue;
+
+      final double value = duration.absoluteValue;
+      if (value > 0 && value < shortest) shortest = value;
+
+      double gap = 0.0;
+      if (previousDuration != null) {
+        gap = interNoteSpacing(
+          previousDuration: previousDuration,
+          previousIsRest: previous is Rest,
+          staffSpace: staffSpace,
+          baseSpacing: baseSpacing,
+        );
+        gap += opticalAdjustment(
+          previous: previous,
+          current: element,
+          staffSpace: staffSpace,
+        );
+        if (gap < 0.0) gap = 0.0;
+      }
+
+      cursor += gap;
+
+      final double width =
+          TimeSlice.estimateAdvanceWidthInStaffSpaces(element) * staffSpace;
+
+      placed.add(
+        ElementSpacing(
+          index: i,
+          element: element,
+          xPosition: cursor,
+          leadingGap: gap,
+          width: width,
+        ),
+      );
+      boxes.add(Rect.fromLTWH(cursor, 0.0, width, staffHeight));
+
+      previous = element;
+      previousDuration = duration;
+    }
+
+    final List<CollisionPair> collisions = const CollisionDetector()
+        .detectAllCollisions(boxes);
+
+    final double totalWidth = placed.isEmpty
+        ? 0.0
+        : placed.last.xPosition + placed.last.width;
+
+    return SpacingResult(
+      elements: placed,
+      shortestDuration: shortest.isFinite ? shortest : 0.0,
+      totalWidth: totalWidth,
+      collisions: collisions,
+    );
+  }
+
+  /// Written duration of a rhythmic element, or `null` for anything else.
+  static Duration? _rhythmicDurationOf(MusicalElement? element) {
+    if (element is Note) return element.duration;
+    if (element is Chord) return element.duration;
+    if (element is Rest) return element.duration;
+    return null;
+  }
+
+  /// Lazily builds (and caches) the compensator for [staffSpace].
+  OpticalCompensator _compensatorFor(double staffSpace) {
+    final OpticalCompensator? cached = _compensator;
+    if (cached != null &&
+        cached.staffSpace == staffSpace &&
+        cached.enabled == preferences.enableOpticalSpacing) {
+      return cached;
+    }
+    final OpticalCompensator created = OpticalCompensator(
+      staffSpace: staffSpace,
+      enabled: preferences.enableOpticalSpacing,
+      intensity: 1.0,
+    );
+    _compensator = created;
+    return created;
+  }
+
+  /// Maps a core [MusicalElement] onto an [OpticalContext].
+  ///
+  /// Returns `null` for elements the optical rules do not describe.
+  OpticalContext? _opticalContextFor(MusicalElement element, bool? stemUp) {
+    if (element is Note) {
+      return OpticalContext(
+        type: SymbolType.note,
+        stemUp: stemUp,
+        duration: element.duration.absoluteValue,
+        hasAccidental: element.pitch.accidentalGlyph != null,
+        isDotted: element.duration.dots > 0,
+        beamCount: element.beam == null
+            ? null
+            : _beamCountFor(element.duration),
+      );
+    }
+    if (element is Chord) {
+      return OpticalContext(
+        type: SymbolType.chord,
+        stemUp: stemUp,
+        duration: element.duration.absoluteValue,
+        hasAccidental: element.notes.any(
+          (note) => note.pitch.accidentalGlyph != null,
+        ),
+        isDotted: element.duration.dots > 0,
+        beamCount: element.beam == null
+            ? null
+            : _beamCountFor(element.duration),
+      );
+    }
+    if (element is Rest) {
+      return OpticalContext(
+        type: SymbolType.rest,
+        duration: element.duration.absoluteValue,
+        isDotted: element.duration.dots > 0,
+      );
+    }
+    return null;
+  }
+
+  /// Number of beams/flags implied by [duration] (eighth = 1, 16th = 2, …).
+  static int _beamCountFor(Duration duration) {
+    final double value = duration.type.value;
+    if (value > DurationType.eighth.value) return 0;
+
+    int count = 0;
+    double current = DurationType.eighth.value;
+    while (current >= value && count < 16) {
+      count++;
+      current /= 2.0;
+    }
+    return count;
+  }
+
+  // ===========================================================================
+  // ANALYSIS PATH — the dual-algorithm experiment.
+  //
+  // Nothing below is called by LayoutEngine. Kept because it documents the
+  // MuseScore/Dorico dual approach and is useful for offline comparison, but
+  // a passing test down here says nothing about rendered output.
+  // ===========================================================================
+
+  /// **ANALYSIS PATH — not used by the renderer.**
+  ///
   /// Calculates textual spacing (anti-colisão)
   ///
   /// **Objetivo:** Avoid colisões de symbols, ignorando duração
@@ -49,7 +390,7 @@ class IntelligentSpacingEngine {
   /// **Processo:**
   /// 1. Calculate width de each symbol
   /// 2. add padding mínimo between elementos adjacentes
-  /// 3. Processesr symbols simultâneos in múltiplas staves
+  /// 3. processar symbols simultâneos in múltiplas staves
   ///
   /// **Returns:** List of positions with spacing denso and uniforme
   List<SymbolSpacing> computeTextualSpacing({
@@ -89,6 +430,9 @@ class IntelligentSpacingEngine {
     return positions;
   }
 
+  /// **ANALYSIS PATH — not used by the renderer.** The production rhythmic law
+  /// is [interNoteSpacing].
+  ///
   /// Calculates durational spacing (proporcional to the tempo)
   ///
   /// **Objetivo:** Codificar relações temporais
@@ -147,6 +491,8 @@ class IntelligentSpacingEngine {
     return positions;
   }
 
+  /// **ANALYSIS PATH — not used by the renderer.**
+  ///
   /// Combina spacings textual and duracional adaptativamente
   ///
   /// **Algoritmo:**
@@ -292,6 +638,9 @@ class IntelligentSpacingEngine {
     return expanded;
   }
 
+  /// **ANALYSIS PATH — not used by the renderer.** The production entry point
+  /// for optical compensation is [opticalAdjustment].
+  ///
   /// applies compensações ópticas
   void applyOpticalCompensation({
     required List<SymbolSpacing> spacing,
@@ -317,7 +666,7 @@ class IntelligentSpacingEngine {
         localDensity: density,
       );
 
-      // Appliesr ajuste a all os symbols subsequentes
+      // aplicar ajuste a all os symbols subsequentes
       for (int j = i; j < spacing.length; j++) {
         spacing[j].xPosition += compensation;
       }
@@ -385,7 +734,9 @@ class IntelligentSpacingEngine {
   }
 }
 
-/// Informação de symbol musical for spacing
+/// **ANALYSIS SCAFFOLDING — not on the render path.**
+///
+/// Informação de symbol musical for spacing (dual-algorithm experiment).
 class MusicalSymbolInfo {
   final int index;
   final double musicalTime; // Onset em frações de semibreve
@@ -410,7 +761,10 @@ class MusicalSymbolInfo {
   });
 }
 
-/// Result de spacing de a symbol
+/// **ANALYSIS SCAFFOLDING — not on the render path.** The production report
+/// type is [SpacingResult].
+///
+/// Result de spacing de a symbol (dual-algorithm experiment).
 class SymbolSpacing {
   final int symbolIndex;
   double xPosition;

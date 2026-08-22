@@ -8,10 +8,24 @@ import 'dart:collection';
 /// Implementation baseada in [LinkedHashMap] that mantém ordem de acesso.
 /// When o cache atinge o size máximo, remove o item less recentemente used.
 ///
+/// **Where this is used**
+///
+/// * `PerformanceOptimizer` (`lib/src/rendering/performance_optimizer.dart`)
+///   owns two of them: the glyph [TextPainter] cache shared by every renderer
+///   that extends `BaseGlyphRenderer` (256 entries, keyed by character + font
+///   + quantised size + colour) and the staff-lines `Path` cache. That class
+///   documents the invalidation policy of both.
+/// * Any other render-time memoisation should go through it rather than
+///   growing an unbounded `Map`, which is how the glyph painters used to leak.
+///
 /// **Performance:**
 /// - get(): O(1)
 /// - put(): O(1)
 /// - Eviction: O(1)
+///
+/// **Ownership:** the cache holds strong references to its values until they
+/// are evicted or [clear] is called; values must therefore be immutable (or
+/// treated as immutable) once stored, since every reader shares the instance.
 ///
 /// **Thread-safety:** Not is thread-safe. Use in context single-threaded (Rendering Flutter).
 class LruCache<K, V> {
@@ -37,7 +51,7 @@ class LruCache<K, V> {
     return value;
   }
 
-  /// Adds or currentiza value no cache
+  /// Adds or atualiza value no cache
   ///
   /// If cache está cheio, remove o item more antigo (first of the list).
   void put(K key, V value) {

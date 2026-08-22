@@ -3,7 +3,7 @@
 import 'musical_element.dart';
 import 'duration.dart';
 
-/// Representa a afinação de a corda in noteção de tablatura.
+/// Representa a afinação de a corda in notação de tablatura.
 ///
 /// Correspwhere às informações de afinação in `<staffDef>` no MEI v5.
 class TabString {
@@ -136,7 +136,7 @@ class TabNote extends MusicalElement {
 
 /// Grupo de notes simultâneas in tablatura (MEI `<tabGrp>`).
 ///
-/// Equivale a a chord in noteção convencional, mas representado as
+/// Equivale a a chord in notação convencional, mas representado as
 /// numbers de casa in múltiplas cordas simultaneamente.
 ///
 /// ```dart

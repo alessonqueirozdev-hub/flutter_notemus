@@ -100,10 +100,25 @@ class ChordRenderer extends BaseGlyphRenderer {
     return mostExtremePos < 0;
   }
 
+  /// Horizontal gap, in staff spaces, between two accidental columns and
+  /// between column 0 and the leftmost notehead.
+  static const double defaultColumnGapSpaces = 0.22;
+
   /// Assigns chord accidentals to columns (0 = closest to the chord) by greedy
   /// top-to-bottom first-fit: each accidental is placed in the rightmost column
-  /// where it clears every accidental already there by the corresponding entry
-  /// in [clearancesHalfSpaces] (the glyph height + gap, in half staff spaces).
+  /// where it clears every accidental already there by the required vertical
+  /// clearance, following "Behind Bars" (Gould, p. 79-80) — the highest
+  /// accidental takes column 0, and every following accidental that would
+  /// collide moves one column further LEFT.
+  ///
+  /// [clearancesHalfSpaces] carries, per accidental, the vertical space its own
+  /// glyph needs (glyph height + gap, in half staff spaces). Two accidentals
+  /// sharing a column must be at least the AVERAGE of their two clearances
+  /// apart: each contributes half its own height to the required centre-to-
+  /// centre distance. For two equal glyphs — the overwhelmingly common case —
+  /// the average is that same clearance, so uniform chords are unaffected;
+  /// mixed heights (a double-flat above a sharp) are no longer judged by the
+  /// second glyph's clearance alone.
   ///
   /// [staffPositionsTopToBottom] and [clearancesHalfSpaces] are parallel and
   /// must be ordered top -> bottom (descending staff position). Returns the
@@ -115,16 +130,17 @@ class ChordRenderer extends BaseGlyphRenderer {
     final columns = List<int>.filled(staffPositionsTopToBottom.length, 0);
     final members = <int, List<int>>{};
     for (var i = 0; i < staffPositionsTopToBottom.length; i++) {
-      final clearance = clearancesHalfSpaces[i];
       var column = 0;
       while (true) {
         final ms = members[column];
         var collides = false;
         if (ms != null) {
           for (final k in ms) {
+            final required =
+                (clearancesHalfSpaces[i] + clearancesHalfSpaces[k]) * 0.5;
             if ((staffPositionsTopToBottom[i] - staffPositionsTopToBottom[k])
                     .abs() <
-                clearance) {
+                required) {
               collides = true;
               break;
             }
@@ -139,6 +155,24 @@ class ChordRenderer extends BaseGlyphRenderer {
     return columns;
   }
 
+  /// Total horizontal space, in staff spaces, reserved by a chord's accidental
+  /// block: every used column's width plus one [columnGapSpaces] gap per column
+  /// (the last of which separates column 0 from the leftmost notehead).
+  ///
+  /// [columnWidthsSpaces] is indexed by column number, so its length is exactly
+  /// the number of columns actually used — the reserved width therefore grows
+  /// only with the columns the packing produced.
+  static double accidentalBlockWidthSpaces(
+    List<double> columnWidthsSpaces, {
+    double columnGapSpaces = defaultColumnGapSpaces,
+  }) {
+    var total = 0.0;
+    for (final width in columnWidthsSpaces) {
+      total += width + columnGapSpaces;
+    }
+    return total;
+  }
+
   void render(
     Canvas canvas,
     Chord chord,
@@ -149,6 +183,11 @@ class ChordRenderer extends BaseGlyphRenderer {
   }) {
     // Effective accidental glyph for a chord note after within-measure
     // resolution: null = suppress, the natural glyph on revert, else the note's.
+    //
+    // F-02: this is the ONLY place a chord accidental glyph is chosen, and it
+    // always goes through [accidentalDecisions] — the resolved decision from the
+    // layout engine, keyed by note identity. No drawing path below may read
+    // Pitch.accidentalGlyph directly and bypass it.
     String? effAcc(Note n) {
       switch (accidentalDecisions?[n] ?? AccidentalDisplay.show) {
         case AccidentalDisplay.hide:
@@ -159,6 +198,7 @@ class ChordRenderer extends BaseGlyphRenderer {
           return n.pitch.accidentalGlyph;
       }
     }
+
     final sortedNotes = [...chord.notes]
       ..sort(
         (a, b) => StaffPositionCalculator.calculate(
@@ -205,11 +245,19 @@ class ChordRenderer extends BaseGlyphRenderer {
     // accidentals neither overlap vertically nor horizontally (the previous
     // version used a fixed 6-half-space threshold and the advance width — which
     // is narrower than the glyph — so columns collided).
-    double accWidthSpaces(String glyph) {
-      final box = metadata.getGlyphInfo(glyph)?.boundingBox;
-      final w = box?.width ?? metadata.getGlyphWidth(glyph);
-      return w > 0 ? w : 1.0;
-    }
+    //
+    // The reserved horizontal space is exactly the sum of the USED columns'
+    // widths plus one gap each (see [accidentalBlockWidthSpaces]); a column's
+    // width is the widest accidental in it, enclosing signs included.
+    final accidentalRenderer = noteRenderer.accidentalRenderer;
+
+    // Reserved width of one chord accidental INCLUDING any cautionary
+    // parentheses / editorial brackets around it (F-16), so an enclosed
+    // accidental widens its column instead of spilling into the neighbour.
+    double accWidthSpaces(int index) => accidentalRenderer.decoratedWidthSpaces(
+      effAcc(sortedNotes[index])!,
+      sortedNotes[index].accidentalParenthesis,
+    );
 
     // Vertical clearance (in staff positions = half-spaces) needed between two
     // accidentals sharing a column: the glyph height + a small gap.
@@ -244,7 +292,7 @@ class ChordRenderer extends BaseGlyphRenderer {
       (columnMembers[column] ??= <int>[]).add(i);
       columnWidthSpaces[column] = math.max(
         columnWidthSpaces[column] ?? 0.0,
-        accWidthSpaces(effAcc(sortedNotes[i])!),
+        accWidthSpaces(i),
       );
     }
 
@@ -252,19 +300,34 @@ class ChordRenderer extends BaseGlyphRenderer {
     // leftmost notehead edge (accounts for left-shifted second-cluster notes);
     // each further column is offset left by the previous column's glyph width.
     if (accidentalColumns.isNotEmpty) {
-      const columnGapSpaces = 0.22;
+      const columnGapSpaces = defaultColumnGapSpaces;
       final leftmostNoteDx =
           basePosition.dx + clusterOffsets.reduce(math.min);
       final maxColumn = columnMembers.keys.reduce(math.max);
+      // Greedy first-fit never skips a column, so columns 0..maxColumn are all
+      // in use and this list's length IS the number of columns used.
+      final columnWidths = <double>[
+        for (int c = 0; c <= maxColumn; c++) (columnWidthSpaces[c] ?? 1.0),
+      ];
+      final blockWidthPx =
+          accidentalBlockWidthSpaces(columnWidths) * coordinates.staffSpace;
+
       final columnLeftX = <int, double>{};
       var cursorRightEdge =
           leftmostNoteDx - columnGapSpaces * coordinates.staffSpace;
       for (int c = 0; c <= maxColumn; c++) {
-        final widthPx = (columnWidthSpaces[c] ?? 1.0) * coordinates.staffSpace;
+        final widthPx = columnWidths[c] * coordinates.staffSpace;
         columnLeftX[c] = cursorRightEdge - widthPx;
         cursorRightEdge =
             columnLeftX[c]! - columnGapSpaces * coordinates.staffSpace;
       }
+
+      // F-31: the space actually consumed by the block must equal the width
+      // reserved for the columns that were used — no more, no less.
+      assert(
+        (columnLeftX[maxColumn]! - (leftmostNoteDx - blockWidthPx)).abs() < 1e-3,
+        'chord accidental block width does not match the columns in use',
+      );
 
       for (final entry in accidentalColumns.entries) {
         final i = entry.key;
@@ -274,11 +337,15 @@ class ChordRenderer extends BaseGlyphRenderer {
           coordinates.staffSpace,
           coordinates.staffBaseline.dy,
         );
-        drawGlyphWithBBox(
+        // Draw through AccidentalRenderer so chord accidentals get the same
+        // cautionary/editorial enclosure as single notes (F-16).
+        accidentalRenderer.drawDecoratedAccidental(
           canvas,
           glyphName: accidentalGlyph,
-          position: Offset(columnLeftX[entry.value]!, noteY),
+          leftX: columnLeftX[entry.value]!,
+          y: noteY,
           color: theme.accidentalColor ?? theme.noteheadColor,
+          paren: sortedNotes[i].accidentalParenthesis,
           options: const GlyphDrawOptions(trackBounds: true),
         );
       }

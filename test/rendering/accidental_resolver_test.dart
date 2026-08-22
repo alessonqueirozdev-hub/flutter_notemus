@@ -1,7 +1,6 @@
 // Within-measure accidental persistence (Behind Bars rule).
 
 import 'package:flutter_notemus/flutter_notemus.dart';
-import 'package:flutter_notemus/src/rendering/accidental_resolver.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

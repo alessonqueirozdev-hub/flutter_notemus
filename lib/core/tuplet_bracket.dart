@@ -11,7 +11,7 @@ enum BracketSide {
   notehead,
 }
 
-/// Configuresção of the bracket de tuplet
+/// configuração of the bracket de tuplet
 class TupletBracket {
   /// Thickness of the line of the bracket (0.125 staff spaces by default)
   final double thickness;

@@ -94,207 +94,185 @@ class BeamGrouper {
         return _groupManual(notes, manualBeamGroups);
       case BeamingMode.automatic:
       default:
-        final strategy = _getGroupingStrategy(timeSignature);
-        switch (strategy) {
-          case BeamingStrategy.simple:
-            return _groupSimpleTime(items, timeSignature);
-          case BeamingStrategy.compound:
-            return _groupCompoundTime(items, timeSignature);
-          case BeamingStrategy.irregular:
-            return _groupIrregularTime(items, timeSignature);
-        }
+        return _groupBySubdivisions(
+          items,
+          _beamGroupSubdivisions(timeSignature),
+        );
     }
   }
 
+  /// A note can carry a beam when it is an eighth note or shorter.
+  ///
+  /// [DurationType.value] is measured in whole notes, so every value from
+  /// 1/8 down to 1/2048 satisfies this test.
   static bool _isBeamable(Note note) {
     return note.duration.type.value <= 0.125;
   }
 
-  static BeamingStrategy _getGroupingStrategy(TimeSignature timeSignature) {
-    final denominator = timeSignature.denominator;
-    final numerator = timeSignature.numerator;
+  /// Returns the beam-group boundaries of [timeSignature] as a list of
+  /// durations measured in whole notes (a quarter note is `0.25`).
+  ///
+  /// Each entry is one macro-beat that a beam must not cross. Simple, compound
+  /// and irregular meters all describe themselves through this single list, so
+  /// there is only one grouping algorithm to keep correct.
+  static List<double> _beamGroupSubdivisions(TimeSignature timeSignature) {
+    if (timeSignature.isFreeTime) return const <double>[];
 
-    if (denominator == 8 && numerator % 3 == 0) {
-      return BeamingStrategy.compound;
+    final numerator = timeSignature.numerator;
+    final denominator = timeSignature.denominator;
+    if (numerator <= 0 || denominator <= 0) return const <double>[];
+
+    final unit = 1.0 / denominator;
+
+    // Additive meters carry their own grouping, e.g. (3+2+2)/8.
+    final additiveGroups = timeSignature.additiveGroups;
+    if (additiveGroups != null && additiveGroups.isNotEmpty) {
+      return additiveGroups.map((group) => group.numerator * unit).toList();
     }
 
+    // Compound meters (6/8, 9/8, 12/8, 6/16, ...): groups of three units.
+    // 3/8 is deliberately excluded - it is a single beat, not a compound bar.
+    if ((denominator == 8 || denominator == 16) &&
+        numerator > 3 &&
+        numerator % 3 == 0) {
+      return List<double>.filled(numerator ~/ 3, 3 * unit);
+    }
+
+    // Simple ternary written in eighths or sixteenths (3/8, 3/16): one group.
+    if (numerator == 3 && (denominator == 8 || denominator == 16)) {
+      return <double>[3 * unit];
+    }
+
+    // 4/4 beams across the half bar (the Behind Bars preference).
+    if (numerator == 4 && denominator == 4) {
+      return const <double>[0.5, 0.5];
+    }
+
+    // Other simple meters, including 2/2 (alla breve): one group per unit.
     if ([2, 3, 4].contains(numerator) && [2, 4, 8].contains(denominator)) {
-      return BeamingStrategy.simple;
+      return List<double>.filled(numerator, unit);
     }
 
-    return BeamingStrategy.irregular;
-  }
-
-  static List<BeamGroup> _groupSimpleTime(
-    List<_BeamingItem> items,
-    TimeSignature timeSignature,
-  ) {
-    final groups = <BeamGroup>[];
-    // Beam-grouping macro-beat: in 4/4, beam eighths across the half-bar
-    // (groups of 4, the Behind Bars preference); in other simple meters, beam
-    // by the beat (denominator unit). Previously the break only fired when a
-    // SINGLE note spanned two beats — which never happens for eighths — so a
-    // full bar of eighths beamed as one group (V4).
-    final beatUnit = (timeSignature.numerator == 4 &&
-            timeSignature.denominator == 4)
-        ? 2.0 / timeSignature.denominator
-        : 1.0 / timeSignature.denominator;
-
-    var currentGroup = <Note>[];
-    var currentPosition = 0.0;
-    int? currentGroupBeat; // macro-beat index the current group belongs to
-
-    for (final item in items) {
-      if (item.note == null || !item.isBeamable) {
-        _addGroupIfValid(groups, currentGroup);
-        currentGroup = <Note>[];
-        currentGroupBeat = null;
-        currentPosition += item.duration;
-        continue;
-      }
-
-      final note = item.note!;
-      final startBeat = (currentPosition / beatUnit + 0.0001).floor();
-
-      if (currentGroup.isNotEmpty && startBeat != currentGroupBeat) {
-        _addGroupIfValid(groups, currentGroup);
-        currentGroup = [note];
-      } else {
-        currentGroup.add(note);
-      }
-      currentGroupBeat = startBeat;
-      currentPosition += item.duration;
-    }
-
-    _addGroupIfValid(groups, currentGroup);
-    return groups;
-  }
-
-  static List<BeamGroup> _groupCompoundTime(
-    List<_BeamingItem> items,
-    TimeSignature timeSignature,
-  ) {
-    final groups = <BeamGroup>[];
-    final beatUnit = 3.0 / timeSignature.denominator;
-
-    var currentGroup = <Note>[];
-    var currentBeatPosition = 0.0;
-
-    for (final item in items) {
-      if (item.note == null || !item.isBeamable) {
-        _addGroupIfValid(groups, currentGroup);
-        currentGroup = <Note>[];
-        currentBeatPosition += item.duration;
-        continue;
-      }
-
-      final note = item.note!;
-      final nextBeatPosition = currentBeatPosition + item.duration;
-      final currentBeat = (currentBeatPosition / beatUnit).floor();
-      final nextBeat = (nextBeatPosition / beatUnit).floor();
-
-      if (currentBeat != nextBeat && currentGroup.isNotEmpty) {
-        _addGroupIfValid(groups, currentGroup);
-        currentGroup = <Note>[];
-      }
-
-      currentGroup.add(note);
-      currentBeatPosition = nextBeatPosition;
-
-      if (_isEndOfCompoundBeat(nextBeatPosition, beatUnit) &&
-          currentGroup.length >= 2) {
-        groups.add(BeamGroup(notes: List<Note>.from(currentGroup)));
-        currentGroup.clear();
-      }
-    }
-
-    _addGroupIfValid(groups, currentGroup);
-    return groups;
-  }
-
-  static List<BeamGroup> _groupIrregularTime(
-    List<_BeamingItem> items,
-    TimeSignature timeSignature,
-  ) {
-    final groups = <BeamGroup>[];
-    final subdivisions = _getIrregularSubdivisions(timeSignature);
-
-    var currentGroup = <Note>[];
-    var currentPosition = 0.0;
-    var subdivisionIndex = 0;
-    var subdivisionStart = 0.0;
-
-    for (final item in items) {
-      if (item.note == null || !item.isBeamable) {
-        _addGroupIfValid(groups, currentGroup);
-        currentGroup = <Note>[];
-        currentPosition += item.duration;
-
-        while (subdivisionIndex < subdivisions.length &&
-            currentPosition >
-                subdivisionStart + subdivisions[subdivisionIndex]) {
-          subdivisionStart += subdivisions[subdivisionIndex];
-          subdivisionIndex++;
-        }
-        continue;
-      }
-
-      final note = item.note!;
-      final nextPosition = currentPosition + item.duration;
-
-      if (subdivisionIndex < subdivisions.length) {
-        final subdivisionEnd =
-            subdivisionStart + subdivisions[subdivisionIndex];
-
-        if (nextPosition > subdivisionEnd && currentGroup.isNotEmpty) {
-          _addGroupIfValid(groups, currentGroup);
-          currentGroup.clear();
-          subdivisionStart = subdivisionEnd;
-          subdivisionIndex++;
-        }
-      }
-
-      currentGroup.add(note);
-      currentPosition = nextPosition;
-    }
-
-    _addGroupIfValid(groups, currentGroup);
-    return groups;
-  }
-
-  static List<double> _getIrregularSubdivisions(TimeSignature timeSignature) {
-    final numerator = timeSignature.numerator;
-    final denominator = timeSignature.denominator;
-    final eighthNote = 1.0 / 8;
-
+    // Known irregular meters.
     switch ('$numerator/$denominator') {
       case '5/8':
-        return [2 * eighthNote, 3 * eighthNote];
+        return <double>[2 * unit, 3 * unit];
       case '7/8':
-        return [2 * eighthNote, 2 * eighthNote, 3 * eighthNote];
+        return <double>[2 * unit, 2 * unit, 3 * unit];
+      case '8/8':
+        return <double>[3 * unit, 3 * unit, 2 * unit];
       case '5/4':
-        return [1.0, 1.0];
-      default:
-        final subdivisions = <double>[];
-        var remaining = numerator;
-        final unit = 1.0 / denominator;
-
-        while (remaining > 0) {
-          if (remaining >= 3) {
-            subdivisions.add(3 * unit);
-            remaining -= 3;
-          } else {
-            subdivisions.add(remaining * unit);
-            remaining = 0;
-          }
-        }
-        return subdivisions;
+        return const <double>[0.5, 0.5];
     }
+
+    // Fallback: groups of three units while three units remain.
+    final subdivisions = <double>[];
+    var remaining = numerator;
+    while (remaining > 0) {
+      if (remaining >= 3) {
+        subdivisions.add(3 * unit);
+        remaining -= 3;
+      } else {
+        subdivisions.add(remaining * unit);
+        remaining = 0;
+      }
+    }
+    return subdivisions;
   }
 
-  static bool _isEndOfCompoundBeat(double position, double beatUnit) {
+  /// Groups a rhythmic timeline into beams, breaking only at [subdivisions].
+  ///
+  /// A note belongs to the subdivision it STARTS in. Grouping by the start
+  /// (instead of by the end) is what keeps the note that completes a beat
+  /// inside that beat rather than pushing it into the next group.
+  ///
+  /// A note that crosses a boundary — it lasts longer than what is left of its
+  /// subdivision — closes the group before it and opens a new group with it.
+  ///
+  /// Rests and non-beamable notes are hard barriers. The subdivision pattern
+  /// repeats if the timeline is longer than one measure, so overfull measures
+  /// keep grouping instead of collapsing into one beam.
+  static List<BeamGroup> _groupBySubdivisions(
+    List<_BeamingItem> items,
+    List<double> subdivisions,
+  ) {
     const tolerance = 0.0001;
-    return (position % beatUnit).abs() < tolerance;
+
+    final pattern = subdivisions
+        .where((subdivision) => subdivision > tolerance)
+        .toList();
+    final totalDuration = items.fold<double>(
+      0.0,
+      (sum, item) => sum + item.duration,
+    );
+
+    // Cumulative boundary positions, in whole notes.
+    final boundaries = <double>[];
+    if (pattern.isNotEmpty) {
+      var boundary = 0.0;
+      var index = 0;
+      while (boundary < totalDuration - tolerance) {
+        boundary += pattern[index % pattern.length];
+        boundaries.add(boundary);
+        index++;
+      }
+    }
+
+    final groups = <BeamGroup>[];
+    var currentGroup = <Note>[];
+    int? currentGroupIndex;
+    var position = 0.0;
+
+    for (final item in items) {
+      if (item.note == null || !item.isBeamable) {
+        _addGroupIfValid(groups, currentGroup);
+        currentGroup = <Note>[];
+        currentGroupIndex = null;
+        position += item.duration;
+        continue;
+      }
+
+      final note = item.note!;
+      final nextPosition = position + item.duration;
+      final startIndex = _subdivisionIndexAt(boundaries, position);
+
+      var endIndex = startIndex;
+      while (endIndex < boundaries.length &&
+          boundaries[endIndex] + tolerance < nextPosition) {
+        endIndex++;
+      }
+      final crossesBoundary = endIndex != startIndex;
+
+      if (currentGroup.isNotEmpty &&
+          (startIndex != currentGroupIndex || crossesBoundary)) {
+        _addGroupIfValid(groups, currentGroup);
+        currentGroup = <Note>[];
+      }
+
+      currentGroup.add(note);
+      // A crossing note carries its new group into the subdivision it ends in.
+      currentGroupIndex = endIndex;
+      position = nextPosition;
+    }
+
+    _addGroupIfValid(groups, currentGroup);
+    return groups;
+  }
+
+  /// Index of the subdivision a note starting at [position] belongs to.
+  ///
+  /// A note landing exactly on a boundary (within tolerance) starts the next
+  /// subdivision.
+  static int _subdivisionIndexAt(List<double> boundaries, double position) {
+    const tolerance = 0.0001;
+    var index = 0;
+
+    while (index < boundaries.length &&
+        position >= boundaries[index] - tolerance) {
+      index++;
+    }
+
+    return index;
   }
 
   static List<BeamGroup> _groupAllRuns(List<List<Note>> runs) {
@@ -383,6 +361,10 @@ class BeamGrouper {
   }
 }
 
+/// Coarse classification of a time signature's beaming behaviour.
+///
+/// Kept for callers that describe a meter; grouping itself no longer branches
+/// on it — every meter is expressed as a list of beam-group subdivisions.
 enum BeamingStrategy { simple, compound, irregular }
 
 class BeamGroup {

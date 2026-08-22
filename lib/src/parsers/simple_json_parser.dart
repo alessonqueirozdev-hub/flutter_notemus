@@ -40,7 +40,7 @@ class SimpleJsonParser {
     final List<dynamic> notesJson = jsonDecode(jsonString);
     final staff = Staff();
     
-    // Createsr first measure with atributos
+    // criar first measure with atributos
     var currentMeasure = Measure();
     currentMeasure.add(Clef(clefType: clefType));
     currentMeasure.add(KeySignature(keySignatureFifths));
@@ -58,7 +58,7 @@ class SimpleJsonParser {
       
       final noteDuration = note.duration.realValue;
       
-      // If a note not cabe no current measure, Createsr new measure
+      // If a note not cabe no current measure, criar new measure
       if (currentDuration + noteDuration > measureCapacity) {
         if (autoBarlines) {
           currentMeasure.add(Barline(type: BarlineType.single));

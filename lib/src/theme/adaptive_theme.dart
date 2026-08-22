@@ -1,3 +1,5 @@
+// MODEL ONLY — `AdaptiveMusicScoreTheme` is not consumed by any renderer.
+// Status is tracked in `doc/MODEL_ONLY.md`.
 // lib/src/theme/adaptive_theme.dart
 
 import 'dart:math';
@@ -250,7 +252,7 @@ class AdaptiveMusicScoreTheme extends MusicScoreTheme {
     }
   }
 
-  /// calculateTeste contrast ratio between two colors (WCAG 2.0 formula)
+  /// calculate contrast ratio between two colors (WCAG 2.0 formula)
   ///
   /// Formula:
   /// ```

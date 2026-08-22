@@ -1,50 +1,66 @@
 // lib/src/rendering/renderers/base_glyph_renderer.dart
-// Base class: unified SMuFL glyph rendering
+// Base class: unified SMuFL glyph rendering.
 //
-// This class base fornece method unificado for desenhar glifos
-// using Always bounding box SMuFL for posicionamento preciso.
-//
-// ELIMINA inconsistências de uso de centerVertically/centerHorizontally
-// that cause alinhamentos imprecisos.
+// Provides the single method every renderer uses to draw a glyph, always
+// positioning it from the SMuFL bounding box rather than from TextPainter
+// metrics — which is what removes the inconsistent use of
+// centerVertically/centerHorizontally that used to misalign glyphs.
 
 import 'package:flutter/material.dart';
-import '../../utils/lru_cache.dart';
-import '../../layout/collision_detector.dart'; // CORREÇÃO: Caminho correto após consolidação
+import '../performance_optimizer.dart';
+import '../../layout/collision_detector.dart';
 import '../../smufl/smufl_metadata_loader.dart';
 import '../staff_coordinate_system.dart';
 
-/// Class base for Renderers de glifos SMuFL
+/// Base class for SMuFL glyph renderers.
 ///
-/// Fornece method unificado [drawGlyphWithBBox] that Always Uses
-/// bounding box of the metadata SMuFL for posicionamento preciso.
+/// Provides the unified [drawGlyphWithBBox] method, which always positions a
+/// glyph from its SMuFL bounding box. Every renderer must extend this class and
+/// draw exclusively through [drawGlyphWithBBox].
 ///
-/// Important: All os renderers must herdar desta class
-/// and Use exclusivamente [drawGlyphWithBBox] for Rendering.
+/// ## Font independence
+///
+/// **No renderer may name a music font literally.** Writing `'Bravura'` (or any
+/// other family) into a [TextStyle] is a defect, not a shortcut: it silently
+/// re-pins the engine to one font while the package advertises SMuFL
+/// compliance, and it desynchronises drawing from measuring.
+///
+/// The font actually in use is carried by [SmuflMetadata.font], a
+/// [SmuflFontDescriptor] holding the family and the package that ships it.
+/// Renderers read `metadata.font.fontFamily` together with
+/// `package: metadata.font.fontPackage` when the [TextStyle] accepts a package,
+/// or [SmuflFontDescriptor.resolvedFamily] when it does not.
+///
+/// This matters because *every geometric decision in this package already comes
+/// from the loaded font's metadata* — `engravingDefaults` (stem, beam, barline
+/// and staff-line thicknesses), `glyphBBoxes` (bounding boxes, hence every
+/// alignment computed above), `glyphAdvanceWidths` (spacing and digit advance)
+/// and `glyphsWithAnchors` (stem attachment, optical centres). Point
+/// [SmuflMetadata.load] at Petaluma, Leland or Sebastian and all of those
+/// numbers change accordingly. A hardcoded family would keep drawing Bravura
+/// outlines under another font's metrics: glyphs measured from one font and
+/// rasterised from another, which is worse than either font alone.
+///
+/// **Where the TextPainters come from**
+///
+/// Building (and laying out) a [TextPainter] per glyph per frame is the single
+/// most expensive thing a score painter does. Every painter used here is
+/// therefore obtained from [PerformanceOptimizer.glyphPainter], the process-wide
+/// LRU cache (`lib/src/rendering/performance_optimizer.dart`, capacity
+/// [PerformanceOptimizer.glyphPainterCacheCapacity]) keyed by character, font
+/// family/package, quantised size and colour. That class documents the full
+/// invalidation policy; the two rules that matter to renderers are:
+///
+/// * the returned painter is **shared and must not be mutated** (never call
+///   `layout()` on it, never reassign `text`) — it is only ever painted;
+/// * pass `GlyphDrawOptions(disableCache: true)` to get a private painter
+///   instead (built by [PerformanceOptimizer.buildGlyphPainter]).
 abstract class BaseGlyphRenderer {
   final StaffCoordinateSystem coordinates;
   final SmuflMetadata metadata;
   final double glyphSize;
 
-  /// Cache LRU de TextPainters reutilizáveis for performance
-  ///
-  /// **Limite:** 500 entradas (avoids memory leak)
-  /// **Estratégia:** LRU (Least Recently Used) - remove entradas less used
-  /// **Key:** glyphName_size_color
-  ///
-  /// **Calculation de size estimado:**
-  /// - Each TextPainter: ~2-5 KB (dependendo of the glyph)
-  /// - 500 entradas: ~1-2.5 MB de memória máxima
-  ///
-  /// **Benchmarks:**
-  /// - Hit rate típico: 85-95% (poucas combinações de glyph/size/color)
-  /// - Miss only in glyphs raros or sizes incomuns
-  ///
-  /// **References:**
-  /// - Guia completo: docs/IMPLEMENTATION_GUIDE_LRU_CACHE.md
-  /// - Magic numbers: docs/MAGIC_NUMBERS_REFERENCE.md
-  final LruCache<String, TextPainter> _textPainterCache = LruCache(500);
-
-  /// Detector de colisões opcional (can be shared between Renderers)
+  /// Optional collision detector (may be shared between renderers).
   CollisionDetector? collisionDetector;
 
   BaseGlyphRenderer({
@@ -54,19 +70,19 @@ abstract class BaseGlyphRenderer {
     this.collisionDetector,
   });
 
-  /// Desenha a glifo SMuFL using bounding box for posicionamento preciso
+  /// Draws a SMuFL glyph, positioning it from its bounding box.
   ///
-  /// This is o ÚNICO method that must be used for Rendering de glifos.
-  /// It ensures:
-  /// 1. Uso correct de bounding box SMuFL (never TextPainter.height/width)
-  /// 2. Centralização needs baseada in bbox.centerY and bbox.centerX
-  /// 3. Cache de TextPainters for performance
+  /// This is the ONLY method that may be used to render a glyph. It guarantees:
+  /// 1. correct use of the SMuFL bounding box (never TextPainter.height/width);
+  /// 2. precise centring based on bbox.centerX / bbox.centerY;
+  /// 3. TextPainter caching, drawn with the loaded font (see *Font
+  ///    independence* above).
   ///
-  /// @param canvas Flutter canvas for drawing
-  /// @param glyphName Glyph name SMuFL (ex: 'noteheadBlack', 'gClef')
-  /// @param position Position reference (where o glifo será desenhado)
-  /// @param color Cor of the glifo
-  /// @param options Opções de alinhamento and transformação
+  /// [canvas] Flutter canvas to draw on.
+  /// [glyphName] SMuFL glyph name (e.g. 'noteheadBlack', 'gClef').
+  /// [position] Reference point where the glyph is drawn.
+  /// [color] Colour of the glyph.
+  /// [options] Alignment and transform options.
   void drawGlyphWithBBox(
     Canvas canvas, {
     required String glyphName,
@@ -74,10 +90,10 @@ abstract class BaseGlyphRenderer {
     required Color color,
     GlyphDrawOptions options = const GlyphDrawOptions(),
   }) {
-    // Get codepoint Unicode of the glifo
+    // Unicode codepoint of the glyph.
     final character = metadata.getCodepoint(glyphName);
     if (character.isEmpty) {
-      // Glifo not encontrado, Use fallback if fornecido
+      // Glyph not found: use the fallback glyph when one was supplied.
       if (options.fallbackGlyph != null) {
         drawGlyphWithBBox(
           canvas,
@@ -90,37 +106,28 @@ abstract class BaseGlyphRenderer {
       return;
     }
 
-    // Get or Createsr TextPainter of the cache
-    final cacheKey = '${glyphName}_${options.size ?? glyphSize}_${color.toARGB32()}';
-    TextPainter textPainter;
-
-    // Tentar Get of the cache LRU
-    final cached = options.disableCache ? null : _textPainterCache.get(cacheKey);
-    if (cached != null) {
-      textPainter = cached;
-    } else {
-      textPainter = TextPainter(
-        text: TextSpan(
-          text: character,
-          style: TextStyle(
-            fontFamily: 'Bravura',
-            package: 'flutter_notemus',
-            fontSize: options.size ?? glyphSize,
+    // Get the (shared, already laid out) TextPainter from the LRU cache owned
+    // by PerformanceOptimizer. The key covers every parameter that changes the
+    // text layout: character, font descriptor (family + package), quantised
+    // size and colour. The font comes from `metadata.font`, so the glyphs are
+    // rasterised with the very font whose metrics positioned them.
+    // The painter is read-only for us — we only paint it, never re-layout it.
+    final fontSize = options.size ?? glyphSize;
+    final TextPainter textPainter = options.disableCache
+        ? PerformanceOptimizer.buildGlyphPainter(
+            character: character,
+            fontSize: fontSize,
             color: color,
-            height: 1.0,
-            letterSpacing: 0.0,
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-      );
-      textPainter.layout();
+            font: metadata.font,
+          )
+        : PerformanceOptimizer.glyphPainter(
+            character: character,
+            fontSize: fontSize,
+            color: color,
+            font: metadata.font,
+          );
 
-      if (!options.disableCache) {
-        _textPainterCache.put(cacheKey, textPainter);
-      }
-    }
-
-    // Fix: CRÍTICA: Use bounding box SMuFL to the invés de TextPainter dimensions
+    // CRITICAL: use the SMuFL bounding box instead of TextPainter dimensions.
     final glyphInfo = metadata.getGlyphInfo(glyphName);
     double xOffset = 0.0;
     double yOffset = 0.0;
@@ -130,31 +137,31 @@ abstract class BaseGlyphRenderer {
 
       // Calculate offsets based on the SMuFL bounding box
       if (options.centerHorizontally) {
-        // Centralizar horizontalmente using centre of the bbox
+        // Centre horizontally on the bbox centre.
         xOffset = -(bbox.centerX * coordinates.staffSpace);
       } else if (options.alignLeft) {
-        // Align to the left using borda left of the bbox
+        // Align to the bbox's left edge.
         xOffset = -(bbox.bBoxSwX * coordinates.staffSpace);
       } else if (options.alignRight) {
-        // Align to the right using borda right of the bbox
+        // Align to the bbox's right edge.
         xOffset = -(bbox.bBoxNeX * coordinates.staffSpace);
       }
-      // If nenhum, Use position as está (sem offset horizontal)
+      // With no option set, use `position` as-is (no horizontal offset).
 
       if (options.centerVertically) {
-        // Centralizar verticalmente using centre of the bbox
+        // Centre vertically on the bbox centre.
         yOffset = -(bbox.centerY * coordinates.staffSpace);
       } else if (options.alignTop) {
-        // Align to the top using borda upper of the bbox
+        // Align to the bbox's top edge.
         yOffset = -(bbox.bBoxNeY * coordinates.staffSpace);
       } else if (options.alignBottom) {
-        // Align to the base using borda lower of the bbox
+        // Align to the bbox's bottom edge.
         yOffset = -(bbox.bBoxSwY * coordinates.staffSpace);
       }
-      // If nenhum, Use position as está (sem offset vertical)
+      // With no option set, use `position` as-is (no vertical offset).
     } else {
-      // FALLBACK: If not houver bounding box, Use dimensões of the TextPainter
-      // (less preciso, mas funcional)
+      // FALLBACK: with no bounding box, fall back to the TextPainter's own
+      // dimensions (less precise, but functional).
       if (options.centerHorizontally) {
         xOffset = -textPainter.width * 0.5;
       }
@@ -163,57 +170,59 @@ abstract class BaseGlyphRenderer {
       }
     }
 
-    // Appliesr transformações (rotação, escala) if required
+    // Apply transforms (rotation, scale) when requested.
     if (options.rotation != 0.0 || options.scale != 1.0) {
       canvas.save();
 
-      // Transladar for point de rotação/escala
+      // Translate to the rotation/scale pivot.
       canvas.translate(position.dx + xOffset, position.dy + yOffset);
 
-      // Appliesr rotação
+      // Rotation.
       if (options.rotation != 0.0) {
-        canvas.rotate(options.rotation * 3.14159 / 180.0); // Graus para radianos
+        canvas.rotate(options.rotation * 3.14159 / 180.0); // degrees -> radians
       }
 
-      // Appliesr escala
+      // Scale.
       if (options.scale != 1.0) {
         canvas.scale(options.scale);
       }
 
-      // Desenhar na origem (already transladamos)
+      // Draw at the origin (we already translated).
       textPainter.paint(canvas, Offset.zero);
 
       canvas.restore();
     } else {
-      // Desenho simples sem transformações
+      // Plain draw, no transform.
       final finalX = position.dx + xOffset;
       final finalY = position.dy + yOffset;
-      
-      // Fix: CRÍTICA: TextPainter not desenha pela baseline SMuFL!
-      // For fontes SMuFL, o TextPainter desenha o glyph with o Top na coordenada Y especificada,
-      // not pela baseline. Precisamos compensar deslocando o glyph for top in metade of the height.
-      // A baseline SMuFL está aproximadamente no centre vertical of the bounding box Rendersdo.
-      // 
-      // EXCEÇÃO: Noteheads Not must receber this correção pois need align
-      // exatamente with ledger lines!
+
+      // CRITICAL: TextPainter does not draw from the SMuFL baseline. It places
+      // the glyph's TOP at the given Y, so we compensate by lifting the glyph
+      // half its height — the SMuFL baseline sits roughly at the vertical
+      // centre of the rendered bounding box.
+      //
+      // EXCEPTION: noteheads must NOT get this correction, since they have to
+      // line up exactly with the ledger lines.
       double baselineCorrection = 0.0;
-      if (!options.centerVertically && !options.alignTop && !options.alignBottom 
-          && !options.disableBaselineCorrection) {
-        // Only Appliesr correção if not estamos using nenhum alinhamento vertical
-        // And if a correção not foi explicitamente desabilitada
-        // NO FLUTTER: Y+ = Bottom, então SUBTRAÍMOS for fazer o glifo SUBIR
+      if (!options.centerVertically &&
+          !options.alignTop &&
+          !options.alignBottom &&
+          !options.disableBaselineCorrection) {
+        // Only correct when no vertical alignment was requested and the
+        // correction was not explicitly disabled.
+        // In Flutter Y+ points DOWN, so we SUBTRACT to move the glyph UP.
         baselineCorrection = -textPainter.height * 0.5;
       }
-      
+
       final correctedY = finalY + baselineCorrection;
-      
+
       textPainter.paint(
         canvas,
         Offset(finalX, correctedY),
       );
     }
 
-    // Registrar desenho for system de detecção de colisões (if habilitado)
+    // Register the drawn bounds with the collision system (when enabled).
     if (options.trackBounds &&
         collisionDetector != null &&
         glyphInfo != null &&
@@ -226,7 +235,6 @@ abstract class BaseGlyphRenderer {
         bbox.heightInPixels(coordinates.staffSpace),
       );
 
-      // Registrar no system de colisões
       collisionDetector!.register(
         id: '${glyphName}_${position.dx.toStringAsFixed(1)}_${position.dy.toStringAsFixed(1)}',
         bounds: bounds,
@@ -236,8 +244,9 @@ abstract class BaseGlyphRenderer {
     }
   }
 
-  /// New: Desenha a glifo alinhando a anchor SMuFL a a alvo
-  /// E.g., align 'opticalCenter' of the glifo exatamente in `target`.
+  /// Draws a glyph with one of its SMuFL anchors placed on a target point.
+  ///
+  /// E.g. put the glyph's 'opticalCenter' exactly at `target`.
   void drawGlyphAlignedToAnchor(
     Canvas canvas, {
     required String glyphName,
@@ -248,7 +257,7 @@ abstract class BaseGlyphRenderer {
   }) {
     final anchor = metadata.getGlyphAnchor(glyphName, anchorName);
     if (anchor == null) {
-      // Sem anchor: fallback for centralização default
+      // No such anchor: fall back to the default centring.
       drawGlyphWithBBox(
         canvas,
         glyphName: glyphName,
@@ -259,20 +268,20 @@ abstract class BaseGlyphRenderer {
       return;
     }
 
-    // Convertsr anchor de staff spaces for pixels
+    // Convert the anchor from staff spaces to pixels.
     final anchorPx = Offset(
       anchor.dx * coordinates.staffSpace,
       -anchor.dy * coordinates.staffSpace,
     );
 
-    // For align o anchor to the alvo, desenhar o glifo in (target - anchorPx)
+    // To land the anchor on the target, draw the glyph at (target - anchorPx).
     drawGlyphWithBBox(
       canvas,
       glyphName: glyphName,
       position: Offset(target.dx - anchorPx.dx, target.dy - anchorPx.dy),
       color: color,
       options: options.copyWith(
-        // Anchor alignment Generateslmente not requer centralizações Addsis
+        // Anchor alignment generally needs no additional centring.
         centerHorizontally: false,
         centerVertically: false,
         alignLeft: false,
@@ -284,18 +293,23 @@ abstract class BaseGlyphRenderer {
     );
   }
 
-  /// Limpa cache de TextPainters
-  /// Útil for liberar memória or when mudanças de tema ocorrem
+  /// Clears the TextPainter cache shared by every renderer.
+  ///
+  /// Delegates to [PerformanceOptimizer.clearGlyphCache]: the cache is
+  /// process-wide, so this clears it for every renderer, not just this one.
+  /// Needed when the font assets change; **not** needed on theme changes,
+  /// since the colour is part of the cache key.
   void clearCache() {
-    _textPainterCache.clear();
+    PerformanceOptimizer.clearGlyphCache();
   }
 
-  /// Gets number de itens no cache
-  int get cacheSize => _textPainterCache.size;
+  /// Number of glyph painters alive in the shared cache
+  /// ([PerformanceOptimizer.glyphCacheSize]).
+  int get cacheSize => PerformanceOptimizer.glyphCacheSize;
 
-  /// Determina a categoria de colisão baseada no glyph name and opções
+  /// Picks the collision category from the glyph name and the draw options.
   CollisionCategory _getCategoryForGlyph(String glyphName, GlyphDrawOptions options) {
-    // Map based no glyph name
+    // Map from the glyph name first.
     if (glyphName.startsWith('notehead')) return CollisionCategory.notehead;
     if (glyphName.startsWith('accidental')) return CollisionCategory.accidental;
     if (glyphName.startsWith('flag')) return CollisionCategory.flag;
@@ -307,7 +321,7 @@ abstract class BaseGlyphRenderer {
     }
     if (glyphName.contains('ornament')) return CollisionCategory.ornament;
 
-    // Categoria default baseada nas opções predefinidas
+    // Otherwise fall back to the category implied by the preset options.
     if (options == GlyphDrawOptions.noteheadDefault) {
       return CollisionCategory.notehead;
     }
@@ -325,49 +339,49 @@ abstract class BaseGlyphRenderer {
   }
 }
 
-/// Opções for desenho de glifos
+/// Options for drawing a glyph.
 class GlyphDrawOptions {
-  /// Centralizar horizontalmente using bounding box center
+  /// Centre horizontally on the bounding-box centre.
   final bool centerHorizontally;
 
-  /// Centralizar verticalmente using bounding box center
+  /// Centre vertically on the bounding-box centre.
   final bool centerVertically;
 
-  /// Align to the left using bounding box left edge
+  /// Align to the bounding box's left edge.
   final bool alignLeft;
 
-  /// Align to the right using bounding box right edge
+  /// Align to the bounding box's right edge.
   final bool alignRight;
 
-  /// Align to the top using bounding box top edge
+  /// Align to the bounding box's top edge.
   final bool alignTop;
 
-  /// Align to the base using bounding box bottom edge
+  /// Align to the bounding box's bottom edge.
   final bool alignBottom;
 
-  /// Size customizado (if null, Uses glyphSize default)
+  /// Custom size (when null, the renderer's default glyphSize is used).
   final double? size;
 
-  /// Rotação in graus (horário positivo)
+  /// Rotation in degrees (clockwise positive).
   final double rotation;
 
-  /// Escala (1.0 = normal)
+  /// Scale (1.0 = natural size).
   final double scale;
 
-  /// Glifo de fallback caso o principal not seja encontrado
+  /// Glyph to draw instead when the requested one is missing from the font.
   final String? fallbackGlyph;
 
-  /// Desabilitar cache (útil for glifos that mudam frequently)
+  /// Bypass the shared painter cache (for glyphs that change every frame).
   final bool disableCache;
 
-  /// Registrar bounds for detecção de colisões
+  /// Register the drawn bounds with the collision detector.
   final bool trackBounds;
 
-  /// Prioridade de colisão (used if trackBounds = true)
+  /// Collision priority (used when [trackBounds] is true).
   final CollisionPriority? collisionPriority;
 
-  /// Desabilitar correção de baseline automática
-  /// (útil for noteheads that must align precisamente with lines)
+  /// Disable the automatic baseline correction (needed by noteheads, which
+  /// must sit exactly on the staff/ledger lines).
   final bool disableBaselineCorrection;
 
   const GlyphDrawOptions({
@@ -387,7 +401,7 @@ class GlyphDrawOptions {
     this.disableBaselineCorrection = false,
   });
 
-  /// Creates cópia with valores modificados
+  /// Returns a copy with the given fields replaced.
   GlyphDrawOptions copyWith({
     bool? centerHorizontally,
     bool? centerVertically,
@@ -422,20 +436,24 @@ class GlyphDrawOptions {
     );
   }
 
-  /// Opções default for noteheads
-  /// Critical: A baseline correction is Required for position as notes corretamente!
-  /// Os anchors (stemUpSE, stemDownNW) are relativos to the baseline SMuFL.
-  /// Note: Isso caUses a offset nos points de aumento, that is compensado no DotRenderer.
+  /// Defaults for noteheads.
+  ///
+  /// Critical: the baseline correction is REQUIRED to position notes correctly,
+  /// because the stem anchors (stemUpSE, stemDownNW) are relative to the SMuFL
+  /// baseline. Note that this introduces an offset on the augmentation dots,
+  /// which DotRenderer compensates for.
   static const GlyphDrawOptions noteheadDefault = GlyphDrawOptions(
     centerHorizontally: false,
     centerVertically: false,
-    // disableBaselineCorrection: false (default) - Required!
+    // disableBaselineCorrection: false (the default) — required!
     trackBounds: true,
     collisionPriority: CollisionPriority.veryHigh,
   );
 
-  /// Opções default for accidentals
-  /// Critical: centerVertically: false for consistência with baseline SMuFL
+  /// Defaults for accidentals.
+  ///
+  /// Critical: centerVertically stays false, for consistency with the SMuFL
+  /// baseline.
   static const GlyphDrawOptions accidentalDefault = GlyphDrawOptions(
     centerHorizontally: true,
     centerVertically: false,
@@ -443,30 +461,36 @@ class GlyphDrawOptions {
     collisionPriority: CollisionPriority.veryHigh,
   );
 
-  /// Opções default for articulations
-  /// Critical: centerVertically: false for consistência with baseline SMuFL
+  /// Defaults for articulations.
+  ///
+  /// Critical: centerVertically stays false, for consistency with the SMuFL
+  /// baseline.
   static const GlyphDrawOptions articulationDefault = GlyphDrawOptions(
     centerHorizontally: true,
     centerVertically: false,
-    trackBounds: true, // CORREÇÃO: Ativado para collision detection
+    trackBounds: true, // enabled so collision detection sees these glyphs
     collisionPriority: CollisionPriority.high,
   );
 
-  /// Opções default for ornaments
-  /// Critical: centerVertically: false for consistência with baseline SMuFL
+  /// Defaults for ornaments.
+  ///
+  /// Critical: centerVertically stays false, for consistency with the SMuFL
+  /// baseline.
   static const GlyphDrawOptions ornamentDefault = GlyphDrawOptions(
     centerHorizontally: true,
     centerVertically: false,
-    trackBounds: true, // CORREÇÃO: Ativado para collision detection
+    trackBounds: true, // enabled so collision detection sees these glyphs
     collisionPriority: CollisionPriority.medium,
   );
 
-  /// Opções default for paUsess
-  /// Critical: centerVertically: false for consistência with baseline SMuFL
+  /// Defaults for rests.
+  ///
+  /// Critical: centerVertically stays false, for consistency with the SMuFL
+  /// baseline.
   static const GlyphDrawOptions restDefault = GlyphDrawOptions(
     centerHorizontally: true,
     centerVertically: false,
-    trackBounds: true, // CORREÇÃO: Ativado para collision detection
+    trackBounds: true, // enabled so collision detection sees these glyphs
     collisionPriority: CollisionPriority.high,
   );
 }

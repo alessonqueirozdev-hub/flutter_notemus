@@ -130,7 +130,7 @@ class EngravingRules {
   /// OSMD: 0.85
   double voiceSpacingMultiplierVexflow = 0.85;
 
-  /// Value Addsdo to the spacing VexFlow
+  /// Value adicionado to the spacing VexFlow
   /// OSMD: 3.0
   double voiceSpacingAddendVexflow = 3.0;
 
@@ -420,7 +420,7 @@ class EngravingRules {
   // ESCALA DE FONTES
   // ====================
 
-  /// Escala default de fonte de noteção VexFlow
+  /// Escala default de fonte de notação VexFlow
   /// OSMD: 39
   /// Verovio Uses unitsPerEm = 20480 (2048 * 10)
   double vexFlowDefaultNotationFontScale = 39.0;
@@ -429,7 +429,7 @@ class EngravingRules {
   /// OSMD: 39
   double vexFlowDefaultTabFontScale = 39.0;
 
-  /// Fonte default de noteção VexFlow
+  /// Fonte default de notação VexFlow
   /// OSMD: "gonville", mas suporta "bravura", "petaluma"
   String defaultVexFlowNoteFont = "bravura";
 

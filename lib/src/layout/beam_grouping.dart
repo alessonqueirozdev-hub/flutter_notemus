@@ -1,9 +1,18 @@
+// DEAD CODE — superseded by `beam_grouper.dart`, kept only for reference.
+//
+// Nothing in the package references this file (verified by grep: zero imports).
+// It still contains the note-CLONING beam assignment that the 2.6.0 forensic
+// audit identified as the root cause of four separate defects — see
+// `doc/adr/ADR-001-layout-never-clones-the-model.md`. If you ever wire this
+// file up, port it to in-place assignment first, or you will reintroduce them.
+//
+// Status is tracked in `doc/MODEL_ONLY.md` (deletion candidate).
 // lib/src/layout/beam_grouping.dart
 
 import '../../core/core.dart';
 
 /// Lógica inteligente de agrupamento de barras (beams) for figures rítmicas
-/// Segue as regras trAddsis de noteção musical
+/// Segue as regras trAddsis de notação musical
 class BeamGrouping {
   /// Agrupa notes in beams based na fórmula de measure and position no measure
   static List<MusicalElement> groupBeams(
@@ -58,7 +67,7 @@ class BeamGrouping {
         
         result.add(element);
         
-        // Currentizar position no measure
+        // Atualizar position no measure
         if (element is Note) {
           currentBeatPosition += element.duration.realValue;
         } else if (element is Rest) {
@@ -230,7 +239,7 @@ class BeamGrouping {
     return result;
   }
 
-  /// Clona a note Addsndo informação de beam
+  /// Clona a note adicionando informação de beam
   static Note _cloneNoteWithBeam(Note original, BeamType beamType) {
     return Note(
       pitch: original.pitch,

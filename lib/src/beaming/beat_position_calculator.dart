@@ -1,4 +1,4 @@
-// lib/src/beaming/beat_position_calculateTestor.dart
+// lib/src/beaming/beat_position_calculator.dart
 
 import 'package:flutter_notemus/core/core.dart';
 

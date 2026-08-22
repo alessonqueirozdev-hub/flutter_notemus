@@ -1,10 +1,12 @@
+// MODEL ONLY — animation configuration that no renderer consumes yet.
+// Status is tracked in `doc/MODEL_ONLY.md`.
 // lib/src/animation/animation_config.dart
 
 import 'package:flutter/material.dart';
 
 /// Configurestion for music score animations
 ///
-/// Definesss durations, curves, and behavior for various animation types
+/// Define durations, curves, and behavior for various animation types
 /// that can be applied to musical elements in the score.
 class AnimationConfig {
   // ═══════════════════════════════════════════════════════════════════════

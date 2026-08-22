@@ -18,7 +18,7 @@ class Chord extends MusicalElement with BoundingBoxSupport {
   final List<Ornament> ornaments;
   final Dynamic? dynamic;
 
-  /// Number of the voice for noteção polifônica (1 = soprano, 2 = contralto, etc.)
+  /// Number of the voice for notação polifônica (1 = soprano, 2 = contralto, etc.)
   /// null = voice única (default)
   final int? voice;
 

@@ -1,7 +1,9 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart' show Offset;
 import '../smufl/smufl_metadata_loader.dart';
 
-/// Class responsible for calculateTesting precise positions using SMuFL metadata
+/// Class responsible for calculating precise positions using SMuFL metadata
 /// and professional music typography rules.
 ///
 /// Based on:
@@ -12,7 +14,39 @@ import '../smufl/smufl_metadata_loader.dart';
 class SMuFLPositioningEngine {
   // REMOVED: stemUpXCorrection / stemDownXCorrection (old pixel-based constants).
   // The offset is now computed dynamically from stemThickness inside
-  // calculateTesteStemAttachmentOffset — see the explanation there.
+  // calculateStemAttachmentOffset — see the explanation there.
+
+  /// Standard stem length, in staff spaces.
+  ///
+  /// This value is deliberately a named constant and NOT read from
+  /// `engravingDefaults`: the SMuFL specification defines 29 engraving default
+  /// keys and none of them describes stem length, so any lookup of a
+  /// `'stemLength'` key would always fall through to its fallback while
+  /// pretending to be font-derived.
+  ///
+  /// Source: Elaine Gould, "Behind Bars", p. 13 — the standard stem length is
+  /// one octave, i.e. 3.5 staff spaces.
+  static const double kStandardStemLengthSpaces = 3.5;
+
+  /// Absolute lower bound for a stem, in staff spaces.
+  ///
+  /// "Behind Bars", p. 13: stems of notes lying far outside the staff may be
+  /// shortened, but never below 2.5 staff spaces.
+  static const double kAbsoluteMinimumStemLengthSpaces = 2.5;
+
+  /// How much a beamed stem may be shortened below [kStandardStemLengthSpaces].
+  ///
+  /// Kept at zero: inside a beam group the beam itself already replaces the
+  /// flag, so the classical full-octave stem is used as the target minimum.
+  static const double kBeamedStemShorteningSpaces = 0.0;
+
+  /// Fallback beam thickness in staff spaces, used when the loaded font does
+  /// not publish `beamThickness` in its `engravingDefaults` (Bravura: 0.5).
+  static const double kFallbackBeamThicknessSpaces = 0.5;
+
+  /// Fallback beam spacing in staff spaces, used when the loaded font does not
+  /// publish `beamSpacing` in its `engravingDefaults` (Bravura: 0.25).
+  static const double kFallbackBeamSpacingSpaces = 0.25;
 
   // Reference to the metadata loader (required)
   final SmuflMetadata _metadataLoader;
@@ -23,6 +57,13 @@ class SMuFLPositioningEngine {
   late final double minimumStemLength;
   late final double stemExtensionPerBeam;
   late final double stemThickness;
+
+  /// Beam thickness in staff spaces (`engravingDefaults.beamThickness`).
+  late final double beamThickness;
+
+  /// Vertical gap between two adjacent beams, in staff spaces
+  /// (`engravingDefaults.beamSpacing`).
+  late final double beamSpacing;
 
   // Accidental spacing
   late final double accidentalToNoteheadDistance;
@@ -54,11 +95,20 @@ class SMuFLPositioningEngine {
   SMuFLPositioningEngine({required SmuflMetadata metadataLoader})
     : _metadataLoader = metadataLoader {
     // Load values from SMuFL metadata
-    standardStemLength = _loadEngravingDefault('stemLength', 3.5);
-    minimumStemLength =
-        2.5; // Not in engravingDefaults, keeps default value
+    // Stem lengths are NOT part of engravingDefaults (see the dartdoc on
+    // kStandardStemLengthSpaces): use the documented engraving constants.
+    standardStemLength = kStandardStemLengthSpaces;
+    minimumStemLength = kAbsoluteMinimumStemLengthSpaces;
     stemExtensionPerBeam = 0.5; // Calculated based on beamSpacing
     stemThickness = _loadEngravingDefault('stemThickness', 0.12);
+    beamThickness = _loadEngravingDefault(
+      'beamThickness',
+      kFallbackBeamThicknessSpaces,
+    );
+    beamSpacing = _loadEngravingDefault(
+      'beamSpacing',
+      kFallbackBeamSpacingSpaces,
+    );
 
     // Spacing - Behind Bars recommends 0.16-0.25 SS of visual clearance.
     // Using 0.25 SS to ensure clear separation between the accidental and the notehead.
@@ -148,7 +198,7 @@ class SMuFLPositioningEngine {
         ? getStemUpAnchor(noteheadGlyphName)
         : getStemDownAnchor(noteheadGlyphName);
 
-    // SMuFL spec: stemUpSE gives the If CORNER (right edge) of the stem
+    // SMuFL spec: stemUpSE gives the SE CORNER (right edge) of the stem
     // rectangle; stemDownNW gives the NW CORNER (left edge).
     // canvas.drawLine centres the strokeWidth on the coordinate, so we must
     // offset by half the stem thickness to make the visual edge land exactly
@@ -223,7 +273,7 @@ class SMuFLPositioningEngine {
     return Offset.zero;
   }
 
-  /// calculateTestes the stem length based on the note's position in the staff
+  /// Calculates the stem length based on the note's position in the staff
   /// and the number of beams
   double calculateStemLength({
     required int staffPosition,
@@ -261,7 +311,7 @@ class SMuFLPositioningEngine {
     return length;
   }
 
-  /// calculateTestes the stem length for CHORDS.
+  /// Calculates the stem length for CHORDS.
   /// The stem must span ALL notes in the chord!
   ///
   /// Behind Bars (p. 16): "The stem of a chord must connect the most extreme note
@@ -307,7 +357,7 @@ class SMuFLPositioningEngine {
     return length;
   }
 
-  /// calculateTestes the correct position of an accidental relative to the notehead.
+  /// Calculates the correct position of an accidental relative to the notehead.
   /// Based on professional music typography practices.
   /// Behind Bars: 0.16-0.20 staff spaces from the notehead.
   /// Returns coordinates in STAFF SPACES (SMuFL units)
@@ -341,7 +391,7 @@ class SMuFLPositioningEngine {
     return Offset(xOffset, yOffset);
   }
 
-  /// calculateTestes the angle of a beam based on note positions.
+  /// Calculates the angle of a beam based on note positions.
   /// Follows the rules of Ted Ross and Elaine Gould.
   double calculateBeamAngle({
     required List<int> noteStaffPositions,
@@ -364,7 +414,7 @@ class SMuFLPositioningEngine {
           : (lastPos > firstPos ? -slant : slant);
     }
 
-    // For multiple notes, calculateTeste the angle based on position difference
+    // For multiple notes, calculate the angle based on position difference
     double slant;
     if (positionDifference <= 1) {
       slant = minimumBeamSlant;
@@ -384,7 +434,43 @@ class SMuFLPositioningEngine {
         : (lastPos > firstPos ? -slant : slant);
   }
 
-  /// calculateTestes the ideal beam height at the position of the first note
+  /// Minimum length, in staff spaces, that every stem of a beamed group must
+  /// have once the beam line has been placed.
+  ///
+  /// This is the invariant enforced by the "fit and shift" step of the beam
+  /// placement (the same approach used by LilyPond and Verovio): after the
+  /// beam slope is chosen, the whole beam line is translated until the
+  /// shortest stem of the group reaches this length.
+  ///
+  /// The value is
+  ///
+  /// ```text
+  /// max(kAbsoluteMinimumStemLengthSpaces,
+  ///     kStandardStemLengthSpaces - kBeamedStemShorteningSpaces)
+  ///   + (beamCount - 1) * (beamThickness + beamSpacing)
+  /// ```
+  ///
+  /// The extra term reserves room for the secondary beams, which grow away
+  /// from the notehead: without it a 32nd-note group would have its innermost
+  /// beam sitting on top of the noteheads ("Behind Bars", pp. 17-18).
+  ///
+  /// [beamCount] is the number of beams of the group (1 for eighths, 2 for
+  /// sixteenths, ...). Values below 1 are treated as 1.
+  double minimumStemLengthSpaces({required int beamCount}) {
+    final extraBeams = beamCount > 1 ? beamCount - 1 : 0;
+    final base = math.max(
+      kAbsoluteMinimumStemLengthSpaces,
+      kStandardStemLengthSpaces - kBeamedStemShorteningSpaces,
+    );
+    return base + extraBeams * (beamThickness + beamSpacing);
+  }
+
+  /// Calculates the ideal beam height at the position of the first note.
+  ///
+  /// This is only the INITIAL placement of the beam line; it looks at the
+  /// extreme notes of the group and does not guarantee a minimum length for
+  /// every stem. The caller is expected to run the fit-and-shift pass against
+  /// [minimumStemLengthSpaces] afterwards (see `BeamAnalyzer`).
   double calculateBeamHeight({
     required int staffPosition,
     required bool stemUp,
@@ -438,7 +524,7 @@ class SMuFLPositioningEngine {
     }
   }
 
-  /// calculateTestes the position of an ornament relative to the note
+  /// Calculates the position of an ornament relative to the note
   Offset calculateOrnamentPosition({
     required String ornamentGlyph,
     required int staffPosition,
@@ -463,7 +549,7 @@ class SMuFLPositioningEngine {
     return Offset(0.0, yOffset);
   }
 
-  /// calculateTestes the position of an articulation (staccato, accent, etc.)
+  /// Calculates the position of an articulation (staccato, accent, etc.)
   Offset calculateArticulationPosition({
     required String articulationGlyph,
     required int staffPosition,
@@ -501,7 +587,7 @@ class SMuFLPositioningEngine {
     return Offset(0.0, yOffset);
   }
 
-  /// calculateTestes control points for a smooth slur curve.
+  /// Calculates control points for a smooth slur curve.
   /// Returns [startPoint, controlPoint1, controlPoint2, endPoint] for a cubic Bézier curve.
   List<Offset> calculateSlurControlPoints({
     required Offset startPosition,
@@ -535,7 +621,7 @@ class SMuFLPositioningEngine {
     return [startPosition, cp1, cp2, endPosition];
   }
 
-  /// calculateTestes the position and size of a grace note (appoggiatura)
+  /// Calculates the position and size of a grace note (appoggiatura)
   Map<String, dynamic> calculateGraceNoteLayout({
     required int staffPosition,
     required bool mainNoteStemUp,
@@ -552,7 +638,7 @@ class SMuFLPositioningEngine {
     };
   }
 
-  /// calculateTestes the position and layout of a tuplet
+  /// Calculates the position and layout of a tuplet
   Map<String, dynamic> calculateTupletLayout({
     required List<Offset> notePositions,
     required bool stemsUp,
@@ -589,12 +675,12 @@ class SMuFLPositioningEngine {
     };
   }
 
-  /// calculateTestes the width of a glyph using the metadata loader
+  /// Calculates the width of a glyph using the metadata loader
   double getGlyphWidth(String glyphName) {
     return _metadataLoader.getGlyphWidth(glyphName);
   }
 
-  /// calculateTestes the height of a glyph based on its bounding box
+  /// Calculates the height of a glyph based on its bounding box
   double _getGlyphHeight(String glyphName) {
     return _metadataLoader.getGlyphHeight(glyphName);
   }
@@ -605,7 +691,7 @@ class SMuFLPositioningEngine {
     return _metadataLoader.getGlyphAnchor(glyphName, 'opticalCenter');
   }
 
-  /// calculateTestes the position of repeat signs
+  /// Calculates the position of repeat signs
   Map<String, dynamic> calculateRepeatSignPosition({
     required String repeatGlyph,
     required double barlineX,
@@ -628,7 +714,7 @@ class SMuFLPositioningEngine {
     };
   }
 
-  /// calculateTestes the layout of repeat barlines with endings (voltas)
+  /// Calculates the layout of repeat barlines with endings (voltas)
   Map<String, dynamic> calculateEndingLayout({
     required double startX,
     required double endX,
@@ -644,7 +730,7 @@ class SMuFLPositioningEngine {
     };
   }
 
-  /// calculateTestes the positioning of a time signature
+  /// Calculates the positioning of a time signature
   Map<String, dynamic> calculateTimeSignaturePosition({
     required int numerator,
     required int denominator,
@@ -661,14 +747,14 @@ class SMuFLPositioningEngine {
     };
   }
 
-  /// calculateTestes the appropriate scale for dynamic markings (to avoid overlaps)
+  /// Calculates the appropriate scale for dynamic markings (to avoid overlaps)
   double calculateDynamicsScale(String dynamicGlyph) {
     // Dynamics are generally drawn at normal scale
     // but can be reduced if there are overlaps
     return 1.0;
   }
 
-  /// Gets the cut-outs of a glyph (for advanced spacing calculateTestions)
+  /// Gets the cut-outs of a glyph (for advanced spacing calculations)
   Map<String, Offset> getGlyphCutOuts(String glyphName) {
     final Map<String, Offset> cutOuts = {};
 

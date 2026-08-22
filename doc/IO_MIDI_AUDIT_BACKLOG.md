@@ -1,35 +1,98 @@
 # Import/Export + MIDI audit backlog (41 confirmed)
 
-> **2.6.0 audit status (2026-06-19).** Cross-checked against the code by a
-> two-pass automated audit (classify, then adversarial verify). An item is
-> listed **RESOLVED** only when the adversarial pass confirmed the desired
-> behavior is implemented; **PARTIAL** = implemented with caveats/gaps; the
-> rest stay open. Overlay over 41 items — the per-item descriptions below
-> are unchanged.
+> **Evidence rule (see the methodological note at the top of
+> `doc/LIBRARY_AUDIT_BACKLOG.md`).** RESOLVED requires a test that would fail if
+> the regression returned. For this file those tests are
+> `test/invariants/engraving_invariants_test.dart` (groups L9, L10, "F-06 / F-07")
+> and the parser/MIDI suites under `test/parsers/` and `test/midi/`.
 
-- **RESOLVED (9):**
+> **2.7.0 audit status (2026-08-22).** Re-verified against the code after the
+> two remediation waves that followed `doc/AUDITORIA_FORENSE_2026-08-21.md`.
+> Statuses were re-derived from the source, not carried over. The per-item
+> descriptions below are unchanged and still describe the ORIGINAL defect.
+
+- **RESOLVED (15):**
   - **#1** — Crescendo/diminuendo wedges not imported
   - **#4** — MEI beam/tuplet container children dropped
   - **#5** — Only one MusicXML part imported; multi-staff collapses
+  - **#7** — `<transpose>` ignored — *fixed this round: `parser_support.dart:1765-1800`
+    reads `<diatonic>`/`<chromatic>`/`<octave-change>` per part.*
   - **#8** — Lyrics (syllables) never exported
   - **#9** — Beams never exported
-  - **#17** — Slur/tie <number> (id) ignored; overlapping slurs collapse
+  - **#14** — `TempoMark.beatUnit` ignored in playback — *fixed this round:
+    `midi_mapper.dart:513` converts the mark through
+    `Duration(beatUnit).realValue * 4`, so a dotted-quarter = 60 no longer plays
+    as a quarter = 60.*
+  - **#16** — `<divisions>` ignored — *fixed this round: a per-part `_divisions`
+    is tracked and `<duration>` becomes the authoritative value when `<type>` is
+    absent (`parser_support.dart:1518-1580`, `_musicXmlNotatedWholeNoteValue`).
+    Invariant: "F-06 / F-07 — divisions drive the duration when `<type>` is
+    absent".*
+  - **#17** — Slur/tie `<number>` (id) ignored; overlapping slurs collapse
   - **#18** — Multi-voice measures export empty
   - **#19** — Ornaments and grace notes dropped on export
-  - **#38** — MusicXML <duration> hardcoded to 1
-- **PARTIAL (12):**
-  - **#2** — Tuplets silently dropped on export
-  - **#3** — MEI scoreDef/staffDef clef/key/meter lost
-  - **#6** — MEI control events (slur/tie/dynam) with @startid/@endid ign...
-  - **#10** — Clef line mapping wrong for treble/bass and missing octave c...
-  - **#11** — Ties only emit start/stop, not continuation; <tied> notation...
-  - **#14** — TempoMark.beatUnit ignored in playback
+  - **#25** — Grace notes add time instead of stealing it — *fixed this round:
+    `midi_mapper.dart:582-599` starts the grace note BEFORE the principal
+    (`graceStart = startTick - graceTicks`) and only falls back to adding time at
+    tick 0.*
+  - **#28** — `<backup>`/`<forward>` are no-ops — *fixed this round: the measure
+    reader keeps a musical time cursor in divisions ticks; `<backup>` rewinds it
+    (and opens a synthetic voice when the file carries no `<voice>`) and
+    `<forward>` advances it, emitting the gap as rests
+    (`parser_support.dart:1474-1612`). Invariant: "backup separates simultaneous
+    voices".*
+  - **#29** — Ornaments never expanded into the note stream — *fixed this round:
+    `midi_mapper.dart:657+` expands trill/mordent/turn into sub-notes filling the
+    principal's duration.*
+  - **#38** — MusicXML `<duration>` hardcoded to 1
+- **PARTIAL (9):**
+  - **#2** — Tuplets on export — the writer now has a `Tuplet` branch
+    (`musicxml_parser.dart:371, 413`) and emits `<time-modification>`; nesting is
+    still flattened.
+  - **#3** — MEI scoreDef/staffDef clef/key/meter — `_meiStaffDefaults` seeds the
+    first measure from `<scoreDef>`; per-`<staffDef>` overrides mid-score are not
+    tracked.
+  - **#6** — MEI control events with `@startid`/`@endid` — slur/tie/dynam are
+    resolved and the indexes are now cleared per measure (F-42), so duplicate
+    `xml:id`s across bars no longer leak; hairpin/fermata/dir/tempo by id are
+    still not.
+  - **#10** — Clef line mapping / octave clefs on export
+  - **#11** — Ties emit start/stop, not continuation
   - **#20** — Barlines and repeats not exported
-  - **#24** — Crescendo/diminuendo produce no velocity ramp; reset velocit...
-  - **#25** — Grace notes add time instead of stealing it
-  - **#29** — Ornaments never expanded into note stream
+  - **#24** — Hairpins produce no velocity ramp — *half-fixed this round: a
+    hairpin no longer RESETS the running velocity to mf
+    (`midi_mapper.dart:537-544`), which was the destructive half. There is still
+    no ramp.*
   - **#33** — Grace-note slash (acciaccatura vs appoggiatura) not captured
-  - **#37** — Only first <beam> level read; secondary beams lost
+  - **#37** — Beam levels — *partially fixed this round: `_musicXmlBeamText`
+    (`parser_support.dart:2240-2248`) now selects the beam by `@number` instead of
+    taking `firstOrNull`, so a note whose `<beam number="2">` comes first no longer
+    loses its PRIMARY beam. Levels 2..4 are still dropped, and the TODO in the code
+    says why: `Note` exposes a single `BeamType? beam`, and adding a per-level
+    field is a `lib/core` model change.*
+- **New this round — beyond the original 41 (§30 of the forensic audit):**
+  - **Per-voice MIDI tracks and channels** — `MidiGenerationOptions.separateTracksPerVoice`
+    emits one `MidiTrack` per (staff, voice) on its own channel; `mutedVoices` /
+    `soloVoices` / `mutedStaves` / `soloStaves` make solo and mute possible
+    (`midi_models.dart:183-236`, `midi_mapper.dart:157-240`). Muted parts still
+    consume musical time, so everything else keeps its timing.
+  - **Octave-transposing clefs in playback (F-24b)** — `MidiMapper` now tracks the
+    active `Clef` and applies `octaveShift` to obtain the sounding pitch, with a
+    warning when the result leaves the MIDI range (`midi_mapper.dart:25-26,
+    330-356, 460-463`). The convention is now fixed and identical on both sides:
+    **`Pitch.octave` is the WRITTEN octave**; render reads it as written, playback
+    transposes. This closes the "no reading in which both are right" objection.
+  - **Still missing from §30:** no measure-range / region selection — no API on
+    `MidiGenerationOptions` accepts a measure interval, so "play the selection"
+    is not expressible yet.
+- **Still OPEN — and why (spot-checked, 2026-08-22):**
+  - **#13, #21, #22, #23** — there is still **no MEI serializer at all**
+    (`lib/src/parsers/` has `mei_parser.dart` and no writer). MEI is import-only;
+    every MEI round-trip claim must stay off the table.
+  - **#12, #15, #26, #27, #30, #31, #32, #34, #36, #39, #40, #41** — untouched.
+  - **#35** — MEI `<space>`, `<mRest>`, `<mSpace>`, `<multiRest>` are still not
+    matched in the layer reader, so a voice that relies on them loses its
+    alignment.
 
 ## 1. [HIGH/medium] (musicxml-import) Crescendo/diminuendo wedges (<wedge>) are not imported
 **Current:** _parseMusicXmlDirections (parser_support.dart:1365) only handles direction-type children dynamics, words, metronome, segno, coda, rehearsal, and octave-shift. There is no case for <wedge>, so hairpin crescendo/diminuendo spanners are dropped entirely. The model supports them: Dynamic has isHairpin and length (lib/core/dynamic.dart:55-66) and DynamicType has crescendo/diminuendo (parser_support.dart:522-524), but only literal <dynamics> abbreviations and the words 'crescendo'/'diminuendo' ever reach it.

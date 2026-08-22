@@ -63,7 +63,7 @@ class SpacingPreferences {
   /// **Recomendado: 0.7** for qualidade profissional
   final double consistencyWeight;
 
-  /// Spacing de paUsess relativo a notes (0.0 - 1.0)
+  /// Spacing de pausas relativo a notes (0.0 - 1.0)
   /// 
   /// Elaine Gould recomenda 80% of the note spacing equivalentes
   /// 
@@ -133,7 +133,7 @@ class SpacingPreferences {
     compoundMeterPulseSpacing: 0.25,
   );
 
-  /// Createsr cópia with modificações
+  /// criar cópia with modificações
   SpacingPreferences copyWith({
     SpacingModel? model,
     double? spacingFactor,

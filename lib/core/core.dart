@@ -50,7 +50,7 @@ export 'repeat.dart';
 export 'breath.dart';
 export 'volta_bracket.dart';
 
-// === TEXT AND ANNoteTIONS ===
+// === TEXT AND ANNOTATIONS ===
 export 'text.dart';             // includes Syllable, Verse (MEI <syl>/<verse>)
 
 // === ADVANCED TECHNIQUES ===

@@ -47,10 +47,19 @@ class MusicScoreTheme {
   final TextStyle? octaveTextStyle;
   final TextStyle? metronomeTextStyle;
 
-  // Configuresções de Rendering
+  // configurações de Rendering
   final double? defaultStaffSpace;
   final double? defaultFontSize;
   final bool showLedgerLines;
+
+  /// Draw the measure number above the first measure of every system
+  /// (Behind Bars: system-start numbering is the default convention).
+  /// Measure 1 is never numbered.
+  final bool showMeasureNumbers;
+
+  /// Text style for measure numbers. Defaults to a small italic-free label
+  /// sized from the staff space when null.
+  final TextStyle? measureNumberTextStyle;
   final bool antiAlias;
   final double strokeWidth;
 
@@ -100,10 +109,12 @@ class MusicScoreTheme {
     this.octaveTextStyle,
     this.metronomeTextStyle,
 
-    // Configuresções
+    // configurações
     this.defaultStaffSpace,
     this.defaultFontSize,
     this.showLedgerLines = true,
+    this.showMeasureNumbers = true,
+    this.measureNumberTextStyle,
     this.antiAlias = true,
     this.strokeWidth = 1.0,
   });
@@ -211,6 +222,8 @@ class MusicScoreTheme {
     double? defaultStaffSpace,
     double? defaultFontSize,
     bool? showLedgerLines,
+    bool? showMeasureNumbers,
+    TextStyle? measureNumberTextStyle,
     bool? antiAlias,
     double? strokeWidth,
   }) {
@@ -245,6 +258,9 @@ class MusicScoreTheme {
       defaultStaffSpace: defaultStaffSpace ?? this.defaultStaffSpace,
       defaultFontSize: defaultFontSize ?? this.defaultFontSize,
       showLedgerLines: showLedgerLines ?? this.showLedgerLines,
+      showMeasureNumbers: showMeasureNumbers ?? this.showMeasureNumbers,
+      measureNumberTextStyle:
+          measureNumberTextStyle ?? this.measureNumberTextStyle,
       antiAlias: antiAlias ?? this.antiAlias,
       strokeWidth: strokeWidth ?? this.strokeWidth,
     );

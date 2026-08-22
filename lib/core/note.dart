@@ -9,7 +9,7 @@ import 'technique.dart';
 import 'text.dart';
 import '../src/music_model/bounding_box_support.dart';
 
-/// Definesss the articulation types that a note may have.
+/// Define the articulation types that a note may have.
 enum ArticulationType {
   staccato,         // Dot
   staccatissimo,    // Triangular dot
@@ -42,11 +42,23 @@ class Note extends MusicalElement with BoundingBoxSupport {
   final Pitch pitch;
   final Duration duration;
 
-  final BeamType? beam;
+  /// Beam membership of this note.
+  ///
+  /// This field is a LAYOUT decision, not a purely musical one: when a measure
+  /// has `autoBeaming` enabled, [LayoutEngine] resolves the beam groups from
+  /// the meter and writes the result back here, **in place, on this very
+  /// object**. It deliberately does not clone the note: identity has to survive
+  /// the layout pass so that identity-keyed layout data (accidental decisions,
+  /// note X/Y positions, future selection/hit-testing) keeps matching the
+  /// caller's own objects.
+  ///
+  /// Set it yourself to encode beams explicitly, and set
+  /// `Measure.autoBeaming = false` so the layout leaves your value alone.
+  BeamType? beam;
   final List<ArticulationType> articulations;
   final TieType? tie;
 
-  /// Optional: Definesss whether this note starts or ends a slur.
+  /// Optional: Define whether this note starts or ends a slur.
   final SlurType? slur;
 
   /// Concurrent (nested/overlapping) slur boundaries on this note, each with a
@@ -63,7 +75,7 @@ class Note extends MusicalElement with BoundingBoxSupport {
   /// Special playing techniques for the note.
   final List<PlayingTechnique> techniques;
 
-  /// Voice number for polyphonic notetion (1 = soprano, 2 = alto, etc.).
+  /// Voice number for polyphonic notation (1 = soprano, 2 = alto, etc.).
   /// null = single voice (default).
   final int? voice;
 

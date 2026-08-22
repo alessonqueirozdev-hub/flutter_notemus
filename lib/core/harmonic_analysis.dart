@@ -3,7 +3,7 @@
 import 'musical_element.dart';
 
 /// Type de intervalo melódico, correspwherendo to the atributo `@intm` of the MEI v5.
-/// Suporta Código de Parsons, noteção diatônica and semitons.
+/// Suporta Código de Parsons, notação diatônica and semitons.
 enum MelodicIntervalType {
   /// Código de Parsons: repetição (R), ascendente (U), descendente (D)
   parsonsCode,
@@ -122,7 +122,7 @@ class HarmonicInterval {
   String toString() => diatonicName ?? '$semitones st';
 }
 
-/// Definess a membro de a chord within de a `ChordTable` (MEI `<chordMember>`).
+/// Define a membro de a chord within de a `ChordTable` (MEI `<chordMember>`).
 class ChordMember {
   /// Note of the membro (pname + octave relativo to the fundamental, or semitom).
   final int intervalFromRoot;
@@ -133,7 +133,7 @@ class ChordMember {
   const ChordMember({required this.intervalFromRoot, this.alter = 0.0});
 }
 
-/// Definess a type de chord na tabela de chords (MEI `<chordDef>`).
+/// Define a type de chord na tabela de chords (MEI `<chordDef>`).
 ///
 /// ```dart
 /// ChordDefinition(

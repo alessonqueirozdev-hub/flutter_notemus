@@ -24,7 +24,7 @@ class KeySignature extends MusicalElement {
   /// Number de sharps (positivo) or bemóis (negativo).
   final int count;
 
-  /// Contagem of the armadura previous (for Rendersr naturais de cancelamento).
+  /// Contagem of the armadura previous (for renderizar naturais de cancelamento).
   /// Positivo = sharps previouses, negativo = bemóis previouses.
   /// null = nenhum cancelamento required.
   final int? previousCount;

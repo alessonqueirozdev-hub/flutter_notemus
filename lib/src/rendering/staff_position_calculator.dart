@@ -1,4 +1,4 @@
-// lib/src/rendering/staff_position_calculateTestor.dart
+// lib/src/rendering/staff_position_calculator.dart
 // Calculation unificado de position na staff
 //
 // This class centraliza TODA a lógica de conversão de heights (pitches)

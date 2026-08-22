@@ -20,33 +20,102 @@ class PositionedElement {
   final Offset position;
   final int system;
 
-  /// Number of the voice (1, 2, ...) in context polifônicos. Null = voice única.
+  /// Voice number (1, 2, ...) in polyphonic contexts. Null = single voice.
   final int? voiceNumber;
+
+  /// Musical onset of this element, measured in whole notes from the start of
+  /// the staff (a quarter note is 0.25). Non-rhythmic elements inherit the
+  /// onset of the position they occupy.
+  ///
+  /// This is the shared time coordinate that lets several staves be aligned on
+  /// one grid (see `GrandStaffPainter`): two events with the same onset must
+  /// end up at the same X, whatever their individual spacing needs.
+  final double onset;
+
+  /// Index of the measure this element belongs to, or -1 when unknown.
+  /// Used for measure numbering and for future selection by bar.
+  final int measureIndex;
 
   PositionedElement(
     this.element,
     this.position, {
     this.system = 0,
     this.voiceNumber,
+    this.onset = 0.0,
+    this.measureIndex = -1,
   });
 
   /// Stable signature used to cheaply compare large positioned element lists.
   ///
-  /// The signature intentionally includes element identity/equality semantics,
-  /// position, system and voice context so `shouldRepaint` can compare in O(1).
+  /// The signature is **structural**, not identity based: laying the same
+  /// [Staff] out twice must produce the same number, otherwise `shouldRepaint`
+  /// can never return false and viewport culling saves nothing. (It used to mix
+  /// in `element.hashCode`, which is identity for musical elements, and the
+  /// engine replaced beamed notes with fresh objects on every run.)
   static int computeSignature(List<PositionedElement> elements) {
     int hash = 17;
     for (final item in elements) {
       hash = Object.hash(
         hash,
-        item.element,
+        structuralHash(item.element),
         item.position.dx,
         item.position.dy,
         item.system,
         item.voiceNumber,
+        item.onset,
+        item.measureIndex,
       );
     }
     return Object.hash(hash, elements.length);
+  }
+
+  /// Content-based hash for a musical element, so two runs over the same model
+  /// agree even though the objects are compared by identity elsewhere.
+  static int structuralHash(MusicalElement element) {
+    if (element is Note) {
+      return Object.hash(
+        'Note',
+        element.pitch,
+        element.duration.type,
+        element.duration.dots,
+        element.beam,
+        element.tie,
+        element.voice,
+        element.articulations.length,
+        element.ornaments.length,
+        element.syllables?.length ?? 0,
+      );
+    }
+    if (element is Rest) {
+      return Object.hash('Rest', element.duration.type, element.duration.dots);
+    }
+    if (element is Chord) {
+      var h = Object.hash('Chord', element.duration.type,
+          element.duration.dots, element.beam, element.voice);
+      for (final n in element.notes) {
+        h = Object.hash(h, n.pitch);
+      }
+      return h;
+    }
+    if (element is Clef) {
+      return Object.hash('Clef', element.clefType);
+    }
+    if (element is KeySignature) {
+      return Object.hash('Key', element.count, element.previousCount);
+    }
+    if (element is TimeSignature) {
+      return Object.hash('Time', element.numerator, element.denominator);
+    }
+    if (element is Barline) {
+      return Object.hash('Barline', element.type);
+    }
+    if (element is Tuplet) {
+      return Object.hash('Tuplet', element.actualNotes, element.normalNotes,
+          element.elements.length);
+    }
+    // Fall back to the runtime type: enough to notice a structural change,
+    // and still deterministic across runs.
+    return element.runtimeType.hashCode;
   }
 }
 
@@ -72,6 +141,9 @@ class LayoutCursor {
   double _currentX;
   double _currentY;
   int _currentSystem;
+
+  /// Index of the measure currently being laid out (set by the engine).
+  int currentMeasureIndex = -1;
   bool _isFirstMeasureInSystem;
   Clef? _currentClef; // ✅ NOVO: Rastrear clave atual
 
@@ -86,7 +158,7 @@ class LayoutCursor {
   }) : _currentX = systemMargin,
        _currentY =
            staffSpace *
-           5.0, // CORREÃƒâ€¡ÃƒÆ’O CRÃƒÂTICA: Baseline ÃƒÂ© staffSpace * 5, nÃƒÂ£o * 4
+           5.0, // CORREÇÃO CRÃƒÂTICA: Baseline é staffSpace * 5, não * 4
        _currentSystem = 0,
        _isFirstMeasureInSystem = true;
 
@@ -95,6 +167,9 @@ class LayoutCursor {
   int get currentSystem => _currentSystem;
   bool get isFirstMeasureInSystem => _isFirstMeasureInSystem;
   double get usableWidth => availableWidth - (systemMargin * 2);
+
+  /// Clef currently in force at the cursor, or null before the first clef.
+  Clef? get activeClef => _currentClef;
 
   void advance(double width) {
     _currentX += width;
@@ -117,27 +192,32 @@ class LayoutCursor {
     _isFirstMeasureInSystem = true;
   }
 
-  void addBarline(List<PositionedElement> elements) {
+  void addBarline(List<PositionedElement> elements, {double onset = 0.0}) {
     elements.add(
       PositionedElement(
         Barline(),
         Offset(_currentX, _currentY),
         system: _currentSystem,
+        onset: onset,
+        measureIndex: currentMeasureIndex,
       ),
     );
-    advance(LayoutEngine.barlineSeparation * staffSpace);
+    advance(LayoutEngine.barlineTrailingSpace * staffSpace);
   }
 
   /// Adds double barline final (end of the peça)
-  void addDoubleBarline(List<PositionedElement> elements) {
+  void addDoubleBarline(List<PositionedElement> elements,
+      {double onset = 0.0}) {
     elements.add(
       PositionedElement(
         Barline(type: BarlineType.final_),
         Offset(_currentX, _currentY),
         system: _currentSystem,
+        onset: onset,
+        measureIndex: currentMeasureIndex,
       ),
     );
-    advance(LayoutEngine.barlineSeparation * staffSpace);
+    advance(LayoutEngine.barlineTrailingSpace * staffSpace);
   }
 
   void endMeasure() {
@@ -149,11 +229,22 @@ class LayoutCursor {
     MusicalElement element,
     List<PositionedElement> elements, {
     int? voiceNumber,
+    double onset = 0.0,
   }) {
-    // Rastrear clef current
+    // Track the clef currently in force. Because system elements are now laid
+    // out in document order (a mid-measure clef change stays where the author
+    // put it), the notes before such a change keep the previous clef.
     if (element is Clef) {
       _currentClef = element;
     }
+
+    // A plain (non-MultiVoice) measure can still carry voice-tagged notes —
+    // that is exactly what the MusicXML importer produces. Derive the voice
+    // from the element when the caller did not pass one, otherwise cross-voice
+    // collision resolution and voice-based selection silently skip them.
+    voiceNumber ??= element is Note
+        ? element.voice
+        : (element is Chord ? element.voice : null);
 
     if (element is Chord && _currentClef != null) {
       for (final note in element.notes) {
@@ -176,6 +267,8 @@ class LayoutCursor {
           Offset(_currentX, _currentY),
           system: _currentSystem,
           voiceNumber: voiceNumber,
+          onset: onset,
+          measureIndex: currentMeasureIndex,
         ),
       );
       return;
@@ -205,6 +298,8 @@ class LayoutCursor {
         Offset(_currentX, elementY),
         system: _currentSystem,
         voiceNumber: voiceNumber,
+        onset: onset,
+        measureIndex: currentMeasureIndex,
       ),
     );
   }
@@ -233,8 +328,33 @@ class LayoutEngine {
   late final Map<Note, AccidentalDisplay> accidentalDecisions =
       AccidentalResolver.resolve(staff.measures);
 
-  // Configuresção de validação (silenciosa by default)
+  /// Horizontal compression applied to the rhythmic spacing of the measure
+  /// currently being laid out.
+  ///
+  /// 1.0 = natural spacing. A measure whose natural width exceeds the usable
+  /// line width is squeezed instead of being allowed to run off the canvas
+  /// (F-05: a bar of 32 sixteenths at 400 px used to reach x = 1222 px, and the
+  /// widget clipped everything past the viewport with no way to scroll to it).
+  double _spacingScale = 1.0;
+
+  /// Lower bound for [_spacingScale]; past this the notes would collide, so the
+  /// measure is allowed to overflow (the canvas is horizontally scrollable).
+  static const double minimumSpacingScale = 0.35;
+
+  /// Musical time, in whole notes, at which the measure being laid out starts.
+  double _measureOnsetBase = 0.0;
+
+  // Validation configuration (silent by default).
   final bool verboseValidation;
+
+  /// Number of measures that precede this [staff] in the real score.
+  ///
+  /// A wrapped system is laid out from a SUB-staff, so its measure indices
+  /// restart at 0. Rather than stamping the absolute number onto the caller's
+  /// `Measure` objects (a surprising mutation of the model, and one that gets
+  /// anacrusis numbering wrong), the offset is passed here and applied only
+  /// when the measure carries no explicit `Measure.number`.
+  final int measureNumberOffset;
 
   // Fix: SMuFL: Larguras agora consultadas dinamicamente of the metadata
   // Valores de fallback mantidos for compatibilidade
@@ -244,8 +364,31 @@ class LayoutEngine {
   static const double _noteheadBlackWidthFallback = 1.18;
   static const double _accidentalSharpWidthFallback = 1.116;
   static const double _accidentalFlatWidthFallback = 1.18;
-  static const double barlineSeparation = 2.5; // Espaço DEPOIS da barline
+  /// Space left AFTER a barline before the next measure's content, in staff
+  /// spaces.
+  ///
+  /// NOTE: this is NOT SMuFL's `barlineSeparation` engraving default (0.4),
+  /// which describes the gap BETWEEN the two strokes of a double/final barline
+  /// and is read straight from the metadata by `BarlineRenderer`. The name
+  /// collision was misleading, so the constant is now [barlineTrailingSpace];
+  /// [barlineSeparation] stays as a deprecated alias.
+  static const double barlineTrailingSpace = 2.5;
+
+  @Deprecated(
+    'Renamed to barlineTrailingSpace: this is not SMuFL barlineSeparation',
+  )
+  static const double barlineSeparation = barlineTrailingSpace;
   static const double legerLineExtension = 0.4;
+
+  /// Size factor applied to a clef/key/meter change that happens INSIDE a bar
+  /// (Behind Bars / Verovio draw those at cue size). Matches the 0.72 used by
+  /// `StaffRenderer` when it detects a mid-system clef.
+  static const double midMeasureCueScale = 0.72;
+
+  /// Horizontal grid, in staff spaces, on which `TupletRenderer` lays the notes
+  /// inside a tuplet. Mirrored by `_registerTupletGeometry` so layout geometry
+  /// and rendering agree.
+  static const double tupletInnerSpacing = 2.5;
 
   // Intelligent spacing: Valores balanceados
   static const double systemMargin = 2.5;
@@ -261,6 +404,7 @@ class LayoutEngine {
     this.staffSpace = 12.0,
     this.metadata,
     this.verboseValidation = false, // Silencioso por padrão
+    this.measureNumberOffset = 0,
     spacing.SpacingPreferences? spacingPreferences,
   }) {
     // Initialise spacing engine
@@ -330,7 +474,21 @@ class LayoutEngine {
   double get accidentalFlatWidth =>
       _getGlyphWidth('accidentalFlat', _accidentalFlatWidthFallback);
 
-  /// Returns os Advanced Beam Groups Calculatestesdos pelo last layout
+  /// Display number for each measure index, honouring `Measure.number`
+  /// (MEI `<measure @n>`) and falling back to 1-based position.
+  ///
+  /// The model has carried `Measure.number` since 2.x but nothing ever drew it;
+  /// measure numbers are part of any professional score, so `StaffRenderer`
+  /// now reads this map.
+  Map<int, int> get measureNumbers {
+    final result = <int, int>{};
+    for (var i = 0; i < staff.measures.length; i++) {
+      result[i] = staff.measures[i].number ?? (i + 1 + measureNumberOffset);
+    }
+    return result;
+  }
+
+  /// Returns os Advanced Beam Groups Calculados pelo last layout
   List<AdvancedBeamGroup> get advancedBeamGroups =>
       List.unmodifiable(_advancedBeamGroups);
 
@@ -387,6 +545,11 @@ class LayoutEngine {
     Clef? currentClef;
     KeySignature? currentKey;
 
+    // Musical time, in whole notes, consumed by the measures laid out so far.
+    // Carried onto every PositionedElement so several staves can later be
+    // aligned on one shared time grid.
+    double onsetCursor = 0.0;
+
     // Contador de validação (only for estatísticas)
     int validMeasures = 0;
     int invalidMeasures = 0;
@@ -441,10 +604,16 @@ class LayoutEngine {
         // If the next system starts with a barline (for example a repeat
         // start), the previous system still needs a normal closing barline.
         if (measureStartsWithBarline && !previousSystemAlreadyEndsWithBarline) {
-          cursor.addBarline(positionedElements);
+          cursor.addBarline(positionedElements, onset: onsetCursor);
         }
         cursor.startNewSystem();
       }
+
+      // The restated clef/key below belong to the measure ABOUT to be laid
+      // out, so stamp the index first — otherwise the restatement carried the
+      // PREVIOUS bar's index and the measure-number pass read the wrong number
+      // (and picked the wrong left-most element) at every system start.
+      cursor.currentMeasureIndex = i;
 
       // Restate the running clef (and key signature) at the start of every
       // system after the first, when this measure does not carry its own — so
@@ -455,13 +624,13 @@ class LayoutEngine {
         var restated = false;
         final clef = currentClef;
         if (!hasClef && clef != null) {
-          cursor.addElement(clef, positionedElements);
+          cursor.addElement(clef, positionedElements, onset: onsetCursor);
           cursor.advance(_getElementWidthSimple(clef));
           restated = true;
         }
         final key = currentKey;
         if (!hasKey && key != null && key.count != 0) {
-          cursor.addElement(key, positionedElements);
+          cursor.addElement(key, positionedElements, onset: onsetCursor);
           cursor.advance(_getElementWidthSimple(key));
           restated = true;
         }
@@ -482,12 +651,26 @@ class LayoutEngine {
       systemMeasures[currentSystem] = systemMeasures[currentSystem] ?? [];
       systemMeasures[currentSystem]!.add(i);
 
+      // A measure that cannot fit the line is COMPRESSED instead of being let
+      // run off the canvas. `needsSystemBreak` never fires for the first
+      // measure of a system (there is nowhere to break to), so without this a
+      // dense bar simply overflowed and the widget clipped it.
+      final usable = cursor.usableWidth;
+      final headroom = usable - (cursor.currentX - cursor.systemMargin);
+      if (measureWidth > headroom && headroom > 0) {
+        _spacingScale =
+            (headroom / measureWidth).clamp(minimumSpacingScale, 1.0);
+      }
+
+      _measureOnsetBase = onsetCursor;
       _layoutMeasureCursor(
         measure,
         cursor,
         positionedElements,
         cursor.isFirstMeasureInSystem,
       );
+      _spacingScale = 1.0;
+      onsetCursor += _measureMusicalDuration(measure);
 
       // Check if current measure ends with barline
       final currentMeasureEndsWithBarline =
@@ -509,11 +692,11 @@ class LayoutEngine {
         if (isLast) {
           // Double barline Final
           cursor.advance(measureEndPadding * staffSpace);
-          cursor.addDoubleBarline(positionedElements);
+          cursor.addDoubleBarline(positionedElements, onset: onsetCursor);
         } else {
           // BARLINE NORMAL between measures
           cursor.advance(measureEndPadding * staffSpace);
-          cursor.addBarline(positionedElements);
+          cursor.addBarline(positionedElements, onset: onsetCursor);
         }
       } else {
         // Measure ends with barline Or next começa with barline - only add padding
@@ -535,19 +718,31 @@ class LayoutEngine {
     // Displace cross-voice noteheads that would overlap (seconds/unisons).
     _resolveCrossVoiceCollisions(positionedElements);
 
-    // Sincronizar _noteXPositions with as positions pós-justificação.
-    // _justifyHorizontally modifica positionedElements mas not _noteXPositions,
-    // causing desalinhamento between beams (that use _noteXPositions) and noteheads.
+    // Re-sync `_noteXPositions` with the post-justification positions.
+    // Justification moves `positionedElements` but not the note map, and beams
+    // read the map — so without this the beam and its noteheads drift apart.
+    // The old loop only handled top-level `Note`s, leaving every note INSIDE a
+    // Chord holding its pre-justification X.
     for (final positioned in positionedElements) {
-      if (positioned.element is Note) {
-        final note = positioned.element as Note;
-        if (_noteXPositions.containsKey(note)) {
-          _noteXPositions[note] = positioned.position.dx;
+      final element = positioned.element;
+      final x = positioned.position.dx;
+      if (element is Note) {
+        if (_noteXPositions.containsKey(element)) {
+          _noteXPositions[element] = x;
         }
+      } else if (element is Chord) {
+        for (final note in element.notes) {
+          if (_noteXPositions.containsKey(note)) {
+            _noteXPositions[note] = x;
+          }
+        }
+      } else if (element is Tuplet) {
+        // Inner notes sit on the renderer's grid, anchored on the tuplet.
+        _reanchorTupletX(element, x);
       }
     }
 
-    // ANÃƒÂLISE DE BEAMING AVANÃƒâ€¡ADO: Createsr AdvancedBeamGroups
+    // ANÃƒÂLISE DE BEAMING AVANÇADO: criar AdvancedBeamGroups
     _analyzeBeamGroups(currentTimeSignature, positionedElements);
 
     return positionedElements;
@@ -564,7 +759,7 @@ class LayoutEngine {
     }
 
     // ✅ CORREÇÃO: Extrair notes ProcessesDAS diretamente de positionedElements
-    // As notes Processesdas are aquelas that foram Addsdas aos mapas
+    // As notes processadas are aquelas that foram adicionadas aos mapas
     final processedNotes = positionedElements
         .where((p) => p.element is Note)
         .map((p) => p.element as Note)
@@ -610,67 +805,69 @@ class LayoutEngine {
   }
 
   /// Justifica horizontalmente os measures for preencher a width disponível
+  /// Stretches each system (except the last) so its music reaches the right
+  /// margin.
+  ///
+  /// Two things were wrong before:
+  ///
+  /// * the offset was proportional to the element's absolute X, which scales
+  ///   EVERY gap by the same factor — including the fixed opening block
+  ///   (clef -> key -> meter), which by convention must never be stretched.
+  ///   Only the region from the first rhythmic event onwards is elastic now.
+  /// * a `fillThreshold` of 0.7 left any system filling less than 70% of the
+  ///   line ragged. That is a last-system rule, not a mid-score one: a 1400 px
+  ///   viewport measured 69% fill and produced a ragged right edge in the
+  ///   MIDDLE of the piece.
   void _justifyHorizontally(
     List<PositionedElement> elements,
     Map<int, List<int>> systemMeasures,
   ) {
-    final usableWidth = availableWidth - (systemMargin * staffSpace * 2);
-
-    // The last system must keep natural spacing (Behind Bars), and any system
-    // that fills less than this fraction of the line is left at natural width
-    // instead of being stretched edge-to-edge.
-    const double fillThreshold = 0.7;
+    final rightEdge = availableWidth - (systemMargin * staffSpace);
     final int lastSystem = systemMeasures.keys.isEmpty
         ? -1
         : systemMeasures.keys.reduce((a, b) => a > b ? a : b);
 
     for (final entry in systemMeasures.entries) {
       final system = entry.key;
-      final measures = entry.value;
+      if (system == lastSystem) continue; // Behind Bars: last line stays natural
+      if (entry.value.isEmpty) continue;
 
-      if (measures.isEmpty) continue;
-
-      // Encontrar X mínimo and máximo dos elementos neste system
-      double minX = double.infinity;
-      double maxX = 0;
-
+      // Elastic region = from the first rhythmic event of the system to the
+      // right-most element on it.
+      double? contentStartX;
+      double maxX = double.negativeInfinity;
       for (final positioned in elements) {
-        if (positioned.system == system) {
-          if (positioned.position.dx < minX) minX = positioned.position.dx;
-          if (positioned.position.dx > maxX) maxX = positioned.position.dx;
+        if (positioned.system != system) continue;
+        final e = positioned.element;
+        final isRhythmic =
+            e is Note || e is Rest || e is Chord || e is Tuplet;
+        if (isRhythmic &&
+            (contentStartX == null || positioned.position.dx < contentStartX)) {
+          contentStartX = positioned.position.dx;
         }
+        if (positioned.position.dx > maxX) maxX = positioned.position.dx;
       }
+      if (contentStartX == null || maxX <= contentStartX) continue;
 
-      final usedWidth = maxX - minX;
-      final extraSpace = usableWidth - usedWidth;
+      final extraSpace = rightEdge - maxX;
+      if (extraSpace <= 0) continue; // already full (or compressed)
 
-      // Don't stretch the last system, nor any sparsely-filled system.
-      final isLastSystem = system == lastSystem;
-      final fillsEnough =
-          usableWidth > 0 && (usedWidth / usableWidth) >= fillThreshold;
-      if (isLastSystem || !fillsEnough) continue;
+      final span = maxX - contentStartX;
+      for (int i = 0; i < elements.length; i++) {
+        final positioned = elements[i];
+        if (positioned.system != system) continue;
+        final dx = positioned.position.dx;
+        if (dx <= contentStartX) continue; // opening block stays put
 
-      // If há space extra, distribuir proporcionalmente
-      if (extraSpace > 0 && measures.length > 1) {
-        // Ajustar positions dos elementos after each measure
-        for (int i = 0; i < elements.length; i++) {
-          final positioned = elements[i];
-          if (positioned.system != system) continue;
-
-          // Calculate proporção de position no system (simplificado)
-          final positionRatio = (maxX - minX) > 0
-              ? (positioned.position.dx - minX) / (maxX - minX)
-              : 0.0;
-
-          // Appliesr offset proporcional based na position
-          final offset = extraSpace * positionRatio;
-          elements[i] = PositionedElement(
-            positioned.element,
-            Offset(positioned.position.dx + offset, positioned.position.dy),
-            system: positioned.system,
-            voiceNumber: positioned.voiceNumber,
-          );
-        }
+        final ratio = (dx - contentStartX) / span;
+        elements[i] = PositionedElement(
+          positioned.element,
+          Offset(dx + extraSpace * ratio, positioned.position.dy),
+          system: positioned.system,
+          voiceNumber: positioned.voiceNumber,
+          onset: positioned.onset,
+          measureIndex: positioned.measureIndex,
+        );
       }
     }
   }
@@ -729,6 +926,8 @@ class LayoutEngine {
         Offset(newX, positioned.position.dy),
         system: positioned.system,
         voiceNumber: positioned.voiceNumber,
+        onset: positioned.onset,
+        measureIndex: positioned.measureIndex,
       );
     }
   }
@@ -740,12 +939,19 @@ class LayoutEngine {
   void _resolveCrossVoiceCollisions(List<PositionedElement> elements) {
     final noteW = noteheadBlackWidth * staffSpace;
 
-    // Group note elements (that carry a voice) by system + rounded X.
+    // Group notes by system + MUSICAL ONSET.
+    //
+    // The grouping key used to be the rounded X. Voices 2+ are placed by linear
+    // interpolation on voice 1's timeline, so two simultaneous notes routinely
+    // landed on 123.4 and 123.6 -> keys '123' and '124' -> no group at all and
+    // the collision went unresolved. Onset is exact and is what "simultaneous"
+    // actually means.
     final groups = <String, List<int>>{};
     for (var i = 0; i < elements.length; i++) {
       final pe = elements[i];
       if (pe.element is! Note || pe.voiceNumber == null) continue;
-      final key = '${pe.system}_${pe.position.dx.round()}';
+      final onsetKey = (pe.onset * 1024).round();
+      final key = '${pe.system}_$onsetKey';
       (groups[key] ??= <int>[]).add(i);
     }
 
@@ -794,36 +1000,40 @@ class LayoutEngine {
           Offset(pe.position.dx - noteW, pe.position.dy),
           system: pe.system,
           voiceNumber: pe.voiceNumber,
+          onset: pe.onset,
+          measureIndex: pe.measureIndex,
         );
       }
     }
   }
 
+  /// Exact width the measure will occupy, obtained by laying it out into a
+  /// throw-away cursor.
+  ///
+  /// This used to be an independent estimate: sum of glyph widths plus a FLAT
+  /// `3.5 staff spaces` per note gap, while the real layout advanced by a
+  /// duration-proportional amount. The two numbers disagreed by up to 2x, so
+  /// system breaks were decided with a figure that did not describe the
+  /// drawing. Measuring by dry-run makes the two agree by construction — they
+  /// cannot drift apart again because there is only one implementation.
+  ///
+  /// The probe cursor is created WITHOUT the note position maps so the dry run
+  /// leaves no trace in [_noteXPositions] and friends.
   double _calculateMeasureWidthCursor(Measure measure, bool isFirstInSystem) {
-    double totalWidth = 0;
-    int musicalElementCount = 0;
+    final probe = LayoutCursor(
+      staffSpace: staffSpace,
+      availableWidth: availableWidth,
+      systemMargin: 0,
+    );
+    final scrap = <PositionedElement>[];
+    final savedScale = _spacingScale;
+    _spacingScale = 1.0;
+    _layoutMeasureCursor(measure, probe, scrap, isFirstInSystem);
+    _spacingScale = savedScale;
 
-    for (final element in measure.elements) {
-      // Floating elements don't contribute to measure width.
-      if (_isAboveOrBelowStaffElement(element)) {
-        continue;
-      }
-
-      // System elements (clef/key/time) now always render when present in a
-      // measure (opening or mid-line change), so they must count toward width.
-      totalWidth += _getElementWidthSimple(element);
-
-      if (element is Note || element is Rest || element is Chord) {
-        musicalElementCount++;
-      }
-    }
-
-    if (musicalElementCount > 1) {
-      totalWidth += (musicalElementCount - 1) * noteMinSpacing * staffSpace;
-    }
-
+    final width = probe.currentX;
     final minWidth = measureMinWidth * staffSpace;
-    return totalWidth < minWidth ? minWidth : totalWidth;
+    return width < minWidth ? minWidth : width;
   }
 
   void _layoutMultiVoiceMeasure(
@@ -849,7 +1059,7 @@ class LayoutEngine {
       final isLeadVoice = voiceIdx == 0;
       cursor.setX(isLeadVoice ? startX : firstMusicX);
 
-      // Processesr beaming separadamente for each voice
+      // processar beaming separadamente for each voice
       final processedElements = _processBeamsWithAnacrusis(
         voice.elements,
         measure.timeSignature,
@@ -909,12 +1119,13 @@ class LayoutEngine {
           cursor.setX(alignedX);
         }
 
-        // Appliesr offset horizontal of the voice to the X position
+        // Apply the voice's horizontal offset to the X position.
         final savedX = cursor.currentX;
         cursor.addElement(
           element,
           positionedElements,
           voiceNumber: voice.number,
+          onset: _measureOnsetBase + (isLeadVoice ? leadTotalTime : voiceTime),
         );
         cursor.setX(savedX);
 
@@ -1003,7 +1214,7 @@ class LayoutEngine {
     List<PositionedElement> positionedElements,
     bool isFirstInSystem,
   ) {
-    // Handle MultiVoiceMeasure: layout each voice independently
+    // Handle MultiVoiceMeasure: layout each voice independently.
     if (measure is MultiVoiceMeasure) {
       _layoutMultiVoiceMeasure(
         measure,
@@ -1013,8 +1224,8 @@ class LayoutEngine {
       );
       return;
     }
-    // Fix: Process beaming considerando anacrusis
-    final processedElements = _processBeamsWithAnacrusis(
+
+    final elementsToRender = _processBeamsWithAnacrusis(
       measure.elements,
       measure.timeSignature,
       autoBeaming: measure.autoBeaming,
@@ -1022,79 +1233,178 @@ class LayoutEngine {
       manualBeamGroups: measure.manualBeamGroups,
     );
 
-    // Render every element the measure actually carries. System elements
-    // (clef/key/time) only appear in a measure's data when the author placed
-    // them — the opening measure, or a genuine mid-line change — so they must
-    // draw regardless of position in the system. Inherited restatements at
-    // system starts are injected separately by the caller (so they are NOT in
-    // measure.elements and won't double up here).
-    final elementsToRender = processedElements;
-
     if (elementsToRender.isEmpty) return;
 
-    final systemElements = <MusicalElement>[];
-    final musicalElements = <MusicalElement>[];
-
-    for (final element in elementsToRender) {
-      if (_isSystemElement(element)) {
-        systemElements.add(element);
-      } else {
-        musicalElements.add(element);
-      }
+    // Only the LEADING run of clef/key/time is the measure's opening block.
+    //
+    // The engine used to hoist EVERY system element to the head of the bar.
+    // That moved a genuine mid-measure clef change to the barline AND — because
+    // the cursor tracks the clef in the order it receives elements — made every
+    // note in the bar be positioned with the LAST clef of the bar. A measure
+    // `[treble, C4, bass, C4]` drew both C4s at the bass-clef position: a
+    // twelfth off for the first one. System elements now stay in document
+    // order, so notes before a change keep the previous clef.
+    int lead = 0;
+    while (lead < elementsToRender.length &&
+        _isSystemElement(elementsToRender[lead])) {
+      lead++;
     }
+    final openingBlock = elementsToRender.sublist(0, lead);
+    final body = elementsToRender.sublist(lead);
 
-    for (final element in systemElements) {
-      cursor.addElement(element, positionedElements);
+    double onset = _measureOnsetBase;
+
+    for (final element in openingBlock) {
+      cursor.addElement(element, positionedElements, onset: onset);
       cursor.advance(_getElementWidthSimple(element));
     }
 
-    if (systemElements.isNotEmpty) {
-      final spacingAfterSystem = _calculateSpacingAfterSystemElementsCorrected(
-        systemElements,
-        musicalElements,
+    if (openingBlock.isNotEmpty) {
+      cursor.advance(
+        _calculateSpacingAfterSystemElementsCorrected(
+          openingBlock,
+          body.where((e) => !_isSystemElement(e)).toList(),
+        ),
       );
-      cursor.advance(spacingAfterSystem);
     }
 
     // FLOATING ELEMENTS (tempo marks, segno/coda, dynamics, expression texts,
-    // octave marks, etc.) must Not advance the cursor. They are co-positioned
-    // with the rhythmic element that follows them (or the last element in the
-    // measure if they trail at the end). This prevents extra-staff symbols from
-    // widening the inter-note spacing inside the staff.
+    // octave marks, ...) must NOT advance the cursor. They are co-positioned
+    // with the rhythmic element that follows them (or with the last element in
+    // the measure if they trail at the end), so extra-staff symbols never widen
+    // the inter-note spacing inside the staff.
     final pendingFloating = <MusicalElement>[];
     MusicalElement? previousRhythmic;
 
-    for (int i = 0; i < musicalElements.length; i++) {
-      final element = musicalElements[i];
+    for (int i = 0; i < body.length; i++) {
+      final element = body[i];
 
       if (_isAboveOrBelowStaffElement(element)) {
-        // Buffer — will be flushed at the same X as the following note/rest.
         pendingFloating.add(element);
         continue;
       }
 
-      // Advance by rhythmic spacing based on the PREVIOUS RHYTHMIC element,
-      // completely ignoring floating elements in the spacing calculateTestion.
+      // A mid-measure clef / key / meter change sits in the flow: it needs a
+      // little air on both sides but carries no rhythmic value.
+      if (_isSystemElement(element)) {
+        if (previousRhythmic != null) {
+          cursor.advance(staffSpace * 0.8);
+        }
+        for (final floating in pendingFloating) {
+          cursor.addElement(floating, positionedElements, onset: onset);
+        }
+        pendingFloating.clear();
+        cursor.addElement(element, positionedElements, onset: onset);
+        cursor.advance(_getElementWidthSimple(element) * midMeasureCueScale);
+        cursor.advance(staffSpace * 0.6);
+        continue;
+      }
+
       if (previousRhythmic != null) {
         cursor.advance(_calculateRhythmicSpacing(element, previousRhythmic));
       }
 
-      // Flush all buffered floating elements at this X position so they are
-      // co-positioned with the current rhythmic element.
       for (final floating in pendingFloating) {
-        cursor.addElement(floating, positionedElements);
+        cursor.addElement(floating, positionedElements, onset: onset);
       }
       pendingFloating.clear();
 
-      cursor.addElement(element, positionedElements);
+      cursor.addElement(element, positionedElements, onset: onset);
+      _registerTupletGeometry(element, cursor, onset);
       cursor.advance(_getElementWidthSimple(element));
+      onset += _getRhythmicValue(element);
       previousRhythmic = element;
     }
 
-    // Flush any trailing floating elements at the current X (end of measure).
     for (final floating in pendingFloating) {
-      cursor.addElement(floating, positionedElements);
+      cursor.addElement(floating, positionedElements, onset: onset);
     }
+  }
+
+  /// Records X / staff position / Y for the notes INSIDE a tuplet.
+  ///
+  /// A [Tuplet] is positioned as one opaque element, so its inner notes used to
+  /// get no geometry at all (`noteXPositions` returned null for every one of
+  /// them) and were therefore invisible to beam analysis, to the public
+  /// position API and to anything doing hit-testing. The renderer lays the
+  /// inner notes out on an even grid of `tupletInnerSpacing` staff spaces; the
+  /// same grid is mirrored here so the two agree.
+  void _registerTupletGeometry(
+    MusicalElement element,
+    LayoutCursor cursor,
+    double onset,
+  ) {
+    if (element is! Tuplet) return;
+    final clef = cursor.activeClef;
+    if (clef == null) return;
+    _registerTupletNotes(element, clef, cursor.currentX, cursor.currentY);
+  }
+
+  /// Re-anchors the X of every note inside [tuplet] (recursively) after the
+  /// tuplet itself has moved — justification, cross-staff alignment, and the
+  /// full-bar-rest centring all move elements after the fact, and beams read
+  /// these positions.
+  double _reanchorTupletX(Tuplet tuplet, double startX) {
+    final step = tupletInnerSpacing * staffSpace;
+    var x = startX;
+    for (final inner in tuplet.elements) {
+      if (inner is Note) {
+        if (_noteXPositions.containsKey(inner)) _noteXPositions[inner] = x;
+        x += step;
+      } else if (inner is Chord) {
+        for (final note in inner.notes) {
+          if (_noteXPositions.containsKey(note)) _noteXPositions[note] = x;
+        }
+        x += step;
+      } else if (inner is Tuplet) {
+        x += _reanchorTupletX(inner, x);
+      } else {
+        x += step;
+      }
+    }
+    return x - startX;
+  }
+
+  /// Recursive worker for [_registerTupletGeometry]. Returns the width consumed,
+  /// so a NESTED tuplet advances the outer grid by its own content rather than
+  /// by a single slot.
+  double _registerTupletNotes(
+    Tuplet tuplet,
+    Clef clef,
+    double startX,
+    double baselineY,
+  ) {
+    final step = tupletInnerSpacing * staffSpace;
+
+    void place(Note note, double x) {
+      final staffPosition = StaffPositionCalculator.calculate(note.pitch, clef);
+      _noteXPositions[note] = x;
+      _noteStaffPositions[note] = staffPosition;
+      _noteYPositions[note] = StaffPositionCalculator.toPixelY(
+        staffPosition,
+        staffSpace,
+        baselineY,
+      );
+    }
+
+    var x = startX;
+    for (final inner in tuplet.elements) {
+      if (inner is Note) {
+        place(inner, x);
+        x += step;
+      } else if (inner is Chord) {
+        for (final note in inner.notes) {
+          place(note, x);
+        }
+        x += step;
+      } else if (inner is Tuplet) {
+        // Nested tuplet: mirrors TupletRenderer, which now recurses too.
+        x += _registerTupletNotes(inner, clef, x, baselineY);
+      } else {
+        x += step;
+      }
+    }
+    return x - startX;
   }
 
   bool _isSystemElement(MusicalElement element) {
@@ -1149,12 +1459,12 @@ class LayoutEngine {
     }
   }
 
-  // ESPAÃƒâ€¡AMENTO APÃƒâ€œS ELEMENTOS DE System: MÃƒÂNIMO necessÃƒÂ¡rio
+  // ESPAÇAMENTO APÓS ELEMENTOS DE System: MÃƒÂNIMO necessário
   double _calculateSpacingAfterSystemElementsCorrected(
     List<MusicalElement> systemElements,
     List<MusicalElement> musicalElements,
   ) {
-    // EspaÃƒÂ§o MÃƒÂNIMO apÃƒÂ³s elementos de system
+    // Espaço MÃƒÂNIMO após elementos de system
     double baseSpacing = staffSpace * 1.2; // MUITO REDUZIDO!
 
     bool hasClef = systemElements.any((e) => e is Clef);
@@ -1174,7 +1484,7 @@ class LayoutEngine {
       }
     }
 
-    // CORREÃƒâ€¡ÃƒÆ’O: Check if primeira note tem accidental EXPLÃƒÂCITO
+    // CORREÇÃO: Check if primeira note tem accidental EXPLÃƒÂCITO
     if (musicalElements.isNotEmpty) {
       final firstMusicalElement = musicalElements.first;
 
@@ -1194,7 +1504,39 @@ class LayoutEngine {
     return baseSpacing.clamp(
       staffSpace * 1.0,
       staffSpace * 3.0,
-    ); // Limites reduçidos
+    ); // Limites reduzidos
+  }
+
+  /// Horizontal advance this element occupies, in pixels.
+  ///
+  /// Public so hit-testing and export can build the same boxes the layout used
+  /// (they must not re-derive them, or selection drifts from what is drawn).
+  double elementWidth(MusicalElement element) =>
+      _getElementWidthSimple(element);
+
+  /// Advance width of an accidental glyph, in staff spaces, straight from the
+  /// SMuFL metadata.
+  ///
+  /// This replaces a chain of `glyphName.contains(...)` tests whose branch
+  /// order made the double-flat case UNREACHABLE ('accidentalDoubleFlat'
+  /// contains 'Flat', so it matched the first branch and reserved 1.18 instead
+  /// of Bravura's real 1.652 — the accidental then collided with the previous
+  /// note). The natural was hardcoded at 0.92 against a real 0.672, and the
+  /// flat fallback had been copied from `noteheadBlack`. All of those numbers
+  /// were already sitting in `bravura_metadata.json`.
+  double _accidentalAdvanceWidth(String glyphName) {
+    if (metadata != null && metadata!.hasGlyph(glyphName)) {
+      return metadata!.getGlyphWidth(glyphName);
+    }
+    // Fallbacks are the Bravura values, used only when metadata is missing.
+    const fallbacks = <String, double>{
+      'accidentalSharp': 0.996,
+      'accidentalFlat': 0.904,
+      'accidentalNatural': 0.672,
+      'accidentalDoubleSharp': 1.0,
+      'accidentalDoubleFlat': 1.652,
+    };
+    return fallbacks[glyphName] ?? _accidentalSharpWidthFallback;
   }
 
   double _getElementWidthSimple(MusicalElement element) {
@@ -1265,24 +1607,8 @@ class LayoutEngine {
       double width = noteheadBlackWidth * staffSpace;
       final accGlyph = _effectiveAccidentalGlyph(element);
       if (accGlyph != null) {
-        // Fix: SMuFL: Detecção more robusta and uso de valores corretos
-        final glyphName = accGlyph;
-        double accWidth = accidentalSharpWidth; // Default
-
-        // Identificar type de accidental corretamente
-        if (glyphName.contains('Flat') || glyphName.contains('flat')) {
-          accWidth = accidentalFlatWidth;
-        } else if (glyphName.contains('Natural') ||
-            glyphName.contains('natural')) {
-          accWidth = 0.92; // Largura típica de natural
-        } else if (glyphName.contains('DoubleSharp')) {
-          accWidth = 1.0; // Largura de dobrado sustenido
-        } else if (glyphName.contains('DoubleFlat')) {
-          accWidth = 1.5; // Largura de dobrado bemol
-        }
-
-        // CORRIGIDO: Spacing recomendado SMuFL is 0.25-0.3 staff spaces
-        width += (accWidth + 0.3) * staffSpace;
+        // SMuFL advises 0.25-0.3 staff spaces between accidental and notehead.
+        width += (_accidentalAdvanceWidth(accGlyph) + 0.3) * staffSpace;
       }
       // Augmentation dots sit to the right of the notehead (DotRenderer: first
       // dot at centre + 1.0 SS, each further +0.6 SS), extending ~0.7 SS past
@@ -1304,20 +1630,7 @@ class LayoutEngine {
       for (final note in element.notes) {
         final accGlyph = _effectiveAccidentalGlyph(note);
         if (accGlyph != null) {
-          // Fix: Use same lógica robusta de detecção that Note
-          final glyphName = accGlyph;
-          double accWidth = accidentalSharpWidth;
-
-          if (glyphName.contains('Flat') || glyphName.contains('flat')) {
-            accWidth = accidentalFlatWidth;
-          } else if (glyphName.contains('Natural') ||
-              glyphName.contains('natural')) {
-            accWidth = 0.92;
-          } else if (glyphName.contains('DoubleSharp')) {
-            accWidth = 1.0;
-          } else if (glyphName.contains('DoubleFlat')) {
-            accWidth = 1.5;
-          }
+          final accWidth = _accidentalAdvanceWidth(accGlyph);
           if (accWidth > maxAccidentalWidth) {
             maxAccidentalWidth = accWidth;
           }
@@ -1346,11 +1659,17 @@ class LayoutEngine {
     if (element is Ornament) return 1.0 * staffSpace;
 
     if (element is Tuplet) {
-      // CRÃƒÂTICO: Calculate width baseada nas notes INTERNAS of the tuplet
-      final numElements = element.elements.length;
-      final elementSpacing = staffSpace * 2.5; // Mesma do TupletRenderer
-      final totalWidth = numElements * elementSpacing;
-      return totalWidth;
+      // Width comes from the inner content laid out on the renderer's grid.
+      // A nested tuplet contributes its OWN content width, not one slot.
+      double slots(Tuplet t) {
+        var total = 0.0;
+        for (final inner in t.elements) {
+          total += inner is Tuplet ? slots(inner) : 1.0;
+        }
+        return total;
+      }
+
+      return slots(element) * tupletInnerSpacing * staffSpace;
     }
 
     if (element is TempoMark) {
@@ -1653,76 +1972,153 @@ class LayoutEngine {
   /// @param currentElement Elemento current
   /// @param previousElement Elemento previous (opcional)
   /// @return Spacing in pixels
+  /// Horizontal gap to leave BEFORE [currentElement], given the element that
+  /// precedes it.
+  ///
+  /// Gould's square-root law: the space an event occupies grows with the square
+  /// root of its duration, normalised to the quarter note. The factor is
+  /// COMPUTED, not looked up: the old table only covered `whole`..`sixtyFourth`
+  /// and fell back to `1.0` for everything else, so a breve was spaced like a
+  /// quarter (narrower than a whole note!) and a 128th got 2.3x the space of a
+  /// 64th — the rhythmic proportion inverted at both ends of the range. It also
+  /// ignored augmentation dots; `absoluteValue` includes them.
   double _calculateRhythmicSpacing(
     MusicalElement currentElement,
     MusicalElement? previousElement,
   ) {
-    // Base: spacing mínimo between notes (semínima as reference)
     const double baseSpacing = noteMinSpacing;
 
-    // Gould square-root spacing law (Behind Bars / Verovio): horizontal space
-    // is proportional to sqrt(duration), normalised to the quarter note (=1.0).
-    // The previous ad-hoc table was far too wide for short notes (16th 0.7 vs
-    // the correct 0.5, 64th 0.55 vs 0.25), flattening rhythmic proportion.
-    final durationFactors = {
-      DurationType.whole: 2.0, // √4
-      DurationType.half: 1.414, // √2
-      DurationType.quarter: 1.0, // √1 (base)
-      DurationType.eighth: 0.707, // √0.5
-      DurationType.sixteenth: 0.5, // √0.25
-      DurationType.thirtySecond: 0.354, // √0.125
-      DurationType.sixtyFourth: 0.25, // √0.0625
-    };
-
-    // Inter-onset spacing (Gould): the gap BEFORE this element reflects how much
-    // horizontal space the PREVIOUS element occupies — proportional to its
-    // (sqrt) duration — not this element's own duration. So a long note gets a
-    // wide gap after it and short notes cluster tightly.
-    DurationType? prevDuration;
-    if (previousElement is Note) {
-      prevDuration = previousElement.duration.type;
-    } else if (previousElement is Chord) {
-      prevDuration = previousElement.duration.type;
-    } else if (previousElement is Rest) {
-      prevDuration = previousElement.duration.type;
+    Duration? durationOf(MusicalElement? e) {
+      if (e is Note) return e.duration;
+      if (e is Chord) return e.duration;
+      if (e is Rest) return e.duration;
+      return null;
     }
+
+    final prevDuration = durationOf(previousElement);
 
     // No previous rhythmic element (start of measure/system): use base spacing.
     if (prevDuration == null) {
-      return baseSpacing * staffSpace;
+      return baseSpacing * staffSpace * _spacingScale;
     }
 
-    // Appliesr fator de duração (do elemento anterior)
-    final factor = durationFactors[prevDuration] ?? 1.0;
-    double spacing = baseSpacing * factor * staffSpace;
+    // The law itself lives in IntelligentSpacingEngine: sqrt(duration/quarter),
+    // normalised to the quarter note, times the rest ratio when the previous
+    // event was a rest. Calling it here is what puts that engine on the
+    // production path — it used to be constructed, covered by 390 lines of
+    // green tests, and never invoked, so those tests proved nothing about what
+    // the renderer actually did.
+    double spacing = _spacingEngine.interNoteSpacing(
+      previousDuration: prevDuration,
+      previousIsRest: previousElement is Rest,
+      staffSpace: staffSpace,
+      baseSpacing: baseSpacing,
+    );
 
-    // A rest occupies slightly LESS space than an equal-duration note
-    // (Gould ~0.8x) via the configurable restSpacingRatio.
-    if (previousElement is Rest) {
-      spacing *= _spacingPreferences.restSpacingRatio;
-    }
-
-    // Augmentation-dot space is reserved on the dotted note's own trailing
-    // width (_getElementWidthSimple), so no extra leading gap is needed here.
+    // Context-sensitive optical compensation (alternating stems, rest before a
+    // stem-up note, duration transitions). Returns 0.0 unless the caller
+    // enabled it in SpacingPreferences.
+    spacing += _spacingEngine.opticalAdjustment(
+      previous: previousElement,
+      current: currentElement,
+      staffSpace: staffSpace,
+    );
 
     // Leading space for the CURRENT element's accidental, which hangs to the
     // left of its notehead into this gap.
     if (currentElement is Note &&
-        currentElement.pitch.accidentalGlyph != null) {
+        _effectiveAccidentalGlyph(currentElement) != null) {
       spacing += staffSpace * 0.15;
     } else if (currentElement is Chord) {
       final hasAccidental = currentElement.notes.any(
-        (note) => note.pitch.accidentalGlyph != null,
+        (note) => _effectiveAccidentalGlyph(note) != null,
       );
       if (hasAccidental) {
         spacing += staffSpace * 0.15;
       }
     }
 
-    return spacing;
+    // A lyric syllable is centred on its notehead, so its left half hangs into
+    // this gap. Without this a long syllable simply overlapped the previous
+    // note (measured: "Extraordinarily" produced exactly the same spacing as no
+    // syllable at all).
+    final leadIn = _syllableOverhang(currentElement) +
+        _syllableOverhang(previousElement);
+    if (leadIn > 0) spacing += leadIn;
+
+    spacing *= _spacingScale;
+
+    // Never let compression (or an ultra-short duration) push two noteheads
+    // into each other.
+    final minimum = _minimumInterNoteGap(currentElement, previousElement);
+    return spacing < minimum ? minimum : spacing;
   }
 
-  // Fix: Processamento de beams considerando anacrusis
+  /// Half of the width a note's widest lyric syllable sticks out past its
+  /// notehead, in pixels. Zero when the element carries no syllable.
+  double _syllableOverhang(MusicalElement? element) {
+    final syllables = element is Note
+        ? element.syllables
+        : (element is Chord
+            ? element.notes
+                .map((n) => n.syllables)
+                .firstWhere((s) => s != null && s.isNotEmpty,
+                    orElse: () => null)
+            : null);
+    if (syllables == null || syllables.isEmpty) return 0.0;
+
+    double widest = 0;
+    for (final syllable in syllables) {
+      final w = _syllableWidth(syllable);
+      if (w > widest) widest = w;
+    }
+    final head = noteheadBlackWidth * staffSpace;
+    final overhang = (widest - head) / 2;
+    return overhang > 0 ? overhang : 0.0;
+  }
+
+  /// Rendered width of one lyric syllable, matching `NoteRenderer` metrics
+  /// (font size = 0.85 staff spaces; ~0.5 em average advance per character).
+  double _syllableWidth(Syllable syllable) {
+    var text = syllable.text;
+    if (syllable.type == SyllableType.initial ||
+        syllable.type == SyllableType.middle) {
+      text = '$text-';
+    }
+    if (text.isEmpty) return 0.0;
+    const double lyricFontFactor = 0.85;
+    const double averageGlyphWidth = 0.5;
+    return text.length * staffSpace * lyricFontFactor * averageGlyphWidth;
+  }
+
+  /// Absolute floor for the gap between two consecutive rhythmic events: the
+  /// two half-noteheads plus a hair of air. Protects both ultra-short durations
+  /// and compressed (over-full) measures from producing overlapping heads.
+  double _minimumInterNoteGap(
+    MusicalElement currentElement,
+    MusicalElement? previousElement,
+  ) {
+    final head = noteheadBlackWidth * staffSpace;
+    double gap = head * 0.9;
+    if (currentElement is Note &&
+        _effectiveAccidentalGlyph(currentElement) != null) {
+      gap += staffSpace * 0.6;
+    }
+    return gap;
+  }
+
+  /// Resolves beam membership for [elements] and writes it back onto the
+  /// notes **in place**.
+  ///
+  /// The engine used to build replacement [Note] objects here so it could store
+  /// the resolved [BeamType]. That silently broke every identity-keyed map
+  /// built before this point (accidental decisions, note X/Y positions), made
+  /// the layout signature differ between two identical runs, and dropped a note
+  /// whenever the same instance appeared twice in a measure. Beams are now
+  /// stamped on the caller's own objects, so identity survives the whole
+  /// pipeline — which is also what a future editor needs for hit-testing.
+  ///
+  /// Notes that end up in no valid group keep whatever beam the author set.
   List<MusicalElement> _processBeamsWithAnacrusis(
     List<MusicalElement> elements,
     TimeSignature? timeSignature, {
@@ -1732,17 +2128,8 @@ class LayoutEngine {
   }) {
     timeSignature ??= TimeSignature(numerator: 4, denominator: 4);
 
-    final notes = elements.whereType<Note>().toList();
-    if (notes.isEmpty) return elements;
+    if (!elements.any((e) => e is Note)) return elements;
 
-    // Calculate position initial no measure (for detectar anacrusis)
-    for (final element in elements) {
-      if (element is Note || element is Rest) {
-        break;
-      }
-    }
-
-    // Agrupar notes considerando anacrusis
     final beamGroups = BeamGrouper.groupElementsForBeaming(
       elements,
       timeSignature,
@@ -1751,68 +2138,193 @@ class LayoutEngine {
       manualBeamGroups: manualBeamGroups,
     );
 
-    final processedElements = <MusicalElement>[];
-    final processedNotes = <Note>{};
-
-    for (final element in elements) {
-      if (element is Note && !processedNotes.contains(element)) {
-        BeamGroup? group;
-        for (final beamGroup in beamGroups) {
-          if (beamGroup.notes.contains(element)) {
-            group = beamGroup;
-            break;
-          }
-        }
-
-        if (group != null && group.isValid) {
-          for (int i = 0; i < group.notes.length; i++) {
-            final note = group.notes[i];
-            BeamType? beamType;
-
-            if (i == 0) {
-              beamType = BeamType.start;
-            } else if (i == group.notes.length - 1) {
-              beamType = BeamType.end;
-            } else {
-              beamType = BeamType.inner;
-            }
-
-            final beamedNote = Note(
-              pitch: note.pitch,
-              duration: note.duration,
-              beam: beamType,
-              articulations: note.articulations,
-              tie: note.tie,
-              slur: note.slur,
-              ornaments: note.ornaments,
-              dynamicElement: note.dynamicElement,
-              techniques: note.techniques,
-              voice: note.voice,
-              tremoloStrokes: note.tremoloStrokes,
-              isGraceNote: note.isGraceNote,
-              alternatePitch: note.alternatePitch,
-              tabFret: note.tabFret,
-              tabString: note.tabString,
-              syllables: note.syllables,
-              accidentalParenthesis: note.accidentalParenthesis,
-              slurs: note.slurs,
-              crossStaffMove: note.crossStaffMove,
-            );
-            beamedNote.xmlId = note.xmlId;
-
-            processedElements.add(beamedNote);
-            processedNotes.add(note);
-          }
-        } else {
-          processedElements.add(element);
-          processedNotes.add(element);
-        }
-      } else if (element is! Note) {
-        processedElements.add(element);
+    for (final group in beamGroups) {
+      if (!group.isValid) continue;
+      final last = group.notes.length - 1;
+      for (int i = 0; i <= last; i++) {
+        group.notes[i].beam = i == 0
+            ? BeamType.start
+            : (i == last ? BeamType.end : BeamType.inner);
       }
     }
 
-    return processedElements;
+    return elements;
+  }
+
+  /// Total musical duration of [measure] in whole notes, voice aware: two
+  /// voices sounding together occupy the same time, so the bar lasts as long as
+  /// its longest voice, not as long as the sum of every note in it.
+  double _measureMusicalDuration(Measure measure) {
+    double durationOf(Iterable<MusicalElement> els) {
+      double total = 0;
+      for (final e in els) {
+        total += _getRhythmicValue(e);
+      }
+      return total;
+    }
+
+    if (measure is MultiVoiceMeasure) {
+      double longest = durationOf(measure.elements);
+      for (final voice in measure.sortedVoices) {
+        final v = durationOf(voice.elements);
+        if (v > longest) longest = v;
+      }
+      return longest;
+    }
+
+    // Single-voice measures may still carry `Note.voice` tags (MusicXML import
+    // writes them), so bucket by voice before summing.
+    final byVoice = <int, double>{};
+    for (final e in measure.elements) {
+      final value = _getRhythmicValue(e);
+      if (value <= 0) continue;
+      final v = e is Note ? (e.voice ?? 1) : (e is Chord ? (e.voice ?? 1) : 1);
+      byVoice[v] = (byVoice[v] ?? 0) + value;
+    }
+    if (byVoice.isEmpty) return 0.0;
+    return byVoice.values.reduce((a, b) => a > b ? a : b);
+  }
+
+  /// Total horizontal extent of [elements], including the right-hand glyph of
+  /// the last element and the right margin.
+  ///
+  /// The widget sizes its canvas from this number. If it under-reports, music
+  /// is clipped away with no way to scroll to it (F-05b).
+  double contentWidth(List<PositionedElement> elements) {
+    if (elements.isEmpty) return systemMargin * 2 * staffSpace;
+    var maxRight = 0.0;
+    for (final positioned in elements) {
+      final right =
+          positioned.position.dx + _getElementWidthSimple(positioned.element);
+      if (right > maxRight) maxRight = right;
+    }
+    // Justification already parks the last element on the right margin, so only
+    // a hair of trailing air is added here — adding a full margin again would
+    // report a phantom overflow for every justified system.
+    return maxRight + staffSpace * 0.5;
+  }
+
+  /// Whether the laid-out music is wider than the line it was given, i.e. the
+  /// host must provide horizontal scrolling for all of it to be reachable.
+  bool overflowsAvailableWidth(List<PositionedElement> elements) =>
+      contentWidth(elements) > availableWidth + 0.5;
+
+  /// Vertical distance, in staff spaces, from the top of a system's block to
+  /// its staff baseline. The painter places system N's baseline at
+  /// `N * systemHeightSpaces + firstBaselineSpaces` staff spaces.
+  static const double firstBaselineSpaces = 5.0;
+  static const double systemHeightSpaces = 10.0;
+
+  /// How much taller than the default headroom this score needs above the first
+  /// staff line, in pixels. Zero when everything fits.
+  ///
+  /// The canvas used to start exactly [firstBaselineSpaces] staff spaces above
+  /// the first baseline, whatever the music did. Anything reaching higher was
+  /// simply cut off with no scroll and no warning: a C9 in treble clef landed at
+  /// y = -114 on a canvas 192 px tall, and a boxed rehearsal mark sat entirely
+  /// above the top edge. Callers add this to their canvas height and translate
+  /// the origin down by the same amount.
+  double contentTopOverflow(List<PositionedElement> elements) {
+    if (elements.isEmpty) return 0.0;
+
+    final headroom = firstBaselineSpaces * staffSpace;
+    var worst = 0.0;
+
+    for (final positioned in elements) {
+      final baseline =
+          (positioned.system * systemHeightSpaces + firstBaselineSpaces) *
+              staffSpace;
+      final reach =
+          (baseline - positioned.position.dy) + _aboveStaffExtent(positioned);
+      final overflow = reach - headroom;
+      if (overflow > worst) worst = overflow;
+    }
+    return worst;
+  }
+
+  /// How much taller than the default bottom margin this score needs below the
+  /// last staff line, in pixels. Zero when everything fits.
+  ///
+  /// The mirror of [contentTopOverflow]: a C0 in treble clef lands 264 px down
+  /// on a canvas the old formula sized at 192 px, so it was cut off exactly the
+  /// same way — the bug simply had two sides.
+  double contentBottomOverflow(List<PositionedElement> elements) {
+    if (elements.isEmpty) return 0.0;
+
+    var maxSystem = 0;
+    for (final positioned in elements) {
+      if (positioned.system > maxSystem) maxSystem = positioned.system;
+    }
+
+    // Space the default formula already leaves below the LAST system's
+    // baseline: the rest of its block plus the bottom margin.
+    final lastBaseline =
+        (maxSystem * systemHeightSpaces + firstBaselineSpaces) * staffSpace;
+    final defaultBottom =
+        (systemHeightSpaces - firstBaselineSpaces) * staffSpace +
+            staffSpace * 2.0;
+
+    var worst = 0.0;
+    for (final positioned in elements) {
+      if (positioned.system != maxSystem) continue;
+      final reach = (positioned.position.dy - lastBaseline) +
+          _belowStaffExtent(positioned);
+      final overflow = reach - defaultBottom;
+      if (overflow > worst) worst = overflow;
+    }
+    return worst;
+  }
+
+  /// How far below its own anchor an element draws, in pixels.
+  double _belowStaffExtent(PositionedElement positioned) {
+    final element = positioned.element;
+    if (element is Note) {
+      // Notehead half-height, plus the lyric block when the note is sung.
+      var extent = staffSpace * 2.2;
+      final syllables = element.syllables;
+      if (syllables != null && syllables.isNotEmpty) {
+        extent = staffSpace * (4.0 + 1.1 * syllables.length);
+      }
+      return extent;
+    }
+    if (element is Chord) {
+      final sung = element.notes
+          .map((n) => n.syllables?.length ?? 0)
+          .fold<int>(0, (a, b) => a > b ? a : b);
+      return sung > 0 ? staffSpace * (4.0 + 1.1 * sung) : staffSpace * 2.2;
+    }
+    if (element is Dynamic) return staffSpace * 4.5;
+    if (element is Rest) return staffSpace * 2.2;
+    return staffSpace * 2.0;
+  }
+
+  /// How far above its own anchor an element draws, in pixels.
+  ///
+  /// Floating elements are positioned by the RENDERER relative to the staff, not
+  /// by the layout, so their reach is expressed here as an allowance measured
+  /// from the staff baseline (the top staff line is 2 staff spaces above it).
+  double _aboveStaffExtent(PositionedElement positioned) {
+    final element = positioned.element;
+    if (element is MusicText) {
+      switch (element.type) {
+        case TextType.rehearsal:
+          // centre 3.2 SS above the top line, plus half the box.
+          return staffSpace * 6.4;
+        case TextType.tempo:
+          return staffSpace * 5.0;
+        default:
+          return staffSpace * 4.6;
+      }
+    }
+    if (element is TempoMark) return staffSpace * 5.0;
+    if (element is OctaveMark) return staffSpace * 4.6;
+    if (element is Note || element is Chord) {
+      // Notehead half-height plus a stem's worth of clearance; ledger lines and
+      // articulations live inside this.
+      return staffSpace * 2.2;
+    }
+    if (element is Rest) return staffSpace * 2.2;
+    return staffSpace * 2.0;
   }
 
   double calculateTotalHeight(List<PositionedElement> elements) {
@@ -1827,10 +2339,14 @@ class LayoutEngine {
       }
     }
 
-    final double systemHeight = staffSpace * 10.0;
+    final double systemHeight = staffSpace * systemHeightSpaces;
     final double topMargin = staffSpace * 4.0;
     final double bottomMargin = staffSpace * 2.0;
 
-    return topMargin + ((maxSystem + 1) * systemHeight) + bottomMargin;
+    return topMargin +
+        contentTopOverflow(elements) +
+        ((maxSystem + 1) * systemHeight) +
+        bottomMargin +
+        contentBottomOverflow(elements);
   }
 }

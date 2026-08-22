@@ -6,12 +6,12 @@ import 'note.dart';
 import 'rest.dart';
 import 'chord.dart';
 
-/// Represents a voice in polyphonic notetion
+/// Represents a voice in polyphonic notation.
 ///
 /// In polyphonic music, multiple independent melodic lines (voices)
-/// are noteted on the same staff. Each voice is typically distinguished by:
+/// are notated on the same staff. Each voice is typically distinguished by:
 /// - Stem direction (voice 1: up, voice 2: down)
-/// - Horizontal offset (voice 2 shifted right)
+/// - Horizontal offset (the stem-down voice shifted right on unisons/seconds)
 /// - Different beaming groups
 ///
 /// Examples:
@@ -20,10 +20,13 @@ import 'chord.dart';
 /// - Guitar fingerstyle (melody + accompaniment)
 /// - Counterpoint exercises
 ///
-/// Convention:
-/// - Voice 1 (top voice): Stems up, no offset
-/// - Voice 2 (bottom voice): Stems down, shifted right
-/// - Voice 3+: Additional voices as needed
+/// Convention (Gould, *Behind Bars*, "Two or more parts on a staff"):
+/// - Odd voices (1, 3): stems up, no horizontal offset
+/// - Even voices (2, 4): stems down, offset to the right when they collide
+///
+/// A [Voice] does not mutate the elements it receives: `Note.voice` is
+/// `final`, so the voice number must be set when the note is constructed.
+/// Use [elementsCarryVoiceNumber] / [validate] to check that this was done.
 class Voice {
   /// Voice number (1-based)
   ///
@@ -33,7 +36,7 @@ class Voice {
   /// Musical elements in this voice (notes, rests, chords)
   final List<MusicalElement> elements;
 
-  /// Optional name for the voice (and.g., "Soprano", "Melody")
+  /// Optional name for the voice (e.g., "Soprano", "Melody")
   final String? name;
 
   /// Preferred stem direction for this voice
@@ -61,45 +64,97 @@ class Voice {
     this.color,
   }) : elements = elements ?? [];
 
-  /// Add element to this voice
+  /// Add element to this voice.
+  ///
+  /// The element is stored as-is. `Note.voice` and `Chord.voice` are `final`,
+  /// so this method cannot back-fill the voice number: it has to be supplied
+  /// at construction time, e.g. `Note(pitch: ..., duration: ..., voice: 2)`.
+  /// [validate] reports elements whose voice number disagrees with [number].
   void add(MusicalElement element) {
     elements.add(element);
-
-    // Set voice number on notes
-    if (element is Note) {
-      // Note: This would require modifying Note class to have mutable voiceNumber
-      // For now, voice tracking is manual
-    }
   }
 
-  /// Get stem direction for this voice
+  /// True when every [Note]/[Chord] in this voice already declares
+  /// `voice == number`.
   ///
-  /// Uses forced direction if set, otherwise follows convention:
-  /// - Voice 1: up
-  /// - Voice 2: down
-  /// - Voice 3+: up (or based on position)
+  /// A `null` voice does **not** count as carrying the number, not even for
+  /// voice 1: it only means "unassigned". Returns `true` for a voice that
+  /// contains no notes or chords.
+  bool get elementsCarryVoiceNumber => validate().isEmpty;
+
+  /// Checks that the voice number was propagated to the elements.
+  ///
+  /// Returns one human-readable message per inconsistency, in element order:
+  /// `element at index i has voice=X but belongs to Voice Y`. An empty list
+  /// means the voice is internally consistent.
+  ///
+  /// Propagation must happen when the note is built (`Note.voice` is final);
+  /// this method exists so callers can detect a mismatch instead of silently
+  /// rendering notes in the wrong voice.
+  List<String> validate() {
+    final problems = <String>[];
+    for (var i = 0; i < elements.length; i++) {
+      final element = elements[i];
+      int? elementVoice;
+      if (element is Note) {
+        elementVoice = element.voice;
+      } else if (element is Chord) {
+        elementVoice = element.voice;
+      } else {
+        continue; // Rests and other elements do not carry a voice number.
+      }
+      if (elementVoice != number) {
+        problems.add(
+          'element at index $i has voice=${elementVoice ?? 'null'} '
+          'but belongs to Voice $number',
+        );
+      }
+    }
+    return problems;
+  }
+
+  /// Get stem direction for this voice.
+  ///
+  /// Uses [forcedStemDirection] when set. Otherwise follows the standard
+  /// convention (Gould, *Behind Bars*): odd-numbered voices point up and
+  /// even-numbered voices point down, i.e. voices 1 and 3 up, voices 2 and 4
+  /// down. This pairing is what lets voice 1 sit above voice 2 (and voice 3
+  /// above voice 4) without extra layout information.
   StemDirection getStemDirection() {
     if (forcedStemDirection != null) return forcedStemDirection!;
 
     return number.isEven ? StemDirection.down : StemDirection.up;
   }
 
-  /// Get horizontal offset for this voice
+  /// Get horizontal offset for this voice, in pixels.
   ///
-  /// Voice 2 is typically offset to avoid collision with voice 1
+  /// Uses [horizontalOffset] (expressed in staff spaces) when set.
+  ///
+  /// Otherwise the offset follows the stem direction of the voice, per Gould,
+  /// *Behind Bars*: when noteheads of opposing voices collide, the stem-down
+  /// voice is displaced to the right of the stem-up voice so the noteheads
+  /// stay legible. The offset therefore pairs with [getStemDirection]:
+  ///
+  /// | Voice | Stems | Offset               |
+  /// |-------|-------|----------------------|
+  /// | 1     | up    | none                 |
+  /// | 2     | down  | 0.6 staff spaces     |
+  /// | 3     | up    | none                 |
+  /// | 4     | down  | 0.6 staff spaces     |
+  ///
+  /// Limitation: this is a static, per-voice rule. Real engraving only
+  /// displaces a notehead when the voices actually collide (unison or an
+  /// interval of a second at the same rhythmic position), and it keeps the
+  /// column aligned everywhere else. Voices beyond 4 reuse the same odd/even
+  /// rule; they are rare and usually need manual [horizontalOffset].
   double getHorizontalOffset(double staffSpace) {
     if (horizontalOffset != null) {
       return horizontalOffset! * staffSpace;
     }
 
-    switch (number) {
-      case 1:
-        return 0.0; // No offset for voice 1
-      case 2:
-        return staffSpace * 0.6; // Offset right for voice 2
-      default:
-        return staffSpace * 0.6 * (number - 1); // Incremental offset
-    }
+    // Stem-up voices (odd) keep the reference column; stem-down voices (even)
+    // move right by one notehead width minus the stem, ~0.6 staff spaces.
+    return number.isEven ? staffSpace * 0.6 : 0.0;
   }
 
   /// Check if this voice contains any notes (not just rests)
@@ -151,10 +206,27 @@ enum StemDirection {
   auto, // Determined by position on staff
 }
 
-/// Measure with multiple independent voices
+/// Measure with multiple independent voices.
 ///
-/// Used for polyphonic notetion where multiple melodic lines
+/// Used for polyphonic notation where multiple melodic lines
 /// appear on the same staff simultaneously.
+///
+/// This is a **specialization** of [Measure]: instead of keeping its notes in
+/// the inherited [Measure.elements] list, it stores them inside [Voice]
+/// objects. [Measure.elements] is therefore normally limited to the shared
+/// attributes of the bar (clef, time signature, key signature, barlines).
+///
+/// Because of that, **[allElements] is the correct way to iterate a measure**
+/// — it is overridden here to yield the shared elements followed by the
+/// elements of every voice in voice order. Reading `elements` directly on a
+/// [MultiVoiceMeasure] silently skips all the music.
+///
+/// The inherited capacity API ([currentMusicalValue], [musicalValueOfVoice],
+/// [isValidlyFilled], [canAddDuration], [remainingValue]) is voice-aware here
+/// as well: it is all derived from [musicalValueByVoice], which this class
+/// overrides to account for the voices. Without that override a polyphonic
+/// measure reported a rhythmic value of ~0 and was rejected by every
+/// measure validator.
 ///
 /// Example:
 /// ```dart
@@ -162,24 +234,58 @@ enum StemDirection {
 ///
 /// // Voice 1 (melody, stems up)
 /// final voice1 = Voice.voice1();
-/// voice1.add(Note(pitch: Pitch(step: 'And', octave: 5), duration: ...));
+/// voice1.add(Note(pitch: Pitch(step: 'E', octave: 5), duration: ..., voice: 1));
 /// measure.addVoice(voice1);
 ///
 /// // Voice 2 (accompaniment, stems down)
 /// final voice2 = Voice.voice2();
-/// voice2.add(Note(pitch: Pitch(step: 'C', octave: 4), duration: ...));
+/// voice2.add(Note(pitch: Pitch(step: 'C', octave: 4), duration: ..., voice: 2));
 /// measure.addVoice(voice2);
 /// ```
 class MultiVoiceMeasure extends Measure {
   MultiVoiceMeasure();
 
-  /// Collection de voices (ordenação not garantida).
+  /// Collection of voices (order not guaranteed).
   ///
-  /// Mantém API amigável for iteração and Checksções de coleção.
+  /// Kept as a convenience for iteration and collection queries; use
+  /// [sortedVoices] when voice order matters.
   Iterable<Voice> get voices => _voicesByNumber.values;
 
   /// Map of voice number to Voice object
   final Map<int, Voice> _voicesByNumber = {};
+
+  /// Shared elements of the bar followed by the elements of every voice,
+  /// voices taken in ascending voice-number order.
+  ///
+  /// This is the only iteration path that sees the whole content of a
+  /// polyphonic measure.
+  @override
+  Iterable<MusicalElement> get allElements sync* {
+    yield* elements;
+    for (final voice in sortedVoices) {
+      yield* voice.elements;
+    }
+  }
+
+  /// Rhythmic value per voice, counting both the inherited
+  /// [Measure.elements] list and the elements held by each [Voice].
+  ///
+  /// A voice contributes to its own voice number ([Voice.number]) regardless
+  /// of the `voice` field of the notes it holds, since the container is the
+  /// authoritative assignment here.
+  @override
+  Map<int, double> get musicalValueByVoice {
+    final byVoice = Map<int, double>.from(super.musicalValueByVoice);
+    for (final entry in _voicesByNumber.entries) {
+      double total = 0.0;
+      for (final element in entry.value.elements) {
+        total += Measure.musicalValueOf(element);
+      }
+      if (total <= 0.0) continue;
+      byVoice[entry.key] = (byVoice[entry.key] ?? 0.0) + total;
+    }
+    return byVoice;
+  }
 
   /// Add a voice to this measure
   void addVoice(Voice voice) {

@@ -129,7 +129,7 @@ class RestRenderer extends BaseGlyphRenderer {
       }
     }
 
-    // Rendersr ornaments if presentes
+    // renderizar ornaments if presentes
     if (rest.ornaments.isNotEmpty) {
       final placeholderNote = Note(
         pitch: Pitch(step: 'B', octave: 4), // Posição central da pauta

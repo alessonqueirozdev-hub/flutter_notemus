@@ -1,4 +1,4 @@
-/// Mathematical spacing models for music notetion.
+/// Mathematical spacing models for music notation.
 ///
 /// Based on common engraving strategies:
 /// - Square-root model (recommended)
@@ -33,9 +33,9 @@ enum SpacingModel {
   exponential,
 }
 
-/// Duration-based spacing calculateTestor.
+/// Duration-based spacing calculator.
 class SpacingCalculator {
-  /// Model used for spacing calculateTestions.
+  /// Model used for spacing calculations.
   final SpacingModel model;
 
   /// Global multiplier (1.0 = normal).

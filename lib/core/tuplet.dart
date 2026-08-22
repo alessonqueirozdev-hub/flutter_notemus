@@ -2,6 +2,8 @@
 
 import 'musical_element.dart';
 import 'note.dart';
+import 'rest.dart';
+import 'chord.dart';
 import 'time_signature.dart';
 import 'tuplet_bracket.dart';
 import 'tuplet_number.dart';
@@ -31,16 +33,16 @@ class Tuplet extends MusicalElement {
   /// Denominator of the razão (number de notes normais that seriam tocadas)
   final int normalNotes;
   
-  /// Elementos within of the tuplet (notes, paUsess)
+  /// Elementos within of the tuplet (notes, pausas)
   final List<MusicalElement> elements;
   
   /// Only as notes (filtradas de elements)
   final List<Note> notes;
   
-  /// Configuresção of the bracket
+  /// configuração of the bracket
   final TupletBracket? bracketConfig;
   
-  /// Configuresção of the number
+  /// configuração of the number
   final TupletNumber? numberConfig;
   
   /// Mostrar bracket (deprecated - use bracketConfig)
@@ -85,7 +87,7 @@ class Tuplet extends MusicalElement {
   double getModifiedDuration(double baseDuration) {
     double modifiedDuration = baseDuration * ratio.modifier;
     
-    // If aninhada, Appliesr modificador of the pai recursivamente
+    // If aninhada, aplicar modificador of the pai recursivamente
     if (isNested && parentTuplet != null) {
       return parentTuplet!.getModifiedDuration(modifiedDuration);
     }
@@ -93,18 +95,44 @@ class Tuplet extends MusicalElement {
     return modifiedDuration;
   }
   
-  /// Calculates a duração total that a tuplet ocupa
+  /// Real duração que a quiáltera ocupa no compasso, em semibreves.
+  ///
+  /// Soma a duração escrita de **cada** elemento e aplica a razão
+  /// `normalNotes / actualNotes` uma única vez.
+  ///
+  /// A implementação anterior lia apenas a PRIMEIRA nota e multiplicava por
+  /// [actualNotes], o que assumia que toda quiáltera é homogênea. Isso estava
+  /// errado em três casos comuns:
+  ///
+  /// * duraçōes mistas — uma tercina de colcheia + semínima + colcheia é
+  ///   perfeitamente legal e era medida como três colcheias;
+  /// * quiálteras só com pausas ou só com acordes — `whereType<Note>()` não
+  ///   encontrava nada e a duração virava **0.0**, colapsando o tempo de tudo
+  ///   que vinha depois;
+  /// * quiálteras aninhadas — o grupo interno não era contado.
+  ///
+  /// Como o onset musical de cada evento é derivado daqui, um erro deste valor
+  /// desloca tudo o que segue — inclusive o alinhamento entre pautas e a
+  /// seleção por intervalo de tempo.
   double get totalDuration {
     if (elements.isEmpty) return 0.0;
-    
-    // Assumir that all as notes têm a same duração base
-    // (isso can be expanded for suportar valores mistos)
-    final firstNote = elements.whereType<Note>().firstOrNull;
-    if (firstNote == null) return 0.0;
-    
-    final singleDuration = firstNote.duration.realValue;
-    final totalBefore = singleDuration * actualNotes;
-    return totalBefore * ratio.modifier;
+
+    double written = 0.0;
+    for (final element in elements) {
+      if (element is Note) {
+        written += element.duration.realValue;
+      } else if (element is Rest) {
+        written += element.duration.realValue;
+      } else if (element is Chord) {
+        // Um acorde soa uma vez, não uma vez por nota.
+        written += element.duration.realValue;
+      } else if (element is Tuplet) {
+        // Já traz a própria razão aplicada.
+        written += element.totalDuration;
+      }
+    }
+
+    return written * ratio.modifier;
   }
   
   /// Checks if must mostrar o bracket
@@ -135,7 +163,7 @@ class Tuplet extends MusicalElement {
     return actualNotes.toString();
   }
   
-  /// Atalhos for Createsr tuplets comuns
+  /// Atalhos for criar tuplets comuns
   
   /// Tercina (3:2)
   factory Tuplet.triplet({

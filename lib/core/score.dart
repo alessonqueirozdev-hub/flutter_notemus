@@ -7,7 +7,7 @@ import 'score_def.dart';
 
 /// Represents a complete musical score with multiple staves
 ///
-/// A [Score] is the top-level container for musical notetion, containing
+/// A [Score] is the top-level container for musical notation, containing
 /// one or more [StaffGroup]s. Each group can contain one or more [Staff]s
 /// connected by brackets or braces.
 ///
@@ -64,7 +64,7 @@ class Score {
   final PageLayout? pageLayout;
 
   /// Cabeçalho MEI estruturado (`<meiHead>`). Opcional; when fornecido,
-  /// permite serialização/Importsção fiel to the default MEI v5.
+  /// permite serialização/importação fiel to the default MEI v5.
   final MeiHeader? meiHeader;
 
   /// Definition global de partitura (`<scoreDef>`). Centraliza clef,

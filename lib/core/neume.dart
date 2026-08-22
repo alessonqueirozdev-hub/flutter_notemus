@@ -1,7 +1,7 @@
 // lib/core/neume.dart
 //
 // Noteção de Neuma (MEI v5 — Capítulo: Neume Notetion)
-// Suporte a canto gregoriano and noteção litúrgica medieval.
+// Suporte a canto gregoriano and notação litúrgica medieval.
 
 import 'musical_element.dart';
 
@@ -59,7 +59,7 @@ enum NeumeInterval {
 ///
 /// A neume component is a unidade mínima de a figure de neuma, equivalente
 /// aproximadamente a a note in CMN. Can ter height (if adiastemático with
-/// lines guia, or in noteção quadrada with staff).
+/// lines guia, or in notação quadrada with staff).
 ///
 /// ```dart
 /// NeumeComponent(
@@ -69,7 +69,7 @@ enum NeumeInterval {
 /// )
 /// ```
 class NeumeComponent {
-  /// Name of the note (C–B), if a noteção is diastema (with height definida).
+  /// Name of the note (C–B), if a notação is diastema (with height definida).
   final String? pitchName;
 
   /// Oitava of the note.
@@ -176,7 +176,7 @@ enum NeumeType {
 /// Representa a neuma completo (MEI `<neume>`).
 ///
 /// A neuma is a grupo de sons (componentes) that formam a unidade rhythmic-
-/// melódica na noteção gregoriana. Correspwhere a a or more syllables de text.
+/// melódica na notação gregoriana. Correspwhere a a or more syllables de text.
 ///
 /// ```dart
 /// Neume(
@@ -197,7 +197,7 @@ class Neume extends MusicalElement {
   /// Syllable de text associada (lyric of the canto).
   final String? syllable;
 
-  /// Indicates a tradition de noteção (quadrada, adiastemática, etc.).
+  /// Indicates a tradition de notação (quadrada, adiastemática, etc.).
   final NeumeNotationStyle notationStyle;
 
   /// Whether this syllable is joined to the NEXT syllable of the same word by a
@@ -214,9 +214,9 @@ class Neume extends MusicalElement {
   });
 }
 
-/// Style de noteção de neuma.
+/// Style de notação de neuma.
 enum NeumeNotationStyle {
-  /// Noteção quadrada (noteção gregoriana with staff, séc. XII in diante)
+  /// Noteção quadrada (notação gregoriana with staff, séc. XII in diante)
   square,
   /// Noteção adiastemática (sans staff, only direction melódica)
   adiastematic,
@@ -239,7 +239,7 @@ class NeumeDivision extends MusicalElement {
 
 /// Type de divisão no canto gregoriano.
 enum NeumeDivisionType {
-  /// Divisão mínima (curta paUses)
+  /// Divisão mínima (curta pausa)
   minima,
   /// Divisão smaller
   minor,

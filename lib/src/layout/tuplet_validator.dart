@@ -2,11 +2,32 @@
 
 import '../../core/core.dart';
 
-/// Validador de tuplets based on teoria musical
+/// Tuplet rules from music theory (ratios, note values, beam counts).
+///
+/// **Where this is used**
+///
+/// This class is the single source of truth for the `actual:normal` ratio
+/// arithmetic of a [Tuplet]. It is consumed by:
+///
+/// * [MeasureValidator] (`lib/src/layout/measure_validator.dart`), which calls
+///   [getModifiedDuration] when it measures how much rhythmic time a tuplet
+///   occupies inside a bar, and [describeProblems] to surface tuplet
+///   inconsistencies through `MeasureValidator.describeProblems`.
+/// * `MeasureValidator` is itself called by `LayoutEngine.layout*`
+///   (`lib/src/layout/layout_engine.dart`) for every measure it lays out.
+///
+/// Everything here is pure arithmetic on plain `int`/`double` values so that it
+/// can be unit tested without a Flutter binding.
+///
+/// See also: `Measure.musicalValueOf`, which applies the very same
+/// `normalNotes / actualNotes` ratio when a measure reports its own capacity.
 class TupletValidator {
-  /// Tolerância for comparações de point flutuante
+  /// Tolerância for comparações de point flutuante.
+  ///
+  /// [MeasureValidator.tolerance] aliases this constant so that the two
+  /// validators never disagree about what "the same duration" means.
   static const double epsilon = 0.0001;
-  
+
   /// Valida a razão of the tuplet with base no tempo
   /// 
   /// Regras:
@@ -143,9 +164,105 @@ class TupletValidator {
   
   /// Checks if a tuplet is irracional
   /// (denominator not is potência de 2 or 3)
-  /// 
+  ///
   /// Examples irracionais: 7:5, 11:7, 5:3
   static bool isIrrational(int denominator) {
     return TupletNumber.isIrrational(denominator);
+  }
+
+  /// The factor that converts the *written* duration of the notes inside
+  /// [actualNotes]:[normalNotes] into the duration they really occupy.
+  ///
+  /// `3:2` (a triplet) returns `2/3`: three written eighths sound in the time
+  /// of two. Returns `1.0` for a malformed ratio (`actualNotes <= 0`) so that
+  /// callers degrade to the written duration instead of dividing by zero.
+  ///
+  /// This is the same arithmetic as [getModifiedDuration]; that method takes
+  /// loose ints, this one is the guarded version used by [MeasureValidator].
+  static double ratioModifier(int actualNotes, int normalNotes) {
+    if (actualNotes <= 0 || normalNotes <= 0) return 1.0;
+    return normalNotes / actualNotes;
+  }
+
+  /// Counts the elements of [tuplet] that actually carry rhythmic time.
+  ///
+  /// Notes, rests, chords and nested tuplets count; clefs, barlines and other
+  /// time-less elements do not. A well formed tuplet declares `actualNotes`
+  /// equal to this count.
+  static int countRhythmicElements(Tuplet tuplet) {
+    var count = 0;
+    for (final element in tuplet.elements) {
+      if (Measure.musicalValueOf(element) > 0) count++;
+    }
+    return count;
+  }
+
+  /// Actionable descriptions of everything that looks wrong with [tuplet].
+  ///
+  /// Returns an empty list when the tuplet is well formed. Each entry is a
+  /// single human readable sentence, prefixed with [label] when one is given
+  /// (`MeasureValidator` passes something like `bar 4: tuplet 2`), e.g.:
+  ///
+  /// ```text
+  /// bar 4: tuplet 2 declares 3:2 but contains 4 rhythmic elements
+  /// ```
+  ///
+  /// [timeSignature] is optional context: when it is supplied the ratio is
+  /// additionally checked against simple/compound meter via [validateRatio].
+  /// When it is `null` the tuplet's own [Tuplet.timeSignature] is used.
+  ///
+  /// Called by `MeasureValidator.describeProblems`; safe to call directly.
+  static List<String> describeProblems(
+    Tuplet tuplet, {
+    TimeSignature? timeSignature,
+    String? label,
+  }) {
+    final problems = <String>[];
+    final prefix = (label == null || label.isEmpty) ? 'tuplet' : label;
+    final actual = tuplet.actualNotes;
+    final normal = tuplet.normalNotes;
+
+    if (actual <= 0 || normal <= 0) {
+      problems.add(
+        '$prefix has an impossible ratio $actual:$normal; '
+        'both sides must be positive.',
+      );
+      // Nothing else can be checked with a broken ratio.
+      return problems;
+    }
+
+    final rhythmicCount = countRhythmicElements(tuplet);
+    if (rhythmicCount != actual) {
+      problems.add(
+        '$prefix declares $actual:$normal but contains $rhythmicCount '
+        'rhythmic element${rhythmicCount == 1 ? '' : 's'}; '
+        'set actualNotes to $rhythmicCount or fix its contents.',
+      );
+    }
+
+    final ts = timeSignature ?? tuplet.timeSignature;
+    if (ts != null && !validateRatio(actual, normal, ts)) {
+      problems.add(
+        '$prefix uses ratio $actual:$normal in ${ts.numerator}/'
+        '${ts.denominator} (simple time), where tuplets are normally '
+        'contracting ($actual should be greater than $normal).',
+      );
+    }
+
+    if (isIrrational(normal)) {
+      problems.add(
+        '$prefix is irrational ($actual:$normal): $normal is neither a power '
+        'of two nor a multiple of three, so the ratio has no plain note value.',
+      );
+    }
+
+    if (actual > 7) {
+      problems.add(
+        '$prefix groups $actual notes, which is unusual; '
+        'check the ratio or split the group.',
+      );
+    }
+
+    return problems;
   }
 }

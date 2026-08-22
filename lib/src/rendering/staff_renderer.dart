@@ -94,15 +94,18 @@ class StaffRenderer {
     required this.metadata,
     required this.theme,
   }) {
-    // CORREÃ‡ÃƒO TIPOGRÃIs: Size correct of the glifo based on SMuFL
+    // CORREÇÃO TIPOGRÃIs: Size correct of the glifo based on SMuFL
     glyphSize = coordinates.staffSpace * 4.0;
 
     // Fix: Use valores corretos of the metadata Bravura
+    // Always pass a fallback: `getEngravingDefault` returns 0.0 for a missing
+    // key, and a 0-thickness staff line is an INVISIBLE staff with no error.
     staffLineThickness =
-        metadata.getEngravingDefault('staffLineThickness') *
+        metadata.getEngravingDefault('staffLineThickness', 0.13) *
         coordinates.staffSpace;
     stemThickness =
-        metadata.getEngravingDefault('stemThickness') * coordinates.staffSpace;
+        metadata.getEngravingDefault('stemThickness', 0.12) *
+        coordinates.staffSpace;
 
     // Initialize SMuFL positioning engine with already loaded metadata
     positioningEngine = SMuFLPositioningEngine(metadataLoader: metadata);
@@ -210,6 +213,8 @@ class StaffRenderer {
       noteRenderer: noteRenderer,
       restRenderer: restRenderer,
       positioningEngine: positioningEngine,
+      // Chords inside tuplets used to be skipped by every render branch.
+      chordRenderer: chordRenderer,
     );
 
     // ✅ Initialise SlurRenderer profissional
@@ -238,6 +243,7 @@ class StaffRenderer {
     LayoutEngine? layoutEngine,
     bool renderBarlines = true,
     Set<Note> skipNotes = const {},
+    bool renderMeasureNumbers = true,
   }) {
     _skipNotes = skipNotes;
     // Limpar set de notes beamed
@@ -256,7 +262,7 @@ class StaffRenderer {
     _drawStaffLinesBySystem(canvas, elements);
     currentClef = Clef(clefType: ClefType.treble); // Default clef
 
-    // Primeira passagem: Rendersr elementos individuais
+    // Primeira passagem: renderizar elementos individuais
     for (int i = 0; i < elements.length; i++) {
       _renderElement(
         canvas,
@@ -267,7 +273,7 @@ class StaffRenderer {
       );
     }
 
-    // Segunda passagem: Rendersr ADVANCED BEAMS (if disponível)
+    // Segunda passagem: renderizar ADVANCED BEAMS (if disponível)
     if (layoutEngine != null && layoutEngine.advancedBeamGroups.isNotEmpty) {
       final noteXPositions = layoutEngine.noteXPositions;
       final noteYPositions = layoutEngine.noteYPositions;
@@ -288,7 +294,14 @@ class StaffRenderer {
       }
     }
 
-    // Terceira passagem: Rendersr elementos de grupo (beams simples, ties, slurs)
+    // Measure numbers above the first bar of every system (Behind Bars).
+    if (renderMeasureNumbers &&
+        theme.showMeasureNumbers &&
+        layoutEngine != null) {
+      _renderMeasureNumbers(canvas, elements, layoutEngine.measureNumbers);
+    }
+
+    // Terceira passagem: renderizar elementos de grupo (beams simples, ties, slurs)
     if (currentClef != null) {
       _renderLineOrnaments(canvas, elements);
       _renderLyricHyphens(canvas, elements);
@@ -334,7 +347,7 @@ class StaffRenderer {
         }
       }
 
-      // Rebuild slurRenderer with the new skyline calculateTestor
+      // Rebuild slurRenderer with the new skyline calculator
       slurRenderer = SlurRenderer(
         staffSpace: coordinates.staffSpace,
         staffBaselineY: coordinates.staffBaseline.dy,
@@ -706,6 +719,67 @@ class StaffRenderer {
 
   /// Desenha staff lines By System
   /// Each system tem their lines ending na última barline daquele system
+  /// Draws the measure number above the first measure of each system.
+  ///
+  /// `Measure.number` (MEI `<measure @n>`) has existed in the model since 2.x
+  /// but nothing ever rendered it — a professional score without bar numbers is
+  /// unusable for rehearsal. Convention (Gould): number at the start of every
+  /// system, above the staff, left-aligned on the first element; bar 1 is not
+  /// numbered.
+  void _renderMeasureNumbers(
+    Canvas canvas,
+    List<PositionedElement> elements,
+    Map<int, int> measureNumbers,
+  ) {
+    if (elements.isEmpty) return;
+
+    // First positioned element of each (system, measure) pair.
+    final firstOfSystem = <int, PositionedElement>{};
+    for (final pe in elements) {
+      if (pe.measureIndex < 0) continue;
+      final current = firstOfSystem[pe.system];
+      if (current == null ||
+          pe.measureIndex < current.measureIndex ||
+          (pe.measureIndex == current.measureIndex &&
+              pe.position.dx < current.position.dx)) {
+        firstOfSystem[pe.system] = pe;
+      }
+    }
+
+    // Merge, do not replace: a theme that only supplies a font family must not
+    // lose the staff-derived size and colour.
+    final base = TextStyle(
+      fontSize: coordinates.staffSpace * 0.9,
+      color: theme.textColor ?? theme.staffLineColor,
+      fontWeight: FontWeight.w500,
+    );
+    final override = theme.measureNumberTextStyle;
+    final style = override == null ? base : base.merge(override);
+
+    for (final entry in firstOfSystem.entries) {
+      final pe = entry.value;
+      final number = measureNumbers[pe.measureIndex];
+      if (number == null || number <= 1) continue;
+
+      final painter = TextPainter(
+        text: TextSpan(text: '$number', style: style),
+        textDirection: TextDirection.ltr,
+      )..layout();
+
+      // Staff top line sits 2 staff spaces above the system baseline.
+      // (Never use pe.position.dy: for a Note that is the NOTEHEAD's y.)
+      final staffTopY =
+          coordinates.staffBaseline.dy - 2 * coordinates.staffSpace;
+      painter.paint(
+        canvas,
+        Offset(
+          pe.position.dx,
+          staffTopY - coordinates.staffSpace * 1.4 - painter.height,
+        ),
+      );
+    }
+  }
+
   void _drawStaffLinesBySystem(
     Canvas canvas,
     List<PositionedElement> elements,
@@ -747,10 +821,10 @@ class StaffRenderer {
       ..strokeWidth = staffLineThickness
       ..style = PaintingStyle.stroke;
     final thinBarlineThickness =
-        metadata.getEngravingDefault('thinBarlineThickness') *
+        metadata.getEngravingDefault('thinBarlineThickness', 0.16) *
         coordinates.staffSpace;
     final thickBarlineThickness =
-        metadata.getEngravingDefault('thickBarlineThickness') *
+        metadata.getEngravingDefault('thickBarlineThickness', 0.5) *
         coordinates.staffSpace;
 
     // Desenhar lines for each system separadamente
@@ -1057,10 +1131,10 @@ class StaffRenderer {
     final x = positioned.position.dx;
     final barline = element;
     final thin =
-        metadata.getEngravingDefault('thinBarlineThickness') *
+        metadata.getEngravingDefault('thinBarlineThickness', 0.16) *
         coordinates.staffSpace;
     final thick =
-        metadata.getEngravingDefault('thickBarlineThickness') *
+        metadata.getEngravingDefault('thickBarlineThickness', 0.5) *
         coordinates.staffSpace;
     final glyphWidth = _barlineGlyphWidth(barline.type, thin, thick);
 

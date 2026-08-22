@@ -3,14 +3,16 @@
 import 'package:flutter/material.dart';
 import '../../smufl/smufl_metadata_loader.dart';
 
-/// Renderer centred for glyphs SMuFL and text
-/// Elimina duplicação de código between all os renderers
+/// Central renderer for SMuFL glyphs and text.
+///
+/// Removes the code duplicated across the individual renderers. The music font
+/// is always taken from [metadata] (`SmuflMetadata.font`), never named here.
 class GlyphRenderer {
   final SmuflMetadata metadata;
 
   GlyphRenderer({required this.metadata});
 
-  /// Desenha a glyph SMuFL with opções de centralização
+  /// Draws a SMuFL glyph with optional centring.
   void drawGlyph(
     Canvas canvas, {
     required String glyphName,
@@ -27,8 +29,10 @@ class GlyphRenderer {
       text: TextSpan(
         text: character,
         style: TextStyle(
-          fontFamily: 'Bravura',
-          package: 'flutter_notemus',
+          // Font independence: never hardcode a family — see
+          // BaseGlyphRenderer's "Font independence" note.
+          fontFamily: metadata.font.fontFamily,
+          package: metadata.font.fontPackage,
           fontSize: size,
           color: color,
           height: 1.0,
@@ -48,7 +52,7 @@ class GlyphRenderer {
     );
   }
 
-  /// Desenha text with style customizado
+  /// Draws text with a caller-supplied style.
   void drawText(
     Canvas canvas, {
     required String text,

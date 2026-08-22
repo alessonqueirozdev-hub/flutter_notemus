@@ -1,3 +1,9 @@
+// DEAD CODE — a SECOND `SlurCalculator`, shadowed by the one actually used.
+//
+// `SlurRenderer` imports `lib/src/layout/slur_calculator.dart`; nothing imports
+// this file. Two classes with the same name in two directories is a trap for
+// the next person who "fixes a slur bug" in the wrong one.
+// Status is tracked in `doc/MODEL_ONLY.md` (deletion candidate).
 import 'dart:ui';
 import 'dart:math' as math;
 import '../../core/core.dart';
@@ -11,7 +17,7 @@ class ElementBoundingBox {
   ElementBoundingBox(this.rect, this.element);
 }
 
-/// calculateTestes slur curves with enhanced obstacle detection.
+/// calculates slur curves with enhanced obstacle detection.
 class SlurCalculator {
   final double staffSpace;
   final List<PositionedElement> allElements;
@@ -31,7 +37,7 @@ class SlurCalculator {
     }
   }
 
-  /// calculateTestes the curve of a slur considering obstacles.
+  /// calculates the curve of a slur considering obstacles.
   SlurCurve calculateSlurCurve({
     required Offset startPoint,
     required Offset endPoint,
@@ -170,7 +176,7 @@ class SlurCalculator {
     if (element is Note) {
       width = staffSpace * 1.2;
       height = staffSpace * 3.5; // Stem height.
-      // Simplified stem position. A more complete logic would use _calculateTesteStaffPosition.
+      // Simplified stem position. A more complete logic would use _calculateStaffPosition.
       final stemUp =
           pos.dy >
           (positioned.system * staffSpace * 10 + staffSpace * 7); // Heuristic
@@ -207,7 +213,7 @@ class SlurCalculator {
   }
 }
 
-/// Represents a calculateTested slur curve
+/// Represents a calculated slur curve
 class SlurCurve {
   final Offset startPoint;
   final Offset endPoint;

@@ -2,7 +2,7 @@
 
 import 'time_signature.dart';
 
-/// Configuresção of the number of the tuplet
+/// configuração of the number of the tuplet
 class TupletNumber {
   /// Size of the fonte (default: 1.2 staff spaces)
   final double fontSize;

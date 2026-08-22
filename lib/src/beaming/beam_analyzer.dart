@@ -9,6 +9,14 @@ import 'package:flutter_notemus/src/rendering/smufl_positioning_engine.dart';
 
 /// Analyzes note groups and determines beam geometry and structure.
 class BeamAnalyzer {
+  /// Horizontal correction, in pixels, applied to the stem anchor of an
+  /// up-stem so the stem edge lands on the notehead anchor.
+  static const double _stemUpXOffsetPixels = 0.7;
+
+  /// Horizontal correction, in pixels, applied to the stem anchor of a
+  /// down-stem so the stem edge lands on the notehead anchor.
+  static const double _stemDownXOffsetPixels = -0.8;
+
   final double staffSpace;
   final double noteheadWidth;
   final SMuFLPositioningEngine positioningEngine;
@@ -32,11 +40,30 @@ class BeamAnalyzer {
 
     final group = AdvancedBeamGroup(notes: notes);
     group.stemDirection = _calculateStemDirection(notes, noteStaffPositions);
-    _calculateXPositions(group, noteXPositions);
-    _calculatePrimaryBeamGeometry(group, noteStaffPositions, noteYPositions);
+    final stemXPositions = _calculateXPositions(group, noteXPositions);
+    _calculatePrimaryBeamGeometry(
+      group,
+      noteStaffPositions,
+      noteYPositions,
+      stemXPositions,
+    );
     _analyzeSecondaryBeams(group, timeSignature);
     return group;
   }
+
+  /// Minimum length, in staff spaces, required for every stem of a beamed
+  /// group with [beamCount] beams.
+  ///
+  /// Exposed so callers and tests can assert the invariant enforced by
+  /// [analyzeAdvancedBeamGroup]: for every note of the returned group,
+  /// `(noteY - group.interpolateBeamY(stemX)).abs()` is at least
+  /// `minimumStemLengthSpaces(beamCount: ...) * staffSpace`, and the notehead
+  /// always stays on the far side of the beam line.
+  ///
+  /// Delegates to [SMuFLPositioningEngine.minimumStemLengthSpaces], which
+  /// derives the secondary-beam allowance from the font `engravingDefaults`.
+  double minimumStemLengthSpaces({required int beamCount}) =>
+      positioningEngine.minimumStemLengthSpaces(beamCount: beamCount);
 
   StemDirection _calculateStemDirection(
     List<Note> notes,
@@ -70,46 +97,70 @@ class BeamAnalyzer {
     return farthestPos >= centerLine ? StemDirection.down : StemDirection.up;
   }
 
-  void _calculateXPositions(
+  /// Computes the stem X of every note of the group and stores the beam
+  /// endpoints (`leftX`/`rightX`) on [group].
+  ///
+  /// Returns the stem X of each note, in the same order as `group.notes`.
+  /// The inner notes are needed by the fit-and-shift pass, which measures the
+  /// stem length of every note against the beam line, not just the endpoints.
+  List<double> _calculateXPositions(
     AdvancedBeamGroup group,
     Map<Note, double>? noteXPositions,
   ) {
     if (noteXPositions == null || noteXPositions.isEmpty) {
+      final stemXPositions = List<double>.generate(
+        group.notes.length,
+        (index) => index * staffSpace * 2,
+      );
       group.leftX = 0;
       group.rightX = (group.notes.length - 1) * staffSpace * 2;
-      return;
+      return stemXPositions;
     }
 
-    final firstNote = group.notes.first;
-    final lastNote = group.notes.last;
-    final firstNoteX = noteXPositions[firstNote] ?? 0;
-    final lastNoteX = noteXPositions[lastNote] ?? 0;
+    final stemXPositions = <double>[
+      for (final note in group.notes)
+        _stemXForNote(note, noteXPositions[note] ?? 0, group.stemDirection),
+    ];
 
-    final firstNoteheadGlyph = firstNote.duration.type.glyphName;
-    final lastNoteheadGlyph = lastNote.duration.type.glyphName;
-
-    final firstStemAnchor = group.stemDirection == StemDirection.up
-        ? positioningEngine.getStemUpAnchor(firstNoteheadGlyph)
-        : positioningEngine.getStemDownAnchor(firstNoteheadGlyph);
-
-    final lastStemAnchor = group.stemDirection == StemDirection.up
-        ? positioningEngine.getStemUpAnchor(lastNoteheadGlyph)
-        : positioningEngine.getStemDownAnchor(lastNoteheadGlyph);
-
-    const stemUpXOffset = 0.7;
-    const stemDownXOffset = -0.8;
-    final xOffset = group.stemDirection == StemDirection.up
-        ? stemUpXOffset
-        : stemDownXOffset;
-
-    group.leftX = firstNoteX + (firstStemAnchor.dx * staffSpace - xOffset);
-    group.rightX = lastNoteX + (lastStemAnchor.dx * staffSpace - xOffset);
+    group.leftX = stemXPositions.first;
+    group.rightX = stemXPositions.last;
+    return stemXPositions;
   }
 
+  /// Returns the X of the stem of [note] whose notehead origin is at [noteX].
+  double _stemXForNote(Note note, double noteX, StemDirection stemDirection) {
+    final noteheadGlyph = note.duration.type.glyphName;
+    final stemUp = stemDirection == StemDirection.up;
+
+    final stemAnchor = stemUp
+        ? positioningEngine.getStemUpAnchor(noteheadGlyph)
+        : positioningEngine.getStemDownAnchor(noteheadGlyph);
+
+    final xOffset = stemUp ? _stemUpXOffsetPixels : _stemDownXOffsetPixels;
+
+    return noteX + (stemAnchor.dx * staffSpace - xOffset);
+  }
+
+  /// Places the primary beam line.
+  ///
+  /// Two-step algorithm, as used by LilyPond and Verovio:
+  ///
+  /// 1. FIT - the slope comes from `calculateBeamAngle` (with the flattening
+  ///    clamp for two-note groups) and an initial vertical placement is taken
+  ///    from the extreme notes of the group.
+  /// 2. SHIFT - the stem length of EVERY note is measured against that line
+  ///    and the whole line is translated rigidly (slope preserved) by the
+  ///    smallest amount that brings the shortest stem up to
+  ///    [minimumStemLengthSpaces].
+  ///
+  /// Step 2 is what keeps inner notes honest: averaging only the first and the
+  /// last note leaves a wide leap with a stub of a stem on the extreme inner
+  /// note, and can even push a notehead through the beam.
   void _calculatePrimaryBeamGeometry(
     AdvancedBeamGroup group,
     Map<Note, int>? noteStaffPositions,
     Map<Note, double>? noteYPositions, // absolute Y in pixels
+    List<double> stemXPositions,
   ) {
     if (noteStaffPositions == null || noteStaffPositions.isEmpty) {
       throw ArgumentError(
@@ -199,6 +250,61 @@ class BeamAnalyzer {
 
     group.leftY = beamBaseY;
     group.rightY = beamBaseY + (beamSlope * xDistance);
+
+    _enforceMinimumStemLengths(
+      group,
+      noteYPositions,
+      stemXPositions,
+      beamCount: maxBeams,
+      stemUp: stemUp,
+    );
+  }
+
+  /// Rigidly shifts the already-sloped beam line of [group] until every stem
+  /// is at least [minimumStemLengthSpaces] long.
+  ///
+  /// The shift preserves the slope (both endpoints move by the same amount),
+  /// so the beam angle chosen by the fit step survives untouched. Because the
+  /// stem length is measured as a SIGNED distance (positive when the notehead
+  /// is on the correct side of the beam), a notehead that would end up on the
+  /// wrong side of the beam produces a large deficit and is pushed back to the
+  /// correct side by the same shift - this is the anti-crossing guarantee.
+  void _enforceMinimumStemLengths(
+    AdvancedBeamGroup group,
+    Map<Note, double> noteYPositions,
+    List<double> stemXPositions, {
+    required int beamCount,
+    required bool stemUp,
+  }) {
+    final minStemLengthPixels =
+        minimumStemLengthSpaces(beamCount: beamCount) * staffSpace;
+
+    var requiredShift = 0.0;
+    for (var i = 0; i < group.notes.length; i++) {
+      if (i >= stemXPositions.length) break;
+
+      final noteY = noteYPositions[group.notes[i]];
+      if (noteY == null) continue;
+
+      final beamY = group.interpolateBeamY(stemXPositions[i]);
+
+      // Positive when the notehead sits on the expected side of the beam:
+      // below it for up-stems, above it for down-stems.
+      final signedStemLength = stemUp ? (noteY - beamY) : (beamY - noteY);
+
+      final deficit = minStemLengthPixels - signedStemLength;
+      if (deficit > requiredShift) {
+        requiredShift = deficit;
+      }
+    }
+
+    if (requiredShift <= 0) return;
+
+    // Move the beam AWAY from the noteheads: up (negative Y) for up-stems,
+    // down (positive Y) for down-stems.
+    final delta = stemUp ? -requiredShift : requiredShift;
+    group.leftY += delta;
+    group.rightY += delta;
   }
 
   void _analyzeSecondaryBeams(

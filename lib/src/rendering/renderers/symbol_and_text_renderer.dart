@@ -24,7 +24,13 @@ class HairpinGeometry {
 }
 
 class SymbolAndTextRenderer {
-  /// SMuFL/Bravura recommended text font families (engravingDefaults.textFontFamily)
+  /// Text (non-music) font families recommended by SMuFL for the prose that
+  /// accompanies a score — dynamics words, tempo marks, instructions.
+  ///
+  /// These are the families listed by `engravingDefaults.textFontFamily` in the
+  /// SMuFL reference metadata; they are *text* faces, unrelated to the music
+  /// font, which is never named here (see BaseGlyphRenderer, "Font
+  /// independence") and always comes from `metadata.font`.
   static const List<String> smuflTextFontFallback = [
     'Academico',
     'Century Schoolbook',
@@ -86,7 +92,7 @@ class SymbolAndTextRenderer {
     // - repeats/simile/percent: centralizados na staff
     final signY = _getRepeatMarkY(repeatMark.type);
 
-    // Fix: SMuFL: Use opticalCenter anchor if disponível
+    // SMuFL: use the opticalCenter anchor when the font provides one.
     _drawGlyph(
       canvas,
       glyphName: glyphName,
@@ -293,7 +299,7 @@ class SymbolAndTextRenderer {
     }
 
     final glyphName = _getDynamicGlyph(dynamic.type);
-    // CORREÃ‡ÃƒO TIPOGRÃIs SMuFL: DinÃ¢micas must be placed 2.5 staff spaces below the Ãºltima line
+    // CORREÇÃO TIPOGRÃIs SMuFL: DinÃ¢micas must be placed 2.5 staff spaces below the Ãºltima line
     // Fix: LACERDA: Add verticalOffset for avoid overlap
     final dynamicY =
         coordinates.getStaffLineY(1) +
@@ -344,10 +350,10 @@ class SymbolAndTextRenderer {
         coordinates.getStaffLineY(1) +
         (coordinates.staffSpace * 2.5) +
         verticalOffset;
-    // CORREÃ‡ÃƒO TIPOGRÃIs SMuFL: Height recomendada de 0.75-1.0 staff spaces
+    // SMuFL typography: recommended height is 0.75-1.0 staff spaces.
     final height = coordinates.staffSpace * 0.5;
 
-    // CORREÃ‡ÃƒO CRÃTICA SMuFL: Use hairpinThickness to the invÃ©s de thinBarlineThickness
+    // CRITICAL SMuFL fix: use hairpinThickness, not thinBarlineThickness.
     final hairpinThickness = metadata.getEngravingDefault('hairpinThickness');
     final paint = Paint()
       ..color = theme.dynamicColor ?? theme.noteheadColor
@@ -520,6 +526,19 @@ class SymbolAndTextRenderer {
               fontFamilyFallback: smuflTextFontFallback,
             );
         break;
+      case TextType.rehearsal:
+        // Behind Bars: rehearsal marks are UPRIGHT and BOLD (never italic, so
+        // they never read as an expression mark), set larger than surrounding
+        // text and enclosed in a box.
+        // Merge rather than replace, so a theme that only sets a font family
+        // keeps the staff-derived size and the upright/bold convention.
+        baseStyle = TextStyle(
+          fontSize: coordinates.staffSpace * 1.5,
+          fontStyle: FontStyle.normal,
+          fontWeight: FontWeight.w700,
+          fontFamilyFallback: smuflTextFontFallback,
+        ).merge(theme.rehearsalTextStyle);
+        break;
       default:
         baseStyle =
             theme.textStyle ??
@@ -564,6 +583,11 @@ class SymbolAndTextRenderer {
           case TextType.dynamics:
             return coordinates.getStaffLineY(5) -
                 (coordinates.staffSpace * 1.75);
+          case TextType.rehearsal:
+            // Highest layer above the staff: a rehearsal mark outranks tempo
+            // and expression text (Gould).
+            return coordinates.getStaffLineY(5) -
+                (coordinates.staffSpace * 3.2);
           default:
             return coordinates.getStaffLineY(5) -
                 (coordinates.staffSpace * 1.55);
@@ -578,13 +602,61 @@ class SymbolAndTextRenderer {
   void renderMusicText(Canvas canvas, MusicText text, Offset basePosition) {
     final style = _resolveMusicTextStyle(text);
     final yPosition = _resolveMusicTextY(text);
+    final position = Offset(basePosition.dx, yPosition);
+
+    if (text.type == TextType.rehearsal) {
+      _drawRehearsalEnclosure(canvas, text.text, position, style);
+    }
 
     _drawText(
       canvas,
       text: text.text,
-      position: Offset(basePosition.dx, yPosition),
+      position: position,
       style: style,
       centerHorizontally: false,
+    );
+  }
+
+  /// Boxes a rehearsal mark.
+  ///
+  /// `TextType.rehearsal` was imported from MusicXML `<rehearsal>` since 2.x
+  /// and then fell through the default branch of every text switch — modelled,
+  /// never drawn. A rehearsal mark without its enclosure is just bold text and
+  /// is not what a player scans for, so the box is part of the feature.
+  ///
+  /// Behind Bars: a thin rectangle with a small, even margin around the glyphs;
+  /// the SMuFL `textEnclosureThickness` engraving default gives the line width.
+  void _drawRehearsalEnclosure(
+    Canvas canvas,
+    String label,
+    Offset position,
+    TextStyle style,
+  ) {
+    if (label.trim().isEmpty) return;
+
+    final painter = TextPainter(
+      text: TextSpan(text: label, style: style),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    final pad = coordinates.staffSpace * 0.32;
+    final rect = Rect.fromLTWH(
+      position.dx - pad,
+      position.dy - painter.height / 2 - pad,
+      painter.width + pad * 2,
+      painter.height + pad * 2,
+    );
+
+    final thickness =
+        metadata.getEngravingDefault('textEnclosureThickness', 0.16) *
+            coordinates.staffSpace;
+
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = thickness
+        ..color = style.color ?? theme.textColor ?? theme.noteheadColor,
     );
   }
 
@@ -943,8 +1015,9 @@ class SymbolAndTextRenderer {
       text: TextSpan(
         text: character,
         style: TextStyle(
-          fontFamily: 'Bravura',
-          package: 'flutter_notemus',
+          // Font independence: the family comes from the loaded descriptor.
+          fontFamily: metadata.font.fontFamily,
+          package: metadata.font.fontPackage,
           fontSize: size,
           color: color,
           height: 1.0,

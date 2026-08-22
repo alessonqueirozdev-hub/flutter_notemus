@@ -5,17 +5,73 @@ import 'package:flutter/material.dart' show Offset;
 import 'package:flutter/services.dart' show rootBundle;
 import 'smufl_coordinates.dart';
 
+/// Identifies one SMuFL-compliant music font: the family name Flutter should
+/// draw with, plus the two JSON files the SMuFL spec defines.
+///
+/// The package ships Bravura ([SmuflFontDescriptor.bravura]), but nothing in
+/// the engine is Bravura-specific: every metric comes from `engravingDefaults`,
+/// `glyphBBoxes`, `glyphAdvanceWidths` and `glyphsWithAnchors`. Point this at
+/// Petaluma, Leland, Sebastian or a house font and the renderer follows.
+class SmuflFontDescriptor {
+  /// Flutter font family used to draw the glyphs.
+  final String fontFamily;
+
+  /// Package that owns [fontFamily], or null for an application font.
+  final String? fontPackage;
+
+  /// Asset key of the font's `*_metadata.json` (SMuFL font metadata).
+  final String metadataAsset;
+
+  /// Asset key of `glyphnames.json` (SMuFL glyph name to codepoint map).
+  final String glyphNamesAsset;
+
+  const SmuflFontDescriptor({
+    required this.fontFamily,
+    required this.metadataAsset,
+    required this.glyphNamesAsset,
+    this.fontPackage,
+  });
+
+  /// The font bundled with this package.
+  static const SmuflFontDescriptor bravura = SmuflFontDescriptor(
+    fontFamily: 'Bravura',
+    fontPackage: 'flutter_notemus',
+    metadataAsset:
+        'packages/flutter_notemus/assets/smufl/bravura_metadata.json',
+    glyphNamesAsset: 'packages/flutter_notemus/assets/smufl/glyphnames.json',
+  );
+
+  /// Family string to hand to a [TextStyle], package-qualified when needed.
+  String get resolvedFamily =>
+      fontPackage == null ? fontFamily : 'packages/$fontPackage/$fontFamily';
+
+  @override
+  String toString() => 'SmuflFontDescriptor($fontFamily)';
+}
+
 class SmuflMetadata {
-  // Singleton pattern ensures data is loaded only once.
+  /// Process-wide default instance (Bravura), kept for backwards
+  /// compatibility: `SmuflMetadata()` returns it.
   static final SmuflMetadata _instance = SmuflMetadata._internal();
   factory SmuflMetadata() => _instance;
 
+  /// Creates an INDEPENDENT loader, so an app can hold several music fonts at
+  /// once (or load a different one in a test) instead of being pinned to the
+  /// single global Bravura instance.
+  SmuflMetadata.forFont(SmuflFontDescriptor font) : _font = font;
+
   SmuflMetadata._internal();
+
+  SmuflFontDescriptor _font = SmuflFontDescriptor.bravura;
+
+  /// The font this instance describes.
+  SmuflFontDescriptor get font => _font;
 
   Map<String, dynamic>? _metadata;
   Map<String, dynamic>? _glyphnames;
   final Map<String, SmuflGlyphInfo> _glyphInfoCache = {};
   bool _isLoaded = false;
+  Future<void>? _loading;
 
   // Cached metadata sections
   Map<String, dynamic>? _glyphsWithAnchors;
@@ -23,17 +79,27 @@ class SmuflMetadata {
   Map<String, dynamic>? _glyphAdvanceWidths;
   Map<String, dynamic>? _engravingDefaults;
 
-  Future<void> load() async {
-    if (_isLoaded) return;
+  /// Loads (once) the SMuFL metadata for [font], or for this instance's font.
+  ///
+  /// Concurrent calls share one in-flight future: the previous implementation
+  /// checked a plain bool, so two simultaneous callers both hit `rootBundle`
+  /// and briefly observed a half-populated loader.
+  Future<void> load({SmuflFontDescriptor? font}) {
+    if (font != null && font != _font) {
+      _font = font;
+      _isLoaded = false;
+      _loading = null;
+      _glyphInfoCache.clear();
+    }
+    if (_isLoaded) return Future<void>.value();
+    return _loading ??= _loadNow();
+  }
 
-    final metadataString = await rootBundle.loadString(
-      'packages/flutter_notemus/assets/smufl/bravura_metadata.json',
-    );
+  Future<void> _loadNow() async {
+    final metadataString = await rootBundle.loadString(_font.metadataAsset);
     _metadata = json.decode(metadataString);
 
-    final glyphnamesString = await rootBundle.loadString(
-      'packages/flutter_notemus/assets/smufl/glyphnames.json',
-    );
+    final glyphnamesString = await rootBundle.loadString(_font.glyphNamesAsset);
     _glyphnames = json.decode(glyphnamesString);
 
     // Load metadata sections in a structured way
@@ -43,6 +109,7 @@ class SmuflMetadata {
     _engravingDefaults = _metadata?['engravingDefaults'] as Map<String, dynamic>?;
 
     _isLoaded = true;
+    _loading = null;
   }
 
   // Returns the Unicode character for a given glyph name

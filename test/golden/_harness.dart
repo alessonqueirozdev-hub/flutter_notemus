@@ -175,6 +175,16 @@ Future<Finder> pumpCase(WidgetTester tester, CorpusCase c) async {
                     ? const MusicScoreTheme(
                         lyricTextStyle: TextStyle(fontFamily: kTextFontFamily),
                         dynamicTextStyle: TextStyle(fontFamily: kTextFontFamily),
+                        // Measure numbers and rehearsal marks are plain text
+                        // too: without a real family they rasterize as Ahem
+                        // boxes under `flutter test` and the goldens record a
+                        // black square instead of the label.
+                        measureNumberTextStyle:
+                            TextStyle(fontFamily: kTextFontFamily),
+                        rehearsalTextStyle: TextStyle(
+                          fontFamily: kTextFontFamily,
+                          fontWeight: FontWeight.w700,
+                        ),
                       )
                     : const MusicScoreTheme(),
               ),

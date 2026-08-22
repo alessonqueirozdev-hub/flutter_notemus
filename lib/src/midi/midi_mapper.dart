@@ -1,11 +1,13 @@
 import '../../core/barline.dart';
 import '../../core/chord.dart';
+import '../../core/clef.dart';
 import '../../core/duration.dart' as music;
 import '../../core/dynamic.dart';
 import '../../core/measure.dart';
 import '../../core/musical_element.dart';
 import '../../core/note.dart';
 import '../../core/ornament.dart';
+import '../../core/pitch.dart';
 import '../../core/repeat.dart';
 import '../../core/rest.dart';
 import '../../core/score.dart';
@@ -18,6 +20,14 @@ import '../../core/voice.dart';
 import '../../core/volta_bracket.dart';
 import 'midi_models.dart';
 
+/// Converts a [Staff]/[Score] into a playable [MidiSequence].
+///
+/// Octave-transposing clefs (8va/8vb/15ma/15mb): `Pitch.octave` is the WRITTEN
+/// octave; the active [Clef]'s `octaveShift` is applied to obtain the SOUNDING
+/// pitch. This mirrors StaffPositionCalculator, which places notes by written
+/// octave. The active clef is tracked in element order, so a mid-measure clef
+/// change takes effect from that element on; when no clef has been declared no
+/// shift is applied.
 class MidiMapper {
   static MidiSequence fromStaff(
     Staff staff, {
@@ -26,22 +36,39 @@ class MidiMapper {
   }) {
     final instrument =
         options.instrumentsByStaff[0] ?? options.defaultInstrument;
-    final result = _buildTrackFromStaff(
+    final results = _buildStaffTracks(
       staff: staff,
+      staffIndex: 0,
       options: options,
       instrument: instrument,
       trackName: trackName,
     );
 
+    final conductorEvents = <MidiEvent>[
+      for (final result in results) ...result.metaEvents,
+    ];
+    if (results.length > 1) {
+      _dedupeMetaEvents(conductorEvents, defaultBpm: options.defaultBpm);
+    }
+
     final tracks = <MidiTrack>[
-      MidiTrack(name: 'Conductor', channel: 0, events: result.metaEvents),
-      result.track,
+      MidiTrack(
+        name: 'Conductor',
+        channel: 0,
+        events: results.length > 1
+            ? _sortedEvents(conductorEvents)
+            : conductorEvents,
+      ),
+      for (final result in results) result.track,
     ];
 
-    if (options.includeMetronome && result.playedMeasures.isNotEmpty) {
+    final playedMeasures = results.isEmpty
+        ? const <_PlayedMeasureTiming>[]
+        : results.first.playedMeasures;
+    if (options.includeMetronome && playedMeasures.isNotEmpty) {
       tracks.add(
         _buildMetronomeTrack(
-          playedMeasures: result.playedMeasures,
+          playedMeasures: playedMeasures,
           options: options,
         ),
       );
@@ -50,7 +77,7 @@ class MidiMapper {
     return MidiSequence(
       ticksPerQuarter: options.ticksPerQuarter,
       tracks: tracks,
-      warnings: result.warnings,
+      warnings: <String>[for (final result in results) ...result.warnings],
     );
   }
 
@@ -77,14 +104,17 @@ class MidiMapper {
       final instrument =
           configured ?? _defaultInstrumentForStaff(staffIndex, options);
 
-      final trackResult = _buildTrackFromStaff(
+      final staffResults = _buildStaffTracks(
         staff: staves[staffIndex],
+        staffIndex: staffIndex,
         options: options,
         instrument: instrument,
         trackName: 'Staff ${staffIndex + 1}',
       );
-      results.add(trackResult);
-      warnings.addAll(trackResult.warnings);
+      results.addAll(staffResults);
+      for (final trackResult in staffResults) {
+        warnings.addAll(trackResult.warnings);
+      }
     }
 
     final conductorEvents = <MidiEvent>[
@@ -119,11 +149,104 @@ class MidiMapper {
   }
 }
 
+/// Builds every MIDI track that belongs to one staff.
+///
+/// With [MidiGenerationOptions.separateTracksPerVoice] disabled this is a
+/// single track carrying all voices (the historical behaviour). Enabled, it is
+/// one track per voice, named `'<trackName> - Voice <n>'` and placed on its own
+/// channel so a player can solo/mute a single voice.
+List<_TrackBuildResult> _buildStaffTracks({
+  required Staff staff,
+  required int staffIndex,
+  required MidiGenerationOptions options,
+  required MidiInstrumentAssignment instrument,
+  required String trackName,
+}) {
+  final staffAudible = options.isStaffAudible(staffIndex);
+
+  if (!options.separateTracksPerVoice) {
+    return <_TrackBuildResult>[
+      _buildTrackFromStaff(
+        staff: staff,
+        options: options,
+        instrument: instrument,
+        trackName: trackName,
+        staffAudible: staffAudible,
+      ),
+    ];
+  }
+
+  final voiceNumbers = _voiceNumbersInStaff(staff);
+  final results = <_TrackBuildResult>[];
+  for (int index = 0; index < voiceNumbers.length; index++) {
+    final voiceNumber = voiceNumbers[index];
+    final voiceInstrument = MidiInstrumentAssignment(
+      channel: _voiceChannel(instrument.channel, index, options),
+      program: instrument.program,
+      velocity: instrument.velocity,
+    );
+    results.add(
+      _buildTrackFromStaff(
+        staff: staff,
+        options: options,
+        instrument: voiceInstrument,
+        trackName: '$trackName - Voice $voiceNumber',
+        staffAudible: staffAudible,
+        onlyVoice: voiceNumber,
+      ),
+    );
+  }
+  return results;
+}
+
+/// Voice numbers used anywhere in [staff], sorted ascending. Measures that are
+/// not [MultiVoiceMeasure] contribute the implicit voice 1.
+List<int> _voiceNumbersInStaff(Staff staff) {
+  final numbers = <int>{};
+  for (final measure in staff.measures) {
+    if (measure is MultiVoiceMeasure) {
+      numbers.addAll(measure.voiceNumbers);
+      // Sounding elements sitting directly on a multi-voice measure belong to
+      // the implicit voice 1, so that voice needs a track of its own.
+      if (measure.voiceNumbers.isEmpty || _hasSoundingElement(measure)) {
+        numbers.add(1);
+      }
+      continue;
+    }
+    numbers.add(1);
+  }
+  if (numbers.isEmpty) numbers.add(1);
+  return numbers.toList()..sort();
+}
+
+/// Whether [measure] carries note-producing elements directly (outside of its
+/// voices).
+bool _hasSoundingElement(Measure measure) => measure.elements.any(
+      (element) => element is Note || element is Chord || element is Tuplet,
+    );
+
+/// Channel for the [voiceIndex]-th voice of a staff whose base channel is
+/// [baseChannel]. The first voice keeps the staff channel; the metronome
+/// channel is never reused.
+int _voiceChannel(
+  int baseChannel,
+  int voiceIndex,
+  MidiGenerationOptions options,
+) {
+  int channel = (baseChannel + voiceIndex) % 16;
+  if (voiceIndex != 0 && channel == options.metronomeChannel) {
+    channel = (channel + 1) % 16;
+  }
+  return channel;
+}
+
 _TrackBuildResult _buildTrackFromStaff({
   required Staff staff,
   required MidiGenerationOptions options,
   required MidiInstrumentAssignment instrument,
   required String trackName,
+  bool staffAudible = true,
+  int? onlyVoice,
 }) {
   final warnings = <String>[];
   final playOrder = _buildPlaybackOrder(staff.measures, options, warnings);
@@ -137,6 +260,8 @@ _TrackBuildResult _buildTrackFromStaff({
     channel: instrument.channel,
     options: options,
     baseVelocity: instrument.velocity,
+    staffAudible: staffAudible,
+    onlyVoice: onlyVoice,
   );
 
   builder.events.add(
@@ -179,11 +304,21 @@ class _TrackEventBuilder {
     required this.channel,
     required this.options,
     required this.baseVelocity,
+    this.staffAudible = true,
+    this.onlyVoice,
   });
 
   final int channel;
   final int baseVelocity;
   final MidiGenerationOptions options;
+
+  /// False when the whole staff is muted (or not soloed): musical time is still
+  /// consumed, but no note events are emitted.
+  final bool staffAudible;
+
+  /// When non-null this track carries a single voice; every other voice is
+  /// traversed for its meta events only.
+  final int? onlyVoice;
 
   final List<MidiEvent> events = <MidiEvent>[];
   final List<MidiEvent> metaEvents = <MidiEvent>[];
@@ -191,6 +326,39 @@ class _TrackEventBuilder {
 
   final Map<int, int> _voiceVelocity = <int, int>{};
   final Map<_TieKey, _TieState> _openTies = <_TieKey, _TieState>{};
+
+  /// Clef in force at the current element, tracked in reading order (a clef may
+  /// change mid-measure). Null while no clef has been declared, in which case
+  /// no octave transposition is applied.
+  Clef? _activeClef;
+
+  /// Deduplicates the out-of-range warnings (a repeated section would otherwise
+  /// report the same note once per pass).
+  final Set<String> _reportedWarnings = <String>{};
+
+  /// Whether note events for [voiceNumber] should be emitted on this track.
+  bool _isVoiceAudible(int voiceNumber) {
+    if (!staffAudible) return false;
+    final only = onlyVoice;
+    if (only != null && voiceNumber != only) return false;
+    return options.isVoiceAudible(voiceNumber);
+  }
+
+  /// Converts a WRITTEN [pitch] into the SOUNDING MIDI number by applying the
+  /// active clef's octave transposition (8va/8vb/15ma/15mb), clamped to 0..127.
+  int _soundingMidi(Pitch pitch) {
+    final clef = _activeClef;
+    final shift = clef?.octaveShift ?? 0;
+    final raw = pitch.midiNumber + shift * 12;
+    final clamped = raw.clamp(0, 127);
+    if (shift != 0 && raw != clamped) {
+      final warning =
+          'Note $pitch in ${_clefLabel(clef!)} transposes out of MIDI range; '
+          'clamped.';
+      if (_reportedWarnings.add(warning)) warnings.add(warning);
+    }
+    return clamped;
+  }
 
   void processMeasure({
     required Measure measure,
@@ -221,7 +389,10 @@ class _TrackEventBuilder {
           localTick += consumed;
         }
 
-        if (localTick > measureEndTick) {
+        // Report the overflow once: on the track that owns the voice when the
+        // voices were split, otherwise on the single staff track.
+        if (localTick > measureEndTick &&
+            (onlyVoice == null || onlyVoice == voice.number)) {
           warnings.add(
             'Voice ${voice.number} overflowed measure by '
             '${localTick - measureEndTick} ticks.',
@@ -242,7 +413,9 @@ class _TrackEventBuilder {
       localTick += consumed;
     }
 
-    if (localTick > measureEndTick) {
+    // A single-voice measure belongs to the implicit voice 1; report its
+    // overflow only once when the voices were split into separate tracks.
+    if (localTick > measureEndTick && (onlyVoice == null || onlyVoice == 1)) {
       warnings.add(
         'Measure overflowed by ${localTick - measureEndTick} ticks.',
       );
@@ -284,6 +457,13 @@ class _TrackEventBuilder {
     required int voiceNumber,
     required double tupletMultiplier,
   }) {
+    if (element is Clef) {
+      // A clef may appear mid-measure; from here on it defines the sounding
+      // octave of every following note (see the MidiMapper class doc).
+      _activeClef = element;
+      return 0;
+    }
+
     if (element is Note) {
       return _emitNote(
         note: element,
@@ -392,8 +572,10 @@ class _TrackEventBuilder {
     required int voiceNumber,
     required double tupletMultiplier,
   }) {
+    final audible = _isVoiceAudible(voiceNumber);
+
     if (note.isGraceNote) {
-      if (!options.playGraceNotes) return 0;
+      if (!options.playGraceNotes || !audible) return 0;
       // A grace note STEALS time rather than adding it: play it just before the
       // beat (borrowing from the preceding note) and do NOT advance the cursor,
       // so the main note stays on time and the measure does not overflow.
@@ -408,7 +590,7 @@ class _TrackEventBuilder {
       final graceStart = startTick >= graceTicks ? startTick - graceTicks : startTick;
       final graceEnd =
           startTick >= graceTicks ? startTick : startTick + graceTicks;
-      final graceMidi = note.pitch.midiNumber.clamp(0, 127);
+      final graceMidi = _soundingMidi(note.pitch);
       final graceVel = (note.dynamicElement != null
               ? velocityFromDynamic(note.dynamicElement!.type)
               : (_voiceVelocity[voiceNumber] ?? baseVelocity))
@@ -429,7 +611,9 @@ class _TrackEventBuilder {
       isGraceNote: note.isGraceNote,
       options: options,
     );
-    final midiNote = note.pitch.midiNumber.clamp(0, 127);
+    if (!audible) return durationTicks;
+
+    final midiNote = _soundingMidi(note.pitch);
     var velocity = note.dynamicElement != null
         ? velocityFromDynamic(note.dynamicElement!.type)
         : (_voiceVelocity[voiceNumber] ?? baseVelocity);
@@ -560,6 +744,8 @@ class _TrackEventBuilder {
       options: options,
     );
 
+    if (!_isVoiceAudible(voiceNumber)) return durationTicks;
+
     final dynamicVelocity = chord.dynamic != null
         ? velocityFromDynamic(chord.dynamic!.type)
         : (_voiceVelocity[voiceNumber] ?? baseVelocity);
@@ -567,7 +753,7 @@ class _TrackEventBuilder {
     final chordEffect = _articulationEffect(chord.articulations);
 
     for (final chordNote in chord.notes) {
-      final midiNote = chordNote.pitch.midiNumber.clamp(0, 127);
+      final midiNote = _soundingMidi(chordNote.pitch);
       var noteVelocity = chordNote.dynamicElement != null
           ? velocityFromDynamic(chordNote.dynamicElement!.type)
           : dynamicVelocity;
@@ -694,6 +880,26 @@ class _TrackEventBuilder {
         return;
     }
   }
+}
+
+/// Name of a clef for warning messages, e.g. `treble8vb`.
+///
+/// [Clef.actualClefType] already drops the octave marker of the G/F clefs, but
+/// keeps it for `c8vb`, so the base name is normalised before the marker of the
+/// current [Clef.octaveShift] is appended.
+String _clefLabel(Clef clef) {
+  final base = clef.actualClefType.name.replaceAll(
+    RegExp(r'(8va|8vb|15ma|15mb)$'),
+    '',
+  );
+  final suffix = switch (clef.octaveShift) {
+    2 => '15ma',
+    1 => '8va',
+    -1 => '8vb',
+    -2 => '15mb',
+    _ => '',
+  };
+  return '$base$suffix';
 }
 
 /// Duration "gate" fraction for an articulation (how much of the written

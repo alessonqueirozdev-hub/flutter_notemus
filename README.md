@@ -24,6 +24,7 @@ Professional music notation rendering for Flutter with SMuFL-compliant engraving
 
 - [Current Status](#current-status)
 - [MEI v5 Conformance](#mei-v5-conformance)
+- [Editorial and Professional Features](#editorial-and-professional-features--honest-status)
 - [Open Pending Work](#open-pending-work)
 - [Highlights](#highlights)
 - [Installation](#installation)
@@ -58,6 +59,9 @@ Professional music notation rendering for Flutter with SMuFL-compliant engraving
   - [Breath and Caesura](#breath-and-caesura)
   - [Import from JSON, MusicXML, and MEI](#import-from-json-musicxml-and-mei)
   - [MIDI Mapping and Export](#midi-mapping-and-export)
+  - [Selection and Hit-Testing](#selection-and-hit-testing)
+  - [Measure Numbers](#measure-numbers)
+  - [Using a Different SMuFL Font](#using-a-different-smufl-font)
   - [Themes and Styling](#themes-and-styling)
 - [Reference JSON Format](#reference-json-format)
 - [Architecture](#architecture)
@@ -72,6 +76,12 @@ flutter_notemus ships a **notation-agnostic data model that covers the breadth o
 
 **Important — what is actually imported/rendered vs. modeled.** MEI *import* and *rendering* focus on **Common Music Notation (CMN)**, which is well supported. Several advanced MEI modules exist in the data model (you can construct them in Dart) but are **not yet wired to the MEI parser/renderer** — they are marked *Model only* below. The table reflects what is genuinely imported and/or rendered, not just representable. (An adversarial audit found ~58% of catalogued items fully wired; the rest are model-only or partial.)
 
+**MEI is import-only.** There is no MEI serializer — `lib/src/parsers/` has a
+reader and no writer. Nothing in this table should be read as MEI round-trip.
+Export exists for **MusicXML** only. Full analysis:
+[`doc/MEI_V5_AUDIT.md`](doc/MEI_V5_AUDIT.md), which separates *model only* /
+*parsed* / *rendered* / *exported* / *round-trippable* per module.
+
 ### Coverage by MEI v5 module
 
 Legend: ✅ modeled **and** imported/rendered · ◐ partial (see note) · ○ *model only* (classes exist; no MEI import/render yet).
@@ -81,22 +91,22 @@ Legend: ✅ modeled **and** imported/rendered · ◐ partial (see note) · ○ *
 | **CMN — Pitch & Duration** | ✅ | `Pitch`, `Duration`, `DurationType` (maxima → 2048th) |
 | **CMN — Events** | ✅ | `Note`, `Rest`, `Chord`, `Space`, `MeasureSpace` |
 | **CMN — Measure & Staff** | ✅ | `Measure` (`@n`), `Staff` (configurable `lineCount`), `xml:id` |
-| **CMN — Clef / Key / Meter** | ◐ | `Clef` (20 types) ✅; `KeyMode` and additive meter exist in the model but are **not parsed from MEI** yet |
+| **CMN — Clef / Key / Meter** | ✅ | `Clef` (20 types); `@mode` → `KeyMode` and additive meter (`meter.count="3+2+2"`, `<meterSigGrp>`) parsed since 2.7.0 |
 | **CMN — Articulation** | ✅ | `ArticulationType` (17 types) |
 | **CMN — Dynamics** | ◐ | `DynamicType` has 36 types; 9 are rendered, plus hairpins |
 | **CMN — Ornaments** | ◐ | `OrnamentType` has 43 types; 33 mapped to glyphs |
-| **CMN — Slur / Tie / Beam** | ✅ | `SlurType`, `TieType`, `BeamType`, `SlurEvent` (nested/numbered) |
-| **CMN — Tuplets** | ✅ | `Tuplet`, `TupletBracket`, nested tuplets |
-| **CMN — Polyphony** | ✅ | `Voice`, `MultiVoiceMeasure`, `StemDirection` |
+| **CMN — Slur / Tie / Beam** | ◐ | `SlurType`, `TieType`, `BeamType`, `SlurEvent` (nested/numbered); slurs and ties split correctly across a system break since 2.7.0. **Secondary beam levels** (MusicXML `<beam number="2">`) are still collapsed to one level |
+| **CMN — Tuplets** | ✅ | `Tuplet`, `TupletBracket`; nested tuplets and chords inside tuplets are **drawn** since 2.7.0 (they were skipped by every render branch before) |
+| **CMN — Polyphony** | ✅ | `Voice`, `MultiVoiceMeasure`, `StemDirection`; voice-aware bar capacity, onset-based cross-voice collision and per-voice playback since 2.7.0 |
 | **CMN — Score structure** | ✅ | `Score`, `StaffGroup`, `ScoreDefinition` (`<scoreDef>`) |
-| **CMN — Navigation** | ✅ | `RepeatMark`, `VoltaBracket`, `BarlineType` (15 types) |
+| **CMN — Navigation** | ✅ | `RepeatMark`, `VoltaBracket`, `BarlineType` (15 types); MEI `<ending>` → `VoltaBracket` since 2.7.0 |
 | **Lyrics & Text** | ◐ | `Syllable`/`SyllableType` imported & rendered; `Verse` grouping not populated by the parser yet |
-| **Metadata (meiHead / FRBR)** | ○ | `MeiHeader` & FRBR classes exist; **not parsed from MEI** |
+| **Metadata (meiHead / FRBR)** | ✅ | parsed since 2.7.0 via `MEIParser.scoreFromMei` (`fileDesc`, `titleStmt`, contributors, `pubStmt`, `workList`, `revisionDesc`) |
 | **Harmonic Analysis** | ○ | `HarmonicLabel`, `ScaleDegree`, `ChordTable` exist; **not parsed/rendered** |
 | **Figured Bass** | ○ | `FiguredBass`, `FigureElement` exist; **not parsed/rendered** |
 | **Microtonality** | ✅ | `AccidentalType` (sagittal, koma, quarter-tone) — modeled & rendered |
 | **Solmization** | ✅ | `Pitch.fromSolmization()`, `Pitch.solmizationName` |
-| **Tablature** | ◐ | `Note.tabFret/tabString` modeled & rendered; MEI `@tab.*` **import not implemented** |
+| **Tablature** | ✅ | `Note.tabFret`/`tabString` modeled & rendered; MEI `@tab.fret`/`@tab.string` parsed since 2.7.0 (including inside `<chord>`). The richer MEI tablature *model* stays model-only — see [`doc/MODEL_ONLY.md`](doc/MODEL_ONLY.md) |
 | **Mensural Notation** | ○ | `MensuralNote`, `Ligature`, `Mensur` exist; **no MEI import/render** |
 | **Neume Notation** | ◐ | rendered via **GABC/Gregorian**; MEI `<neume>` import not implemented |
 
@@ -197,12 +207,60 @@ For a full conformance audit see [`doc/MEI_V5_AUDIT.md`](doc/MEI_V5_AUDIT.md).
 
 ## Current Status
 
-- Current package release target: `2.6.0`
-- Previous pub.dev baseline: `2.5.1`
-- Core notation rendering is production-ready; **multi-staff / grand-staff and
-  cross-staff beaming** are now supported alongside single-staff `MusicScore`.
-- MIDI mapping and `.mid` export are available in the package (CMN and chant).
-- Android native audio backend is active; other native targets are configured and tracked as pending.
+- Current package release target: `2.7.0`
+- Previous pub.dev baseline: `2.6.0`
+- **2.7.0 is an audit-remediation release.** An adversarial forensic audit of
+  2.6.0 executed the engine against 40+ probe cases and catalogued 42 findings,
+  eight of them P1 (wrong pitches from a mid-measure clef change, compound
+  meters beamed wrongly, grand-staff hands out of alignment, dense bars clipped
+  and unreachable, silently dropped notes, MusicXML timing ignored on import).
+  The audit and the remediation are both in the repository:
+  [`doc/AUDITORIA_FORENSE_2026-08-21.md`](doc/AUDITORIA_FORENSE_2026-08-21.md)
+  and the [CHANGELOG](CHANGELOG.md#270---2026-08-21).
+- Single-staff and multi-staff CMN rendering, MIDI mapping and `.mid` export
+  (CMN and chant), and Gregorian square notation are the load-bearing features.
+- Android native audio backend is active; iOS, macOS, Windows, Linux and Web are
+  **no-op stubs** (`nativeIsReady` returns `false`) — tracked as
+  [#1](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/1)/[#15](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/15).
+
+### What's New in 2.7.0
+
+**Engraving corrections** (output changes on purpose; 30 of 54 goldens were
+re-baselined):
+
+- **Compound meters beam in threes.** 3/8, 6/8, 9/8 and 12/8 used to group the
+  beat-completing note into the next group and orphan the last note of the bar.
+- **A mid-measure clef change stays where it was written** and only affects the
+  notes after it. Every note in such a bar used to be drawn with the *last* clef
+  of the bar — a twelfth off for the first one.
+- **Grand-staff hands line up.** Staves are aligned on a shared musical time
+  grid ([ADR-002](doc/adr/ADR-002-shared-musical-time-grid.md)); beat 3 of a 4/4
+  bar used to sit 38 px apart between the hands.
+- **Rhythmic spacing is proportional across all 15 duration types.** A breve used
+  to be spaced like a quarter — narrower than a whole note.
+- **Every stem in a beam group clears the minimum length**, lyrics claim
+  horizontal space, courtesy accidentals are drawn with parentheses/brackets,
+  and accidental widths come from the SMuFL metadata.
+- **Measure numbers** are engraved at the start of every system.
+
+**New capabilities:**
+
+- [`ScoreHitTester`](#selection-and-hit-testing) — selection and hit-testing by
+  point, region, measure, system, voice and time range.
+- Per-voice / per-staff playback with mute and solo.
+- Real PDF export of the engraving (it used to emit placeholder pages).
+- A different SMuFL font can be loaded (`SmuflFontDescriptor`).
+
+**Correctness and robustness:**
+
+- The layout no longer replaces your model objects
+  ([ADR-001](doc/adr/ADR-001-layout-never-clones-the-model.md)), so identity —
+  and therefore selection, editing and hit-testing — survives the pipeline.
+- MusicXML import honours `<divisions>`/`<duration>`, `<backup>` and
+  `<forward>`; MEI reads every `<section>`.
+- Invalid input fails with a `FormatException` naming the element instead of
+  crashing later with a null-check `TypeError`.
+- New invariant, selection, Gregorian-calibration and fuzz test suites.
 
 ### What's New in 2.6.0
 
@@ -252,6 +310,32 @@ full list.
 - CI pipeline (`.github/workflows/ci.yml`) added — runs `flutter analyze`, `flutter test`, and `flutter pub publish --dry-run` on every push and pull request.
 - All source comments and documentation strings migrated to English throughout the entire codebase (library, tests, and examples) — Issue #11 closed.
 - Duplicate stem X-offset constants in `BeamRenderer` extracted into a single `_stemXOffset()` helper.
+
+---
+
+## Editorial and Professional Features — honest status
+
+The 2.6.0 audit asked for this table explicitly, because "the class exists" and
+"the feature works" had drifted apart. Statuses are verified against the code,
+not against intent. `SUPPORTED` means it survives the whole path
+`model → layout → render` (and, where relevant, import/export).
+
+| Feature | Status | Note |
+|---|---|---|
+| Measure numbers | **SUPPORTED** | engraved at every system start; `Measure.number` honoured (2.7.0) |
+| Courtesy / editorial accidentals | **SUPPORTED** | resolved *and* drawn with SMuFL parentheses/brackets (2.7.0) |
+| Instrument / group names | **SUPPORTED** | `StaffGroup.name`, drawn beside the brace/bracket |
+| Transposing instruments | **PARTIAL** | octave-transposing clefs apply to playback (2.7.0); MusicXML `<transpose>` import is limited |
+| Cue notes | **NOT SUPPORTED** | `<cue/>` is not modelled; cue-*size* is used only for mid-system clef changes |
+| Rehearsal marks | **MODEL ONLY** | `TextType.rehearsal` is imported from MusicXML but nothing draws it |
+| Page numbers | **NOT SUPPORTED** | there is no page model; PDF export paginates by system |
+| Ossia staves | **NOT SUPPORTED** | |
+| Hidden / invisible notes | **NOT SUPPORTED** | no `print-object` equivalent |
+| Coloured notes | **PARTIAL** | colours are per-theme, not per-element; `Voice.color` is not consumed |
+| Linked parts / part extraction | **NOT SUPPORTED** | `ScoreView` always renders every staff of the score |
+| Conductor score | **SUPPORTED** | `Score` → `StaffGroup`s → `ScoreView` |
+| System text | **PARTIAL** | `MusicText` renders tempo/expression/instruction; other types fall through |
+| Figured bass, mensural, harmonic analysis, MEI header | **MODEL ONLY** | see [`doc/MODEL_ONLY.md`](doc/MODEL_ONLY.md) |
 
 ---
 
@@ -854,6 +938,99 @@ Native integration APIs:
 - `MidiNativeAudioBackend`
 - `MethodChannelMidiNativeAudioBackend`
 - `MidiNativeSequenceBridge`
+
+**Playing part of a score.** A track can be emitted per staff and, since 2.7.0,
+per voice — so a single voice can be soloed or muted:
+
+```dart
+final sequence = MidiMapper.fromStaff(
+  staff,
+  options: const MidiGenerationOptions(
+    separateTracksPerVoice: true,   // one track per (staff, voice)
+    soloVoices: {2},                // hear only the inner voice
+    // mutedVoices: {2},            // ...or silence it (solo wins over mute)
+    // soloStaves: {0}, mutedStaves: {1},
+  ),
+);
+```
+
+Before 2.7.0 every voice of a staff shared one track and one channel, so neither
+mute nor solo was possible.
+
+### Selection and Hit-Testing
+
+`ScoreHitTester` turns a laid-out score into something a user can point at. It
+returns **your own model objects**, not copies — which is why editing and
+highlighting work:
+
+```dart
+final engine = LayoutEngine(
+  staff, availableWidth: width, staffSpace: 12, metadata: metadata);
+final elements = engine.layout();
+
+final tester = ScoreHitTester(
+  elements: elements, staffSpace: 12, engine: engine);
+
+// Point
+final hit = tester.hitTest(localPosition);
+if (hit != null) {
+  print('${hit.element.runtimeType} in bar ${hit.measureIndex}, '
+        'voice ${hit.voiceNumber}, onset ${hit.onset}');
+}
+
+// Region (marquee), with a playable time range
+final selection = tester.selectionFromRect(dragRect);
+print('bars ${selection.firstMeasure}..${selection.lastMeasure}, '
+      'onsets ${selection.startOnset}..${selection.endOnset}');
+
+// Structural
+tester.selectMeasure(3);
+tester.selectSystem(0);
+tester.selectVoice(2);
+tester.selectTimeRange(0.25, 0.75);
+
+// Caret placement / play-from-here
+final where = tester.timeAt(localPosition);
+```
+
+Every `PositionedElement` carries `onset` (musical time in whole notes from the
+start of the staff) and `measureIndex`, which is what makes all of the above —
+and cross-staff alignment — possible.
+
+### Measure Numbers
+
+Measure numbers are engraved at the start of every system (bar 1 is not
+numbered), following Gould. `Measure.number` wins when set, otherwise the
+1-based position is used:
+
+```dart
+MusicScore(
+  staff: staff,
+  theme: const MusicScoreTheme(
+    showMeasureNumbers: true,                       // default
+    measureNumberTextStyle: TextStyle(fontSize: 10),
+  ),
+)
+```
+
+### Using a Different SMuFL Font
+
+Nothing in the engine is Bravura-specific: every metric comes from the SMuFL
+metadata. Point the loader at another SMuFL font and register its family:
+
+```dart
+const petaluma = SmuflFontDescriptor(
+  fontFamily: 'Petaluma',
+  metadataAsset: 'assets/petaluma/petaluma_metadata.json',
+  glyphNamesAsset: 'assets/petaluma/glyphnames.json',
+);
+
+final metadata = SmuflMetadata.forFont(petaluma);
+await metadata.load();
+```
+
+`SmuflMetadata()` still returns the shared Bravura instance, so existing code is
+unchanged.
 
 ### Themes and Styling
 

@@ -3,11 +3,21 @@
 
 import 'package:flutter/foundation.dart';
 import '../../core/core.dart';
+import 'tuplet_validator.dart';
 
 /// Result detalhado of the validação de a measure
+///
+/// Legacy shape kept for `LayoutEngine`, which only counts valid/invalid bars.
+/// For actionable, voice-aware output prefer [MeasureValidation] (obtained
+/// from [MeasureValidator.validateVoiceAware]) or the ready-made sentences of
+/// [MeasureValidator.describeProblems].
 class MeasureValidationResult {
   final bool isValid;
   final double expectedCapacity;
+
+  /// Rhythmic value of the bar: the **longest voice**, not the sum of every
+  /// element (voices sound simultaneously). Same definition as
+  /// `Measure.currentMusicalValue`.
   final double actualDuration;
   final double difference;
   final int numerator;
@@ -15,6 +25,12 @@ class MeasureValidationResult {
   final List<String> warnings;
   final List<String> errors;
   final Map<String, double> elementBreakdown;
+
+  /// Rhythmic value written in each voice, keyed by voice number.
+  ///
+  /// Empty for a bar with no rhythmic content. A single-voice bar has one
+  /// entry under `Measure.defaultVoice`.
+  final Map<int, double> voiceDurations;
 
   MeasureValidationResult({
     required this.isValid,
@@ -26,6 +42,7 @@ class MeasureValidationResult {
     this.warnings = const [],
     this.errors = const [],
     this.elementBreakdown = const {},
+    this.voiceDurations = const {},
   });
 
   String getSummary() {
@@ -72,10 +89,33 @@ class MeasureValidationResult {
   }
 }
 
-/// Validador rigoroso de measures based on teoria musical
+/// Rigorous, voice-aware validation of a [Measure] against its time signature.
+///
+/// **Where this is used**
+///
+/// * `LayoutEngine.layout*` (`lib/src/layout/layout_engine.dart`) calls
+///   [validateWithTimeSignature] for every bar it lays out, using the
+///   inherited time signature, to count valid/invalid bars.
+/// * Applications and tools call [describeProblems] to turn a bar into a list
+///   of actionable sentences ("bar 4: 4/4 holds 1.0 but voice 2 sums 1.25"),
+///   or [validateVoiceAware] when they need the structured [MeasureValidation]
+///   (per-voice sums, tuplet inconsistencies, breakdown per element).
+/// * Tuplet arithmetic is delegated to [TupletValidator], so the `actual:normal`
+///   ratio is the same one `Measure.musicalValueOf` applies.
+///
+/// **Voice awareness**
+///
+/// Polyphonic bars are *not* the sum of their elements: every voice runs in
+/// parallel and independently spans the bar. Elements are grouped with
+/// `Measure.voiceNumberOf` and the value of the bar is the largest per-voice
+/// sum — exactly like `Measure.currentMusicalValue`. Summing all voices
+/// linearly (as this class used to do) rejects every legal polyphonic bar.
 class MeasureValidator {
-  // Tolerância for erros de point flutuante (0.0001 unidades)
-  static const double tolerance = 0.0001;
+  /// Tolerância for erros de point flutuante (0.0001 unidades).
+  ///
+  /// Aliases [TupletValidator.epsilon] so both validators agree on what
+  /// "the same duration" means.
+  static const double tolerance = TupletValidator.epsilon;
 
   /// Valida a measure completo
   static MeasureValidationResult validate(
@@ -97,92 +137,24 @@ class MeasureValidator {
       );
     }
 
-    // Calculate capacidade total of the measure
-    final expectedCapacity = _calculateMeasureCapacity(
-      timeSignature.numerator,
-      timeSignature.denominator,
-    );
-
-    // Processesr all os elementos and Calculate duração total
-    final elementBreakdown = <String, double>{};
-    final warnings = <String>[];
-    double actualDuration = 0.0;
-    int elementIndex = 0;
-
-    for (final element in measure.elements) {
-      if (element is Note) {
-        final duration = _calculateNoteDuration(element, warnings);
-        actualDuration += duration;
-        elementBreakdown['Nota ${elementIndex + 1} (${element.duration.type.name})'] = duration;
-        elementIndex++;
-      } else if (element is Rest) {
-        final duration = _calculateRestDuration(element, warnings);
-        actualDuration += duration;
-        elementBreakdown['Pausa ${elementIndex + 1} (${element.duration.type.name})'] = duration;
-        elementIndex++;
-      } else if (element is Chord) {
-        final duration = _calculateChordDuration(element, warnings);
-        actualDuration += duration;
-        elementBreakdown['Acorde ${elementIndex + 1} (${element.duration.type.name})'] = duration;
-        elementIndex++;
-      } else if (element is Tuplet) {
-        // Critical: Validar notes Within de tuplets!
-        final tupletDuration = _calculateTupletDuration(element, warnings);
-        actualDuration += tupletDuration;
-        elementBreakdown['Tuplet ${elementIndex + 1} (${element.actualNotes}:${element.normalNotes})'] = tupletDuration;
-        elementIndex++;
-      }
-    }
-
-    // Calculate diferença
-    final difference = actualDuration - expectedCapacity;
-    final isValid = difference.abs() < tolerance;
-
-    // Generatesr erros if inválido
-    final errors = <String>[];
-    if (!isValid && !allowAnacrusis) {
-      if (difference > 0) {
-        errors.add(
-          'Compasso excedido em ${difference.toStringAsFixed(4)} unidades. '
-          'Remova figuras ou use fórmula de compasso maior.',
-        );
-      } else {
-        errors.add(
-          'Faltam ${difference.abs().toStringAsFixed(4)} unidades para completar o compasso. '
-          'Adicione pausas ou notas.',
-        );
-      }
-    }
-
-    // Validações Addsis
-    _performAdditionalValidations(
+    return validateWithTimeSignature(
       measure,
       timeSignature,
-      warnings,
-      errors,
-    );
-
-    return MeasureValidationResult(
-      isValid: isValid,
-      expectedCapacity: expectedCapacity,
-      actualDuration: actualDuration,
-      difference: difference,
-      numerator: timeSignature.numerator,
-      denominator: timeSignature.denominator,
-      warnings: warnings,
-      errors: errors,
-      elementBreakdown: elementBreakdown,
+      allowAnacrusis: allowAnacrusis,
     );
   }
 
   /// Encontra o time signature no measure
+  ///
+  /// Walks `Measure.allElements` (so `MultiVoiceMeasure` works too) and falls
+  /// back to the signature `LayoutEngine` inherited onto the bar.
   static TimeSignature? _findTimeSignature(Measure measure) {
-    for (final element in measure.elements) {
+    for (final element in measure.allElements) {
       if (element is TimeSignature) {
         return element;
       }
     }
-    return null;
+    return measure.inheritedTimeSignature;
   }
 
   /// Calculates a capacidade total of the measure based na fórmula
@@ -236,7 +208,7 @@ class MeasureValidator {
   ) {
     double modifiedValue = baseValue;
 
-    // Appliesr points de aumento
+    // aplicar points de aumento
     if (duration.dots > 0) {
       if (duration.dots == 1) {
         // Point simples: Adds 50% of the value
@@ -270,7 +242,7 @@ class MeasureValidator {
     return _applyModifiers(baseValue, note.duration, warnings);
   }
 
-  /// Calculates duração de a paUses (same value that note)
+  /// Calculates duração de a pausa (same value that note)
   static double _calculateRestDuration(Rest rest, List<String> warnings) {
     final baseValue = _calculateBaseValue(rest.duration.type);
     return _applyModifiers(baseValue, rest.duration, warnings);
@@ -283,47 +255,49 @@ class MeasureValidator {
   }
 
   /// Calculates duração de a tuplet (tuplet)
-  /// 
+  ///
   /// Fórmula: Duração = (Soma das notes internas) × (normalNotes / actualNotes)
-  /// 
+  ///
   /// Examples:
   /// - Tercina (3:2): 3 colcheias no tempo de 2 → each a vale 2/3 of the value original
   /// - Quintina (5:4): 5 semicolcheias no tempo de 4 → each a vale 4/5 of the value original
+  ///
+  /// The ratio itself comes from [TupletValidator.ratioModifier] (guarded
+  /// against a zero/negative `actualNotes`), so tuplet arithmetic lives in a
+  /// single place. Nested tuplets are handled recursively: their own ratio is
+  /// applied before the outer one.
+  ///
+  /// Inconsistencies of the tuplet (wrong element count, irrational or
+  /// implausible ratio) are *not* reported here; they are collected by
+  /// [TupletValidator.describeProblems] while scanning the measure.
   static double _calculateTupletDuration(Tuplet tuplet, List<String> warnings) {
     // Somar duração de all os elementos within of the tuplet
     double totalInternalDuration = 0.0;
-    
+
     for (final element in tuplet.elements) {
       if (element is Note) {
         final baseValue = _calculateBaseValue(element.duration.type);
-        final modifiedValue = _applyModifiers(baseValue, element.duration, warnings);
-        totalInternalDuration += modifiedValue;
+        totalInternalDuration +=
+            _applyModifiers(baseValue, element.duration, warnings);
       } else if (element is Rest) {
         final baseValue = _calculateBaseValue(element.duration.type);
-        final modifiedValue = _applyModifiers(baseValue, element.duration, warnings);
-        totalInternalDuration += modifiedValue;
+        totalInternalDuration +=
+            _applyModifiers(baseValue, element.duration, warnings);
       } else if (element is Chord) {
         final baseValue = _calculateBaseValue(element.duration.type);
-        final modifiedValue = _applyModifiers(baseValue, element.duration, warnings);
-        totalInternalDuration += modifiedValue;
+        totalInternalDuration +=
+            _applyModifiers(baseValue, element.duration, warnings);
+      } else if (element is Tuplet) {
+        // Nested tuplet: its inner ratio is applied by the recursive call.
+        totalInternalDuration += _calculateTupletDuration(element, warnings);
       }
     }
-    
-    // Appliesr proporção of the tuplet
+
+    // aplicar proporção of the tuplet
     // Example: Tercina (3:2) = 3 notes ocupam tempo de 2
     // Então: duração_real = duração_nominal × (2/3)
-    final tupletRatio = tuplet.normalNotes / tuplet.actualNotes;
-    final actualTupletDuration = totalInternalDuration * tupletRatio;
-    
-    // add warning if tuplet tiver proporção incomum
-    if (tuplet.actualNotes > 7) {
-      warnings.add(
-        'Tuplet com ${tuplet.actualNotes} notas é incomum. '
-        'Verifique se está correto.',
-      );
-    }
-    
-    return actualTupletDuration;
+    return totalInternalDuration *
+        TupletValidator.ratioModifier(tuplet.actualNotes, tuplet.normalNotes);
   }
 
   /// Realiza validações Addsis específicas
@@ -353,7 +327,7 @@ class MeasureValidator {
 
     // Detectar excesso de figures pequenas
     int smallNotesCount = 0;
-    for (final element in measure.elements) {
+    for (final element in measure.allElements) {
       if (element is Note || element is Rest || element is Chord) {
         final duration = element is Note
             ? element.duration
@@ -392,7 +366,7 @@ class MeasureValidator {
       // Procurar TimeSignature neste measure
       TimeSignature? measureTimeSignature = _findTimeSignature(measure);
       
-      // If encontrou, currentizar o TimeSignature corrente
+      // If encontrou, atualizar o TimeSignature corrente
       if (measureTimeSignature != null) {
         currentTimeSignature = measureTimeSignature;
       }
@@ -411,6 +385,12 @@ class MeasureValidator {
   }
   
   /// Validation: with TimeSignature explícito (útil for inheritance)
+  ///
+  /// This is the entry point used by `LayoutEngine`. It is voice aware: the
+  /// reported [MeasureValidationResult.actualDuration] is the longest voice,
+  /// so a legal two-voice bar is no longer reported as "twice too long".
+  ///
+  /// Equivalent to `validateVoiceAware(...).toResult()`.
   static MeasureValidationResult validateWithTimeSignature(
     Measure measure,
     TimeSignature? timeSignature, {
@@ -428,82 +408,244 @@ class MeasureValidator {
       );
     }
 
-    // Calculate capacidade total of the measure
-    final expectedCapacity = _calculateMeasureCapacity(
-      timeSignature.numerator,
-      timeSignature.denominator,
-    );
-
-    // Processesr all os elementos and Calculate duração total
-    final elementBreakdown = <String, double>{};
-    final warnings = <String>[];
-    double actualDuration = 0.0;
-    int elementIndex = 0;
-
-    for (final element in measure.elements) {
-      if (element is Note) {
-        final duration = _calculateNoteDuration(element, warnings);
-        actualDuration += duration;
-        elementBreakdown['Nota ${elementIndex + 1} (${element.duration.type.name})'] = duration;
-        elementIndex++;
-      } else if (element is Rest) {
-        final duration = _calculateRestDuration(element, warnings);
-        actualDuration += duration;
-        elementBreakdown['Pausa ${elementIndex + 1} (${element.duration.type.name})'] = duration;
-        elementIndex++;
-      } else if (element is Chord) {
-        final duration = _calculateChordDuration(element, warnings);
-        actualDuration += duration;
-        elementBreakdown['Acorde ${elementIndex + 1} (${element.duration.type.name})'] = duration;
-        elementIndex++;
-      } else if (element is Tuplet) {
-        // Critical: Validar notes Within de tuplets!
-        final tupletDuration = _calculateTupletDuration(element, warnings);
-        actualDuration += tupletDuration;
-        elementBreakdown['Tuplet ${elementIndex + 1} (${element.actualNotes}:${element.normalNotes})'] = tupletDuration;
-        elementIndex++;
-      }
-    }
-
-    // Calculate diferença
-    final difference = actualDuration - expectedCapacity;
-    final isValid = difference.abs() < tolerance;
-
-    // Generatesr erros if inválido
-    final errors = <String>[];
-    if (!isValid && !allowAnacrusis) {
-      if (difference > 0) {
-        errors.add(
-          'Compasso excedido em ${difference.toStringAsFixed(4)} unidades. '
-          'Remova figuras ou use fórmula de compasso maior.',
-        );
-      } else {
-        errors.add(
-          'Faltam ${difference.abs().toStringAsFixed(4)} unidades para completar o compasso. '
-          'Adicione pausas ou notas.',
-        );
-      }
-    }
-
-    // Validações Addsis
-    _performAdditionalValidations(
+    return validateVoiceAware(
       measure,
       timeSignature,
-      warnings,
-      errors,
-    );
+      allowAnacrusis: allowAnacrusis,
+    ).toResult();
+  }
 
-    return MeasureValidationResult(
-      isValid: isValid,
+  /// Full, voice-aware validation of [measure].
+  ///
+  /// [timeSignature] may be `null`, in which case it is looked up in the
+  /// measure (including the signature inherited by `LayoutEngine`); when none
+  /// can be found the returned [MeasureValidation] has
+  /// [MeasureValidation.hasTimeSignature] `false` and reports no problem.
+  ///
+  /// [allowAnacrusis] tolerates voices that are *shorter* than the bar (pickup
+  /// bars); voices that overflow are always reported.
+  ///
+  /// [barNumber] is only used to prefix the messages; when omitted
+  /// `Measure.number` is used, and when that is `null` too the messages carry
+  /// no bar prefix.
+  ///
+  /// Used by [validateWithTimeSignature] (and therefore by `LayoutEngine`) and
+  /// by [describeProblems].
+  static MeasureValidation validateVoiceAware(
+    Measure measure,
+    TimeSignature? timeSignature, {
+    bool allowAnacrusis = false,
+    int? barNumber,
+  }) {
+    final ts = timeSignature ?? _findTimeSignature(measure);
+    final number = barNumber ?? measure.number;
+
+    if (ts == null) {
+      return MeasureValidation._(
+        hasTimeSignature: false,
+        barNumber: number,
+        numerator: 0,
+        denominator: 0,
+        expectedCapacity: 0.0,
+        allowAnacrusis: allowAnacrusis,
+        voiceDurations: const {},
+        elementBreakdown: const {},
+        problems: const [],
+        warnings: const [
+          'Compasso sem fórmula de compasso - validação ignorada',
+        ],
+      );
+    }
+
+    final expectedCapacity =
+        _calculateMeasureCapacity(ts.numerator, ts.denominator);
+    final scan = _scan(measure, ts);
+    final prefix = number != null ? 'bar $number: ' : '';
+    final meter = '${ts.numerator}/${ts.denominator}';
+    final capacity = _format(expectedCapacity);
+
+    final problems = <String>[];
+    if (ts.isFreeTime) {
+      // Free time (chant, cadenzas): the bar has no metric capacity, so no
+      // rhythmic verdict is possible — only tuplet consistency is checked.
+    } else if (scan.voiceDurations.isEmpty) {
+      if (!allowAnacrusis && expectedCapacity > tolerance) {
+        problems.add(
+          '$prefix$meter holds $capacity but the measure is empty; '
+          'add notes or a full-bar rest.',
+        );
+      }
+    } else {
+      // One message per voice: a voice is an independent, parallel line, so
+      // each one has to fill the bar on its own.
+      final voices = scan.voiceDurations.keys.toList()..sort();
+      for (final voice in voices) {
+        final sum = scan.voiceDurations[voice]!;
+        final difference = sum - expectedCapacity;
+        if (difference.abs() < tolerance) continue;
+        if (difference > 0) {
+          problems.add(
+            '$prefix$meter holds $capacity but voice $voice sums '
+            '${_format(sum)} (${_format(difference)} too much); '
+            'remove figures or move them to the next bar.',
+          );
+        } else if (!allowAnacrusis) {
+          problems.add(
+            '$prefix$meter holds $capacity but voice $voice sums '
+            '${_format(sum)} (${_format(-difference)} missing); '
+            'add notes or rests.',
+          );
+        }
+      }
+    }
+
+    // Tuplet inconsistencies detected by TupletValidator are reported next to
+    // the rhythmic ones — an unreadable 5:4 is just as actionable.
+    for (final tupletProblem in scan.tupletProblems) {
+      problems.add('$prefix$tupletProblem');
+    }
+
+    final warnings = <String>[...scan.warnings];
+    _performAdditionalValidations(measure, ts, warnings, <String>[]);
+
+    return MeasureValidation._(
+      hasTimeSignature: true,
+      isFreeTime: ts.isFreeTime,
+      barNumber: number,
+      numerator: ts.numerator,
+      denominator: ts.denominator,
       expectedCapacity: expectedCapacity,
-      actualDuration: actualDuration,
-      difference: difference,
-      numerator: timeSignature.numerator,
-      denominator: timeSignature.denominator,
-      warnings: warnings,
-      errors: errors,
-      elementBreakdown: elementBreakdown,
+      allowAnacrusis: allowAnacrusis,
+      voiceDurations: Map.unmodifiable(scan.voiceDurations),
+      elementBreakdown: Map.unmodifiable(scan.elementBreakdown),
+      problems: List.unmodifiable(problems),
+      warnings: List.unmodifiable(warnings),
+      tupletProblems: List.unmodifiable(scan.tupletProblems),
     );
+  }
+
+  /// Actionable, one-sentence descriptions of everything wrong with [measure].
+  ///
+  /// Returns an empty list for a well formed bar. Example output:
+  ///
+  /// ```text
+  /// bar 4: 4/4 holds 1.0 but voice 2 sums 1.25 (0.25 too much); remove figures or move them to the next bar.
+  /// bar 4: tuplet 3 declares 3:2 but contains 4 rhythmic elements; set actualNotes to 4 or fix its contents.
+  /// ```
+  ///
+  /// This is the readable face of [validateVoiceAware]: rhythmic mismatches
+  /// are reported per voice and tuplet inconsistencies come straight from
+  /// [TupletValidator.describeProblems].
+  static List<String> describeProblems(
+    Measure measure,
+    TimeSignature? timeSignature, {
+    bool allowAnacrusis = false,
+    int? barNumber,
+  }) {
+    return validateVoiceAware(
+      measure,
+      timeSignature,
+      allowAnacrusis: allowAnacrusis,
+      barNumber: barNumber,
+    ).problems;
+  }
+
+  /// Problems of every bar of [staff], with inherited time signatures.
+  ///
+  /// Bars are numbered from 1 (or by `Measure.number` when set) so the
+  /// messages point at a real bar of the score.
+  static List<String> describeStaffProblems(
+    Staff staff, {
+    bool allowAnacrusis = false,
+  }) {
+    final problems = <String>[];
+    TimeSignature? current;
+    for (var i = 0; i < staff.measures.length; i++) {
+      final measure = staff.measures[i];
+      current = _findTimeSignature(measure) ?? current;
+      problems.addAll(
+        describeProblems(
+          measure,
+          current,
+          allowAnacrusis: allowAnacrusis && i == 0,
+          barNumber: measure.number ?? (i + 1),
+        ),
+      );
+    }
+    return problems;
+  }
+
+  /// Walks a measure once, accumulating per-voice sums, a per-element
+  /// breakdown, rhythmic warnings and tuplet inconsistencies.
+  ///
+  /// Shared by every entry point of this class so that there is exactly one
+  /// definition of "how long is this bar".
+  static _MeasureScan _scan(Measure measure, TimeSignature? timeSignature) {
+    final scan = _MeasureScan();
+
+    // Pre-pass: only disambiguate the breakdown labels by voice when the bar
+    // really is polyphonic (keeps single-voice labels stable).
+    final voicesSeen = <int>{};
+    for (final element in measure.allElements) {
+      if (Measure.musicalValueOf(element) > 0) {
+        voicesSeen.add(Measure.voiceNumberOf(element));
+      }
+    }
+    final polyphonic = voicesSeen.length > 1;
+
+    var elementIndex = 0;
+    for (final element in measure.allElements) {
+      double duration;
+      String label;
+
+      if (element is Note) {
+        duration = _calculateNoteDuration(element, scan.warnings);
+        label = 'Nota ${elementIndex + 1} (${element.duration.type.name})';
+      } else if (element is Rest) {
+        duration = _calculateRestDuration(element, scan.warnings);
+        label = 'Pausa ${elementIndex + 1} (${element.duration.type.name})';
+      } else if (element is Chord) {
+        duration = _calculateChordDuration(element, scan.warnings);
+        label = 'Acorde ${elementIndex + 1} (${element.duration.type.name})';
+      } else if (element is Tuplet) {
+        // Critical: the actual:normal ratio has to be applied, otherwise every
+        // bar containing a tuplet is reported as too long.
+        duration = _calculateTupletDuration(element, scan.warnings);
+        label = 'Tuplet ${elementIndex + 1} '
+            '(${element.actualNotes}:${element.normalNotes})';
+        scan.tupletProblems.addAll(
+          TupletValidator.describeProblems(
+            element,
+            timeSignature: timeSignature,
+            label: 'tuplet ${elementIndex + 1}',
+          ),
+        );
+      } else {
+        // Clefs, key signatures, barlines… occupy no musical time.
+        continue;
+      }
+
+      final voice = Measure.voiceNumberOf(element);
+      scan.voiceDurations[voice] = (scan.voiceDurations[voice] ?? 0.0) + duration;
+      scan.elementBreakdown[polyphonic ? '$label [voz $voice]' : label] =
+          duration;
+      elementIndex++;
+    }
+
+    return scan;
+  }
+
+  /// Compact, stable rendering of a rhythmic value for the messages
+  /// (`1.0`, `0.25`, `1.3333`) — never scientific notation, never 16 digits.
+  static String _format(double value) {
+    final rounded = double.parse(value.toStringAsFixed(4));
+    if (rounded == rounded.roundToDouble()) {
+      return rounded.toStringAsFixed(1);
+    }
+    return rounded
+        .toStringAsFixed(4)
+        .replaceFirst(RegExp(r'0+$'), '')
+        .replaceFirst(RegExp(r'\.$'), '.0');
   }
 
   /// Imprime relatório completo de validação
@@ -535,4 +677,209 @@ class MeasureValidator {
     debugPrint('║ Compassos inválidos: ${invalidCount.toString().padLeft(30)} ║');
     debugPrint('╚═══════════════════════════════════════════════════════╝\n');
   }
+}
+
+/// Accumulator used by `MeasureValidator._scan` while walking a measure.
+class _MeasureScan {
+  /// Rhythmic value written in each voice, keyed by voice number.
+  final Map<int, double> voiceDurations = <int, double>{};
+
+  /// Duration contributed by each element, for human readable reports.
+  final Map<String, double> elementBreakdown = <String, double>{};
+
+  /// Notation warnings raised while measuring (unusual dot counts, …).
+  final List<String> warnings = <String>[];
+
+  /// Tuplet inconsistencies found by `TupletValidator`, without a bar prefix.
+  final List<String> tupletProblems = <String>[];
+}
+
+/// Voice-aware validation of one measure, with actionable messages.
+///
+/// **Where this is used**
+///
+/// Produced by [MeasureValidator.validateVoiceAware]; [MeasureValidator
+/// .describeProblems] returns just its [problems] and
+/// [MeasureValidator.validateWithTimeSignature] — the entry point called by
+/// `LayoutEngine` for every bar — returns [toResult].
+///
+/// Unlike the legacy [MeasureValidationResult], this class keeps the value of
+/// **each voice**: voices sound in parallel, so a bar is well formed when
+/// every voice fills it, not when their sum does.
+class MeasureValidation {
+  /// Whether a time signature could be resolved for the measure.
+  ///
+  /// When `false` nothing was validated: [problems] is empty and [isValid] is
+  /// `true` (a bar without a meter cannot be wrong).
+  final bool hasTimeSignature;
+
+  /// The bar is in free time (chant, cadenza): it has no metric capacity, so
+  /// no rhythmic verdict is issued and [isRhythmicallyComplete] is `true`.
+  final bool isFreeTime;
+
+  /// Bar number used to prefix the messages (`null` = no prefix).
+  final int? barNumber;
+
+  /// Numerator of the time signature used (0 when [hasTimeSignature] is false).
+  final int numerator;
+
+  /// Denominator of the time signature used (0 when there is none).
+  final int denominator;
+
+  /// Rhythmic value each voice must reach, in whole notes (4/4 → 1.0).
+  final double expectedCapacity;
+
+  /// Whether voices shorter than the bar were tolerated (pickup bar).
+  final bool allowAnacrusis;
+
+  /// Rhythmic value written in each voice, keyed by voice number.
+  final Map<int, double> voiceDurations;
+
+  /// Duration contributed by each element (`'Nota 1 (quarter)' -> 0.25`).
+  final Map<String, double> elementBreakdown;
+
+  /// Actionable, one-sentence descriptions of what is wrong. Empty = fine.
+  final List<String> problems;
+
+  /// Notation advice that does not make the bar invalid (compound-meter
+  /// grouping, irregular meters, unusual dot counts, …).
+  final List<String> warnings;
+
+  /// Tuplet inconsistencies, unprefixed (also present, prefixed, in
+  /// [problems]).
+  final List<String> tupletProblems;
+
+  const MeasureValidation._({
+    required this.hasTimeSignature,
+    required this.barNumber,
+    this.isFreeTime = false,
+    required this.numerator,
+    required this.denominator,
+    required this.expectedCapacity,
+    required this.allowAnacrusis,
+    required this.voiceDurations,
+    required this.elementBreakdown,
+    required this.problems,
+    required this.warnings,
+    this.tupletProblems = const [],
+  });
+
+  /// No problem was found (honours [allowAnacrusis]).
+  bool get isValid => problems.isEmpty;
+
+  /// Rhythmic value of the bar: the **longest** voice (0.0 when empty).
+  ///
+  /// Same definition as `Measure.currentMusicalValue`.
+  double get actualDuration {
+    var longest = 0.0;
+    for (final value in voiceDurations.values) {
+      if (value > longest) longest = value;
+    }
+    return longest;
+  }
+
+  /// [actualDuration] minus [expectedCapacity] (positive = bar too long).
+  double get difference => actualDuration - expectedCapacity;
+
+  /// Every voice — including the longest one — exactly fills the bar.
+  ///
+  /// This is the strict rhythmic verdict, independent of [allowAnacrusis] and
+  /// of tuplet inconsistencies; it is what [toResult] reports as
+  /// `MeasureValidationResult.isValid`.
+  bool get isRhythmicallyComplete {
+    if (!hasTimeSignature || isFreeTime) return true;
+    if (voiceDurations.isEmpty) {
+      return expectedCapacity.abs() < MeasureValidator.tolerance;
+    }
+    for (final value in voiceDurations.values) {
+      if ((value - expectedCapacity).abs() >= MeasureValidator.tolerance) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /// Voices whose content exceeds the bar.
+  List<int> get overfullVoices => _voicesWhere((v) => v > expectedCapacity);
+
+  /// Voices that do not reach the end of the bar.
+  List<int> get incompleteVoices => _voicesWhere((v) => v < expectedCapacity);
+
+  List<int> _voicesWhere(bool Function(double) test) {
+    final result = <int>[];
+    if (!hasTimeSignature || isFreeTime) return result;
+    voiceDurations.forEach((voice, value) {
+      if ((value - expectedCapacity).abs() >= MeasureValidator.tolerance &&
+          test(value)) {
+        result.add(voice);
+      }
+    });
+    result.sort();
+    return result;
+  }
+
+  /// Rhythmic value written in [voice] (0.0 when the voice is empty).
+  double durationOfVoice(int voice) => voiceDurations[voice] ?? 0.0;
+
+  /// Bridges to the legacy [MeasureValidationResult] consumed by
+  /// `LayoutEngine`, keeping its Portuguese error messages.
+  MeasureValidationResult toResult() {
+    final valid = isRhythmicallyComplete;
+    final errors = <String>[];
+    if (!valid && !allowAnacrusis) {
+      if (difference > 0) {
+        errors.add(
+          'Compasso excedido em ${difference.toStringAsFixed(4)} unidades. '
+          'Remova figuras ou use fórmula de compasso maior.',
+        );
+      } else {
+        errors.add(
+          'Faltam ${difference.abs().toStringAsFixed(4)} unidades para completar o compasso. '
+          'Adicione pausas ou notas.',
+        );
+      }
+      // Incomplete inner voices do not move `difference` (which looks at the
+      // longest voice), so spell them out explicitly.
+      for (final voice in incompleteVoices) {
+        errors.add(
+          'Voz $voice tem ${durationOfVoice(voice).toStringAsFixed(4)} de '
+          '${expectedCapacity.toStringAsFixed(4)} unidades.',
+        );
+      }
+    }
+
+    return MeasureValidationResult(
+      isValid: valid,
+      expectedCapacity: expectedCapacity,
+      actualDuration: actualDuration,
+      difference: difference,
+      numerator: numerator,
+      denominator: denominator,
+      warnings: [...warnings, ...tupletProblems],
+      errors: errors,
+      elementBreakdown: elementBreakdown,
+      voiceDurations: voiceDurations,
+    );
+  }
+
+  /// Multi-line, human readable report (problems first, then warnings).
+  String describe() {
+    final buffer = StringBuffer();
+    final label = barNumber != null ? 'bar $barNumber' : 'measure';
+    buffer.writeln(
+      '$label — $numerator/$denominator: ${isValid ? "ok" : "${problems.length} problem(s)"}',
+    );
+    for (final problem in problems) {
+      buffer.writeln('  ✗ $problem');
+    }
+    for (final warning in warnings) {
+      buffer.writeln('  ⚠️ $warning');
+    }
+    return buffer.toString();
+  }
+
+  @override
+  String toString() =>
+      'MeasureValidation($numerator/$denominator, voices: $voiceDurations, '
+      'problems: ${problems.length})';
 }

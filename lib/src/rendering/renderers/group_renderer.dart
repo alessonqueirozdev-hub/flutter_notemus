@@ -2,7 +2,7 @@
 // Refactored implementation: Usa StaffPositionCalculator
 //
 // MELHORIAS IMPLEMENTADAS (Fase 2):
-// ✅ Uses StaffPositioncalculateTestor unificado (elimina 41 lines duplicadas)
+// ✅ Uses StaffPositioncalculator unificado (elimina 41 lines duplicadas)
 // ✅ Corrige possible bug de sinal invertido no calculation de position
 // ✅ 100% conformidade with system unificado de posicionamento
 
@@ -40,14 +40,26 @@ class GroupRenderer {
     positioningEngine = SMuFLPositioningEngine(metadataLoader: metadata);
   }
 
+  /// Collects the runs of notes joined by a single beam.
+  ///
+  /// A beam NEVER crosses a line break: when the music runs out of system the
+  /// group is closed at the last note of that system and the remainder is
+  /// re-beamed on the next one (Gould, *Behind Bars*, p.17 — "beams are broken
+  /// at the end of a system"; the very few cross-system beams that exist in the
+  /// literature are an editorial device, not automatic engraving). The scan
+  /// therefore stops as soon as [PositionedElement.system] changes, otherwise a
+  /// `start..end` run whose `end` was pushed to the next line would be drawn as
+  /// one long beam running backwards over the staff below.
   Map<int, List<int>> _identifyBeamGroups(List<PositionedElement> elements) {
     final groups = <int, List<int>>{};
     int groupId = 0;
     for (int i = 0; i < elements.length; i++) {
       final element = elements[i].element;
       if (element is Note && element.beam == BeamType.start) {
+        final system = elements[i].system;
         final group = <int>[i];
         for (int j = i + 1; j < elements.length; j++) {
+          if (elements[j].system != system) break;
           final nextElement = elements[j].element;
           if (nextElement is Note) {
             group.add(j);
@@ -83,7 +95,7 @@ class GroupRenderer {
         groupElements.add(element);
         if (element.element is Note) {
           final note = element.element as Note;
-          // MELHORIA: Use StaffPositioncalculateTestor unificado
+          // MELHORIA: Use StaffPositioncalculator unificado
           final staffPos = StaffPositionCalculator.calculate(
             note.pitch,
             currentClef,
@@ -275,8 +287,9 @@ class GroupRenderer {
           text: TextSpan(
             text: character,
             style: TextStyle(
-              fontFamily: 'Bravura',
-              package: 'flutter_notemus',
+              // Font independence: family from the loaded descriptor.
+              fontFamily: metadata.font.fontFamily,
+              package: metadata.font.fontPackage,
               fontSize: glyphSize,
               color: theme.noteheadColor,
               height: 1.0,
@@ -353,7 +366,7 @@ class GroupRenderer {
       }
 
       final startNote = startElement.element as Note;
-      // MELHORIA: Use StaffPositioncalculateTestor
+      // MELHORIA: Use StaffPositioncalculator
       final startStaffPos = StaffPositionCalculator.calculate(
         startNote.pitch,
         currentClef,
@@ -366,7 +379,7 @@ class GroupRenderer {
           0; // Haste para cima quando nota está abaixo/na linha central
       final tieAbove = !stemUp; // Ligadura oposta à haste
 
-      // MELHORIA: Use StaffPositioncalculateTestor.toPixelY
+      // MELHORIA: Use StaffPositioncalculator.toPixelY
       final startNoteY = StaffPositionCalculator.toPixelY(
         startStaffPos,
         coordinates.staffSpace,
@@ -444,7 +457,9 @@ class GroupRenderer {
   /// Slur boundary events on an element. Uses the numbered [Note.slurs] when
   /// present (concurrent slurs); otherwise synthesizes a single number-0 event
   /// from the unnumbered [Note.slur]/[Chord.slur].
-  List<SlurEvent> _slurEventsOf(dynamic element) {
+  /// Public so `SlurRenderer` can pair slur boundaries with exactly the same
+  /// rule when it looks for spans broken by a system break.
+  static List<SlurEvent> slurEventsOf(dynamic element) {
     if (element is Note) {
       if (element.slurs.isNotEmpty) return element.slurs;
       if (element.slur == SlurType.start) {
@@ -483,7 +498,7 @@ class GroupRenderer {
       final element = elements[i].element;
       if (!_elementCanParticipateInSlur(element)) continue;
 
-      for (final ev in _slurEventsOf(element)) {
+      for (final ev in slurEventsOf(element)) {
         if (ev.type == SlurType.start) {
           open[ev.number] = i;
         } else if (ev.type == SlurType.end) {
@@ -519,7 +534,7 @@ class GroupRenderer {
       }
       final startNote = startElement.element as Note;
       final endNote = endElement.element as Note;
-      // MELHORIA: Use StaffPositioncalculateTestor
+      // MELHORIA: Use StaffPositioncalculator
       final startStaffPos = StaffPositionCalculator.calculate(
         startNote.pitch,
         currentClef,
@@ -534,7 +549,7 @@ class GroupRenderer {
       final startStemUp = startStaffPos <= 0;
       final slurAbove = !startStemUp;
 
-      // MELHORIA: Use StaffPositioncalculateTestor.toPixelY
+      // MELHORIA: Use StaffPositioncalculator.toPixelY
       final startNoteY = StaffPositionCalculator.toPixelY(
         startStaffPos,
         coordinates.staffSpace,
@@ -653,6 +668,6 @@ class GroupRenderer {
         left.pitch.alter == right.pitch.alter;
   }
 
-  // REMOVIDO: _calculateTesteStaffPosition duplicado (41 lines)
-  // AGORA Uses: StaffPositioncalculateTestor unificado
+  // REMOVIDO: _calculateStaffPosition duplicado (41 lines)
+  // AGORA Uses: StaffPositioncalculator unificado
 }

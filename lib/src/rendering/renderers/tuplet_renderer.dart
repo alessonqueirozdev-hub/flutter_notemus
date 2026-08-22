@@ -7,6 +7,7 @@ import '../../theme/music_score_theme.dart';
 import '../smufl_positioning_engine.dart';
 import '../staff_position_calculator.dart';
 import 'base_glyph_renderer.dart';
+import 'chord_renderer.dart';
 import 'note_renderer.dart';
 import 'rest_renderer.dart';
 
@@ -17,6 +18,11 @@ class TupletRenderer extends BaseGlyphRenderer {
   final RestRenderer restRenderer;
   final SMuFLPositioningEngine positioningEngine;
 
+  /// Used to draw a [Chord] that lives inside a tuplet. Optional so existing
+  /// callers keep compiling; when absent, the chord degrades to its top note
+  /// rather than disappearing.
+  final ChordRenderer? chordRenderer;
+
   TupletRenderer({
     required super.coordinates,
     required super.metadata,
@@ -25,6 +31,7 @@ class TupletRenderer extends BaseGlyphRenderer {
     required this.noteRenderer,
     required this.restRenderer,
     required this.positioningEngine,
+    this.chordRenderer,
   });
 
   void render(
@@ -35,6 +42,10 @@ class TupletRenderer extends BaseGlyphRenderer {
   ) {
     double currentX = basePosition.dx;
     final spacing = coordinates.staffSpace * 2.5;
+    // The layout engine mirrors this same grid in `_registerTupletGeometry`, so
+    // beams, accidental decisions and the public position API all agree on
+    // where a tuplet's inner notes are. Keep the two in step: if you change the
+    // grid here, change `LayoutEngine.tupletInnerSpacing` too.
 
     final allPositions = <Offset>[];
     final noteOnlyPositions = <Offset>[];
@@ -88,6 +99,54 @@ class TupletRenderer extends BaseGlyphRenderer {
         spanStartX ??= restAnchorX - (noteHeadWidth * 0.5);
         spanEndX = restAnchorX + (noteHeadWidth * 0.5);
         currentX += spacing;
+      } else if (element is Chord) {
+        // A chord inside a tuplet used to fall through every branch and simply
+        // NOT BE DRAWN — silent loss of music, not just of a symbol.
+        final top = element.notes.isEmpty
+            ? null
+            : element.notes.reduce(
+                (a, b) => a.pitch.midiNumber > b.pitch.midiNumber ? a : b,
+              );
+        if (chordRenderer != null) {
+          chordRenderer!.render(
+            canvas,
+            element,
+            Offset(currentX, basePosition.dy),
+            currentClef,
+          );
+        } else if (top != null) {
+          noteRenderer.render(
+            canvas,
+            top,
+            Offset(currentX, basePosition.dy),
+            currentClef,
+          );
+        }
+        if (top != null) {
+          final staffPosition =
+              StaffPositionCalculator.calculate(top.pitch, currentClef);
+          final noteY = StaffPositionCalculator.toPixelY(
+            staffPosition,
+            coordinates.staffSpace,
+            coordinates.staffBaseline.dy,
+          );
+          allPositions.add(Offset(currentX + slotCenterOffset, noteY));
+        }
+        spanStartX ??= currentX;
+        spanEndX = currentX + noteHeadWidth;
+        currentX += spacing;
+      } else if (element is Tuplet) {
+        // Nested tuplet (e.g. a triplet inside a quintuplet). It used to be
+        // skipped entirely; now it is drawn recursively and its own bracket and
+        // ratio number are placed by this same routine one level down.
+        render(canvas, element, Offset(currentX, basePosition.dy), currentClef);
+        final innerWidth = element.elements.length * spacing;
+        allPositions.add(
+          Offset(currentX + innerWidth / 2, basePosition.dy),
+        );
+        spanStartX ??= currentX;
+        spanEndX = currentX + innerWidth;
+        currentX += innerWidth;
       }
     }
 
@@ -511,6 +570,15 @@ class TupletRenderer extends BaseGlyphRenderer {
     };
   }
 
+  /// Assigns beam membership to the notes of a tuplet **in place**.
+  ///
+  /// This used to rebuild every note. Besides breaking identity (so the note a
+  /// caller holds is not the note that gets drawn, and no identity-keyed layout
+  /// data matches), the copy constructor omitted `syllables`, `isGraceNote`,
+  /// `alternatePitch`, `tabFret`, `tabString`, `accidentalParenthesis`,
+  /// `slurs`, `crossStaffMove`, `tremoloStrokes` and `xmlId` — so lyrics, tab
+  /// numbers, courtesy accidentals and cross-staff routing simply vanished for
+  /// any note inside a tuplet.
   List<MusicalElement> _applyAutomaticBeams(List<MusicalElement> elements) {
     final notes = elements.whereType<Note>().toList();
     if (notes.length != elements.length || notes.length < 2) {
@@ -528,30 +596,15 @@ class TupletRenderer extends BaseGlyphRenderer {
       return elements;
     }
 
-    final beamedNotes = <Note>[];
+    final last = notes.length - 1;
     for (int index = 0; index < notes.length; index++) {
-      final beamType = switch (index) {
+      notes[index].beam = switch (index) {
         0 => BeamType.start,
-        _ when index == notes.length - 1 => BeamType.end,
+        _ when index == last => BeamType.end,
         _ => BeamType.inner,
       };
-
-      beamedNotes.add(
-        Note(
-          pitch: notes[index].pitch,
-          duration: notes[index].duration,
-          beam: beamType,
-          articulations: notes[index].articulations,
-          tie: notes[index].tie,
-          slur: notes[index].slur,
-          ornaments: notes[index].ornaments,
-          dynamicElement: notes[index].dynamicElement,
-          techniques: notes[index].techniques,
-          voice: notes[index].voice,
-        ),
-      );
     }
 
-    return beamedNotes.cast<MusicalElement>();
+    return elements;
   }
 }

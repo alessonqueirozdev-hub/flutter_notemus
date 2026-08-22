@@ -1,4 +1,4 @@
-// lib/src/layout/skyline_calculateTestor.dart
+// lib/src/layout/skyline_calculator.dart
 
 import 'dart:math' as math;
 import 'bounding_box.dart';
@@ -6,7 +6,7 @@ import 'bounding_box.dart';
 /// Calculator de Skyline and Bottomline for detecção de colisões
 ///
 /// Based on:
-/// - OpenSheetMusicDisplay (SkyBottomLinecalculateTestor.ts)
+/// - OpenSheetMusicDisplay (SkyBottomLinecalculator.ts)
 /// - Algoritmo used for posicionamento inteligente de slurs, dynamics, etc.
 ///
 /// Conceito:
@@ -16,7 +16,7 @@ import 'bounding_box.dart';
 ///
 /// Uso:
 /// 1. Initialise with width
-/// 2. Currentizar skyline/bottomline according to elementos are posicionados
+/// 2. Atualizar skyline/bottomline according to elementos are posicionados
 /// 3. Consultar space disponível for news elementos
 class SkyBottomLineCalculator {
   /// Unidade de amostragem (spacing between points in pixels)
@@ -64,7 +64,7 @@ class SkyBottomLineCalculator {
   // CurrentIZAÇÃO DE SKYLINE
   // ====================
 
-  /// Currentiza o skyline in a position específica
+  /// Atualiza o skyline in a position específica
   ///
   /// @param x X position in pixels
   /// @param y Y position (lower values = higher on screen)
@@ -76,7 +76,7 @@ class SkyBottomLineCalculator {
     }
   }
 
-  /// Currentiza o skyline for a intervalo [startX, endX]
+  /// Atualiza o skyline for a intervalo [startX, endX]
   ///
   /// @param startX X position initial
   /// @param endX X position final
@@ -92,7 +92,7 @@ class SkyBottomLineCalculator {
     }
   }
 
-  /// Currentiza o skyline from a BoundingBox
+  /// Atualiza o skyline from a BoundingBox
   ///
   /// @param box BoundingBox of the element
   void updateSkyLineFromBox(BoundingBox box) {
@@ -107,7 +107,7 @@ class SkyBottomLineCalculator {
   // CurrentIZAÇÃO DE BOTTOMLINE
   // ====================
 
-  /// Currentiza o bottomline in a position específica
+  /// Atualiza o bottomline in a position específica
   ///
   /// @param x X position in pixels
   /// @param y Y position (valores greateres = more bottom)
@@ -119,7 +119,7 @@ class SkyBottomLineCalculator {
     }
   }
 
-  /// Currentiza o bottomline for a intervalo [startX, endX]
+  /// Atualiza o bottomline for a intervalo [startX, endX]
   ///
   /// @param startX X position initial
   /// @param endX X position final
@@ -135,7 +135,7 @@ class SkyBottomLineCalculator {
     }
   }
 
-  /// Currentiza o bottomline from a BoundingBox
+  /// Atualiza o bottomline from a BoundingBox
   ///
   /// @param box BoundingBox of the element
   void updateBottomLineFromBox(BoundingBox box) {

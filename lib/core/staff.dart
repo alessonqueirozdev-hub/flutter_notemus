@@ -24,8 +24,8 @@ class Staff {
   final List<Measure> measures;
 
   /// Number of staff lines. Defaults to 5 (CMN). Valid values per MEI:
-  /// - 1: percussion / single-line notetion
-  /// - 4: 4-string tablature / some historical notetions
+  /// - 1: percussion / single-line notation
+  /// - 4: 4-string tablature / some historical notations
   /// - 5: standard CMN (default)
   /// - 6: guitar tablature
   /// Corresponds to the `lines` attribute of `<staffDef>` in MEI v5.

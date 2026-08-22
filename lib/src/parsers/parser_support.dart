@@ -81,6 +81,53 @@ Staff parseMeiStaff(String source, {int staffIndex = 0}) {
   return _MeiImportParser(staffIndex: staffIndex).parse(document);
 }
 
+/// Imports every staff of an MEI document into a [Score], together with the
+/// `<meiHead>` bibliographic metadata.
+///
+/// [parseMeiStaff] returns a bare [Staff], which has nowhere to keep a title,
+/// a composer or a `<fileDesc>`; this is the route that surfaces them, in
+/// [Score.meiHeader] (full header) and in [Score.title] / [Score.composer]
+/// (convenience shortcuts).
+///
+/// GAP: `MEIParser` (lib/src/parsers/mei_parser.dart) still only exposes
+/// `parseMEI` -> [parseMeiStaff], so this entry point is not reachable from the
+/// package's public surface until that wrapper forwards to it.
+Score parseMeiScore(String source) {
+  final document = XmlDocument.parse(source);
+  final root = document.rootElement;
+  if (root.name.local != 'mei') {
+    throw const FormatException('MEI root element must be <mei>.');
+  }
+
+  final header = _parseMeiHeader(root);
+  final scoreElement = root.findAllElements('score').firstOrNull;
+  final staffCount = scoreElement == null ? 1 : _meiStaffCount(scoreElement);
+  final staves = <Staff>[
+    for (var index = 0; index < staffCount; index++)
+      _MeiImportParser(staffIndex: index).parse(document),
+  ];
+
+  final composer = header?.fileDescription.contributors
+      .where((c) => c.role == ResponsibilityRole.composer)
+      .firstOrNull
+      ?.name;
+
+  return Score(
+    title: header?.fileDescription.title,
+    subtitle: header?.fileDescription.subtitle,
+    composer: composer,
+    staffGroups: <StaffGroup>[
+      StaffGroup(
+        staves: staves,
+        bracket: staves.length > 1 && scoreElement != null
+            ? _meiStaffGrpBracket(scoreElement)
+            : BracketType.none,
+      ),
+    ],
+    meiHeader: header,
+  );
+}
+
 class _VoiceAccumulator {
   _VoiceAccumulator(this.number);
 
@@ -225,7 +272,8 @@ bool _isRhythmicElement(MusicalElement element) {
   return element is Note ||
       element is Rest ||
       element is Chord ||
-      element is Tuplet;
+      element is Tuplet ||
+      element is Space;
 }
 
 void _appendElementToMeasure(Measure measure, MusicalElement element) {
@@ -621,6 +669,60 @@ TechniqueType? _parseTechniqueType(dynamic raw) {
   return _parseEnumByName<TechniqueType>(TechniqueType.values, _asString(raw));
 }
 
+/// The seven diatonic step letters accepted for a pitch, in MusicXML
+/// `<step>`, MEI `@pname` and the JSON importer alike.
+///
+/// Validated locally (rather than through a `lib/core` API) so a malformed
+/// source fails fast at import time with a readable [FormatException] instead
+/// of crashing much later inside `Pitch.midiNumber` (F-10).
+const List<String> _validPitchSteps = <String>[
+  'A',
+  'B',
+  'C',
+  'D',
+  'E',
+  'F',
+  'G',
+];
+
+/// Lowest octave number accepted by the importers.
+const int _minPitchOctave = -1;
+
+/// Highest octave number accepted by the importers.
+const int _maxPitchOctave = 10;
+
+/// Validates a raw step letter and returns it upper-cased.
+///
+/// [source] names the element/attribute the value came from so the thrown
+/// message points at the offending part of the document.
+///
+/// Throws a [FormatException] when the letter is not one of C, D, E, F, G, A
+/// or B (comparison is case-insensitive).
+String _validatePitchStep(String raw, String source) {
+  final step = raw.trim().toUpperCase();
+  if (!_validPitchSteps.contains(step)) {
+    throw FormatException(
+      'Invalid pitch step "$raw" in $source. '
+      'Expected one of ${_validPitchSteps.join(', ')}.',
+    );
+  }
+  return step;
+}
+
+/// Validates a raw octave number and returns it unchanged.
+///
+/// Throws a [FormatException] when the octave falls outside
+/// [_minPitchOctave]..[_maxPitchOctave].
+int _validatePitchOctave(int octave, String source) {
+  if (octave < _minPitchOctave || octave > _maxPitchOctave) {
+    throw FormatException(
+      'Invalid pitch octave "$octave" in $source. '
+      'Expected $_minPitchOctave..$_maxPitchOctave.',
+    );
+  }
+  return octave;
+}
+
 Pitch? _parsePitch(dynamic raw) {
   if (raw is String) {
     return Pitch.fromString(raw);
@@ -629,9 +731,11 @@ Pitch? _parsePitch(dynamic raw) {
   final map = _asMap(raw);
   if (map == null) return null;
 
-  final step = _asString(map['step'])?.toUpperCase();
+  final rawStep = _asString(map['step']);
   final octave = _asInt(map['octave']);
-  if (step == null || octave == null) return null;
+  if (rawStep == null || octave == null) return null;
+  final step = _validatePitchStep(rawStep, 'JSON pitch object');
+  _validatePitchOctave(octave, 'JSON pitch object');
 
   final accidentalType = _parseAccidentalType(
     map['accidentalType'] ?? map['accidental'],
@@ -1160,6 +1264,13 @@ class _MusicXmlImportParser {
 
   final int partIndex;
 
+  /// Current `<divisions>` (ticks per quarter note) for the part being read.
+  ///
+  /// Declared by `<attributes><divisions>` and valid until redefined, so every
+  /// measure inherits the value of the previous one. Reset to the MusicXML
+  /// default of 1 at the start of each part/staff pass (F-06).
+  int _divisions = 1;
+
   Staff parse(XmlDocument document) {
     final root = document.rootElement;
     switch (root.name.local) {
@@ -1191,6 +1302,11 @@ class _MusicXmlImportParser {
     // braced as a grand staff. <part-group> spans in the <part-list> override
     // this by bracketing their member parts together.
     final groups = <StaffGroup>[];
+    // <transpose> declarations, one entry per transposing staff, in the same
+    // order as Score.allStaves. See _musicXmlTranspose for why the written
+    // pitch is not altered here.
+    final transpositions = <Map<String, dynamic>>[];
+    var globalStaffIndex = 0;
     if (isPartwise) {
       final partList = _parsePartList(root);
       // Build each part's staves first, keeping its id.
@@ -1200,10 +1316,25 @@ class _MusicXmlImportParser {
         final partStaves = <Staff>[];
         for (var s = 1; s <= count; s++) {
           final filter = count == 1 ? null : s;
-          final staff = Staff();
+          // <staff-details><staff-lines> decides the staff size (1 = percussion,
+          // 6 = guitar tablature); Staff.lineCount is final, so it has to be
+          // known before the measures are added.
+          final staff = Staff(
+            lineCount: _musicXmlStaffLines([part], staffNumber: filter),
+          );
+          _divisions = 1; // <divisions> is per-part state; restart each pass.
           for (final m in part.findElements('measure')) {
             staff.add(_parseMeasure(m, staffFilter: filter));
           }
+          final transposition = _musicXmlTranspose(part, staffNumber: filter);
+          if (transposition != null) {
+            transpositions.add(_musicXmlTranspositionMetadata(
+              transposition,
+              partId: part.getAttribute('id'),
+              staffIndex: globalStaffIndex,
+            ));
+          }
+          globalStaffIndex++;
           partStaves.add(staff);
         }
         partsData.add(
@@ -1246,10 +1377,24 @@ class _MusicXmlImportParser {
         }
       }
       for (var p = 0; p < partCount; p++) {
-        final staff = Staff();
-        for (final m in partMeasures[p] ?? const <XmlElement>[]) {
+        final partElements = partMeasures[p] ?? const <XmlElement>[];
+        final staff = Staff(lineCount: _musicXmlStaffLines(partElements));
+        _divisions = 1;
+        for (final m in partElements) {
           staff.add(_parseMeasure(m));
         }
+        for (final element in partElements) {
+          final transposition = _musicXmlTranspose(element);
+          if (transposition != null) {
+            transpositions.add(_musicXmlTranspositionMetadata(
+              transposition,
+              partId: element.getAttribute('id'),
+              staffIndex: globalStaffIndex,
+            ));
+            break;
+          }
+        }
+        globalStaffIndex++;
         groups.add(StaffGroup(staves: [staff]));
       }
     }
@@ -1263,6 +1408,12 @@ class _MusicXmlImportParser {
           .firstOrNull
           ?.innerText,
       staffGroups: groups,
+      // Transposing instruments: the notated pitch stays written, the
+      // declaration travels as metadata so playback can reach concert pitch
+      // through [applyMusicXmlTransposition].
+      metadata: transpositions.isEmpty
+          ? const <String, dynamic>{}
+          : <String, dynamic>{'transpositions': transpositions},
     );
   }
 
@@ -1278,8 +1429,8 @@ class _MusicXmlImportParser {
     for (final note in measureElement.findElements('note')) {
       final staff = _asInt(_childText(note, 'staff')) ?? 1;
       final voice = _asInt(_childText(note, 'voice')) ?? 1;
-      final beam =
-          note.findElements('beam').firstOrNull?.innerText.trim().toLowerCase();
+      // Level 1 only: the primary beam is what decides the group's home staff.
+      final beam = _musicXmlBeamText(note, 1);
       int home;
       if (beam == 'begin') {
         groupHome[voice] = staff;
@@ -1378,15 +1529,22 @@ class _MusicXmlImportParser {
       );
     }
 
-    final staff = Staff();
-    for (final measureElement in parts[partIndex].findElements('measure')) {
+    final part = parts[partIndex];
+    // GAP: a <transpose> on this part cannot be surfaced through a bare Staff
+    // (neither Staff nor Note carries a transposition field). Use
+    // parseMusicXmlScore, which records it in Score.metadata['transpositions'].
+    final staff = Staff(lineCount: _musicXmlStaffLines([part]));
+    _divisions = 1;
+    for (final measureElement in part.findElements('measure')) {
       staff.add(_parseMeasure(measureElement));
     }
     return staff;
   }
 
   Staff _parseTimewise(XmlElement root) {
-    final staff = Staff();
+    _divisions = 1;
+    final selectedParts = <XmlElement>[];
+    final measures = <Measure>[];
     for (final measureElement in root.findElements('measure')) {
       final parts = measureElement.findElements('part').toList();
       if (parts.isEmpty) continue;
@@ -1395,17 +1553,39 @@ class _MusicXmlImportParser {
           'Requested partIndex $partIndex, but a score-timewise measure contains ${parts.length} part(s).',
         );
       }
-      staff.add(_parseMeasure(parts[partIndex]));
+      selectedParts.add(parts[partIndex]);
+      measures.add(_parseMeasure(parts[partIndex]));
     }
-    return staff;
+    return Staff(
+      measures: measures,
+      lineCount: _musicXmlStaffLines(selectedParts),
+    );
   }
 
   /// Parses one MusicXML measure. When [staffFilter] is set (multi-staff part),
   /// only notes whose `staff` matches and clefs for that staff are kept.
+  ///
+  /// A musical time cursor (in `<divisions>` ticks from the barline) is kept
+  /// while walking the children so `<backup>` and `<forward>` reposition the
+  /// following notes instead of being ignored (F-07).
   Measure _parseMeasure(XmlElement measureElement, {int? staffFilter}) {
     final Map<int, _VoiceAccumulator> voices = <int, _VoiceAccumulator>{};
     final List<MusicalElement> metadataElements = <MusicalElement>[];
     TimeSignature? currentTimeSignature;
+
+    // Musical time cursor, in <divisions> ticks from the start of the bar.
+    double cursor = 0.0;
+    // Per voice: the tick position where its content currently ends.
+    final Map<int, double> voiceFilled = <int, double>{};
+    // Files that never write <voice> get synthetic voice numbers: each
+    // <backup> that rewinds the cursor opens the next voice. Multi-staff parts
+    // are excluded because there <backup> switches staff, not voice.
+    final bool hasExplicitVoice =
+        measureElement.findAllElements('voice').isNotEmpty;
+    final bool useSyntheticVoices = !hasExplicitVoice && staffFilter == null;
+    int syntheticVoice = 1;
+    // Padding is only emitted for gaps opened by an explicit <forward>.
+    bool sawForward = false;
     // Cross-staff routing (multi-staff parts only): a beamed voice whose notes
     // change <staff> mid-beam is kept on its home (beam-start) staff with a
     // crossStaffMove so the beam survives.
@@ -1429,6 +1609,10 @@ class _MusicXmlImportParser {
     for (final child in measureElement.children.whereType<XmlElement>()) {
       switch (child.name.local) {
         case 'attributes':
+          final int? declaredDivisions = _asInt(_childText(child, 'divisions'));
+          if (declaredDivisions != null && declaredDivisions > 0) {
+            _divisions = declaredDivisions;
+          }
           for (final element
               in _parseMusicXmlAttributes(child, staffFilter: staffFilter)) {
             appendLeadElement(element);
@@ -1445,25 +1629,68 @@ class _MusicXmlImportParser {
           }
           break;
         case 'note':
+          final bool isChordTone = child.findElements('chord').isNotEmpty;
+          final bool isGrace = child.findElements('grace').isNotEmpty;
+          // Chord tones share the onset of their base note and grace notes are
+          // stolen time; neither advances the cursor.
+          final bool advancesTime = !isChordTone && !isGrace;
+          final int tick =
+              advancesTime ? (_asInt(_childText(child, 'duration')) ?? 0) : 0;
+
+          bool keep = true;
           var move = 0;
           if (staffFilter != null) {
             final cs = crossStaff![child];
             final noteStaff = _asInt(_childText(child, 'staff')) ?? 1;
             final home = cs?.home ?? noteStaff;
             // Route the note to its home staff (cross-staff notes follow their
-            // beam, not their own <staff>).
-            if (home != staffFilter) break;
+            // beam, not their own <staff>). Notes belonging to another staff
+            // are dropped here but still move the shared cursor.
+            keep = home == staffFilter;
             move = cs?.move ?? 0;
           }
-          _parseMusicXmlNoteNode(
-            child,
-            voiceForNumber: voice,
-            currentTimeSignature: currentTimeSignature,
-            crossStaffMove: move,
-          );
+
+          if (keep) {
+            final int voiceNumber =
+                _asInt(_childText(child, 'voice')) ?? syntheticVoice;
+            if (advancesTime && sawForward) {
+              _padVoiceToOnset(
+                accumulator: voice(voiceNumber),
+                voiceFilled: voiceFilled,
+                voiceNumber: voiceNumber,
+                onset: cursor,
+              );
+            }
+            _parseMusicXmlNoteNode(
+              child,
+              voiceForNumber: voice,
+              currentTimeSignature: currentTimeSignature,
+              crossStaffMove: move,
+              voiceNumber: voiceNumber,
+              divisions: _divisions,
+            );
+            if (advancesTime) {
+              voiceFilled[voiceNumber] = cursor + tick;
+            }
+          }
+          cursor += tick;
           break;
         case 'backup':
+          final int backupTicks = _asInt(_childText(child, 'duration')) ?? 0;
+          if (backupTicks > 0) {
+            cursor -= backupTicks;
+            if (cursor < 0) cursor = 0;
+            // Without <voice> the only signal that a second voice starts is the
+            // rewind itself, so hand out the next synthetic voice number.
+            if (useSyntheticVoices) syntheticVoice++;
+          }
+          break;
         case 'forward':
+          final int forwardTicks = _asInt(_childText(child, 'duration')) ?? 0;
+          if (forwardTicks > 0) {
+            cursor += forwardTicks;
+            sawForward = true;
+          }
           break;
       }
     }
@@ -1490,17 +1717,57 @@ class _MusicXmlImportParser {
     return measure;
   }
 
+  /// Pads [accumulator] with invisible [Space] so its next element lands on
+  /// [onset] (in `<divisions>` ticks) instead of directly after the previous
+  /// one.
+  ///
+  /// Only called for gaps opened by an explicit `<forward>` (F-07): a
+  /// `<backup>` that lands past a voice's content is an encoding artefact of
+  /// multi-staff/multi-voice writing and must not shift the notes after it.
+  void _padVoiceToOnset({
+    required _VoiceAccumulator accumulator,
+    required Map<int, double> voiceFilled,
+    required int voiceNumber,
+    required double onset,
+  }) {
+    if (_divisions <= 0) return;
+    final double filled = voiceFilled[voiceNumber] ?? 0.0;
+    final double gap = onset - filled;
+    if (gap <= 0) return;
+
+    for (final duration in _splitWholeNoteValue(gap / _divisions / 4.0)) {
+      accumulator.append(Space(duration: duration));
+    }
+    voiceFilled[voiceNumber] = onset;
+  }
+
   void _parseMusicXmlNoteNode(
     XmlElement noteElement, {
     required _VoiceAccumulator Function(int number) voiceForNumber,
     required TimeSignature? currentTimeSignature,
     int crossStaffMove = 0,
+    int? voiceNumber,
+    int divisions = 1,
   }) {
-    final int voiceNumber = _asInt(_childText(noteElement, 'voice')) ?? 1;
-    final accumulator = voiceForNumber(voiceNumber);
+    final int resolvedVoice =
+        voiceNumber ?? _asInt(_childText(noteElement, 'voice')) ?? 1;
+    final accumulator = voiceForNumber(resolvedVoice);
     final bool isChordTone = noteElement.findElements('chord').isNotEmpty;
-    final duration = _musicXmlDurationFromNote(noteElement);
+    final duration = _musicXmlDurationFromNote(
+      noteElement,
+      divisions: divisions,
+      currentTimeSignature: currentTimeSignature,
+    );
     final bool isGrace = noteElement.findElements('grace').isNotEmpty;
+
+    // GAP: cue notes (`<cue/>`) are imported as ordinary notes.
+    // TODO(import-gaps): a cue note is a full-duration note printed at cue
+    // size. The model has no "cue"/"small" flag (adding one belongs to
+    // lib/core/note.dart), and reusing [Note.isGraceNote] would be wrong:
+    // grace notes are drawn without their own rhythmic slot, which would
+    // corrupt the timing of a bar containing cues. So the note keeps its
+    // duration and its normal size, and only the cue *appearance* is lost.
+    // Wiring point when the field lands: `noteElement.findElements('cue')`.
 
     MusicalElement? baseElement;
     if (noteElement.findElements('rest').isNotEmpty) {
@@ -1520,7 +1787,7 @@ class _MusicXmlImportParser {
         slur: _musicXmlSlurType(noteElement),
         slurs: _musicXmlSlurEvents(noteElement),
         ornaments: _musicXmlOrnaments(noteElement),
-        voice: voiceNumber,
+        voice: resolvedVoice,
         isGraceNote: isGrace,
         syllables: _parseMusicXmlLyrics(noteElement),
         accidentalParenthesis: _musicXmlAccidentalParenthesis(noteElement),
@@ -1593,6 +1860,141 @@ List<MusicalElement> _parseMusicXmlAttributes(XmlElement attributesElement,
   return result;
 }
 
+/// A MusicXML `<attributes><transpose>` declaration for one part/staff.
+typedef MusicXmlTransposition = ({
+  /// `<diatonic>`: number of diatonic steps to add to the written pitch.
+  int diatonic,
+
+  /// `<chromatic>`: number of semitones to add to the written pitch.
+  int chromatic,
+
+  /// `<octave-change>`: extra octaves to add on top of [chromatic].
+  int octaveChange,
+
+  /// `<double/>`: the part also sounds an octave lower.
+  bool doubled,
+});
+
+/// Reads the first `<attributes><transpose>` of [part] (optionally restricted
+/// to the staff [staffNumber] via `@number`), or `null` when the part is not a
+/// transposing one.
+///
+/// ## Why the written pitch is kept as-is
+///
+/// MusicXML stores the **written** (notated) pitch inside `<note><pitch>` and
+/// uses `<transpose>` to say what must be *added* to it to obtain the sounding
+/// pitch (MusicXML 4.0, `transpose`). A B-flat clarinet part therefore encodes
+/// the notes as they appear on the page plus
+/// `<diatonic>-1</diatonic><chromatic>-2</chromatic>`.
+///
+/// Since this library engraves what is on the page, the importer deliberately
+/// keeps the written pitch untouched: transposing it here would move every
+/// notehead and accidental of a transposing part to the wrong staff position.
+/// The declaration itself is preserved as score metadata (see
+/// [_musicXmlTranspositionMetadata]) so playback can apply
+/// [applyMusicXmlTransposition] when it needs concert pitch.
+MusicXmlTransposition? _musicXmlTranspose(XmlElement part, {int? staffNumber}) {
+  for (final transpose in part.findAllElements('transpose')) {
+    if (staffNumber != null) {
+      final declared = _asInt(transpose.getAttribute('number')) ?? 1;
+      if (declared != staffNumber) continue;
+    }
+    final chromatic = _asInt(_childText(transpose, 'chromatic'));
+    final diatonic = _asInt(_childText(transpose, 'diatonic'));
+    final octaveChange = _asInt(_childText(transpose, 'octave-change'));
+    if (chromatic == null && diatonic == null && octaveChange == null) {
+      continue;
+    }
+    return (
+      diatonic: diatonic ?? 0,
+      chromatic: chromatic ?? 0,
+      octaveChange: octaveChange ?? 0,
+      doubled: transpose.findElements('double').isNotEmpty,
+    );
+  }
+  return null;
+}
+
+/// Serialises [transposition] into the plain map stored under the
+/// `'transpositions'` key of [Score.metadata].
+Map<String, dynamic> _musicXmlTranspositionMetadata(
+  MusicXmlTransposition transposition, {
+  String? partId,
+  required int staffIndex,
+}) {
+  return <String, dynamic>{
+    'partId': partId,
+    'staffIndex': staffIndex,
+    'diatonic': transposition.diatonic,
+    'chromatic': transposition.chromatic,
+    'octaveChange': transposition.octaveChange,
+    'double': transposition.doubled,
+  };
+}
+
+/// Semitone offset of each diatonic step above C, in [Pitch.validSteps] order.
+const List<int> _diatonicStepSemitones = <int>[0, 2, 4, 5, 7, 9, 11];
+
+/// Applies a MusicXML `<transpose>` declaration to a *written* pitch and
+/// returns the **sounding** (concert) pitch.
+///
+/// This is the operation the importer intentionally does NOT perform (see
+/// [_musicXmlTranspose]); it is exposed so that a playback layer reading
+/// `Score.metadata['transpositions']` can convert on its own.
+///
+/// The diatonic shift picks the spelling (letter name + octave) and the
+/// chromatic shift then fixes the alteration, so a written C4 on a B-flat
+/// instrument (`diatonic: -1`, `chromatic: -2`) becomes B-flat 3 rather than
+/// A-sharp 3.
+Pitch applyMusicXmlTransposition(
+  Pitch written, {
+  int diatonic = 0,
+  int chromatic = 0,
+  int octaveChange = 0,
+}) {
+  final int stepIndex = Pitch.validSteps.indexOf(written.step.toUpperCase());
+  if (stepIndex < 0) return written;
+
+  final int shifted = stepIndex + diatonic;
+  final int newStepIndex = ((shifted % 7) + 7) % 7;
+  final int octaveCarry = (shifted - newStepIndex) ~/ 7;
+  final int newOctave = written.octave + octaveCarry + octaveChange;
+
+  final double writtenSemitone = _diatonicStepSemitones[stepIndex] +
+      12 * (written.octave + 1) +
+      written.alter;
+  final double soundingSemitone =
+      writtenSemitone + chromatic + 12 * octaveChange;
+  final double naturalSemitone =
+      (_diatonicStepSemitones[newStepIndex] + 12 * (newOctave + 1)).toDouble();
+
+  return Pitch(
+    step: Pitch.validSteps[newStepIndex],
+    octave: newOctave,
+    alter: soundingSemitone - naturalSemitone,
+  );
+}
+
+/// Number of staff lines declared by `<attributes><staff-details><staff-lines>`
+/// for [staffNumber] (or the first declaration when [staffNumber] is null).
+///
+/// Falls back to the CMN default of 5 when the part declares nothing, so a
+/// 1-line percussion staff or a 6-line tablature staff now survives the import
+/// instead of always being rebuilt as a 5-line staff.
+int _musicXmlStaffLines(Iterable<XmlElement> parts, {int? staffNumber}) {
+  for (final part in parts) {
+    for (final details in part.findAllElements('staff-details')) {
+      if (staffNumber != null) {
+        final declared = _asInt(details.getAttribute('number')) ?? 1;
+        if (declared != staffNumber) continue;
+      }
+      final lines = _asInt(_childText(details, 'staff-lines'));
+      if (lines != null && lines > 0) return lines;
+    }
+  }
+  return 5;
+}
+
 List<MusicalElement> _parseMusicXmlDirections(XmlElement directionElement) {
   final List<MusicalElement> result = <MusicalElement>[];
   for (final directionType in directionElement.findElements('direction-type')) {
@@ -1658,7 +2060,34 @@ List<MusicalElement> _parseMusicXmlDirections(XmlElement directionElement) {
     }
   }
 
+  // <sound tempo="N"> is the playback-side tempo of a <direction>. It is a
+  // sibling of <direction-type>, so it is read here, after the loop, and only
+  // when the direction carried no <metronome>: when both are present the
+  // <metronome> is the notated (graphical) mark and wins.
+  //
+  // MusicXML defines @tempo as quarter notes per minute, hence the fixed
+  // quarter beat unit.
+  if (!result.any((element) => element is TempoMark)) {
+    final tempo = _musicXmlSoundTempo(directionElement);
+    if (tempo != null) result.add(tempo);
+  }
+
   return result;
+}
+
+/// [TempoMark] from a `<sound tempo="N">` child of [parent], or `null` when the
+/// element has no usable `@tempo`.
+TempoMark? _musicXmlSoundTempo(XmlElement parent) {
+  for (final sound in parent.findElements('sound')) {
+    final bpm = _asDouble(sound.getAttribute('tempo'));
+    if (bpm != null && bpm > 0) {
+      return TempoMark(
+        beatUnit: DurationType.quarter,
+        bpm: bpm.round(),
+      );
+    }
+  }
+  return null;
 }
 
 List<MusicalElement> _parseMusicXmlBarline(XmlElement barlineElement) {
@@ -1783,13 +2212,49 @@ AccidentalParenthesis _musicXmlAccidentalParenthesis(XmlElement noteElement) {
   return AccidentalParenthesis.none;
 }
 
+/// Display pitch of a MusicXML `<unpitched>` note (percussion).
+///
+/// Percussion notation has no sounding pitch: `<unpitched>` only carries the
+/// *graphical* line/space through `<display-step>` / `<display-octave>`, which
+/// is exactly what the engraver needs to place the notehead. It is therefore
+/// imported as a plain [Pitch] with no alteration.
+///
+/// Notes without `<display-step>`/`<display-octave>` default to B4 — the
+/// middle line of a 5-line staff — the conventional fallback position.
+///
+/// Before this existed, `_musicXmlPitch` returned `null` for every unpitched
+/// note and the caller dropped the note silently: a whole drum part imported
+/// as an empty staff.
+Pitch? _musicXmlUnpitchedDisplayPitch(XmlElement noteElement) {
+  final unpitched = noteElement.findElements('unpitched').firstOrNull;
+  if (unpitched == null) return null;
+
+  final rawStep = _childText(unpitched, 'display-step')?.trim();
+  final rawOctave = _asInt(_childText(unpitched, 'display-octave'));
+
+  final step = rawStep == null || rawStep.isEmpty
+      ? 'B'
+      : _validatePitchStep(rawStep, 'MusicXML <unpitched><display-step>');
+  final octave = rawOctave == null
+      ? 4
+      : _validatePitchOctave(rawOctave, 'MusicXML <unpitched><display-octave>');
+
+  return Pitch(step: step, octave: octave);
+}
+
 Pitch? _musicXmlPitch(XmlElement noteElement) {
   final pitchElement = noteElement.findElements('pitch').firstOrNull;
-  if (pitchElement == null) return null;
+  if (pitchElement == null) {
+    // Percussion / unpitched notation: no <pitch>, but <unpitched> carries the
+    // staff position the note must be drawn on.
+    return _musicXmlUnpitchedDisplayPitch(noteElement);
+  }
 
-  final step = _childText(pitchElement, 'step')?.toUpperCase();
+  final rawStep = _childText(pitchElement, 'step');
   final octave = _asInt(_childText(pitchElement, 'octave'));
-  if (step == null || octave == null) return null;
+  if (rawStep == null || octave == null) return null;
+  final step = _validatePitchStep(rawStep, 'MusicXML <pitch><step>');
+  _validatePitchOctave(octave, 'MusicXML <pitch><octave>');
 
   final accidentalType = _parseAccidentalType(
     _childText(noteElement, 'accidental'),
@@ -1806,11 +2271,168 @@ Pitch? _musicXmlPitch(XmlElement noteElement) {
   );
 }
 
-Duration _musicXmlDurationFromNote(XmlElement noteElement) {
-  return Duration(
-    _parseDurationType(_childText(noteElement, 'type')) ?? DurationType.quarter,
-    dots: noteElement.findElements('dot').length,
-  );
+/// Relative tolerance used when matching a measured duration (expressed in
+/// whole notes) against a notated [DurationType] plus augmentation dots.
+const double _durationMatchTolerance = 1e-3;
+
+/// Value, in whole notes, of [type] carrying [dots] augmentation dots.
+///
+/// Mirrors `Duration.absoluteValue`: each dot adds half of the previous
+/// increment (`base * (2 - 2^-dots)`).
+double _dottedValue(DurationType type, int dots) {
+  double total = type.value;
+  double increment = type.value;
+  for (int i = 0; i < dots; i++) {
+    increment /= 2.0;
+    total += increment;
+  }
+  return total;
+}
+
+/// Best [DurationType] + dot count (0..[maxDots]) whose dotted value equals
+/// [wholeNoteValue] within [_durationMatchTolerance] (relative error).
+///
+/// Returns `null` when no combination is close enough, letting callers fall
+/// back to the notated `<type>`/`@dur` or to a sensible default.
+Duration? _durationFromWholeNoteValue(double wholeNoteValue,
+    {int maxDots = 3}) {
+  if (!wholeNoteValue.isFinite || wholeNoteValue <= 0) return null;
+
+  Duration? best;
+  double bestError = double.infinity;
+  for (final type in DurationType.values) {
+    for (int dots = 0; dots <= maxDots; dots++) {
+      final double candidate = _dottedValue(type, dots);
+      final double error = (candidate - wholeNoteValue).abs() / wholeNoteValue;
+      if (error < bestError) {
+        bestError = error;
+        best = Duration(type, dots: dots);
+      }
+    }
+  }
+  return bestError <= _durationMatchTolerance ? best : null;
+}
+
+/// Splits [wholeNoteValue] into the fewest [Duration]s that add up to it.
+///
+/// Used to build the invisible `<space>` padding that a `<forward>` gap needs
+/// (F-07). A value that maps onto a single (possibly dotted) note value yields
+/// one entry; anything else is decomposed greedily from the largest value down.
+List<Duration> _splitWholeNoteValue(double wholeNoteValue) {
+  final exact = _durationFromWholeNoteValue(wholeNoteValue);
+  if (exact != null) return <Duration>[exact];
+
+  final List<Duration> parts = <Duration>[];
+  double remaining = wholeNoteValue;
+  // DurationType.values is ordered from the longest (maxima) to the shortest
+  // value, so a plain descending pass terminates.
+  for (final type in DurationType.values) {
+    while (remaining >= type.value * (1.0 - _durationMatchTolerance)) {
+      parts.add(Duration(type));
+      remaining -= type.value;
+    }
+  }
+  return parts;
+}
+
+/// The *notated* value of a MusicXML `<note>` in whole notes, derived from
+/// `<duration>` and the part's current `<divisions>` (ticks per quarter note).
+///
+/// Any `<time-modification>` ratio is undone first, because `<duration>` holds
+/// the sounding (tuplet-shortened) value while the graphical note value is the
+/// unmodified one.
+///
+/// Returns `null` when the note carries no usable `<duration>` (grace notes) or
+/// when [divisions] is not positive.
+double? _musicXmlNotatedWholeNoteValue(XmlElement noteElement, int divisions) {
+  if (divisions <= 0) return null;
+  final int? raw = _asInt(_childText(noteElement, 'duration'));
+  if (raw == null || raw <= 0) return null;
+
+  double whole = raw / divisions / 4.0;
+  final timeModification =
+      noteElement.findElements('time-modification').firstOrNull;
+  if (timeModification != null) {
+    final int? actual = _asInt(_childText(timeModification, 'actual-notes'));
+    final int? normal = _asInt(_childText(timeModification, 'normal-notes'));
+    if (actual != null && normal != null && actual > 0 && normal > 0) {
+      whole = whole * actual / normal;
+    }
+  }
+  return whole;
+}
+
+/// Duration of a `<rest measure="yes"/>` that carries no `<type>`.
+///
+/// The length comes from the active [TimeSignature] (falling back to the
+/// measured [measuredWhole] when the bar is unknown). A bar exactly one whole
+/// note long keeps [DurationType.whole], the conventional measure-rest glyph.
+Duration _musicXmlMeasureRestDuration(
+  TimeSignature? timeSignature,
+  double? measuredWhole,
+) {
+  final double? barValue =
+      timeSignature != null && !timeSignature.isFreeTime
+          ? timeSignature.measureValue
+          : measuredWhole;
+  if (barValue == null || !barValue.isFinite || barValue <= 0) {
+    return const Duration(DurationType.whole);
+  }
+  if ((barValue - DurationType.whole.value).abs() <= _durationMatchTolerance) {
+    return const Duration(DurationType.whole);
+  }
+  return _durationFromWholeNoteValue(barValue) ??
+      const Duration(DurationType.whole);
+}
+
+/// Resolves the duration of a MusicXML `<note>`.
+///
+/// `<type>` stays authoritative for the graphical shape whenever it is present;
+/// the measured value only fills in augmentation dots the source forgot to
+/// encode. When `<type>` is absent the value is derived from
+/// `<duration>` / `<divisions>` (F-06) — previously both elements were ignored,
+/// so a `<divisions>4` + `<duration>16` whole note imported as a quarter.
+///
+/// [divisions] is the part's current `<divisions>` value and
+/// [currentTimeSignature] the meter in force, used for whole-measure rests.
+Duration _musicXmlDurationFromNote(
+  XmlElement noteElement, {
+  int divisions = 1,
+  TimeSignature? currentTimeSignature,
+}) {
+  final double? notatedWhole =
+      _musicXmlNotatedWholeNoteValue(noteElement, divisions);
+  final DurationType? notatedType =
+      _parseDurationType(_childText(noteElement, 'type'));
+  final int writtenDots = noteElement.findElements('dot').length;
+
+  if (notatedType != null) {
+    // Validate the dots against the measured value, but only when the source
+    // wrote none: an explicit <dot> is the engraver's intent and wins.
+    if (writtenDots == 0 && notatedWhole != null) {
+      for (int dots = 1; dots <= 3; dots++) {
+        final double candidate = _dottedValue(notatedType, dots);
+        if ((candidate - notatedWhole).abs() / notatedWhole <=
+            _durationMatchTolerance) {
+          return Duration(notatedType, dots: dots);
+        }
+      }
+    }
+    return Duration(notatedType, dots: writtenDots);
+  }
+
+  // A whole-measure rest without <type> takes the length of the bar.
+  final rest = noteElement.findElements('rest').firstOrNull;
+  if (rest != null && _normalizeToken(rest.getAttribute('measure')) == 'yes') {
+    return _musicXmlMeasureRestDuration(currentTimeSignature, notatedWhole);
+  }
+
+  if (notatedWhole != null) {
+    final derived = _durationFromWholeNoteValue(notatedWhole);
+    if (derived != null) return derived;
+  }
+
+  return Duration(DurationType.quarter, dots: writtenDots);
 }
 
 List<ArticulationType> _musicXmlArticulations(XmlElement noteElement) {
@@ -1906,9 +2528,40 @@ List<SlurEvent> _musicXmlSlurEvents(XmlElement noteElement) {
   return events;
 }
 
+/// Text of the `<beam number="N">` child of a note for beam [level], lowercased
+/// and trimmed, or `null` when the note carries no beam at that level.
+///
+/// MusicXML numbers beams by level (1 = primary, 2+ = secondary/partial).
+/// Reading simply the first `<beam>` in document order picked up whatever level
+/// happened to be written first, so a file that lists level 2 before level 1
+/// lost its primary beam (F-18). A `<beam>` without `@number` defaults to
+/// level 1.
+String? _musicXmlBeamText(XmlElement noteElement, int level) {
+  XmlElement? unnumbered;
+  for (final beam in noteElement.findElements('beam')) {
+    final int? number = _asInt(beam.getAttribute('number'));
+    if (number == level) return beam.innerText.trim().toLowerCase();
+    if (number == null) unnumbered ??= beam;
+  }
+  return level == 1 ? unnumbered?.innerText.trim().toLowerCase() : null;
+}
+
+/// Primary (level 1) beam of a MusicXML `<note>`.
+///
+/// `forward hook` / `backward hook` are mapped to the nearest existing
+/// [BeamType] (`inner`), since a hook only ever occurs inside an open group.
+///
+/// TODO(F-18): beam levels 2..4 (`<beam number="2">` and up) are still dropped
+/// because the `Note` model exposes a single `BeamType? beam`. Rendering
+/// secondary and partial beams requires a per-level field on `Note`, which
+/// lives in `lib/core`; until then only the primary level is imported.
 BeamType? _musicXmlBeamType(XmlElement noteElement) {
-  final beamElement = noteElement.findElements('beam').firstOrNull;
-  return beamElement == null ? null : _parseBeamType(beamElement.innerText);
+  final String? text = _musicXmlBeamText(noteElement, 1);
+  if (text == null) return null;
+  if (text == 'forward hook' || text == 'backward hook') {
+    return BeamType.inner;
+  }
+  return _parseBeamType(text);
 }
 
 _TupletEventInfo _musicXmlTupletInfo(XmlElement noteElement) {
@@ -2044,7 +2697,14 @@ class _MeiImportParser {
 
   /// Scans a measure's control events (slur/tie/dynam) and indexes them by
   /// the referenced note xml:id via @startid/@endid.
+  ///
+  /// The indexes are measure-scoped: they are cleared on entry so events never
+  /// leak into the following measure (F-42).
   void _collectMeiControlEvents(XmlElement measureElement) {
+    _slurById.clear();
+    _tieById.clear();
+    _afterNoteById.clear();
+
     for (final ev in measureElement.children.whereType<XmlElement>()) {
       final startId = _stripHash(ev.getAttribute('startid'));
       final endId = _stripHash(ev.getAttribute('endid'));
@@ -2079,8 +2739,8 @@ class _MeiImportParser {
     final score = root.findAllElements('score').firstOrNull;
     if (score == null) return Staff();
 
-    final section = score.findAllElements('section').firstOrNull;
-    if (section == null) return Staff();
+    final sections = _topLevelSections(score);
+    if (sections.isEmpty) return Staff();
 
     // MEI encodes the initial clef/key/meter in <scoreDef>/<staffDef>, not
     // inline in <staff>. Capture them and seed the first measure.
@@ -2088,16 +2748,95 @@ class _MeiImportParser {
     final defaults =
         scoreDef == null ? const <MusicalElement>[] : _meiStaffDefaults(scoreDef);
 
-    final staff = Staff();
+    // <staffDef @lines> sizes the staff (1 = percussion, 6 = guitar tab);
+    // Staff.lineCount is final, so it must be resolved up front.
+    final staff = Staff(
+      lineCount: scoreDef == null ? 5 : _meiStaffDefLines(scoreDef),
+    );
     var first = true;
-    for (final measure in section.findElements('measure')) {
-      staff.add(_parseMeasure(
-        measure,
-        leadingDefaults: first ? defaults : const <MusicalElement>[],
-      ));
-      first = false;
+    // <ending> wraps the measures of a volta; a bracket is emitted on the first
+    // measure of each ending. <expansion> is an empty, plist-based element and
+    // simply carries no measures of its own.
+    XmlElement? openEnding;
+    for (final section in sections) {
+      // findAllElements keeps document order and also reaches measures wrapped
+      // in <ending>/<expansion> containers.
+      for (final measure in section.findAllElements('measure')) {
+        final ending = _meiEndingAncestor(measure, section);
+        final lead = <MusicalElement>[
+          if (first) ...defaults,
+          if (ending != null && !identical(ending, openEnding))
+            VoltaBracket(
+              number: _asInt(ending.getAttribute('n')) ??
+                  _asInt(ending.getAttribute('label')) ??
+                  1,
+              label: ending.getAttribute('label'),
+              length: 0.0,
+            ),
+        ];
+        openEnding = ending;
+        staff.add(_parseMeasure(measure, leadingDefaults: lead));
+        first = false;
+      }
     }
     return staff;
+  }
+
+  /// Nearest `<ending>` ancestor of [measure] below [section], or `null` when
+  /// the measure is not inside a volta.
+  static XmlElement? _meiEndingAncestor(
+    XmlElement measure,
+    XmlElement section,
+  ) {
+    for (XmlNode? ancestor = measure.parent;
+        ancestor != null && !identical(ancestor, section);
+        ancestor = ancestor.parent) {
+      if (ancestor is XmlElement && ancestor.name.local == 'ending') {
+        return ancestor;
+      }
+    }
+    return null;
+  }
+
+  /// `<staffDef @lines>` for this staffIndex (falling back to the first
+  /// staffDef, then to the CMN default of 5).
+  int _meiStaffDefLines(XmlElement scoreDef) {
+    final defs = scoreDef.findAllElements('staffDef').toList();
+    if (defs.isEmpty) return 5;
+    XmlElement? sd;
+    for (final d in defs) {
+      if ((_asInt(d.getAttribute('n')) ?? 1) == staffIndex + 1) {
+        sd = d;
+        break;
+      }
+    }
+    sd ??= defs[staffIndex.clamp(0, defs.length - 1)];
+    final lines = _asInt(sd.getAttribute('lines'));
+    return lines != null && lines > 0 ? lines : 5;
+  }
+
+  /// Every `<section>` of a `<score>`, in document order, excluding sections
+  /// nested inside another section.
+  ///
+  /// Only the first `<section>` used to be read, so a score split into several
+  /// sections lost every measure after the first one (F-17). Nested sections
+  /// are skipped here because their measures are already reached through their
+  /// enclosing top-level section.
+  static List<XmlElement> _topLevelSections(XmlElement score) {
+    final List<XmlElement> result = <XmlElement>[];
+    for (final section in score.findAllElements('section')) {
+      var nested = false;
+      for (XmlNode? ancestor = section.parent;
+          ancestor != null && !identical(ancestor, score);
+          ancestor = ancestor.parent) {
+        if (ancestor is XmlElement && ancestor.name.local == 'section') {
+          nested = true;
+          break;
+        }
+      }
+      if (!nested) result.add(section);
+    }
+    return result;
   }
 
   /// Clef/key/meter declared in a `scoreDef`'s `staffDef` for this staffIndex
@@ -2135,9 +2874,7 @@ class _MeiImportParser {
 
     // Resolve measure-level control events (slur/tie/dynam) that reference notes
     // by @startid/@endid, so they apply even though they sit outside <staff>.
-    _slurById.clear();
-    _tieById.clear();
-    _afterNoteById.clear();
+    // The collector clears the previous measure's index first.
     _collectMeiControlEvents(measureElement);
 
     _VoiceAccumulator voice(int number) {
@@ -2173,7 +2910,8 @@ class _MeiImportParser {
           staffElement.children.whereType<XmlElement>().map((e) => e.name.local);
       final hasClef = inlineNames.contains('clef');
       final hasKey = inlineNames.contains('keySig');
-      final hasMeter = inlineNames.contains('meterSig');
+      final hasMeter = inlineNames.contains('meterSig') ||
+          inlineNames.contains('meterSigGrp');
       for (final d in leadingDefaults) {
         if (d is Clef && hasClef) continue;
         if (d is KeySignature && hasKey) continue;
@@ -2201,6 +2939,11 @@ class _MeiImportParser {
           break;
         case 'meterSig':
           final meter = _meiTimeSignature(child);
+          if (meter != null) appendLead(meter);
+          break;
+        case 'meterSigGrp':
+          // Additive meter written as a group of <meterSig>s, e.g. (3+2+2)/8.
+          final meter = _meiMeterSigGrp(child);
           if (meter != null) appendLead(meter);
           break;
         case 'layer':
@@ -2512,19 +3255,30 @@ KeySignature? _meiDefKey(XmlElement def) {
     final k = _meiKeySignature(child);
     if (k != null) return k;
   }
-  final sig = def.getAttribute('key.sig');
+  // MEI v5 renamed `@key.sig` to `@keysig`; both spellings are accepted.
+  final sig = def.getAttribute('key.sig') ?? def.getAttribute('keysig');
+  // `@key.mode` (MEI v5) / `@mode` — the tonal mode of the key signature.
+  final mode = _parseKeyMode(
+    def.getAttribute('key.mode') ?? def.getAttribute('mode'),
+  );
   if (sig == null || sig.trim().isEmpty) return null;
   final n = sig.trim().toLowerCase();
-  if (n == '0') return KeySignature(0);
+  if (n == '0') return KeySignature(0, mode: mode);
   final m = RegExp(r'^(-?\d+)([sf])$').firstMatch(n);
   if (m == null) return null;
   final count = int.tryParse(m.group(1)!);
   if (count == null) return null;
-  return KeySignature(m.group(2) == 'f' ? -count : count);
+  return KeySignature(m.group(2) == 'f' ? -count : count, mode: mode);
 }
 
-/// Meter from a `scoreDef`/`staffDef` (child `meterSig` or meter.count/unit).
+/// Meter from a `scoreDef`/`staffDef` (child `meterSigGrp`/`meterSig`, or the
+/// meter.count/meter.unit attribute pair — both may be additive).
 TimeSignature? _meiDefMeter(XmlElement def) {
+  final grp = def.findElements('meterSigGrp').firstOrNull;
+  if (grp != null) {
+    final additive = _meiMeterSigGrp(grp);
+    if (additive != null) return additive;
+  }
   final child = def.findElements('meterSig').firstOrNull;
   if (child != null) {
     final m = _meiTimeSignature(child);
@@ -2599,12 +3353,41 @@ Clef? _meiClef(XmlElement clefElement) {
   return null;
 }
 
+/// Parses a MEI `@mode` value (`major`, `minor`, `dorian`, …) into a [KeyMode].
+///
+/// MEI v5 carries the mode on `<keySig @mode>` and on `<staffDef>`/`<scoreDef>`
+/// as `@key.mode`. Unknown or absent values yield `null`, which [KeySignature]
+/// treats as [KeyMode.none].
+KeyMode? _parseKeyMode(String? raw) {
+  return _parseEnumByName(
+    KeyMode.values,
+    raw,
+    aliases: const <String, KeyMode>{
+      'maj': KeyMode.major,
+      'min': KeyMode.minor,
+      'dor': KeyMode.dorian,
+      'phr': KeyMode.phrygian,
+      'lyd': KeyMode.lydian,
+      'mix': KeyMode.mixolydian,
+      'mixolyd': KeyMode.mixolydian,
+      'aeo': KeyMode.aeolian,
+      'loc': KeyMode.locrian,
+    },
+  );
+}
+
 KeySignature? _meiKeySignature(XmlElement keySigElement) {
   final sig = keySigElement.getAttribute('sig');
   if (sig == null || sig.trim().isEmpty) return null;
+  // MEI v5 `<keySig @mode>`; `@key.mode` is accepted too for encodings that
+  // copy the staffDef attribute name onto the element.
+  final mode = _parseKeyMode(
+    keySigElement.getAttribute('mode') ??
+        keySigElement.getAttribute('key.mode'),
+  );
   final normalized = sig.trim().toLowerCase();
   if (normalized == '0') {
-    return KeySignature(0);
+    return KeySignature(0, mode: mode);
   }
 
   final match = RegExp(r'^(-?\d+)([sf])$').firstMatch(normalized);
@@ -2612,11 +3395,63 @@ KeySignature? _meiKeySignature(XmlElement keySigElement) {
   final count = int.tryParse(match.group(1)!);
   final suffix = match.group(2);
   if (count == null) return null;
-  return KeySignature(suffix == 'f' ? -count : count);
+  return KeySignature(suffix == 'f' ? -count : count, mode: mode);
+}
+
+/// Parses a MEI `@meter.count` / `@count` value, which may be a plain integer
+/// (`"4"`) or an additive expression (`"3+2+2"`).
+///
+/// Returns the individual groups; a plain integer yields a single-entry list.
+/// Returns `null` when the value is not a usable meter count.
+List<int>? _meiMeterCounts(String? raw) {
+  if (raw == null) return null;
+  final trimmed = raw.trim();
+  if (trimmed.isEmpty) return null;
+  final parts = trimmed.split('+');
+  final counts = <int>[];
+  for (final part in parts) {
+    final value = int.tryParse(part.trim());
+    if (value == null || value <= 0) return null;
+    counts.add(value);
+  }
+  return counts.isEmpty ? null : counts;
+}
+
+/// Builds a [TimeSignature] from [counts] + [denominator], choosing the
+/// additive form when the source declared more than one group.
+TimeSignature _meiMeterFromCounts(List<int> counts, int denominator) {
+  if (counts.length > 1) {
+    return TimeSignature.additive(groups: counts, denominator: denominator);
+  }
+  return TimeSignature(numerator: counts.first, denominator: denominator);
+}
+
+/// Meter from a `<meterSigGrp>` (MEI v5), i.e. several `<meterSig>` children
+/// that together describe one additive meter such as (3+2+2)/8.
+///
+/// The denominator comes from the first child that declares a `@unit`; groups
+/// whose own `@count` is additive are flattened into the result.
+TimeSignature? _meiMeterSigGrp(XmlElement grpElement) {
+  final counts = <int>[];
+  int? denominator;
+  for (final child in grpElement.findElements('meterSig')) {
+    final childCounts = _meiMeterCounts(
+      child.getAttribute('count') ?? child.getAttribute('meter.count'),
+    );
+    if (childCounts == null) continue;
+    counts.addAll(childCounts);
+    denominator ??= _asInt(
+      child.getAttribute('unit') ?? child.getAttribute('meter.unit'),
+    );
+  }
+  if (counts.isEmpty || denominator == null) return null;
+  return _meiMeterFromCounts(counts, denominator);
 }
 
 TimeSignature? _meiTimeSignature(XmlElement meterSigElement) {
-  final numerator = _asInt(
+  // `meter.count` may be additive ("3+2+2"); a plain int is the single-group
+  // case of the very same syntax.
+  final counts = _meiMeterCounts(
     meterSigElement.getAttribute('count') ??
         meterSigElement.getAttribute('meter.count'),
   );
@@ -2624,8 +3459,8 @@ TimeSignature? _meiTimeSignature(XmlElement meterSigElement) {
     meterSigElement.getAttribute('unit') ??
         meterSigElement.getAttribute('meter.unit'),
   );
-  if (numerator == null || denominator == null) return null;
-  return TimeSignature(numerator: numerator, denominator: denominator);
+  if (counts == null || denominator == null) return null;
+  return _meiMeterFromCounts(counts, denominator);
 }
 
 Note? _meiNote(XmlElement noteElement,
@@ -2633,9 +3468,15 @@ Note? _meiNote(XmlElement noteElement,
     BeamType? beamOverride,
     SlurType? slurOverride,
     TieType? tieOverride}) {
-  final step = noteElement.getAttribute('pname')?.toUpperCase();
+  final rawStep = noteElement.getAttribute('pname');
   final octave = _asInt(noteElement.getAttribute('oct'));
-  if (step == null || octave == null) return null;
+  // GAP: a pure tablature note (`<note tab.fret= tab.string=/>` with neither
+  // @pname nor @oct) is still dropped, because Note.pitch is required and
+  // non-nullable and deriving a pitch would mean inventing a tuning. Tab notes
+  // that do carry @pname/@oct — the usual MEI encoding — import fully below.
+  if (rawStep == null || octave == null) return null;
+  final step = _validatePitchStep(rawStep, 'MEI <note @pname>');
+  _validatePitchOctave(octave, 'MEI <note @oct>');
 
   final accidentalType = _parseAccidentalType(
     noteElement.getAttribute('accid') ?? noteElement.getAttribute('accid.ges'),
@@ -2663,6 +3504,9 @@ Note? _meiNote(XmlElement noteElement,
     voice: voiceNumber,
     isGraceNote: noteElement.getAttribute('grace') != null,
     syllables: _parseMeiVerses(noteElement),
+    // MEI v5 tablature attributes; null when the note is not a tab note.
+    tabFret: _asInt(noteElement.getAttribute('tab.fret')),
+    tabString: _asInt(noteElement.getAttribute('tab.string')),
   );
 }
 
@@ -2737,6 +3581,9 @@ Chord? _meiChord(XmlElement chordElement, {required int voiceNumber}) {
           ornaments: note.ornaments,
           voice: voiceNumber,
           isGraceNote: note.isGraceNote,
+          // Chord tones keep their own tablature position.
+          tabFret: note.tabFret,
+          tabString: note.tabString,
         ),
       );
     }
@@ -2794,6 +3641,258 @@ _TupletEventInfo _meiTupletInfo(XmlElement element) {
         numbase != null,
     actualNotes: num ?? 3,
     normalNotes: numbase ?? 2,
+  );
+}
+
+/// Number of staves an MEI `<score>` can be split into without asking
+/// [_MeiImportParser] for a staff a measure does not have.
+///
+/// Uses the smallest `<staff>` count found across the measures (a measure with
+/// fewer staves would make the per-staff parser throw); falls back to the
+/// number of `<staffDef>`s when the score has no measures at all.
+int _meiStaffCount(XmlElement score) {
+  int? minimum;
+  for (final measure in score.findAllElements('measure')) {
+    final count = measure.findElements('staff').length;
+    if (minimum == null || count < minimum) minimum = count;
+  }
+  if (minimum != null && minimum > 0) return minimum;
+  final defs = score.findAllElements('staffDef').length;
+  return defs > 0 ? defs : 1;
+}
+
+/// Bracket implied by the outermost `<staffGrp @symbol>` of an MEI score.
+BracketType _meiStaffGrpBracket(XmlElement score) {
+  final group = score.findAllElements('staffGrp').firstOrNull;
+  switch (_normalizeToken(group?.getAttribute('symbol'))) {
+    case 'brace':
+      return BracketType.brace;
+    case 'bracket':
+    case 'bracketsq':
+      return BracketType.bracket;
+    case 'line':
+      return BracketType.line;
+    default:
+      return BracketType.none;
+  }
+}
+
+/// Trimmed text of the first [childName] descendant of [element], or `null`
+/// when it is missing or blank.
+String? _meiText(XmlElement? element, String childName) {
+  if (element == null) return null;
+  final text = element.findAllElements(childName).firstOrNull?.innerText.trim();
+  return text == null || text.isEmpty ? null : text;
+}
+
+/// Maps an MEI responsibility name (`composer`, `@role="editor"`, …) to a
+/// [ResponsibilityRole]; anything unrecognised becomes
+/// [ResponsibilityRole.other].
+ResponsibilityRole _meiResponsibilityRole(String? raw) {
+  return _parseEnumByName(
+        ResponsibilityRole.values,
+        raw,
+        aliases: const <String, ResponsibilityRole>{
+          'author': ResponsibilityRole.other,
+          'lyricist': ResponsibilityRole.lyricist,
+          'lyrics': ResponsibilityRole.lyricist,
+          'sponsor': ResponsibilityRole.funder,
+        },
+      ) ??
+      ResponsibilityRole.other;
+}
+
+/// Contributors named inside an MEI `<titleStmt>`.
+///
+/// Reads both encodings MEI allows: dedicated elements (`<composer>`,
+/// `<arranger>`, `<editor>`, `<lyricist>`, `<librettist>`, `<funder>`) and the
+/// generic `<respStmt>` with `<persName role="…">` / `<corpName role="…">`.
+List<Contributor> _parseMeiContributors(XmlElement titleStmt) {
+  final result = <Contributor>[];
+
+  void addNamed(String elementName, ResponsibilityRole role) {
+    for (final element in titleStmt.findAllElements(elementName)) {
+      final name = element.innerText.trim();
+      if (name.isEmpty) continue;
+      result.add(Contributor(
+        name: name,
+        role: role,
+        identifier: element.getAttribute('auth.uri') ??
+            element.getAttribute('codedval'),
+      ));
+    }
+  }
+
+  addNamed('composer', ResponsibilityRole.composer);
+  addNamed('arranger', ResponsibilityRole.arranger);
+  addNamed('editor', ResponsibilityRole.editor);
+  addNamed('lyricist', ResponsibilityRole.lyricist);
+  addNamed('librettist', ResponsibilityRole.librettist);
+  addNamed('funder', ResponsibilityRole.funder);
+
+  for (final respStmt in titleStmt.findAllElements('respStmt')) {
+    for (final person in respStmt.children.whereType<XmlElement>()) {
+      final local = person.name.local;
+      if (local != 'persName' && local != 'corpName') continue;
+      final name = person.innerText.trim();
+      if (name.isEmpty) continue;
+      final role = _meiResponsibilityRole(
+        person.getAttribute('role') ??
+            _meiText(respStmt, 'resp') ??
+            person.getAttribute('type'),
+      );
+      // Skip duplicates already picked up from a dedicated element.
+      if (result.any((c) => c.name == name && c.role == role)) continue;
+      result.add(Contributor(
+        name: name,
+        role: role,
+        identifier: person.getAttribute('auth.uri') ??
+            person.getAttribute('nymref'),
+      ));
+    }
+  }
+
+  return result;
+}
+
+/// Builds a [MeiHeader] from the `<meiHead>` of an MEI document, or returns
+/// `null` when the document carries no header.
+///
+/// Covers the essential of `<fileDesc>`/`<titleStmt>` (title, subtitle,
+/// contributors), plus `<pubStmt>`, `<sourceDesc>`, `<encodingDesc>`,
+/// `<workList>` and `<revisionDesc>` when present.
+MeiHeader? _parseMeiHeader(XmlElement mei) {
+  final head = mei.findAllElements('meiHead').firstOrNull;
+  if (head == null) return null;
+
+  final fileDesc = head.findAllElements('fileDesc').firstOrNull;
+  final titleStmt = fileDesc?.findAllElements('titleStmt').firstOrNull;
+
+  String? title;
+  String? subtitle;
+  if (titleStmt != null) {
+    for (final element in titleStmt.findAllElements('title')) {
+      final text = element.innerText.trim();
+      if (text.isEmpty) continue;
+      final type = _normalizeToken(element.getAttribute('type'));
+      if (type == 'subtitle' || type == 'sub') {
+        subtitle ??= text;
+      } else {
+        title ??= text;
+      }
+    }
+  }
+  title ??= _meiText(head, 'title');
+
+  final contributors = titleStmt == null
+      ? const <Contributor>[]
+      : _parseMeiContributors(titleStmt);
+
+  final pubStmt = fileDesc?.findAllElements('pubStmt').firstOrNull;
+  PublicationStatement? publication;
+  if (pubStmt != null) {
+    final publisher = _meiText(pubStmt, 'publisher');
+    final date = _meiText(pubStmt, 'date') ??
+        pubStmt.findAllElements('date').firstOrNull?.getAttribute('isodate');
+    final place = _meiText(pubStmt, 'pubPlace');
+    final availability = _meiText(pubStmt, 'availability');
+    if (publisher != null ||
+        date != null ||
+        place != null ||
+        availability != null) {
+      publication = PublicationStatement(
+        publisher: publisher,
+        date: date,
+        place: place,
+        availability: availability,
+      );
+    }
+  }
+
+  final sources = <SourceDescription>[];
+  final sourceDesc = fileDesc?.findAllElements('sourceDesc').firstOrNull;
+  if (sourceDesc != null) {
+    for (final source in sourceDesc.findAllElements('source')) {
+      sources.add(SourceDescription(
+        title: _meiText(source, 'title'),
+        composer: _meiText(source, 'composer'),
+        date: _meiText(source, 'date'),
+        publisher: _meiText(source, 'publisher'),
+        identifier: _meiText(source, 'identifier') ??
+            source.getAttribute('xml:id'),
+      ));
+    }
+  }
+
+  final encodingDesc = head.findAllElements('encodingDesc').firstOrNull;
+  EncodingDescription? encoding;
+  if (encodingDesc != null) {
+    final applications = <String>[];
+    for (final application in encodingDesc.findAllElements('application')) {
+      final name = _meiText(application, 'name') ??
+          application.getAttribute('label') ??
+          application.getAttribute('xml:id');
+      if (name != null && name.isNotEmpty) applications.add(name);
+    }
+    encoding = EncodingDescription(
+      editorialPrinciples: _meiText(encodingDesc, 'editorialDecl'),
+      meiVersion: mei.getAttribute('meiversion') ?? '5',
+      applications: applications,
+    );
+  }
+
+  final workListElement = head.findAllElements('workList').firstOrNull;
+  WorkList? workList;
+  if (workListElement != null) {
+    final works = <WorkInfo>[];
+    for (final work in workListElement.findAllElements('work')) {
+      works.add(WorkInfo(
+        title: _meiText(work, 'title'),
+        composer: _meiText(work, 'composer'),
+        key: _meiText(work, 'key'),
+        tempo: _meiText(work, 'tempo'),
+        meter: _meiText(work, 'meter'),
+        date: _meiText(work, 'creation') ?? _meiText(work, 'date'),
+        genre: _meiText(work, 'term') ?? _meiText(work, 'genre'),
+      ));
+    }
+    if (works.isNotEmpty) workList = WorkList(works: works);
+  }
+
+  final revisionElement = head.findAllElements('revisionDesc').firstOrNull;
+  RevisionDescription? revision;
+  if (revisionElement != null) {
+    final entries = <RevisionEntry>[];
+    for (final change in revisionElement.findAllElements('change')) {
+      final date = change.getAttribute('isodate') ??
+          _meiText(change, 'date') ??
+          '';
+      entries.add(RevisionEntry(
+        date: date,
+        author: _meiText(change, 'persName') ?? _meiText(change, 'name'),
+        description: _meiText(change, 'changeDesc') ??
+            change.innerText.trim(),
+        version: change.getAttribute('n'),
+      ));
+    }
+    if (entries.isNotEmpty) {
+      revision = RevisionDescription(entries: entries);
+    }
+  }
+
+  return MeiHeader(
+    // <fileDesc><titleStmt><title> is mandatory in MEI, but a malformed file
+    // may omit it; an empty title keeps the header usable instead of throwing.
+    fileDescription: FileDescription(
+      title: title ?? '',
+      subtitle: subtitle,
+      contributors: contributors,
+      publication: publication,
+      sources: sources,
+    ),
+    encodingDescription: encoding,
+    workList: workList,
+    revisionDescription: revision,
   );
 }
 

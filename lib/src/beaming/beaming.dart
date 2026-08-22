@@ -6,7 +6,7 @@
 /// - Broken beams / Fractional beams (for dotted rhythms)
 /// - Professional beam-break rules following Behind Bars
 /// - Precise geometry based on SMuFL specifications
-/// - Beat position calculateTestion (Behind Bars) for intelligent beam breaks
+/// - Beat position calculation (Behind Bars) for intelligent beam breaks
 library;
 
 export 'beam_types.dart';

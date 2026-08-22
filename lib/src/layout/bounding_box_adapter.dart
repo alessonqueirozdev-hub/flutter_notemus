@@ -1,3 +1,6 @@
+// DEAD CODE — adapter between two bounding-box representations, neither of
+// which is on the production render path. Zero references outside this file.
+// Status is tracked in `doc/MODEL_ONLY.md` (deletion candidate).
 // lib/src/layout/bounding_box_adapter.dart
 
 import 'package:flutter/material.dart';
@@ -26,11 +29,11 @@ class BoundingBoxAdapter {
     MusicalElement element,
     String elementType,
   ) {
-    // Ensure that positions are currentizadas
+    // Ensure that positions are atualizadas
     hierarchical.calculateAbsolutePosition();
     hierarchical.calculateBoundingBox();
 
-    // Createsr Rect a partir das bordas Calculated
+    // criar Rect a partir das bordas Calculated
     final rect = Rect.fromLTRB(
       hierarchical.absolutePosition.x + hierarchical.borderLeft,
       hierarchical.absolutePosition.y + hierarchical.borderTop,
@@ -63,7 +66,7 @@ class BoundingBoxAdapter {
     collision.CollisionDetector detector, {
     bool registerChildren = true,
   }) {
-    // Currentizar hierarquia before de registrar
+    // Atualizar hierarquia before de registrar
     hierarchical.calculateAbsolutePosition();
     hierarchical.calculateBoundingBox();
 
@@ -168,7 +171,7 @@ class BoundingBoxAdapter {
 
   /// Mescla múltiplos BoundingBoxes in a único envelope
   ///
-  /// Útil for Createsr bounding box de grupos (chords, tuplets, etc.)
+  /// Útil for criar bounding box de grupos (chords, tuplets, etc.)
   ///
   /// @param boxes List of BoundingBoxes a mesclar
   /// @return BoundingBox that engloba all os boxes fornecidos

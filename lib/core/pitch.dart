@@ -85,7 +85,16 @@ const Map<AccidentalType, String> accidentalToGlyph = {
 /// Pitch.fromString('C#5') // C-sharp 5
 /// ```
 class Pitch {
-  /// The note letter name (C, D, And, F, G, A, B).
+  /// The seven valid diatonic step letters, in ascending diatonic order.
+  static const List<String> validSteps = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+
+  /// Returns `true` if [s] is one of the seven diatonic step letters.
+  ///
+  /// The check is case-insensitive: both `'c'` and `'C'` are valid.
+  static bool isValidStep(String s) =>
+      s.length == 1 && validSteps.contains(s.toUpperCase());
+
+  /// The note letter name (C, D, E, F, G, A, B).
   final String step;
 
   /// The octave number (4 is the standard middle octave).
@@ -96,25 +105,74 @@ class Pitch {
   /// Decimal values are supported for microtones.
   final double alter;
 
-  /// Specific accidental type (optional, for special notetions).
+  /// Specific accidental type (optional, for special notations).
   final AccidentalType? accidentalType;
 
   /// For custom accidentals.
   final String? customAccidentalGlyph;
 
+  /// Creates a pitch from a diatonic [step], an [octave] and an optional
+  /// chromatic [alter].
+  ///
+  /// In debug builds the [step] must be one of [validSteps] (uppercase) and
+  /// the [octave] must be in the MIDI-representable range `[-1, 10]`.
   const Pitch({
     required this.step,
     required this.octave,
     this.alter = 0.0,
     this.accidentalType,
     this.customAccidentalGlyph,
-  });
+  })  : assert(
+          step == 'C' ||
+              step == 'D' ||
+              step == 'E' ||
+              step == 'F' ||
+              step == 'G' ||
+              step == 'A' ||
+              step == 'B',
+          'Invalid pitch step (expected one of C D E F G A B)',
+        ),
+        assert(
+          octave >= -1 && octave <= 10,
+          'Octave out of range (expected -1..10)',
+        );
 
-  /// Effective alteration value used for calculateTestions.
+  /// Creates a pitch after validating and normalizing its [step].
+  ///
+  /// The [step] is upper-cased before validation; a [FormatException] is
+  /// thrown when it is not a diatonic letter or when [octave] falls outside
+  /// the MIDI-representable range `[-1, 10]`. Parsers should prefer this
+  /// factory over the raw constructor so malformed input fails with a clear
+  /// message instead of an assertion or a later crash.
+  factory Pitch.validated({
+    required String step,
+    required int octave,
+    double alter = 0.0,
+    AccidentalType? accidentalType,
+  }) {
+    if (!isValidStep(step)) {
+      throw FormatException(
+        'Invalid pitch step "$step" (expected one of C D E F G A B)',
+      );
+    }
+    if (octave < -1 || octave > 10) {
+      throw FormatException(
+        'Invalid octave $octave (expected a value between -1 and 10)',
+      );
+    }
+    return Pitch(
+      step: step.toUpperCase(),
+      octave: octave,
+      alter: alter,
+      accidentalType: accidentalType,
+    );
+  }
+
+  /// Effective alteration value used for calculations.
   ///
   /// Maintains backward compatibility: when [accidentalType] is provided and
   /// [alter] remains at its default value (`0.0`), uses the implicit value of
-  /// the accidental for MIDI/frequency calculateTestion.
+  /// the accidental for MIDI/frequency calculation.
   double get effectiveAlter {
     if (alter != 0.0 || accidentalType == null) {
       return alter;
@@ -136,7 +194,10 @@ class Pitch {
     );
   }
 
-  /// Constructs a Pitch from a string (and.g. "C4", "F#5", "Bb3").
+  /// Constructs a Pitch from a string (e.g. "C4", "F#5", "Bb3", "C-1").
+  ///
+  /// Accidentals are repeatable (`"C##4"`, `"Ebb3"`, `"C###4"`) and the octave
+  /// may be negative, so the lowest MIDI note `"C-1"` round-trips correctly.
   factory Pitch.fromString(String notation) {
     if (notation.isEmpty) {
       throw ArgumentError('Notation cannot be empty');
@@ -144,29 +205,28 @@ class Pitch {
 
     // Extract the base note (first letter)
     final step = notation[0].toUpperCase();
-    if (!'CDEFGAB'.contains(step)) {
+    if (!isValidStep(step)) {
       throw ArgumentError('Invalid note step: $step');
     }
 
     // Find where the octave number begins
-    int octaveStart = 1;
+    int octaveStart = notation.length;
     double alter = 0.0;
-    AccidentalType? accidentalType;
 
-    // Process accidentals
-    if (notation.length > 1) {
-      for (int i = 1; i < notation.length; i++) {
-        final char = notation[i];
-        if (char == '#') {
-          alter += 1.0;
-          accidentalType = alter == 1.0 ? AccidentalType.sharp : AccidentalType.doubleSharp;
-        } else if (char == 'b') {
-          alter -= 1.0;
-          accidentalType = alter == -1.0 ? AccidentalType.flat : AccidentalType.doubleFlat;
-        } else if (char.contains(RegExp(r'[0-9]'))) {
-          octaveStart = i;
-          break;
-        }
+    // Process accidentals; stop at the first octave character
+    // ('-' introduces a negative octave such as "C-1").
+    for (int i = 1; i < notation.length; i++) {
+      final char = notation[i];
+      if (char == '#') {
+        alter += 1.0;
+      } else if (char == 'b') {
+        alter -= 1.0;
+      } else if (char == '-' ||
+          (char.codeUnitAt(0) >= 0x30 && char.codeUnitAt(0) <= 0x39)) {
+        octaveStart = i;
+        break;
+      } else {
+        throw ArgumentError('Invalid character "$char" in notation: $notation');
       }
     }
 
@@ -181,17 +241,32 @@ class Pitch {
       throw ArgumentError('Invalid octave number: $octaveString');
     }
 
-    return Pitch(
+    return Pitch.validated(
       step: step,
       octave: octave,
       alter: alter,
-      accidentalType: accidentalType,
+      accidentalType: _accidentalTypeForAlter(alter),
     );
   }
 
-  /// calculateTestes the MIDI note number (C4 = 60).
-  /// For microtones, returns the nearest integer value.
-  int get midiNumber {
+  /// Returns the [AccidentalType] matching a whole-tone [alter] value, or
+  /// `null` when the alteration cannot be expressed by a standard accidental
+  /// (in that case only [alter] carries the information).
+  static AccidentalType? _accidentalTypeForAlter(double alter) {
+    if (alter == 1.0) return AccidentalType.sharp;
+    if (alter == -1.0) return AccidentalType.flat;
+    if (alter == 2.0) return AccidentalType.doubleSharp;
+    if (alter == -2.0) return AccidentalType.doubleFlat;
+    if (alter == 3.0) return AccidentalType.tripleSharp;
+    if (alter == -3.0) return AccidentalType.tripleFlat;
+    return null;
+  }
+
+  /// Semitone offset of [step] within the octave (C = 0 ... B = 11).
+  ///
+  /// Throws a [StateError] — never a null-check failure — when [step] is not
+  /// a diatonic letter, so callers get an actionable message.
+  int get _stepSemitone {
     const stepToSemitone = {
       'C': 0,
       'D': 2,
@@ -201,11 +276,22 @@ class Pitch {
       'A': 9,
       'B': 11,
     };
-    final semitone = stepToSemitone[step]!;
-    return (octave + 1) * 12 + semitone + effectiveAlter.round();
+    final semitone = stepToSemitone[step];
+    if (semitone == null) {
+      throw StateError(
+        'Invalid pitch step "$step" (expected one of C D E F G A B)',
+      );
+    }
+    return semitone;
   }
 
-  /// calculateTestes the frequency in Hz (A4 = 440 Hz).
+  /// Calculates the MIDI note number (C4 = 60).
+  /// For microtones, returns the nearest integer value.
+  int get midiNumber {
+    return (octave + 1) * 12 + _stepSemitone + effectiveAlter.round();
+  }
+
+  /// Calculates the frequency in Hz (A4 = 440 Hz).
   double get frequency {
     const a4MidiNumber = 69; // A4
     const a4Frequency = 440.0;
@@ -245,21 +331,18 @@ class Pitch {
   /// Returns the pitch class as an integer 0–11, as per the MEI v5
   /// `pclass` attribute. C=0, C#=1, D=2, ..., B=11.
   int get pitchClass {
-    const stepToSemitone = {
-      'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11,
-    };
-    return ((stepToSemitone[step]! + effectiveAlter.round()) % 12 + 12) % 12;
+    return ((_stepSemitone + effectiveAlter.round()) % 12 + 12) % 12;
   }
 
-  /// Returns the fixed-of the solmization name of this pitch (of the, re, mi, fa, sol, la, si).
-  /// Equivalent to the MEI v5 solmization system.
+  /// Returns the fixed-do solmization name of this pitch (do, re, mi, fa, sol,
+  /// la, si). Equivalent to the MEI v5 solmization system.
   String get solmizationName {
     final idx = _stepToSolmIndex[step] ?? 0;
     return _solmizationNames[idx];
   }
 
-  /// Constructs a [Pitch] from a fixed-of the solmization syllable.
-  /// [syllable] may be 'of the', 're', 'mi', 'fa', 'sol', 'la', 'si' (or 'ti').
+  /// Constructs a [Pitch] from a fixed-do solmization syllable.
+  /// [syllable] may be 'do', 're', 'mi', 'fa', 'sol', 'la', 'si' (or 'ti').
   /// [octave] is the octave number; [alter] is the chromatic alteration.
   factory Pitch.fromSolmization(
     String syllable, {
@@ -300,23 +383,29 @@ class Pitch {
     return value > 0 ? '+$value' : '$value';
   }
 
+  /// Two pitches are equal when they share the same [step], [octave] and
+  /// [effectiveAlter].
+  ///
+  /// [accidentalType] is deliberately excluded so that spelling-equivalent
+  /// pitches such as `Pitch(step: 'F', octave: 4, alter: 1.0)` and
+  /// `Pitch.withAccidental(step: 'F', octave: 4, accidentalType: sharp)`
+  /// compare equal; the field is still preserved on the object.
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     return other is Pitch &&
         other.step == step &&
         other.octave == octave &&
-        other.alter == alter &&
-        other.accidentalType == accidentalType;
+        other.effectiveAlter == effectiveAlter;
   }
 
   @override
   int get hashCode {
-    return Object.hash(step, octave, alter, accidentalType);
+    return Object.hash(step, octave, effectiveAlter);
   }
 }
 
-/// Mapping from note name to solmization index (fixed-of the).
+/// Mapping from note name to solmization index (fixed-do).
 const Map<String, int> _stepToSolmIndex = {
   'C': 0, 'D': 1, 'E': 2, 'F': 3, 'G': 4, 'A': 5, 'B': 6,
 };
@@ -399,10 +488,17 @@ class PitchUtils {
     }
   }
 
-  /// calculateTestes the interval in semitones between two pitches.
+  /// Calculates the interval in semitones between two pitches.
+  ///
+  /// [Pitch.midiNumber] already rounds the alteration into the note number, so
+  /// only the microtonal remainder of each pitch is added on top of the MIDI
+  /// difference (adding the full alteration again would double-count it).
   static double intervalInSemitones(Pitch pitch1, Pitch pitch2) {
+    final fraction1 = pitch1.effectiveAlter - pitch1.effectiveAlter.round();
+    final fraction2 = pitch2.effectiveAlter - pitch2.effectiveAlter.round();
     return (pitch2.midiNumber - pitch1.midiNumber).toDouble() +
-        (pitch2.alter - pitch1.alter);
+        fraction2 -
+        fraction1;
   }
 
   /// Transposes a pitch by a number of semitones.

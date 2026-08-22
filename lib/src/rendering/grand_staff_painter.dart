@@ -2,7 +2,8 @@
 //
 // Multi-staff rendering for one or more [StaffGroup]s (grand staff, SATB, or a
 // full multi-section score). Lays out each staff, aligns them on a shared
-// horizontal grid (content start and barlines line up across all staves),
+// horizontal grid (every MUSICAL ONSET lines up across all staves, not just
+// the barlines),
 // stacks them vertically, wraps into stacked systems when the music is too wide
 // for one line, and draws each group's brace/bracket plus continuous system
 // barlines (and cross-staff beams).
@@ -52,9 +53,55 @@ class GrandStaffPainter extends CustomPainter {
   /// All staves across all groups, top to bottom.
   List<Staff> get _allStaves => [for (final g in groups) ...g.staves];
 
-  /// Total painted height (all systems stacked).
+  /// Aligned, positioned elements for one system, per staff (top to bottom).
+  ///
+  /// Exposed so the shared-time-grid invariant can be checked end to end: two
+  /// staves must place events with the same [PositionedElement.onset] at the
+  /// same X. Before 2.7.0 they did not — with four quarters against two halves,
+  /// beat 3 landed 38 px (more than three staff spaces) apart.
+  @visibleForTesting
+  List<List<PositionedElement>> alignedSystem(int systemIndex) => [
+        for (final layout in _systems[systemIndex]) layout.elements,
+      ];
+
+  /// Number of wrapped systems this painter produced.
+  @visibleForTesting
+  int get systemCount => _systems.length;
+
+  /// Total painted height (all systems stacked), including the headroom the
+  /// music actually needs above the top staff and below the bottom one.
+  ///
+  /// A flat margin cut off high ledger-line notes, boxed rehearsal marks and
+  /// multi-verse lyrics; `LayoutEngine.contentTopOverflow` /
+  /// `contentBottomOverflow` measure the real reach.
   double get totalHeight =>
-      _systems.length * systemBlockHeight + staffSpace * 2.0;
+      _systems.length * systemBlockHeight +
+      staffSpace * 2.0 +
+      contentTopInset +
+      _contentBottomInset;
+
+  /// Extra space reserved above the first staff. The paint pass shifts the
+  /// whole drawing down by this much.
+  late final double contentTopInset = _maxOverflow(
+    (engine, elements) => engine.contentTopOverflow(elements),
+  );
+
+  late final double _contentBottomInset = _maxOverflow(
+    (engine, elements) => engine.contentBottomOverflow(elements),
+  );
+
+  double _maxOverflow(
+    double Function(LayoutEngine, List<PositionedElement>) measure,
+  ) {
+    var worst = 0.0;
+    for (final system in _systems) {
+      for (final layout in system) {
+        final value = measure(layout.engine, layout.elements);
+        if (value > worst) worst = value;
+      }
+    }
+    return worst;
+  }
 
   /// Baseline-to-baseline distance between the tops of consecutive systems.
   double get systemBlockHeight =>
@@ -85,19 +132,22 @@ class GrandStaffPainter extends CustomPainter {
   List<_StaffLayout> _layoutSystem(int a, int b) {
     final layouts = [
       for (final staff in _allStaves)
-        _layoutSubStaff(_systemStaff(staff, a, b)),
+        _layoutSubStaff(_systemStaff(staff, a, b), measureOffset: a),
     ];
     _alignStaves(layouts);
     return layouts;
   }
 
-  _StaffLayout _layoutSubStaff(Staff staff) {
+  _StaffLayout _layoutSubStaff(Staff staff, {int measureOffset = 0}) {
     final engine = LayoutEngine(
       staff,
       // Very wide so a system never wraps internally — breaks are decided here.
       availableWidth: (availableWidth - _bracePad) * 1000,
       staffSpace: staffSpace,
       metadata: metadata,
+      // Indices restart at 0 inside a system's sub-staff; this restores the
+      // absolute bar number without touching the caller's Measure objects.
+      measureNumberOffset: measureOffset,
     );
     final result = engine.layoutWithSignature();
     return _StaffLayout(result.elements, engine);
@@ -194,74 +244,124 @@ class GrandStaffPainter extends CustomPainter {
 
   // --- Horizontal alignment -------------------------------------------------
 
-  /// Per-staff anchor X positions: the system left margin, the content-start
-  /// (first note/rest/chord) and each barline X. Returns the anchors and the
-  /// indices into [elements] that mark each barline.
-  List<double> _anchorsOf(List<PositionedElement> elements) {
-    final anchors = <double>[];
-    double? contentStart;
+  /// Per-staff mapping from MUSICAL ONSET to X.
+  ///
+  /// Onsets are whole-note offsets from the start of the (sub-)staff, carried
+  /// on every [PositionedElement] by the layout engine. When two staves have an
+  /// event at the same onset, those events are simultaneous and MUST share an
+  /// X — that is the whole point of a system.
+  List<({double onset, double x})> _onsetAnchorsOf(
+    List<PositionedElement> elements,
+  ) {
+    final byOnset = <double, double>{};
     for (final pe in elements) {
       final e = pe.element;
-      if (contentStart == null &&
-          (e is Note || e is Rest || e is Chord)) {
-        contentStart = pe.position.dx;
-      }
-      if (e is Barline) {
-        anchors.add(pe.position.dx);
+      final counts = e is Note ||
+          e is Rest ||
+          e is Chord ||
+          e is Tuplet ||
+          e is Barline;
+      if (!counts) continue;
+      // Quantise so floating-point noise never splits one musical instant.
+      final key = (pe.onset * 1024).round() / 1024.0;
+      final current = byOnset[key];
+      if (current == null || pe.position.dx < current) {
+        byOnset[key] = pe.position.dx;
       }
     }
-    // anchors currently = barline Xs; prepend content start.
-    return [contentStart ?? 0.0, ...anchors];
+    final keys = byOnset.keys.toList()..sort();
+    return [for (final k in keys) (onset: k, x: byOnset[k]!)];
   }
 
-  /// Aligns every staff so their content-start and barlines share the same X
-  /// (the maximum across staves), remapping each staff's elements with a
-  /// piecewise-linear map between the per-staff and shared anchors.
+  /// X this staff would use for [onset], interpolating between its own anchors.
+  double _xAtOnset(List<({double onset, double x})> anchors, double onset) {
+    if (anchors.isEmpty) return 0.0;
+    if (onset <= anchors.first.onset) return anchors.first.x;
+    if (onset >= anchors.last.onset) return anchors.last.x;
+    for (var i = 0; i < anchors.length - 1; i++) {
+      final lo = anchors[i];
+      final hi = anchors[i + 1];
+      if (onset < lo.onset || onset > hi.onset) continue;
+      final span = hi.onset - lo.onset;
+      if (span.abs() < 1e-9) return lo.x;
+      return lo.x + (hi.x - lo.x) * ((onset - lo.onset) / span);
+    }
+    return anchors.last.x;
+  }
+
+  /// Puts every staff of a system on ONE shared horizontal time grid.
+  ///
+  /// This used to align only the content-start and the BARLINES, remapping the
+  /// inside of each measure proportionally to each staff's own spacing. Inside
+  /// a bar the staves therefore disagreed: with four quarters in the treble and
+  /// two halves in the bass, beat 3 landed 38 px apart (>3 staff spaces) — the
+  /// single most damaging engraving defect for keyboard and ensemble music.
+  ///
+  /// Now the anchors are MUSICAL ONSETS. For every onset present on any staff
+  /// the shared X is the widest requirement across staves (so nothing is
+  /// squeezed), and each staff is remapped piecewise-linearly onto that grid.
+  /// Because the shared X is the max of monotonic functions it is itself
+  /// monotonic, so the remap can never reorder a staff's events.
   void _alignStaves(List<_StaffLayout> layouts) {
     if (layouts.isEmpty) return;
 
-    final perStaffAnchors = [for (final l in layouts) _anchorsOf(l.elements)];
-    // Number of shared anchors = min across staves (align the common prefix).
-    var anchorCount = perStaffAnchors.first.length;
-    for (final a in perStaffAnchors) {
-      if (a.length < anchorCount) anchorCount = a.length;
-    }
-    if (anchorCount == 0) return;
+    final perStaff = [for (final l in layouts) _onsetAnchorsOf(l.elements)];
+    if (perStaff.every((a) => a.isEmpty)) return;
 
-    // Shared anchor = max across staves at each index (widest wins → no clash).
-    final shared = <double>[];
-    for (var k = 0; k < anchorCount; k++) {
-      var maxX = perStaffAnchors.first[k];
-      for (final a in perStaffAnchors) {
-        if (a[k] > maxX) maxX = a[k];
+    // Union of every onset on any staff of this system.
+    final onsetSet = <double>{};
+    for (final anchors in perStaff) {
+      for (final a in anchors) {
+        onsetSet.add(a.onset);
       }
-      shared.add(maxX);
+    }
+    final onsets = onsetSet.toList()..sort();
+    if (onsets.isEmpty) return;
+
+    // Shared grid: the widest X any staff needs at that instant.
+    final shared = <double>[];
+    for (final onset in onsets) {
+      var maxX = double.negativeInfinity;
+      for (var s = 0; s < perStaff.length; s++) {
+        if (perStaff[s].isEmpty) continue;
+        final x = _xAtOnset(perStaff[s], onset);
+        if (x > maxX) maxX = x;
+      }
+      shared.add(maxX.isFinite ? maxX : 0.0);
+    }
+    // Enforce strict monotonicity (defensive: equal onsets from rounding).
+    for (var k = 1; k < shared.length; k++) {
+      if (shared[k] < shared[k - 1]) shared[k] = shared[k - 1];
     }
 
-    // Remap each staff's element X by piecewise-linear interpolation between
-    // its own anchors and the shared anchors. The first segment is from the
-    // system left margin (constant) to the first anchor.
-    const double leftMargin = 0.0; // both spaces share the same left origin
+    const double leftMargin = 0.0;
+
     for (var s = 0; s < layouts.length; s++) {
-      final anchors = perStaffAnchors[s];
+      final anchors = perStaff[s];
+      if (anchors.isEmpty) continue;
+
+      // This staff's own X at each shared onset -> the shared X there.
+      final from = <double>[];
+      for (final onset in onsets) {
+        from.add(_xAtOnset(anchors, onset));
+      }
+
       double remap(double x) {
-        // Segment 0: [leftMargin, anchors[0]] -> [leftMargin, shared[0]].
-        if (x <= anchors[0]) {
-          final lo = leftMargin, hi = anchors[0];
-          final sLo = leftMargin, sHi = shared[0];
+        if (x <= from.first) {
+          final lo = leftMargin, hi = from.first;
+          final sLo = leftMargin, sHi = shared.first;
           if (hi - lo < 1e-6) return sLo;
           return sLo + (x - lo) / (hi - lo) * (sHi - sLo);
         }
-        for (var k = 0; k < anchorCount - 1; k++) {
-          if (x <= anchors[k + 1]) {
-            final lo = anchors[k], hi = anchors[k + 1];
+        for (var k = 0; k < from.length - 1; k++) {
+          if (x <= from[k + 1]) {
+            final lo = from[k], hi = from[k + 1];
             final sLo = shared[k], sHi = shared[k + 1];
             if (hi - lo < 1e-6) return sLo;
             return sLo + (x - lo) / (hi - lo) * (sHi - sLo);
           }
         }
-        // Beyond the last shared anchor: shift by the last anchor's delta.
-        return x + (shared[anchorCount - 1] - anchors[anchorCount - 1]);
+        return x + (shared.last - from.last);
       }
 
       final remapped = <PositionedElement>[];
@@ -272,10 +372,16 @@ class GrandStaffPainter extends CustomPainter {
           Offset(nx, pe.position.dy),
           system: pe.system,
           voiceNumber: pe.voiceNumber,
+          onset: pe.onset,
+          measureIndex: pe.measureIndex,
         ));
         // Keep the engine's note-X map (used by beams) in sync.
         if (pe.element is Note) {
           layouts[s].engine.overrideNoteX(pe.element as Note, nx);
+        } else if (pe.element is Chord) {
+          for (final n in (pe.element as Chord).notes) {
+            layouts[s].engine.overrideNoteX(n, nx);
+          }
         }
       }
       layouts[s] = _StaffLayout(remapped, layouts[s].engine);
@@ -288,8 +394,9 @@ class GrandStaffPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (metadata.isNotLoaded || _systems.isEmpty) return;
 
-    // Shift the whole system right to leave room for the brace/bracket.
-    canvas.translate(_bracePad, 0);
+    // Shift the whole system right to leave room for the brace/bracket, and
+    // down by whatever headroom the music above the top staff needs.
+    canvas.translate(_bracePad, contentTopInset);
 
     final baseline0 = staffSpace * 5.0;
     for (var sysIdx = 0; sysIdx < _systems.length; sysIdx++) {
@@ -335,6 +442,8 @@ class GrandStaffPainter extends CustomPainter {
         // don't draw their own (which would double up and not connect).
         renderBarlines: false,
         skipNotes: skipPerStaff[i],
+        // Bar numbers belong to the SYSTEM, so only the top staff prints them.
+        renderMeasureNumbers: i == 0,
       );
       canvas.restore();
     }
@@ -546,8 +655,11 @@ class GrandStaffPainter extends CustomPainter {
               text: TextSpan(
                 text: noteheadChar,
                 style: TextStyle(
-                  fontFamily: 'Bravura',
-                  package: 'flutter_notemus',
+                  // Never name the font literally: the engine is SMuFL-based,
+                  // not Bravura-based, and the descriptor is what makes a
+                  // different SMuFL font swappable.
+                  fontFamily: metadata.font.fontFamily,
+                  package: metadata.font.fontPackage,
                   fontSize: fontSize,
                   color: theme.noteheadColor,
                   height: 1.0,

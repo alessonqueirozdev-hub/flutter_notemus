@@ -5,9 +5,17 @@ import 'package:flutter/material.dart';
 import 'package:printing/printing.dart';
 import 'package:pdf/pdf.dart';
 import '../../core/core.dart';
+import '../smufl/smufl_metadata_loader.dart';
+import '../theme/music_score_theme.dart';
 import 'pdf_exporter.dart';
 
 /// Widget for previewing and printing music scores as PDF
+///
+/// The preview shows the real engraved notation: [PdfExporter] rasterizes the
+/// score through the same layout/rendering pipeline as the `MusicScore` widget
+/// and embeds it page by page. Running inside a Flutter app, the engine needed
+/// for rasterization is always available here; the SMuFL metadata is loaded on
+/// demand when [smuflMetadata] is not supplied.
 ///
 /// Provides a full-featured PDF preview with:
 /// - Zoom controls
@@ -42,6 +50,14 @@ class PdfPreviewWidget extends StatelessWidget {
   /// Title for the preview screen
   final String? title;
 
+  /// SMuFL metadata used to engrave the notation.
+  ///
+  /// Defaults to the process-wide instance, loaded on demand.
+  final SmuflMetadata? smuflMetadata;
+
+  /// Theme applied while rendering the notation into the PDF.
+  final MusicScoreTheme theme;
+
   const PdfPreviewWidget({
     super.key,
     required this.score,
@@ -49,6 +65,8 @@ class PdfPreviewWidget extends StatelessWidget {
     this.includeMetadata = true,
     this.quality = const PdfQualitySettings(),
     this.title,
+    this.smuflMetadata,
+    this.theme = const MusicScoreTheme(),
   });
 
   @override
@@ -76,15 +94,21 @@ class PdfPreviewWidget extends StatelessWidget {
     );
   }
 
-  /// Generate PDF for preview
+  /// Generate PDF for preview (engraved notation, not a placeholder).
   Future<Uint8List> _generatePdf(PdfPageFormat format) async {
     final exporter = PdfExporter(
       score: score,
       pageFormat: format,
       includeMetadata: includeMetadata,
       quality: quality,
+      metadata: smuflMetadata,
+      theme: theme,
     );
-    return exporter.export();
+    final bytes = await exporter.export();
+    for (final warning in exporter.warnings) {
+      debugPrint('PdfPreviewWidget: $warning');
+    }
+    return bytes;
   }
 
   /// Generate appropriate file name
@@ -114,7 +138,23 @@ class PdfPreviewWidget extends StatelessWidget {
 }
 
 /// Simple print dialog for scores
+///
+/// All entry points produce the engraved notation via [PdfExporter]; when the
+/// notation cannot be rasterized the user is told through a `SnackBar` instead
+/// of silently receiving an empty score.
 class ScorePrintDialog {
+  /// Reports `PdfExporter.warnings` to the user, if there are any.
+  static void _reportWarnings(BuildContext context, PdfExporter exporter) {
+    if (exporter.warnings.isEmpty) return;
+    for (final warning in exporter.warnings) {
+      debugPrint('ScorePrintDialog: $warning');
+    }
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(exporter.warnings.first)),
+    );
+  }
+
   /// Show print dialog for a score
   ///
   /// Example:
@@ -131,6 +171,8 @@ class ScorePrintDialog {
     PdfPageFormat format = PdfPageFormat.a4,
     bool includeMetadata = true,
     PdfQualitySettings quality = const PdfQualitySettings(),
+    SmuflMetadata? smuflMetadata,
+    MusicScoreTheme theme = const MusicScoreTheme(),
   }) async {
     try {
       final exporter = PdfExporter(
@@ -138,9 +180,12 @@ class ScorePrintDialog {
         pageFormat: format,
         includeMetadata: includeMetadata,
         quality: quality,
+        metadata: smuflMetadata,
+        theme: theme,
       );
 
       final pdfBytes = await exporter.export();
+      if (context.mounted) _reportWarnings(context, exporter);
 
       await Printing.layoutPdf(
         onLayout: (_) => Future.value(pdfBytes),
@@ -162,15 +207,20 @@ class ScorePrintDialog {
     required Score score,
     PdfPageFormat format = PdfPageFormat.a4,
     bool includeMetadata = true,
+    SmuflMetadata? smuflMetadata,
+    MusicScoreTheme theme = const MusicScoreTheme(),
   }) async {
     try {
       final exporter = PdfExporter(
         score: score,
         pageFormat: format,
         includeMetadata: includeMetadata,
+        metadata: smuflMetadata,
+        theme: theme,
       );
 
       final pdfBytes = await exporter.export();
+      if (context.mounted) _reportWarnings(context, exporter);
 
       await Printing.sharePdf(
         bytes: pdfBytes,
@@ -194,15 +244,20 @@ class ScorePrintDialog {
     PdfPageFormat format = PdfPageFormat.a4,
     bool includeMetadata = true,
     String? customFileName,
+    SmuflMetadata? smuflMetadata,
+    MusicScoreTheme theme = const MusicScoreTheme(),
   }) async {
     try {
       final exporter = PdfExporter(
         score: score,
         pageFormat: format,
         includeMetadata: includeMetadata,
+        metadata: smuflMetadata,
+        theme: theme,
       );
 
       final pdfBytes = await exporter.export();
+      if (context.mounted) _reportWarnings(context, exporter);
 
       final fileName = customFileName ??
           '${score.title?.replaceAll(' ', '_') ?? 'score'}.pdf';
