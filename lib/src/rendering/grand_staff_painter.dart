@@ -431,6 +431,11 @@ class GrandStaffPainter extends CustomPainter {
           for (final n in (pe.element as Chord).notes) {
             layouts[s].engine.overrideNoteX(n, nx);
           }
+        } else if (pe.element is Tuplet) {
+          // A tuplet's children sit on their own grid anchored on the tuplet;
+          // remapping only the tuplet left them at pre-alignment coordinates,
+          // which beams and hit-testing read.
+          layouts[s].engine.overrideTupletX(pe.element as Tuplet, nx);
         }
       }
       layouts[s] = _StaffLayout(remapped, layouts[s].engine);

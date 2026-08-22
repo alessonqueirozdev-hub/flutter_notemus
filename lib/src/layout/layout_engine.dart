@@ -560,6 +560,14 @@ class LayoutEngine {
     if (_noteXPositions.containsKey(note)) _noteXPositions[note] = x;
   }
 
+  /// Re-anchors every note inside [tuplet] after the tuplet itself has moved.
+  ///
+  /// The multi-staff aligner remaps X for `Note` and `Chord` elements, but a
+  /// tuplet is positioned as one element and its children live on their own
+  /// grid, so they kept their PRE-ALIGNMENT coordinates on a grand staff — and
+  /// beams, hit-testing and the public position API all read those.
+  void overrideTupletX(Tuplet tuplet, double x) => _reanchorTupletX(tuplet, x);
+
   List<PositionedElement> layout() {
     return _layoutInternal();
   }
