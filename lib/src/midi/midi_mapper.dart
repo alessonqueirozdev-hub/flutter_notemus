@@ -337,16 +337,6 @@ class _TrackEventBuilder {
   final Map<int, int> _voiceVelocity = <int, int>{};
   final Map<_TieKey, _TieState> _openTies = <_TieKey, _TieState>{};
 
-  /// Clef in force at the current element, tracked in reading order (a clef may
-  /// change mid-measure).
-  ///
-  /// Playback no longer derives pitch from it (see the class dartdoc), but the
-  /// tracking is kept because percussion mapping and staff-line-addressed
-  /// instruments need clef context, and re-deriving it later would mean walking
-  /// the measure twice.
-  // ignore: unused_field
-  Clef? _activeClef;
-
   /// Deduplicates the out-of-range warnings (a repeated section would otherwise
   /// report the same note once per pass).
   final Set<String> _reportedWarnings = <String>{};
@@ -483,9 +473,13 @@ class _TrackEventBuilder {
     required double tupletMultiplier,
   }) {
     if (element is Clef) {
-      // A clef may appear mid-measure; from here on it defines the sounding
-      // octave of every following note (see the MidiMapper class doc).
-      _activeClef = element;
+      // ADR-003 took the clef off the MIDI axis: an octave-transposing clef
+      // changes only where a pitch is PRINTED, never what it sounds, so a clef
+      // contributes no event and no state here. Until 2.7.1 this branch wrote a
+      // `_activeClef` field that nothing ever read (measured: 1 write at this
+      // line, 0 reads in lib/ and test/) and that carried an
+      // `// ignore: unused_field` to silence the analyzer. Both are gone; the
+      // clef still consumes zero ticks.
       return 0;
     }
 

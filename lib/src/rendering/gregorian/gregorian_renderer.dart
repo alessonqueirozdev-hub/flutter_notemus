@@ -18,6 +18,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/core/core.dart';
 
+import '../text_font.dart';
 import 'chant_clef.dart';
 import 'greciliae_font.dart';
 
@@ -34,6 +35,15 @@ class GregorianTheme {
   final double staffSpace;
 
   final double lyricSize;
+
+  /// Text face for the chant syllables and word-internal hyphens.
+  ///
+  /// Null means "use the package text chain" — see
+  /// `lib/src/rendering/text_font.dart`. That chain names four faces the package
+  /// does NOT ship (`Academico`, `Century Schoolbook`, `Edwin`, `serif`), so on
+  /// a host that provides none of them the syllables render as `.notdef` boxes:
+  /// measured 2 solid box runs / 2235 filled px in the probe chant. Name a face
+  /// here, or inject one process-wide with `MusicTextFont.use(...)`.
   final String? lyricTextFamily;
 
   const GregorianTheme({
@@ -735,19 +745,29 @@ class GregorianPainter extends CustomPainter {
     tp.paint(canvas, Offset(x, y - ascent + anchor * _scale));
   }
 
+  /// Style shared by the syllable text and the word-internal hyphen.
+  ///
+  /// Routed through [MusicTextFallback.withMusicTextFallback] like every other
+  /// text site in the package. Before 2.7.1 this style carried its OWN chain,
+  /// `['Georgia', 'Times New Roman', 'serif']`, with a null primary family —
+  /// which meant chant lyrics bypassed the package chain entirely. The pixel
+  /// proof: rendering one chant four ways, varying only which text face was
+  /// registered (nothing / 'Academico' / 'serif' / an app face), produced four
+  /// BYTE-IDENTICAL PNGs with 20 solid `.notdef` boxes each — registering the
+  /// face the package asks for could not reach this painter. The local chain is
+  /// gone rather than merged because its three names are no more shipped than
+  /// the package's four, and putting them first would have shadowed the
+  /// injection point; an app that wants Georgia now says so, via
+  /// [GregorianTheme.lyricTextFamily] or `MusicTextFont.use('Georgia')`.
+  TextStyle get _lyricStyle => TextStyle(
+        fontSize: theme.lyricSize,
+        color: theme.color,
+        fontFamily: theme.lyricTextFamily,
+      ).withMusicTextFallback();
+
   void _lyric(Canvas canvas, String text, double centerX, double topY) {
     final tp = TextPainter(
-      text: TextSpan(
-        text: text,
-        style: TextStyle(
-          fontSize: theme.lyricSize,
-          color: theme.color,
-          fontFamily: theme.lyricTextFamily,
-          fontFamilyFallback: theme.lyricTextFamily == null
-              ? const ['Georgia', 'Times New Roman', 'serif']
-              : null,
-        ),
-      ),
+      text: TextSpan(text: text, style: _lyricStyle),
       textDirection: TextDirection.ltr,
     )..layout();
     tp.paint(canvas, Offset(centerX - tp.width / 2, topY));
@@ -785,17 +805,7 @@ class GregorianPainter extends CustomPainter {
   /// together. [x1] and [x2] are the centres of the two syllable texts.
   void _hyphen(Canvas canvas, double x1, double x2, double topY) {
     final tp = TextPainter(
-      text: TextSpan(
-        text: '-',
-        style: TextStyle(
-          fontSize: theme.lyricSize,
-          color: theme.color,
-          fontFamily: theme.lyricTextFamily,
-          fontFamilyFallback: theme.lyricTextFamily == null
-              ? const ['Georgia', 'Times New Roman', 'serif']
-              : null,
-        ),
-      ),
+      text: TextSpan(text: '-', style: _lyricStyle),
       textDirection: TextDirection.ltr,
     )..layout();
 

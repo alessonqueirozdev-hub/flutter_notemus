@@ -12,7 +12,6 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
-import 'package:flutter_notemus/src/rendering/grand_staff_painter.dart';
 
 Note _n(String step, int octave, [DurationType d = DurationType.quarter]) =>
     Note(pitch: Pitch(step: step, octave: octave), duration: Duration(d));

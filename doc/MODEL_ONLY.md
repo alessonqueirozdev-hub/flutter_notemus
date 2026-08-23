@@ -39,6 +39,7 @@ A class referenced by **only its own file** is unwired.
 | `IntelligentSpacingEngine` | `src/layout/spacing/spacing_engine.dart` | owns the square-root spacing law the layout applies |
 | `OpticalCompensator` | `src/layout/spacing/optical_compensation.dart` | exposed through the spacing engine's optical adjustment |
 | `SkyBottomLineCalculator` | `src/layout/skyline_calculator.dart` | already wired in 2.6.0 — slur collision avoidance |
+| `MeiHeader`, `FileDescription`, `WorkList`, `Contributor` | `core/mei_header.dart` | **imported** since 2.7.0: `MEIParser.scoreFromMei` reads `<meiHead>` into `Score.meiHeader`, and `MEIParser.headerFromMei` returns it alone. Measured on a `<fileDesc><titleStmt>` carrying `<title>Ave Maria</title><composer>Franz Schubert</composer>`: `fileDescription.title == 'Ave Maria'` and one `Contributor('Franz Schubert', ResponsibilityRole.composer)`. It is **never written back** — there is no MEI serializer in the package, so a header survives an import and is lost on any export. |
 
 ## TOOLING — real code, deliberately off the render path
 
@@ -59,7 +60,6 @@ anywhere in the README, and this table is what that claim is checked against.
 | Figured bass | `FiguredBass`, `FigureElement` | `core/figured_bass.dart` |
 | Harmonic analysis | `HarmonicLabel`, `ScaleDegree`, `ChordTable`, `IntervalMeasure` | `core/harmonic_analysis.dart` |
 | Mensural notation | `MensuralNote`, `MensuralRest`, `Ligature`, `Mensur` | `core/mensural.dart` |
-| MEI header / FRBR | `MeiHeader`, `FileDescription`, `WorkList` | `core/mei_header.dart` |
 | Tablature (MEI shape) | `TabString`, `TabTuning`, `TabDurSym`, `TabNote`, `TabGrp` | `core/tablature.dart` |
 | Animation | `AnimationConfig`, `ElementAnimationState` | `src/animation/animation_config.dart` |
 | Adaptive theming | `AdaptiveMusicScoreTheme` | `src/theme/adaptive_theme.dart` |

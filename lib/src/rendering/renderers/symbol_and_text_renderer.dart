@@ -35,6 +35,29 @@ class SymbolAndTextRenderer {
   ///
   /// Canonical list lives in `lib/src/rendering/text_font.dart` so every text
   /// site in the package shares one chain; this stays as the published name.
+  ///
+  /// DELIBERATELY NOT APPLIED INSIDE THIS CLASS ANY MORE (2.7.2, finding M-30).
+  /// Every style built here now ends in [MusicTextFallback.withMusicTextFallback]
+  /// and nothing else touches `fontFamilyFallback`. The reason is the extension's
+  /// documented contract — *"a caller-supplied family or fallback chain always
+  /// wins"* — which makes pre-supplying this chain self-defeating: the style
+  /// arrived at the injection point already carrying a chain, so
+  /// `withMusicTextFallback()` treated it as a deliberate caller choice, returned
+  /// it untouched, and [MusicTextFont.use] could never promote an app face to
+  /// primary. Ten sites in this file did exactly that.
+  ///
+  /// Measured before the fix: the same score rasterised with and without
+  /// `MusicTextFont.use('AppSerif')` produced **76,120 px of ink in BOTH cases**
+  /// (byte-identical PNGs) for tempo marks, expression text, word dynamics and
+  /// repeat instructions — the escape hatch was inert on every prose string this
+  /// class draws. After the fix the two rasters differ (see
+  /// `test/invariants/w5_text_font_hatch_test.dart`, which asserts the ink
+  /// changes and that the `.notdef` box count drops to 0 once a real face is
+  /// injected).
+  ///
+  /// The constant stays public and unchanged because apps reference it when
+  /// building their own [MusicScoreTheme] text styles; it is simply no longer
+  /// the mechanism this class uses.
   static const List<String> smuflTextFontFallback = kMusicTextFontFallback;
 
   final StaffCoordinateSystem coordinates;
@@ -267,9 +290,8 @@ class SymbolAndTextRenderer {
               fontSize: 15,
               fontStyle: FontStyle.italic,
               fontWeight: FontWeight.w600,
-              fontFamilyFallback: smuflTextFontFallback,
             ))
-        .copyWith(color: baseColor, fontFamilyFallback: smuflTextFontFallback)
+        .copyWith(color: baseColor)
         .withMusicTextFallback();
   }
 
@@ -494,11 +516,9 @@ class SymbolAndTextRenderer {
               fontSize: glyphSize * fontScale,
               fontStyle: FontStyle.italic,
               fontWeight: FontWeight.w500,
-              fontFamilyFallback: smuflTextFontFallback,
             ))
         .copyWith(
           color: baseColor,
-          fontFamilyFallback: smuflTextFontFallback,
           fontSize:
               (theme.dynamicTextStyle?.fontSize ??
               theme.expressionTextStyle?.fontSize ??
@@ -525,7 +545,6 @@ class SymbolAndTextRenderer {
               fontSize: coordinates.staffSpace * 1.1,
               fontStyle: FontStyle.italic,
               fontWeight: FontWeight.w500,
-              fontFamilyFallback: smuflTextFontFallback,
             );
         break;
       case TextType.rehearsal:
@@ -538,7 +557,6 @@ class SymbolAndTextRenderer {
           fontSize: coordinates.staffSpace * 1.5,
           fontStyle: FontStyle.normal,
           fontWeight: FontWeight.w700,
-          fontFamilyFallback: smuflTextFontFallback,
         ).merge(theme.rehearsalTextStyle);
         break;
       default:
@@ -547,7 +565,6 @@ class SymbolAndTextRenderer {
             TextStyle(
               fontSize: coordinates.staffSpace,
               fontWeight: FontWeight.w500,
-              fontFamilyFallback: smuflTextFontFallback,
             );
         break;
     }
@@ -568,7 +585,6 @@ class SymbolAndTextRenderer {
         .copyWith(
           color: baseStyle.color ?? baseColor,
           fontFamily: text.fontFamily ?? baseStyle.fontFamily,
-          fontFamilyFallback: smuflTextFontFallback,
           fontSize: text.fontSize ?? baseStyle.fontSize,
           fontStyle: fontStyle,
           fontWeight: fontWeight,
@@ -772,12 +788,10 @@ class SymbolAndTextRenderer {
               fontSize: coordinates.staffSpace * 1.3,
               fontWeight: FontWeight.w600,
               fontStyle: FontStyle.italic,
-              fontFamilyFallback: smuflTextFontFallback,
               letterSpacing: 0.15,
             ))
         .copyWith(
           color: theme.tempoTextStyle?.color ?? baseColor,
-          fontFamilyFallback: smuflTextFontFallback,
         )
         .withMusicTextFallback();
   }
@@ -863,7 +877,9 @@ class SymbolAndTextRenderer {
     final tp = TextPainter(
       text: TextSpan(
         text: octaveMark.text,
-        style: style.copyWith(color: octaveColor),
+        // The 8va/8vb label is TEXT, not a SMuFL glyph, and was one of two
+        // sites in this file still handing a bare style to a TextPainter.
+        style: style.copyWith(color: octaveColor).withMusicTextFallback(),
       ),
       textAlign: TextAlign.left,
       textDirection: TextDirection.ltr,
@@ -941,14 +957,15 @@ class SymbolAndTextRenderer {
       canvas.drawLine(Offset(xRight, yTop), Offset(xRight, yBottom), paint);
     }
 
-    // Label text
+    // Label text. Named no family before 2.7.1, so an analysis bracket exported
+    // headlessly rendered its label as `.notdef` boxes.
     final tp = TextPainter(
       text: TextSpan(
         text: bracket.displayLabel,
         style: TextStyle(
           fontSize: coordinates.staffSpace * 1.1,
           color: theme.barlineColor,
-        ),
+        ).withMusicTextFallback(),
       ),
       textDirection: TextDirection.ltr,
     );

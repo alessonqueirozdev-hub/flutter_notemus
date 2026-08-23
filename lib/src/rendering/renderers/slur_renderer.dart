@@ -51,13 +51,33 @@ class SlurRenderer {
   final double staffBaselineY;
   final SkyBottomLineCalculator? skylineCalculator;
 
+  /// 8va/8vb displacement per note, keyed by note identity (absent = 0).
+  ///
+  /// A slur or tie curve is anchored to the notehead, and the notehead's Y is
+  /// recomputed here from the pitch (positions carry the system baseline, not
+  /// the note's own Y). So this renderer has to apply the SAME bracket
+  /// displacement the layout engine and `NoteRenderer` applied, or every curve
+  /// under an 8va would hang an octave away from the notes it joins.
+  ///
+  /// It is a per-note map, not one int, because a slur legitimately straddles
+  /// the start or the end of a bracket. It is a constructor field rather than a
+  /// parameter because the displacement is needed in a dozen private helpers
+  /// down the endpoint/placement/collision chain; `StaffRenderer` rebuilds this
+  /// renderer once per pass anyway (for the skyline), so there is no stale-state
+  /// window.
+  final Map<Note, int> octaveShifts;
+
   SlurRenderer({
     required this.staffSpace,
     required this.metadata,
     required this.staffBaselineY,
     EngravingRules? rules,
     this.skylineCalculator,
+    this.octaveShifts = const {},
   }) : rules = rules ?? EngravingRules();
+
+  /// Bracket displacement in force for [note] (0 outside every 8va/8vb span).
+  int _octaveShiftOf(Note note) => octaveShifts[note] ?? 0;
 
   /// Space, in staff spaces, kept past the right edge of a system by the
   /// outgoing half of a slur/tie broken by a line break (Behind Bars: the curve
@@ -492,6 +512,7 @@ class SlurRenderer {
       final staffPosition = StaffPositionCalculator.calculate(
         element.pitch,
         clef,
+        extraOctaveShift: _octaveShiftOf(element),
       );
       // Inverse of StaffPositionCalculator.toPixelY.
       return (positioned.position.dy + (staffPosition * staffSpace * 0.5)) -
@@ -860,7 +881,11 @@ class SlurRenderer {
     final placements = <_ElementNotePlacement>[];
     if (element.element is Note) {
       final note = element.element as Note;
-      final staffPosition = StaffPositionCalculator.calculate(note.pitch, clef);
+      final staffPosition = StaffPositionCalculator.calculate(
+        note.pitch,
+        clef,
+        extraOctaveShift: _octaveShiftOf(note),
+      );
       final noteY = StaffPositionCalculator.toPixelY(
         staffPosition,
         staffSpace,
@@ -882,16 +907,14 @@ class SlurRenderer {
     }
 
     final chord = element.element as Chord;
+    int chordPosOf(Note n) => StaffPositionCalculator.calculate(
+      n.pitch,
+      clef,
+      extraOctaveShift: _octaveShiftOf(n),
+    );
     final sortedNotes = [...chord.notes]
-      ..sort(
-        (left, right) => StaffPositionCalculator.calculate(
-          right.pitch,
-          clef,
-        ).compareTo(StaffPositionCalculator.calculate(left.pitch, clef)),
-      );
-    final positions = sortedNotes
-        .map((note) => StaffPositionCalculator.calculate(note.pitch, clef))
-        .toList();
+      ..sort((left, right) => chordPosOf(right).compareTo(chordPosOf(left)));
+    final positions = sortedNotes.map(chordPosOf).toList();
     final stemUp = ChordRenderer.resolveStemDirection(
       chord: chord,
       positions: positions,
@@ -1011,7 +1034,11 @@ class SlurRenderer {
     final metrics = _resolveNoteheadMetrics(notePos, note);
     final effectiveGraceSlur = isGraceSlur || hasGraceOrnament(note);
 
-    final staffPos = StaffPositionCalculator.calculate(note.pitch, clef);
+    final staffPos = StaffPositionCalculator.calculate(
+      note.pitch,
+      clef,
+      extraOctaveShift: _octaveShiftOf(note),
+    );
     final noteY = StaffPositionCalculator.toPixelY(
       staffPos,
       staffSpace,
@@ -1063,8 +1090,13 @@ class SlurRenderer {
     final startStaffPos = StaffPositionCalculator.calculate(
       startNote.pitch,
       clef,
+      extraOctaveShift: _octaveShiftOf(startNote),
     );
-    final endStaffPos = StaffPositionCalculator.calculate(endNote.pitch, clef);
+    final endStaffPos = StaffPositionCalculator.calculate(
+      endNote.pitch,
+      clef,
+      extraOctaveShift: _octaveShiftOf(endNote),
+    );
     final startNoteY = StaffPositionCalculator.toPixelY(
       startStaffPos,
       staffSpace,

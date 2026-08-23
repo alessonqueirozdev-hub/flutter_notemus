@@ -113,9 +113,10 @@ Legend: ✅ modeled **and** imported/rendered · ◐ partial (see note) · ○ *
 ### Key MEI v5 features
 
 > These snippets show the **Dart model API** (constructing objects). For modules
-> marked *Model only* / ◐ above (figured bass, mensural, full `meiHead`, MEI
-> `<neume>`), the objects are constructible but are **not yet imported from MEI
-> XML or rendered** — see the status table.
+> marked *Model only* / ◐ above (figured bass, mensural, MEI `<neume>`), the
+> objects are constructible but are **not yet imported from MEI XML or
+> rendered** — see the status table. `meiHead` is **not** in that group: it is
+> both constructible and parsed.
 
 ```dart
 // xml:id on any element (MEI cross-referencing)
@@ -130,46 +131,50 @@ final percStaff = Staff(lineCount: 1);      // percussion
 final tabStaff  = Staff(lineCount: 6);      // guitar tab
 
 // KeyMode (MEI @mode)
-KeySignature(2, mode: KeyMode.dorian)
+KeySignature(2, mode: KeyMode.dorian);
 
 // Free-time measure (senza misura)
-TimeSignature.free()
+TimeSignature.free();
 
 // Additive meter (3+2+2)/8
-TimeSignature.additive(groups: [3, 2, 2], denominator: 8)
+TimeSignature.additive(groups: [3, 2, 2], denominator: 8);
 
 // Lyrics with syllabification (MEI <syl>)
 Verse(number: 1, syllables: [
   Syllable(text: 'A-', type: SyllableType.initial),
   Syllable(text: 've', type: SyllableType.terminal),
-])
+]);
 
 // Figured bass (MEI <fb>/<f>)
 FiguredBass(figures: [
   FigureElement(numeral: '6'),
   FigureElement(numeral: '4', accidental: FigureAccidental.sharp),
-])
+]);
 
 // Tablature (MEI @tab.fret @tab.string)
 Note(
   pitch: Pitch(step: 'E', octave: 4),
   duration: Duration(DurationType.quarter),
   tabString: 1, tabFret: 0,  // open first string
-)
+);
 
 // Mensural notation
-MensuralNote(pitchName: 'G', octave: 3, duration: MensuralDuration.semibreve)
-Mensur(tempus: 3, prolatio: 2)   // Tempus perfectum, prolatio minor
+MensuralNote(pitchName: 'G', octave: 3, duration: MensuralDuration.semibreve);
+Mensur(tempus: 3, prolatio: 2);  // Tempus perfectum, prolatio minor
 
 // Neume (Gregorian chant)
 Neume(type: NeumeType.pes, components: [
   NeumeComponent(pitchName: 'F', octave: 3, form: NcForm.punctum),
   NeumeComponent(pitchName: 'G', octave: 3, form: NcForm.virga),
-])
+]);
 
-// MEI header (meiHead) — model API; not yet parsed from MEI XML
+// MEI header (meiHead) — constructible here AND parsed from MEI XML since
+// 2.7.0 by MEIParser.scoreFromMei (whole score) / MEIParser.headerFromMei
+// (header alone): fileDesc/titleStmt (title, subtitle, contributors), pubStmt,
+// sourceDesc, encodingDesc, workList and revisionDesc. There is still no MEI
+// writer, so a header is read but never written back out.
 Score(
-  staffGroups: [...],
+  staffGroups: [],
   meiHeader: MeiHeader(
     fileDescription: FileDescription(
       title: 'Ave Maria',
@@ -185,20 +190,20 @@ Score(
     keySignature: KeySignature(0),
     timeSignature: TimeSignature(numerator: 4, denominator: 4),
   ),
-)
+);
 
 // Pitch class (MEI pclass) and solmization
-Pitch(step: 'C', octave: 4).pitchClass        // → 0
-Pitch(step: 'A', octave: 4).pitchClass        // → 9
-Pitch.fromSolmization('sol', octave: 4)       // → G4
-Pitch(step: 'G', octave: 4).solmizationName  // → 'sol'
+Pitch(step: 'C', octave: 4).pitchClass;        // → 0
+Pitch(step: 'A', octave: 4).pitchClass;        // → 9
+Pitch.fromSolmization('sol', octave: 4);       // → G4
+Pitch(step: 'G', octave: 4).solmizationName;   // → 'sol'
 
 // All MEI dur values including breve, long, maxima, and 256–2048
-const Duration(DurationType.breve)
-const Duration(DurationType.long)
-const Duration(DurationType.maxima)
-const Duration(DurationType.twoHundredFiftySixth)
-DurationType.fromMeiValue('2048')  // → DurationType.twoThousandFortyEighth
+const Duration(DurationType.breve);
+const Duration(DurationType.long);
+const Duration(DurationType.maxima);
+const Duration(DurationType.twoHundredFiftySixth);
+DurationType.fromMeiValue('2048');  // → DurationType.twoThousandFortyEighth
 ```
 
 For a full conformance audit see [`doc/MEI_V5_AUDIT.md`](doc/MEI_V5_AUDIT.md).
@@ -207,7 +212,7 @@ For a full conformance audit see [`doc/MEI_V5_AUDIT.md`](doc/MEI_V5_AUDIT.md).
 
 ## Current Status
 
-- Current package release target: `2.7.1`
+- Current package release target: `2.8.0`
 - Previous pub.dev baseline: `2.6.0`
 - **2.7.0 is an audit-remediation release.** An adversarial forensic audit of
   2.6.0 executed the engine against 40+ probe cases and catalogued 42 findings,
@@ -222,6 +227,96 @@ For a full conformance audit see [`doc/MEI_V5_AUDIT.md`](doc/MEI_V5_AUDIT.md).
 - Android native audio backend is active; iOS, macOS, Windows, Linux and Web are
   **no-op stubs** (`nativeIsReady` returns `false`) — tracked as
   [#1](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/1)/[#15](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/15).
+
+### What's New in 2.8.0
+
+A second adversarial re-audit — again by executing the engine — was reconciled
+into one defect list and remediated in four waves, the last of which re-probed
+every claim below before it was written down. Full detail and every measured
+before/after is in the [CHANGELOG](CHANGELOG.md#272---2026-08-22).
+
+- **A layout decision is a VALUE now, not a mutation of your model.**
+  `LayoutEngine.beams` / `LayoutEngine.tupletBeams` publish beam membership,
+  read through `LayoutEngine.beamOf(note)`; nothing writes `Note.beam` any more
+  ([ADR-005](doc/adr/ADR-005-layout-decisions-are-values.md)). Measured on two
+  bars of loose quavers: exporting the same `Staff` used to give **3 349
+  characters and 0 `<beam>` tags before it was laid out and 3 973 characters
+  with 16 `<beam>` tags after** — what a user got in their file depended on
+  whether the score had been displayed. Both exports are now byte-identical
+  before and after `layout()` and before and after a paint. **Read the effective
+  beam through `beamOf`, not off `Note.beam`** — that is a behaviour change, and
+  the two sites inside this package that had not caught up (the `GrandStaff`
+  cross-staff relocation predicate and its cross-staff beam walk) now read
+  `beamOf` too. Measured on four quavers with the middle two sent to the other
+  hand: the automatically beamed group and the same group with the beams
+  written by hand into `Note.beam` rasterise to the SAME 10 395 px of ink and
+  the SAME beam runs (rows 69-74 spanning x 161-274). Before, the automatic
+  case found zero cross-staff beam runs and drew no beam at all.
+- **Beaming covers the meters it claimed not to.** Re-measured over the full
+  grid of numerators 2, 3, 4, 5, 6, 7, 8, 9 and 12 against denominators 2, 4, 8
+  and 16, filled with eighths, sixteenths and thirty-seconds: **108
+  combinations, 107 of which hold two or more notes, and exactly one of those
+  107 comes out unbeamed** — 3/16 holding two quavers, a bar that OVERFLOWS its
+  own meter (0.25 against 0.1875), where there is no beat to group by. Before,
+  26 meter/figure combinations produced no beam at all.
+- **A tuplet is legible.** Its internal grid no longer depends on the configured
+  spacing model, and the minimum slot went 1.4 → 1.9 staff spaces. Measured at
+  `staffSpace = 12` on the corpus case `m04m_tuplet_ratio` (5:4, five stepwise
+  sixteenths): the step is 22.800 px = 1.9000 SS and the real ink gap between
+  adjacent noteheads **went from 2 px to 9 px (0.750 SS)**, against the
+  package's own `SpacingPreferences.normal.minGap` of 0.25 SS = 3 px.
+- **`GrandStaff` scrolls horizontally.** Measured on one bar of 200
+  thirty-seconds in a 300 px viewport: 1 `Scrollable`, `AxisDirection.right`,
+  `maxScrollExtent 5525.76` + 300 px viewport = 5825.76, which is exactly
+  `GrandStaffPainter.contentWidth`. 100% of the music is reachable; it used to
+  be 0.5%.
+- **A note's hit box covers its flag and its ledger lines.** A click on the
+  outer two thirds of an eighth's flag, or on either END of a ledger line, used
+  to return `null`.
+- **MusicXML tuplets survive the round trip.** The exporter writes
+  `<notations><tuplet>` alongside `<time-modification>`, and the importer opens
+  and closes a group from the ratio even when the bracket is missing. Measured
+  on a 4/4 bar of a 3:2 triplet plus a quarter: the bar value went 0.5 → 0.625
+  with the group dissolved into four loose notes, and now round-trips 0.5 → 0.5
+  with the `Tuplet` coming back as a `Tuplet` (2 `<tuplet>` tags, one `Tuplet`
+  and one loose note on re-import).
+- **The parsers report what they could not read.** `parseMusicXML`,
+  `scoreFromMusicXML`, `parseMEI` and `parseMeiScore` take an optional
+  `warnings` list, so a partial import is no longer indistinguishable from a
+  complete one. Measured on nine malformed documents that all used to import in
+  silence: a zero `<divisions>` and a non-positive `<duration>` now raise
+  warnings, and **three of the nine are rejected outright** with a
+  `FormatException` — `<pitch>` with no `<octave>`, an unknown `<step>`, and a
+  document that is not a score. **Coverage is not total: four of the nine are
+  still absorbed in silence** — an unknown `<clef><sign>`, an unknown `<type>`,
+  a non-numeric `<alter>` and a missing `<part-list>`.
+- **PDF exports a grand staff as a grand staff, across as many pages as it
+  needs.** The grand-staff path goes through `GrandStaffPainter`, so the brace
+  and the system-spanning barlines are really there instead of two unrelated
+  single staves, and the group is paginated by system instead of squeezed into
+  one clipped image. Measured on a 40-bar two-staff piano score: it wraps into
+  **14 systems**, which come out as **3 pages of 5 / 5 / 4 systems = 14 of 14**,
+  the largest page raster is 1928 x 2520 px against the 8192 px cap, and
+  `PdfExporter.warnings` is empty. 2.7.1 put the same music in one image on one
+  page and clipped it to 39.8% of its height.
+  One caveat is real and remains: **this package ships no text face.** The
+  fallback chain asks for `Academico, Century Schoolbook, Edwin, serif` while
+  `assets/` holds only `Bravura.otf` and `greciliae.ttf` and `pubspec.yaml`
+  declares exactly those two families, both of them music fonts. On a host that
+  supplies none of the four — which includes headless rasterisation, so PDF
+  export — every string comes out as `.notdef` boxes, and the terminal `serif`
+  was measured NOT to rescue it. The escape hatch is
+  `MusicTextFont.use('YourFace')` or `MusicScoreTheme(textFontFamily: ...)`;
+  both are exported from `package:flutter_notemus/flutter_notemus.dart`, and
+  `kMusicTextFontFallback` is the chain they replace. **The hatch reaches every
+  prose string, including the four kinds it used to miss.** Tempo marks,
+  expression text, word dynamics and repeat instructions were built by
+  `SymbolAndTextRenderer` with the fallback chain already attached, and the
+  chain-wins rule then made the injection point unreachable — measured, the
+  same score rasterised to identical ink with and without `MusicTextFont.use`.
+  Those ten sites no longer pre-supply it. Measured after, at `staffSpace = 12`
+  in a 900 px viewport: **14 942 px of ink and 2 `.notdef` boxes with no face
+  registered, 6 886 px and 0 boxes with one injected.**
 
 ### What's New in 2.7.1
 
@@ -241,6 +336,16 @@ The headline items:
   ([ADR-003](doc/adr/ADR-003-pitch-is-the-sounding-pitch.md)). An imported tenor
   part on a treble-8vb clef used to be drawn an octave low *and* played an
   octave low.
+- **An 8va/8vb bracket now moves the notes under it.** `OctaveMark` was
+  engraved but had no reader anywhere in the package, so a marked passage read
+  an octave off the page. Measured on a C6 under a treble clef at
+  `staffSpace: 12`: the printed staff position was 8 with no mark *and* 8 under
+  every one of the six bracket types; it is now 1 under 8va, 15 under 8vb, −6
+  under 15ma, 22 under 15mb, −13 under 22da and 29 under 22db, and the
+  engraved Y of the notehead moves 12.0 → 54.0 px under 8va — 42.0 px, which is
+  3.5 staff spaces, exactly one octave. `Pitch` still carries the *sounding*
+  pitch ([ADR-003](doc/adr/ADR-003-pitch-is-the-sounding-pitch.md)); only where
+  the note is printed changes.
 - **Beam slant follows Gould's interval table.** A 2nd, a 6th and a two-octave
   leap all produced the same 0.25-staff-space slant before.
 - **`MultiVoiceMeasure.elements` were silently dropped by the layout**, which
@@ -248,9 +353,6 @@ The headline items:
 - **A grand staff with an over-full bar crashed the painter**; over-full bars are
   what importers produce.
 - **Layout is linear again**: 6 400 bars went from 5 991 ms to 313 ms.
-- **PDF exports a grand staff as a grand staff**, and text no longer rasterises
-  as `.notdef` boxes.
-
 ### What's New in 2.7.0
 
 **Engraving corrections** (output changes on purpose; 39 of the 52 existing
@@ -352,7 +454,7 @@ not against intent. `SUPPORTED` means it survives the whole path
 |---|---|---|
 | Measure numbers | **SUPPORTED** | engraved at every system start; `Measure.number` honoured (2.7.0) |
 | Courtesy / editorial accidentals | **SUPPORTED** | resolved *and* drawn with SMuFL parentheses/brackets (2.7.0) |
-| Instrument / group names | **SUPPORTED** | `StaffGroup.name` and `Staff.name`/`abbreviation`, drawn beside the brace/bracket; imported from `<part-name>`/`<group-name>` and exported since 2.7.1 |
+| Instrument / group names | **SUPPORTED** | `StaffGroup.name` and `Staff.name`/`abbreviation`, drawn beside the brace/bracket; imported from MusicXML `<part-name>`/`<group-name>` and exported since 2.7.1, and from MEI `<staffGrp><label>`/`<labelAbbr>` since 2.8.0 (measured: `Piano` / `Pno.`, both `null` before) |
 | Transposing instruments | **SUPPORTED** | `Staff.transposition` is imported, applied by `MidiMapper` and exported (2.7.1). `Pitch` is the SOUNDING pitch and octave clefs are applied on the drawing side only — see [ADR-003](doc/adr/ADR-003-pitch-is-the-sounding-pitch.md). Concert-pitch RESPELLING is still missing |
 | Cue notes | **NOT SUPPORTED** | `<cue/>` is not modelled; cue-*size* is used only for mid-system clef changes |
 | Rehearsal marks | **SUPPORTED** | imported from MusicXML and engraved in a SMuFL box (2.7.0); the golden is `m04s_rehearsal_marks` |
@@ -363,7 +465,8 @@ not against intent. `SUPPORTED` means it survives the whole path
 | Linked parts / part extraction | **NOT SUPPORTED** | `ScoreView` always renders every staff of the score |
 | Conductor score | **SUPPORTED** | `Score` → `StaffGroup`s → `ScoreView` |
 | System text | **PARTIAL** | `MusicText` renders tempo/expression/instruction; other types fall through |
-| Figured bass, mensural, harmonic analysis, MEI header | **MODEL ONLY** | see [`doc/MODEL_ONLY.md`](doc/MODEL_ONLY.md) |
+| Figured bass, mensural, harmonic analysis | **MODEL ONLY** | see [`doc/MODEL_ONLY.md`](doc/MODEL_ONLY.md) |
+| MEI header (`meiHead`) | **PARTIAL** | *imported* since 2.7.0 (`MEIParser.scoreFromMei` / `headerFromMei`) and re-verified for 2.8.0 (`fileDesc/titleStmt/title` round-trips into `MeiHeader.fileDescription.title`); never written back — `grep -rn 'toMei' lib/` returns 0 hits, there is no MEI serializer |
 
 ---
 
@@ -376,6 +479,73 @@ All pending work is tracked as GitHub issues, with the local index mirrored in [
 - Content and text rendering follow-up: [#13](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/13) (melisma extension lines — needs post-layout pass)
 - Editor and interactivity roadmap: [#16](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/16), [#17](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/17), [#18](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/18), [#19](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/19)
 - Remaining example/system integration work: [#7](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/7)
+
+### Known limitations, measured and still open
+
+Everything here was found by executing the engine, and nothing leaves this list
+until a pass that did not write the fix has re-measured it. Six entries have
+left it that way across 2.7.0–2.7.1 — no beams in 26 meter/figure combinations,
+MusicXML tuplets not surviving a round trip, `GrandStaff` with no horizontal
+scroll, a single-page clipped grand-staff PDF, cross-staff beams not being
+drawn at all, and the text-font escape hatch being inert on prose. Every one of
+them was re-probed for this release by a pass that did not write the fix, and
+each came back clean: `1 Scrollable, AxisDirection.right, maxScrollExtent
+5525.76` covering 100% of the content; `3 music pages, 14 of 14 systems,
+warnings empty`; an automatically beamed cross-staff group that now rasterises
+identically to the hand-beamed one (10 395 px of ink, the same beam runs) where
+it used to draw nothing; and an injected text face that now moves the ink
+(14 942 px → 6 886 px) where it used to change nothing at all. The bar was not
+lowered; those bullets are gone because the engine stopped having them. A
+seventh — silent acceptance of malformed MusicXML — left it only PARTLY, and
+the residue is the second bullet below.
+
+**Two defects are still open**, both found by the closing sign-off and both
+recorded with their measurements in `CHANGELOG.md` under *Known defects still
+open*: the "hide the bracket over a fully beamed tuplet" rule is not applied to
+any rendered score (`Tuplet.shouldShowBracket` has no caller — `TupletRenderer`
+decides with the deprecated `tuplet.showBracket`), and `LayoutEngine.layout()`
+still writes `Measure.inheritedTimeSignature` onto the caller's model, which
+flips `Measure.add` from accepting a note to throwing
+`MeasureCapacityException`. Each needs an engraving-policy or API decision
+rather than a patch, so neither was changed at sign-off.
+
+Everything below is **not** a defect — it is a set of deliberate boundaries,
+each measured:
+
+- **This package ships no text face**, so on a host that provides none of
+  `Academico, Century Schoolbook, Edwin, serif` every string is a `.notdef`
+  box. `pubspec.yaml` declares exactly two families and both are music fonts
+  (`Bravura`, `Greciliae`); `assets/smufl/` holds `Bravura.otf` and no text
+  font at all. Measured: the terminal generic `serif` does NOT rescue it — a
+  headless binary with a face literally registered as `serif` produced a
+  byte-identical PNG. `MusicTextFont.use` / `MusicScoreTheme.textFontFamily` is
+  the supported answer and, since this release, reaches every string the
+  package draws.
+- **Four kinds of malformed MusicXML are still absorbed in silence.** Re-probed
+  in this release over seven documents: a zero `<divisions>` and a non-positive
+  `<duration>` raise warnings, a `<pitch>` with no `<octave>` and an unknown
+  `<step>` are rejected with a `FormatException`, and an unknown
+  `<clef><sign>`, an unknown `<type>` and a non-numeric `<alter>` come back
+  **SILENT** — 2 rejected, 2 warned, 3 silent. A missing `<part-list>` is the
+  fourth silent case.
+- **A single measure can still be wider than the viewport.** The engine
+  compresses an over-full bar down to `LayoutEngine.minimumSpacingScale` (0.35)
+  and no further, because past that the noteheads collide. Measured on 40 whole
+  notes written into one 4/4 bar at 900 px: 43 elements on one system reaching
+  x = 1 829.2 px, **2.03x** the line. No music is lost — `MusicScore` and
+  `GrandStaff` both scroll horizontally — and since this release the engine
+  names the bar and the factor in `LayoutEngine.warnings` instead of
+  overflowing without a word. For a fixed-width medium the bar has to be
+  re-barred or the staff space reduced.
+- **Advanced MEI modules are model-only.** Figured bass, mensural notation and
+  MEI `<neume>` are constructible in Dart but are not imported from MEI XML and
+  not rendered; the compatibility table above marks each one.
+- **Tuplet-internal spacing ignores the configured `SpacingModel`** by design,
+  so that `TupletRenderer` (which has no spacing engine) and `LayoutEngine`
+  cannot draw two different grids. Measured across all four models: the X
+  positions of a tuplet's children are identical in all four, while the same
+  durations written as plain notes move by ratios of 1.250 / 1.137 / 1.027 /
+  1.278.
 
 ---
 
@@ -470,6 +640,7 @@ flutter pub get
 Load Bravura and SMuFL metadata before rendering any score:
 
 ```dart
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 
@@ -730,9 +901,14 @@ TempoMark(
 ### Grace Notes
 
 ```dart
-GraceNote(
+// A grace note is a `Note` with `isGraceNote: true` — it is drawn small and
+// contributes 0.0 to the duration the bar counts as filled. There is no
+// `GraceNote` class.
+Note(
   pitch: const Pitch(step: 'D', octave: 5),
-  type: GraceNoteType.acciaccatura,
+  duration: const Duration(DurationType.eighth),
+  isGraceNote: true,
+  ornaments: [Ornament(type: OrnamentType.acciaccatura)],
 );
 ```
 
@@ -763,10 +939,15 @@ Note(
 ### Octave Markings
 
 ```dart
-OctaveMark(type: OctaveType.ottava);
-OctaveMark(type: OctaveType.ottavaBassa);
-OctaveMark(type: OctaveType.quindicesima);
-OctaveMark(type: OctaveType.quindicesimaBassa);
+// `startMeasure` / `endMeasure` are required: they delimit the span the
+// bracket covers, and that span is what displaces the printed pitch of the
+// notes inside it.
+OctaveMark(type: OctaveType.va8,  startMeasure: 0, endMeasure: 1);  // 8va
+OctaveMark(type: OctaveType.vb8,  startMeasure: 0, endMeasure: 1);  // 8vb
+OctaveMark(type: OctaveType.va15, startMeasure: 0, endMeasure: 1);  // 15ma
+OctaveMark(type: OctaveType.vb15, startMeasure: 0, endMeasure: 1);  // 15mb
+OctaveMark(type: OctaveType.va22, startMeasure: 0, endMeasure: 1);  // 22da
+OctaveMark(type: OctaveType.vb22, startMeasure: 0, endMeasure: 1);  // 22db
 ```
 
 ### Volta Brackets
@@ -857,7 +1038,7 @@ but its notehead is drawn on another staff via `Note.crossStaffMove`:
 Note(
   pitch: const Pitch(step: 'C', octave: 4),
   duration: const Duration(DurationType.eighth),
-  beam: BeamType.begin,
+  beam: BeamType.start,
   crossStaffMove: -1, // draw this notehead one staff up; beam crosses the gap
 );
 ```
@@ -892,7 +1073,10 @@ render with an explicit clef:
 ChantScore(
   clef: const ChantClef(type: ChantClefType.doClef, line: 4),
   elements: [
-    Neume(/* components: punctum, podatus, clivis, … */),
+    Neume(type: NeumeType.pes, components: [
+      NeumeComponent(pitchName: 'F', octave: 3, form: NcForm.punctum),
+      NeumeComponent(pitchName: 'G', octave: 3, form: NcForm.virga),
+    ]),
     NeumeDivision(type: NeumeDivisionType.minor),
   ],
 );
@@ -925,9 +1109,10 @@ PlayingTechnique(type: TechniqueType.sulPonticello);
 ### Breath and Caesura
 
 ```dart
-Breath();
+// `type` is required — there is no default breath mark.
+Breath(type: BreathType.comma);
 Breath(type: BreathType.caesura);
-Breath(type: BreathType.shortBreath);
+Breath(type: BreathType.shortCaesura);
 ```
 
 ### Import from JSON, MusicXML, and MEI
@@ -944,6 +1129,7 @@ final autoDetected = NotationParser.parseStaff(sourceString);
 
 ```dart
 import 'dart:io';
+import 'package:flutter_notemus/flutter_notemus.dart';
 import 'package:flutter_notemus/midi.dart';
 
 Future<void> exportMidi(Staff staff) async {
@@ -1128,6 +1314,25 @@ Rendering flow:
 ```text
 Staff/Score -> LayoutEngine -> PositionedElements -> StaffRenderer -> Canvas
 ```
+
+The arrow only points right. A layout decision is a **value owned by the layout
+result**, never a write back onto your model
+([ADR-005](doc/adr/ADR-005-layout-decisions-are-values.md)): beam membership is
+published as `LayoutEngine.beams` / `LayoutEngine.tupletBeams` and read through
+`LayoutEngine.beamOf(note)`. `Note.beam` is an INPUT hint you may set yourself;
+since 2.8.0 the engine never overwrites it, so `staffToMusicXML` and
+`staffToJson` return the same bytes whether or not the score has been laid out
+or painted.
+
+Decision records:
+
+| ADR | Decision |
+|---|---|
+| [ADR-001](doc/adr/ADR-001-layout-never-clones-the-model.md) | The layout never clones or replaces a model object |
+| [ADR-002](doc/adr/ADR-002-shared-musical-time-grid.md) | Staves are aligned on a shared musical time grid |
+| [ADR-003](doc/adr/ADR-003-pitch-is-the-sounding-pitch.md) | `Pitch` is the sounding pitch |
+| [ADR-004](doc/adr/ADR-004-opening-block-is-a-convention.md) | A measure's opening block is a convention; the body keeps document order |
+| [ADR-005](doc/adr/ADR-005-layout-decisions-are-values.md) | A layout decision is a value, never a mutation of the model (partially supersedes ADR-001) |
 
 ---
 

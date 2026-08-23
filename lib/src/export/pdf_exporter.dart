@@ -17,13 +17,15 @@ import 'score_rasterizer.dart';
 /// 1. An optional title page (title / subtitle / composer / arranger /
 ///    copyright) when [includeMetadata] is true and the score carries any of
 ///    those fields.
-/// 2. One or more **notation pages per staff**: the staff is laid out by
-///    [LayoutEngine] and painted by `StaffRenderer` — the very same pipeline
-///    the on-screen `MusicScore` widget uses — then rasterized to a PNG that is
-///    embedded in the page. Engraving (noteheads, stems, beams, accidentals,
-///    slurs, articulations, dynamics, lyrics, barlines, measure numbers) is
-///    therefore identical to what is shown on screen. Pages are cut on system
-///    boundaries, so a system is never split in half across two pages.
+/// 2. One or more **notation pages per staff** (or per braced group): the music
+///    is laid out by [LayoutEngine] and painted by `StaffRenderer` — or, for a
+///    group of two or more staves, by `GrandStaffPainter` — the very same
+///    pipeline the on-screen `MusicScore` widget uses, then rasterized to a PNG
+///    that is embedded in the page. Engraving (noteheads, stems, beams,
+///    accidentals, slurs, articulations, dynamics, lyrics, barlines, measure
+///    numbers) is therefore identical to what is shown on screen. Both paths
+///    cut pages on system boundaries, so a system is never split in half
+///    across two pages and no music is cropped away.
 ///
 /// The notation is embedded as a raster image, not as vector glyphs or
 /// selectable text: it prints at the DPI configured in [quality]
@@ -301,10 +303,21 @@ class PdfExporter {
     return addedAnyPage;
   }
 
-  /// Engraves a multi-staff [group] as a braced grand staff and appends it.
+  /// Engraves a multi-staff [group] as a braced grand staff and appends its
+  /// pages.
   ///
-  /// The whole group is rendered in one image so the brace, the system barlines
-  /// and the shared horizontal time grid survive into the PDF.
+  /// The group is rendered by `GrandStaffPainter` so the brace, the system
+  /// barlines and the shared horizontal time grid survive into the PDF, and it
+  /// is paginated on system boundaries exactly like [_addStaffPages].
+  ///
+  /// ## Why the pagination is not optional
+  /// This used to put EVERY system in one image on ONE page: it computed
+  /// `scale = usableWidth / logicalWidth`, clamped the image box to
+  /// `usableHeight - headingHeight` and drew with `BoxFit.fitWidth`, which
+  /// crops whatever does not fit. Measured on a 40-bar two-staff piano score:
+  /// the group wraps into 14 systems, 963.78 x 3552 logical px; at A4 the image
+  /// wanted 1776 pt of height and got 706.5 pt, so **39.8% of the music
+  /// reached the PDF** and 8 and a half systems were silently dropped.
   Future<bool> _addGrandStaffPages(
     pw.Document pdf, {
     required StaffGroup group,
@@ -316,15 +329,48 @@ class PdfExporter {
     required double usableHeight,
     required double pixelRatio,
   }) async {
-    final page = await ScoreRasterizer.renderGroupToPage(
+    final layout = ScoreRasterizer.layoutGroup(
       group: group,
       metadata: metadata,
       width: layoutWidth,
       staffSpace: staffSpace,
       theme: theme,
-      pixelRatio: pixelRatio,
     );
-    if (page == null) {
+
+    if (layout.isEmpty) {
+      warnings.add('$label contains no renderable elements; it was skipped.');
+      return false;
+    }
+
+    // Points per logical pixel once the raster is fitted to the page width.
+    // `logicalWidth` is the painter's CONTENT width, so an over-wide system
+    // shrinks to fit the page instead of being cropped.
+    final scale = usableWidth / layout.logicalWidth;
+    final headingHeight = heading == null ? 0.0 : 22.0;
+    final systemHeightPt = layout.systemBandHeight * scale;
+    if (!systemHeightPt.isFinite || systemHeightPt <= 0) {
+      warnings.add('$label produced an invalid system height; it was skipped.');
+      return false;
+    }
+
+    // Whole systems only: a system is never cut in half across two pages.
+    final systemsPerPage = math.max(
+      1,
+      ((usableHeight - headingHeight) / systemHeightPt).floor(),
+    );
+
+    final pages = await ScoreRasterizer.renderGroupPages(
+      group: group,
+      metadata: metadata,
+      width: layoutWidth,
+      systemsPerPage: systemsPerPage,
+      staffSpace: staffSpace,
+      theme: theme,
+      pixelRatio: pixelRatio,
+      precomputedLayout: layout,
+    );
+
+    if (pages.isEmpty) {
       warnings.add(
         '$label could not be rasterized. Rendering notation to PDF requires a '
         'live Flutter engine (a running app or flutter_test); it is not '
@@ -333,43 +379,44 @@ class PdfExporter {
       return false;
     }
 
-    final scale = usableWidth / page.logicalWidth;
-    final headingHeight = heading == null ? 0.0 : 22.0;
-    final imageHeight = math.min(
-      page.logicalHeight * scale,
-      usableHeight - headingHeight,
-    );
+    for (var pageIndex = 0; pageIndex < pages.length; pageIndex++) {
+      final page = pages[pageIndex];
+      final showHeading = heading != null && pageIndex == 0;
+      final maxImageHeight = usableHeight - (showHeading ? headingHeight : 0.0);
+      final imageHeight = math.min(page.logicalHeight * scale, maxImageHeight);
 
-    pdf.addPage(
-      pw.Page(
-        pageFormat: pageFormat,
-        build: (context) => pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          mainAxisAlignment: pw.MainAxisAlignment.start,
-          children: [
-            if (heading != null)
-              pw.Container(
-                height: headingHeight,
-                alignment: pw.Alignment.centerLeft,
-                child: pw.Text(
-                  heading,
-                  style: pw.TextStyle(
-                    fontSize: 14,
-                    fontWeight: pw.FontWeight.bold,
+      pdf.addPage(
+        pw.Page(
+          pageFormat: pageFormat,
+          build: (context) => pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            mainAxisAlignment: pw.MainAxisAlignment.start,
+            children: [
+              if (showHeading)
+                pw.Container(
+                  height: headingHeight,
+                  alignment: pw.Alignment.centerLeft,
+                  child: pw.Text(
+                    heading,
+                    style: pw.TextStyle(
+                      fontSize: 14,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
                   ),
                 ),
+              pw.Image(
+                pw.MemoryImage(page.pngBytes),
+                width: usableWidth,
+                height: imageHeight,
+                fit: pw.BoxFit.contain,
+                alignment: pw.Alignment.topCenter,
               ),
-            pw.Image(
-              pw.MemoryImage(page.pngBytes),
-              width: usableWidth,
-              height: imageHeight,
-              fit: pw.BoxFit.fitWidth,
-              alignment: pw.Alignment.topLeft,
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
-    );
+      );
+    }
+
     return true;
   }
 

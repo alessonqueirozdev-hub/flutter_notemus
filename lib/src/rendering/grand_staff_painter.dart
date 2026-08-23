@@ -27,6 +27,57 @@ class _StaffLayout {
   _StaffLayout(this.elements, this.engine);
 }
 
+/// The clef and key signature in force after walking a run of measures.
+///
+/// This exists because a scan over `Measure.elements` is NOT a scan over the
+/// music. ADR-004 deliberately moved mid-measure attribute changes INTO the
+/// voices, so a `Clef` written half way through voice 1 of a polyphonic bar
+/// lives in `Voice.elements` and is invisible to `Measure.elements`.
+///
+/// Measured consequence before this class existed (ten polyphonic bars, a
+/// bass clef in the middle of voice 1 of bar 3, painter at 400 px, one bar per
+/// system): system 2 opened with NO clef at all and systems 3, 4 and 5
+/// restated `treble` while the BASS clef was in force — every note from bar 3
+/// on was drawn a twelfth out of place, silently.
+///
+/// [Measure.allElements] yields the measure-level attributes first and then
+/// each voice in ascending voice-number order, which is the same order the
+/// layout engine consumes, so the LAST clef it yields is the clef that leaves
+/// the bar.
+class _ClefKeyTracker {
+  Clef? clef;
+  KeySignature? key;
+
+  /// The meter last declared, carried for the same reason the clef is: a
+  /// system that starts at bar `a` does not contain the meter declared at bar
+  /// 1, and since ADR-005 action item 8 the layout engine no longer stamps
+  /// `Measure.inheritedTimeSignature` onto the caller's bars, so there is
+  /// nothing left in the sub-staff to re-derive it from.
+  ///
+  /// Without this, every wrapped system after the one holding the meter
+  /// validated NOTHING: `LayoutEngine` skips capacity validation when it has no
+  /// meter, so an over-full bar in system 2..n was silently counted as valid.
+  ///
+  /// Unlike clef and key this reads `Measure.timeSignature` — the
+  /// measure-level `elements` list — because a meter is a bar attribute and
+  /// never lives inside a `Voice`; that is also exactly the scan
+  /// `LayoutEngine` performs, so the two cannot disagree.
+  TimeSignature? timeSignature;
+
+  /// Absorbs one whole measure, voices included.
+  void advance(Measure measure) {
+    for (final element in measure.allElements) {
+      if (element is Clef) {
+        clef = element;
+      } else if (element is KeySignature) {
+        key = element;
+      }
+    }
+    final meter = measure.timeSignature;
+    if (meter != null) timeSignature = meter;
+  }
+}
+
 /// Renders one or more [StaffGroup]s as a unified, vertically-stacked,
 /// horizontally-aligned system (a grand staff, an SATB choir, or a full
 /// multi-section score). All staves across all groups share one horizontal
@@ -60,16 +111,61 @@ class GrandStaffPainter extends CustomPainter {
   /// staves must place events with the same [PositionedElement.onset] at the
   /// same X. Before 2.7.0 they did not — with four quarters against two halves,
   /// beat 3 landed 38 px (more than three staff spaces) apart.
+  ///
+  /// A cross-staff note is reported on the staff it is PRINTED on, not on the
+  /// voice's home staff — otherwise a hit test built from this list misses a
+  /// cross-staff notehead by a whole `staffGap`. The unbeamed ones were
+  /// already moved at layout time; this relocates the beamed ones, which the
+  /// paint pass draws on the target staff but keeps in their home list so the
+  /// spanning beam can be drawn from one run.
   @visibleForTesting
-  List<List<PositionedElement>> alignedSystem(int systemIndex) => [
-        for (final layout in _systems[systemIndex]) layout.elements,
-      ];
+  List<List<PositionedElement>> alignedSystem(int systemIndex) =>
+      _relocateCrossStaff(
+        [for (final layout in _systems[systemIndex]) layout.elements],
+        (_) => true,
+      );
 
   /// Number of wrapped systems this painter produced.
   ///
   /// Public because the PDF rasterizer reports it on each page it emits; it was
   /// `@visibleForTesting` when only tests read it.
   int get systemCount => _systems.length;
+
+  /// Y of the top staff's middle line inside a system block.
+  double get _baseline0 => staffSpace * 5.0;
+
+  /// Total painted WIDTH, in the same coordinate space as [totalHeight]: the
+  /// right edge of the rightmost element of any staff of any system, plus the
+  /// brace/bracket gutter the paint pass translates everything by.
+  ///
+  /// The host widget must size its canvas from this number, exactly as
+  /// `MusicScore` sizes itself from [LayoutEngine.contentWidth]. It did not,
+  /// and the music was unreachable: measured with one bar of 2000 thirty-second
+  /// notes at `availableWidth` 300, the painter's content reached x = 57,436.2
+  /// px inside a `CustomPaint` pinned at 300.0 px with no scrollable anywhere
+  /// in the tree — about 99.5% of the bar could not be brought on screen.
+  ///
+  /// The right edge of an element is `dx + width - leftExtent`, not
+  /// `dx + width`, for the reason spelled out on [LayoutEngine.contentWidth]:
+  /// part of an element's advance (an accidental, a stem-down cluster's
+  /// notehead) hangs to the LEFT of `dx` and would otherwise be counted twice.
+  late final double contentWidth = _computeContentWidth();
+
+  double _computeContentWidth() {
+    var maxRight = 0.0;
+    for (final system in _systems) {
+      for (final layout in system) {
+        for (final positioned in layout.elements) {
+          final element = positioned.element;
+          final right = positioned.position.dx +
+              layout.engine.elementWidth(element) -
+              layout.engine.elementLeftExtent(element);
+          if (right > maxRight) maxRight = right;
+        }
+      }
+    }
+    return _bracePad + maxRight + staffSpace * 0.5;
+  }
 
   /// Total painted height (all systems stacked), including the headroom the
   /// music actually needs above the top staff and below the bottom one.
@@ -138,7 +234,141 @@ class GrandStaffPainter extends CustomPainter {
         _layoutSubStaff(_systemStaff(staff, a, b), measureOffset: a),
     ];
     _alignStaves(layouts);
+    // An UNBEAMED cross-staff note is moved onto the staff it was sent to, so
+    // the ordinary staff renderer draws it there with its stem, flag, ledger
+    // lines and accidental. Beamed cross-staff groups keep their home list —
+    // `_drawCrossStaffBeams` needs the whole run in one place to draw the beam
+    // that spans the two staves — and are relocated for REPORTING only, in
+    // [alignedSystem].
+    // ADR-005: the beam decision is a VALUE on the engine, not a field on the
+    // note. `note.beam` alone carries only the AUTHOR's hint, and the engine
+    // stopped writing its own answer back into the model in 2.7.2 — so reading
+    // the field here classified every automatically beamed note as UNBEAMED
+    // and relocated it out of its own beam group, which left
+    // `_crossStaffGroups` with nothing to draw. MEASURED on four quavers with
+    // the middle two carrying `crossStaffMove: 1`: the model read
+    // `[null, null, null, null]` while `engine.beamOf` read
+    // `[start, end, start, end]`, and `alignedSystem(0)` reported the two
+    // beamed notes on the DESTINATION staff instead of keeping the run whole
+    // on the home staff. Every cross-staff beam in the package was silently
+    // not drawn.
+    final relocated = _relocateCrossStaff(
+      [for (final l in layouts) l.elements],
+      (note) => _effectiveBeam(layouts, note) == null,
+    );
+    for (var i = 0; i < layouts.length; i++) {
+      layouts[i] = _StaffLayout(relocated[i], layouts[i].engine);
+    }
     return layouts;
+  }
+
+  /// The beam [LayoutEngine] resolved for [note], searched across every
+  /// sub-staff layout of one system.
+  ///
+  /// A cross-staff note is laid out by the engine of its HOME staff, but the
+  /// caller does not always know which staff that is (the relocation predicate
+  /// runs over the flattened element lists of the whole system), so this asks
+  /// each engine in turn. `beamOf` falls back to the author's `Note.beam` hint
+  /// when the engine made no decision, so an engine that never saw this note
+  /// returns null and the search moves on.
+  static BeamType? _effectiveBeam(List<_StaffLayout> layouts, Note note) {
+    for (final layout in layouts) {
+      final beam = layout.engine.beamOf(note);
+      if (beam != null) return beam;
+    }
+    return null;
+  }
+
+  /// Moves every cross-staff note that [shouldMove] accepts out of its home
+  /// staff's list and into the list of the staff it is actually PRINTED on,
+  /// re-deriving its Y from the destination staff's clef.
+  ///
+  /// `crossStaffMove` used to be honoured only inside beamed groups, and only
+  /// at paint time. Measured: a quarter note with `crossStaffMove: 1` stayed
+  /// at its home baseline (dy 90.0 on the top staff) instead of appearing on
+  /// the staff below, and even for the beamed notes — which the paint pass did
+  /// move — [alignedSystem], and therefore every hit test built on it, still
+  /// reported the home staff. Doing the move on the element lists fixes both
+  /// at once: what is drawn and what is reported come from the same list.
+  List<List<PositionedElement>> _relocateCrossStaff(
+    List<List<PositionedElement>> lists,
+    bool Function(Note) shouldMove,
+  ) {
+    if (lists.length < 2) return lists;
+
+    final kept = [for (var i = 0; i < lists.length; i++) <PositionedElement>[]];
+    final moved = <({int target, PositionedElement pe})>[];
+    for (var home = 0; home < lists.length; home++) {
+      for (final pe in lists[home]) {
+        final e = pe.element;
+        if (e is Note && e.crossStaffMove != 0 && shouldMove(e)) {
+          final target =
+              (home + e.crossStaffMove).clamp(0, lists.length - 1);
+          if (target != home) {
+            moved.add((target: target, pe: pe));
+            continue;
+          }
+        }
+        kept[home].add(pe);
+      }
+    }
+    if (moved.isEmpty) return lists;
+
+    for (final entry in moved) {
+      final note = entry.pe.element as Note;
+      final pos = StaffPositionCalculator.calculate(
+        note.pitch,
+        // The clef IN FORCE at that point of the destination staff, not its
+        // first clef: a destination staff that changes clef mid-system would
+        // otherwise place every later cross-staff note by the opening clef.
+        _clefAtX(kept[entry.target], entry.pe.position.dx),
+        extraOctaveShift: _octaveShiftOf(note),
+      );
+      final y = _baseline0 - pos * staffSpace * 0.5;
+      _insertByX(
+        kept[entry.target],
+        entry.pe.movedTo(Offset(entry.pe.position.dx, y)),
+      );
+    }
+    return kept;
+  }
+
+  /// Inserts [pe] after everything already at or before its X, so the list
+  /// keeps reading left to right and the note lands BEHIND a clef sharing its
+  /// X rather than in front of it (the renderer tracks the clef by list
+  /// order). On a polyphonic destination staff, whose list is voice 1 then
+  /// voice 2 and therefore not monotonic in X, this puts the note at the end
+  /// of the last voice it fits into — still after the attributes that govern
+  /// it, which is all the renderer needs.
+  static void _insertByX(List<PositionedElement> list, PositionedElement pe) {
+    var i = list.length;
+    while (i > 0 && list[i - 1].position.dx > pe.position.dx) {
+      i--;
+    }
+    list.insert(i, pe);
+  }
+
+  /// The clef in force at [x] on the staff described by [elements], i.e. the
+  /// rightmost clef printed at or before that point. Treble when the staff
+  /// states none (the engine's own default).
+  ///
+  /// The list is NOT scanned to the first clef past [x] and stopped there: a
+  /// polyphonic staff emits all of voice 1 and then all of voice 2, so its X
+  /// is not monotonic in list order and an early exit would miss the clef a
+  /// later voice carries.
+  static Clef _clefAtX(List<PositionedElement> elements, double x) {
+    Clef? found;
+    var foundX = double.negativeInfinity;
+    for (final pe in elements) {
+      final e = pe.element;
+      if (e is! Clef) continue;
+      if (pe.position.dx > x + 1e-6) continue;
+      if (pe.position.dx >= foundX) {
+        found = e;
+        foundX = pe.position.dx;
+      }
+    }
+    return found ?? Clef(clefType: ClefType.treble);
   }
 
   _StaffLayout _layoutSubStaff(Staff staff, {int measureOffset = 0}) {
@@ -160,19 +390,23 @@ class GrandStaffPainter extends CustomPainter {
   /// that doesn't start the piece, the prevailing clef and key are restated at
   /// the start (Gould/Verovio).
   Staff _systemStaff(Staff staff, int a, int b) {
-    Clef? clef;
-    KeySignature? key;
+    // Walk the music, not just the bar-level attribute list: a mid-measure
+    // clef change lives inside a VOICE (ADR-004) and `Measure.elements` cannot
+    // see it. See [_ClefKeyTracker] for the measured damage that caused.
+    final prevailing = _ClefKeyTracker();
     for (var i = 0; i < a && i < staff.measures.length; i++) {
-      for (final e in staff.measures[i].elements) {
-        if (e is Clef) clef = e;
-        if (e is KeySignature) key = e;
-      }
+      prevailing.advance(staff.measures[i]);
     }
     final measures = <Measure>[];
     for (var i = a; i <= b && i < staff.measures.length; i++) {
       final orig = staff.measures[i];
       if (i == a && a > 0) {
-        measures.add(_restated(orig, clef: clef, key: key));
+        measures.add(_restated(
+          orig,
+          clef: prevailing.clef,
+          key: prevailing.key,
+          inheritedMeter: prevailing.timeSignature,
+        ));
       } else {
         measures.add(orig);
       }
@@ -180,9 +414,10 @@ class GrandStaffPainter extends CustomPainter {
     return Staff(measures: measures, lineCount: staff.lineCount);
   }
 
-  /// A copy of [orig] with the prevailing [clef] and [key] restated in front.
+  /// A copy of [orig] with the prevailing [clef] and [key] restated in front,
+  /// and the prevailing [inheritedMeter] carried onto it.
   ///
-  /// Three things this must get right, all of which the previous version got
+  /// Five things this must get right, all of which some previous version got
   /// wrong:
   ///
   /// 1. **It must not validate.** It used to copy with `Measure.add`, which
@@ -200,9 +435,29 @@ class GrandStaffPainter extends CustomPainter {
   /// 3. **It must preserve polyphony.** For a [MultiVoiceMeasure] the old copy
   ///    walked `orig.elements` only, which holds the bar's system elements —
   ///    every voice, and therefore every note, was dropped.
-  Measure _restated(Measure orig, {Clef? clef, KeySignature? key}) {
-    final hasClef = orig.allElements.any((e) => e is Clef);
-    final hasKey = orig.allElements.any((e) => e is KeySignature);
+  ///
+  /// 4. **"Already has a clef" means AT THE HEAD, not anywhere in the bar.**
+  ///    The suppression test used to be `orig.allElements.any((e) => e is
+  ///    Clef)`, so a bar whose only clef was a MID-measure change suppressed
+  ///    the restatement it still needed in front. Measured: the system that
+  ///    opened on such a bar printed no clef at all until its mid-bar change.
+  ///
+  /// 5. **It must carry the meter the system inherits.** The sub-`Staff` starts
+  ///    at bar `a`, so a meter declared before `a` is not in it and the
+  ///    sub-layout cannot re-derive it — and since ADR-005 action item 8 there
+  ///    is no longer a value stamped on `orig` to borrow either. Passing it as
+  ///    [inheritedMeter] restores what the engine used to leave behind, on a
+  ///    measure THIS PAINTER OWNS rather than on the caller's. `orig`'s own
+  ///    field still wins when it has one, so an author's opt-in is never
+  ///    overwritten.
+  Measure _restated(
+    Measure orig, {
+    Clef? clef,
+    KeySignature? key,
+    TimeSignature? inheritedMeter,
+  }) {
+    final hasClef = _statesAtHead(orig, (e) => e is Clef);
+    final hasKey = _statesAtHead(orig, (e) => e is KeySignature);
 
     final restated = <MusicalElement>[
       if (!hasClef && clef != null) clef,
@@ -214,7 +469,7 @@ class GrandStaffPainter extends CustomPainter {
         ..autoBeaming = orig.autoBeaming
         ..beamingMode = orig.beamingMode
         ..manualBeamGroups = orig.manualBeamGroups
-        ..inheritedTimeSignature = orig.inheritedTimeSignature
+        ..inheritedTimeSignature = orig.inheritedTimeSignature ?? inheritedMeter
         ..number = orig.number;
       copy.elements.addAll(restated);
       copy.elements.addAll(orig.elements);
@@ -228,12 +483,32 @@ class GrandStaffPainter extends CustomPainter {
       autoBeaming: orig.autoBeaming,
       beamingMode: orig.beamingMode,
       manualBeamGroups: orig.manualBeamGroups,
-      inheritedTimeSignature: orig.inheritedTimeSignature,
+      inheritedTimeSignature: orig.inheritedTimeSignature ?? inheritedMeter,
       number: orig.number,
     );
     copy.elements.addAll(restated);
     copy.elements.addAll(orig.elements);
     return copy;
+  }
+
+  /// Whether [orig] states a matching attribute IN FRONT of its first
+  /// rhythmic event, i.e. at the bar's head where a system restatement would
+  /// go. A clef that appears after a note is a mid-measure CHANGE and says
+  /// nothing about what the bar opens with.
+  static bool _statesAtHead(
+    Measure orig,
+    bool Function(MusicalElement) matches,
+  ) {
+    for (final element in orig.allElements) {
+      if (matches(element)) return true;
+      if (element is Note ||
+          element is Rest ||
+          element is Chord ||
+          element is Tuplet) {
+        return false;
+      }
+    }
+    return false;
   }
 
   /// Per-measure widths laid out unwrapped, used to decide shared breaks.
@@ -305,7 +580,18 @@ class GrandStaffPainter extends CustomPainter {
     final byOnset = <double, double>{};
     for (final pe in elements) {
       final e = pe.element;
-      final counts = e is Note ||
+      // A GRACE note is deliberately excluded. A grace note has zero musical
+      // duration, so it shares the onset of the note it ornaments, and it is
+      // printed to that note's LEFT — so as an anchor it dragged the whole
+      // instant backwards on the staff that carries the ornament. Measured on
+      // a grand staff whose top part had a grace note and whose bottom part
+      // did not: onset 0.250 anchored at 172.99 on the top staff (the grace)
+      // against 172.99 on the bottom, which put the two REAL notes of that
+      // beat 43.32 px apart (216.31 vs 172.99) — the ornament was aligned with
+      // the other part instead of the note it belongs to. The main note is the
+      // musical instant; the grace rides in front of it and is carried along
+      // by the piecewise-linear remap below.
+      final counts = (e is Note && !e.isGraceNote) ||
           e is Rest ||
           e is Chord ||
           e is Tuplet ||
@@ -452,7 +738,7 @@ class GrandStaffPainter extends CustomPainter {
     // down by whatever headroom the music above the top staff needs.
     canvas.translate(_bracePad, contentTopInset);
 
-    final baseline0 = staffSpace * 5.0;
+    final baseline0 = _baseline0;
     for (var sysIdx = 0; sysIdx < _systems.length; sysIdx++) {
       final layouts = _systems[sysIdx];
       if (layouts.isEmpty) continue;
@@ -617,22 +903,29 @@ class GrandStaffPainter extends CustomPainter {
   /// note. The home staff skips drawing them; the cross-staff pass draws them.
   Set<Note> _crossStaffNotesOf(List<_StaffLayout> layouts, int home) {
     final out = <Note>{};
-    for (final g in _crossStaffGroups(layouts[home].elements)) {
+    for (final g in _crossStaffGroups(layouts[home])) {
       out.addAll(g);
     }
     return out;
   }
 
-  /// Beam runs (note.beam start..end) among positioned elements that contain a
+  /// Beam runs (start..end) among positioned elements that contain a
   /// cross-staff note. Works regardless of whether the beam was rendered via the
   /// advanced or the simple path.
-  List<List<Note>> _crossStaffGroups(List<PositionedElement> els) {
+  ///
+  /// The run is read through [LayoutEngine.beamOf], never off `Note.beam`
+  /// (ADR-005): since 2.7.2 the engine publishes its grouping as a value and
+  /// leaves the model alone, so the field is null for every automatically
+  /// beamed note and this walk found ZERO runs — measured on four quavers with
+  /// the middle two cross-staffed, model `[null, null, null, null]` against
+  /// engine `[start, end, start, end]`.
+  List<List<Note>> _crossStaffGroups(_StaffLayout layout) {
     final groups = <List<Note>>[];
     List<Note>? cur;
-    for (final pe in els) {
+    for (final pe in layout.elements) {
       final e = pe.element;
       if (e is! Note) continue;
-      switch (e.beam) {
+      switch (layout.engine.beamOf(e)) {
         case BeamType.start:
           cur = [e];
           break;
@@ -654,16 +947,42 @@ class GrandStaffPainter extends CustomPainter {
     return groups;
   }
 
-  Clef _clefOf(int staffIndex) {
-    if (staffIndex < 0 || staffIndex >= _allStaves.length) {
-      return Clef(clefType: ClefType.treble);
-    }
-    for (final m in _allStaves[staffIndex].measures) {
-      for (final e in m.elements) {
-        if (e is Clef) return e;
+  /// 8va/8vb displacement in force at each note of every staff of the system,
+  /// built once on first use.
+  ///
+  /// The cross-staff beam pass below re-derives a notehead's Y from its pitch,
+  /// so it has to apply the SAME bracket displacement `LayoutEngine` and
+  /// `StaffRenderer` applied — otherwise a cross-staff note under an 8va would
+  /// be drawn an octave away from the very beam it belongs to. The clef comes
+  /// from the TARGET staff (that is the staff the notehead is printed on) but
+  /// the bracket comes from the note's OWN staff, which is where the bracket is
+  /// written.
+  Map<Note, int>? _octaveShiftCache;
+
+  int _octaveShiftOf(Note note) {
+    final cache = _octaveShiftCache ??= _buildOctaveShifts();
+    return cache[note] ?? 0;
+  }
+
+  Map<Note, int> _buildOctaveShifts() {
+    final shifts = <Note, int>{};
+    for (final staff in _allStaves) {
+      final span = OctaveSpanTracker();
+      for (var i = 0; i < staff.measures.length; i++) {
+        for (final element in staff.measures[i].allElements) {
+          final shift = span.advance(element, measureIndex: i);
+          if (shift == 0) continue;
+          if (element is Note) {
+            shifts[element] = shift;
+          } else if (element is Chord) {
+            for (final note in element.notes) {
+              shifts[note] = shift;
+            }
+          }
+        }
       }
     }
-    return Clef(clefType: ClefType.treble);
+    return shifts;
   }
 
   /// Draws beam groups that straddle two staves: each notehead on its target
@@ -691,15 +1010,22 @@ class GrandStaffPainter extends CustomPainter {
       for (final pe in layouts[home].elements) {
         if (pe.element is Note) noteX[pe.element as Note] = pe.position.dx;
       }
-      for (final g in _crossStaffGroups(layouts[home].elements)) {
+      for (final g in _crossStaffGroups(layouts[home])) {
         final pts = <({double x, double y})>[];
         for (final note in g) {
           final x = noteX[note];
           if (x == null) continue;
           final target = (home + note.crossStaffMove)
               .clamp(0, _allStaves.length - 1);
-          final pos =
-              StaffPositionCalculator.calculate(note.pitch, _clefOf(target));
+          final pos = StaffPositionCalculator.calculate(
+            note.pitch,
+            // The clef in force on the DESTINATION staff at this X. It used to
+            // be that staff's FIRST clef, so a destination staff that changed
+            // clef during the system placed every later cross-staff notehead
+            // by its opening clef instead.
+            _clefAtX(layouts[target].elements, x),
+            extraOctaveShift: _octaveShiftOf(note),
+          );
           final y = baseline0 + target * staffGap - pos * ss * 0.5;
           pts.add((x: x, y: y));
 

@@ -16,15 +16,29 @@ class MEIParser {
   ///
   /// Everything outside that staff — the other parts, the `<meiHead>`, the
   /// staff grouping — is dropped. Use [scoreFromMei] to keep it.
-  static Staff parseMEI(String meiString, {int staffIndex = 0}) {
-    return parseMeiStaff(meiString, staffIndex: staffIndex);
+  ///
+  /// Pass [warnings] to receive the importer's diagnostics (same shape as
+  /// `MusicXMLParser.parseMusicXML` and `PdfExporter.warnings`): a tablature
+  /// note with no pitch, an MEI document with no `<score>`, and anything else
+  /// the importer had to drop to keep the file readable.
+  static Staff parseMEI(
+    String meiString, {
+    int staffIndex = 0,
+    List<String>? warnings,
+  }) {
+    return parseMeiStaff(
+      meiString,
+      staffIndex: staffIndex,
+      warnings: warnings,
+    );
   }
 
   /// Imports a whole MEI document: every staff, the `<staffGrp>` bracketing and
   /// the `<meiHead>` metadata.
   ///
   /// Mirrors [MusicXMLParser.scoreFromMusicXML] on the MusicXML side.
-  static Score scoreFromMei(String meiString) => parseMeiScore(meiString);
+  static Score scoreFromMei(String meiString, {List<String>? warnings}) =>
+      parseMeiScore(meiString, warnings: warnings);
 
   /// Reads only the `<meiHead>` of a document.
   ///

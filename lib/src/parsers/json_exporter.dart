@@ -48,6 +48,7 @@ class JsonMusicExporter {
             'chromatic': staff.transposition!.chromatic,
             'octaveChange': staff.transposition!.octaveChange,
             'doubled': staff.transposition!.doubled,
+            if (staff.transposition!.doubledAbove) 'doubledAbove': true,
           },
         'measures': [for (final measure in staff.measures) _measure(measure)],
       };

@@ -9,7 +9,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_notemus/flutter_notemus.dart' hide Duration;
 import 'package:flutter_notemus/flutter_notemus.dart' as fn show Duration;
-import 'package:flutter_notemus/src/rendering/grand_staff_painter.dart';
 
 import '_harness.dart';
 

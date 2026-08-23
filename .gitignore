@@ -46,3 +46,8 @@ android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
 
 # Flutter golden test failure diffs (transient)
 test/**/failures/
+
+# Ad-hoc measurement probes (throwaway test scripts, never committed).
+# Also excluded in analysis_options.yaml so `dart analyze` at the repo root
+# matches `dart analyze lib` (measured: 470 issues at root vs 0 in lib).
+probe/

@@ -7,8 +7,19 @@ export 'json_exporter.dart' show JsonMusicExporter;
 /// Parser for Convertsr JSON in objects musicais.
 class JsonMusicParser {
   /// Converts a JSON de partitura for a object [Staff].
-  static Staff parseStaff(String jsonString, {int staffIndex = 0}) {
-    return parseJsonStaff(jsonString, staffIndex: staffIndex);
+  ///
+  /// Pass [warnings] to receive the importer's diagnostics, same shape as
+  /// `MusicXMLParser.parseMusicXML` and `PdfExporter.warnings`.
+  static Staff parseStaff(
+    String jsonString, {
+    int staffIndex = 0,
+    List<String>? warnings,
+  }) {
+    return parseJsonStaff(
+      jsonString,
+      staffIndex: staffIndex,
+      warnings: warnings,
+    );
   }
 
   /// Serialises [staff] back to the shape [parseStaff] reads.

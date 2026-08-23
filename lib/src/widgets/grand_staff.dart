@@ -4,6 +4,8 @@
 // a [StaffGroup]: the staves are stacked vertically, aligned on a shared
 // horizontal grid, and connected by a brace/bracket and continuous barlines.
 
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../core/core.dart';
@@ -91,11 +93,22 @@ class _GrandStaffState extends State<GrandStaff> {
   late Future<void> _metadataFuture;
   late SmuflMetadata _metadata;
 
+  /// Owned by the widget (not created per build) so the scroll offset survives
+  /// a rebuild — a theme change or a hot reload used to be able to jump the
+  /// reader back to bar 1.
+  final ScrollController _horizontalController = ScrollController();
+
   @override
   void initState() {
     super.initState();
     _metadata = SmuflMetadata();
     _metadataFuture = _metadata.load();
+  }
+
+  @override
+  void dispose() {
+    _horizontalController.dispose();
+    super.dispose();
   }
 
   double get _gap => widget.staffGap ?? widget.staffSpace * 11.0;
@@ -130,12 +143,26 @@ class _GrandStaffState extends State<GrandStaff> {
               staffGap: _gap,
             );
             final height = painter.totalHeight;
-            return SizedBox(
-              width: width,
-              height: height,
-              child: CustomPaint(
-                size: Size(width, height),
-                painter: painter,
+            // The canvas must be at least as wide as the music, or the
+            // horizontal scroll view has nothing to scroll and everything past
+            // the viewport is clipped away for good. Measured before this
+            // existed: one bar of 2000 thirty-second notes at a 300 px
+            // viewport laid out to x = 57,436.2 px inside a `CustomPaint`
+            // pinned at 300.0 px, with ZERO scrollables in the tree — 99.5% of
+            // the bar was unreachable. `MusicScore` has always sized itself
+            // this way from `LayoutEngine.contentWidth`; this is the
+            // multi-staff analogue.
+            final canvasWidth = math.max(painter.contentWidth, width);
+            return SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              controller: _horizontalController,
+              child: SizedBox(
+                width: canvasWidth,
+                height: height,
+                child: CustomPaint(
+                  size: Size(canvasWidth, height),
+                  painter: painter,
+                ),
               ),
             );
           },

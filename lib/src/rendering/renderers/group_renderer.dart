@@ -50,12 +50,23 @@ class GroupRenderer {
   /// therefore stops as soon as [PositionedElement.system] changes, otherwise a
   /// `start..end` run whose `end` was pushed to the next line would be drawn as
   /// one long beam running backwards over the staff below.
-  Map<int, List<int>> _identifyBeamGroups(List<PositionedElement> elements) {
+  ///
+  /// [beamTypes] is `LayoutEngine.beams` — the engine's resolved beam
+  /// membership, published as a VALUE (M-26). It is consulted first and
+  /// [Note.beam] is the fallback, so a caller that hands this renderer a bare
+  /// element list with author-set beams and no layout engine still works.
+  /// Reading `note.beam` alone would find NOTHING here now that the engine no
+  /// longer writes its answer back into the model.
+  Map<int, List<int>> _identifyBeamGroups(
+    List<PositionedElement> elements,
+    Map<Note, BeamType>? beamTypes,
+  ) {
+    BeamType? beamOf(Note note) => beamTypes?[note] ?? note.beam;
     final groups = <int, List<int>>{};
     int groupId = 0;
     for (int i = 0; i < elements.length; i++) {
       final element = elements[i].element;
-      if (element is Note && element.beam == BeamType.start) {
+      if (element is Note && beamOf(element) == BeamType.start) {
         final system = elements[i].system;
         final group = <int>[i];
         for (int j = i + 1; j < elements.length; j++) {
@@ -63,7 +74,7 @@ class GroupRenderer {
           final nextElement = elements[j].element;
           if (nextElement is Note) {
             group.add(j);
-            if (nextElement.beam == BeamType.end) break;
+            if (beamOf(nextElement) == BeamType.end) break;
           } else {
             break;
           }
@@ -76,12 +87,19 @@ class GroupRenderer {
     return groups;
   }
 
+  /// [octaveShifts] maps a note to the 8va/8vb displacement of the bracket span
+  /// it falls in (0, and so absent, outside every span). A LIST-level renderer
+  /// needs the map rather than a single int because one beam, tie or slur can
+  /// straddle the start or the end of a bracket, and each end has to be drawn at
+  /// the position the layout engine actually registered for its own note.
   void renderBeams(
     Canvas canvas,
     List<PositionedElement> elements,
-    Clef currentClef,
-  ) {
-    final beamGroups = _identifyBeamGroups(elements);
+    Clef currentClef, {
+    Map<Note, int> octaveShifts = const {},
+    Map<Note, BeamType>? beamTypes,
+  }) {
+    final beamGroups = _identifyBeamGroups(elements, beamTypes);
     for (final group in beamGroups.values) {
       if (group.length < 2) continue;
 
@@ -99,6 +117,7 @@ class GroupRenderer {
           final staffPos = StaffPositionCalculator.calculate(
             note.pitch,
             currentClef,
+            extraOctaveShift: octaveShifts[note] ?? 0,
           );
           final noteY = StaffPositionCalculator.toPixelY(
             staffPos,
@@ -121,6 +140,7 @@ class GroupRenderer {
           durations,
           stemUp,
           currentClef,
+          octaveShifts,
         );
       }
     }
@@ -133,6 +153,7 @@ class GroupRenderer {
     List<DurationType> durations,
     bool stemUp,
     Clef currentClef,
+    Map<Note, int> octaveShifts,
   ) {
     if (positions.length < 2) return;
 
@@ -169,6 +190,7 @@ class GroupRenderer {
       final staffPos = StaffPositionCalculator.calculate(
         element.pitch,
         currentClef,
+        extraOctaveShift: octaveShifts[element] ?? 0,
       );
       staffPositions.add(staffPos);
 
@@ -352,11 +374,17 @@ class GroupRenderer {
     return groups;
   }
 
+  /// [octaveShifts] maps a note to the 8va/8vb displacement of the bracket span
+  /// it falls in (0, and so absent, outside every span). A LIST-level renderer
+  /// needs the map rather than a single int because one beam, tie or slur can
+  /// straddle the start or the end of a bracket, and each end has to be drawn at
+  /// the position the layout engine actually registered for its own note.
   void renderTies(
     Canvas canvas,
     List<PositionedElement> elements,
-    Clef currentClef,
-  ) {
+    Clef currentClef, {
+    Map<Note, int> octaveShifts = const {},
+  }) {
     final tieGroups = identifyTieGroups(elements);
     for (final group in tieGroups.values) {
       final startElement = elements[group.first];
@@ -370,6 +398,7 @@ class GroupRenderer {
       final startStaffPos = StaffPositionCalculator.calculate(
         startNote.pitch,
         currentClef,
+        extraOctaveShift: octaveShifts[startNote] ?? 0,
       );
 
       // Fix: LACERDA: "Ties/slurs are of the lado OPOSTO das stem"
@@ -385,9 +414,11 @@ class GroupRenderer {
         coordinates.staffSpace,
         coordinates.staffBaseline.dy,
       );
+      final endNoteOfTie = endElement.element as Note;
       final endStaffPos = StaffPositionCalculator.calculate(
-        (endElement.element as Note).pitch,
+        endNoteOfTie.pitch,
         currentClef,
+        extraOctaveShift: octaveShifts[endNoteOfTie] ?? 0,
       );
       final endNoteY = StaffPositionCalculator.toPixelY(
         endStaffPos,
@@ -518,11 +549,17 @@ class GroupRenderer {
     return groups;
   }
 
+  /// [octaveShifts] maps a note to the 8va/8vb displacement of the bracket span
+  /// it falls in (0, and so absent, outside every span). A LIST-level renderer
+  /// needs the map rather than a single int because one beam, tie or slur can
+  /// straddle the start or the end of a bracket, and each end has to be drawn at
+  /// the position the layout engine actually registered for its own note.
   void renderSlurs(
     Canvas canvas,
     List<PositionedElement> elements,
-    Clef currentClef,
-  ) {
+    Clef currentClef, {
+    Map<Note, int> octaveShifts = const {},
+  }) {
     final slurGroups = identifySlurGroups(elements);
     for (final group in slurGroups.values) {
       if (group.length < 2) continue;
@@ -538,10 +575,12 @@ class GroupRenderer {
       final startStaffPos = StaffPositionCalculator.calculate(
         startNote.pitch,
         currentClef,
+        extraOctaveShift: octaveShifts[startNote] ?? 0,
       );
       final endStaffPos = StaffPositionCalculator.calculate(
         endNote.pitch,
         currentClef,
+        extraOctaveShift: octaveShifts[endNote] ?? 0,
       );
 
       // Fix: LACERDA: Tie/slur de expressão segue same regra de tie

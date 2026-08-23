@@ -147,7 +147,14 @@ class MeasureValidator {
   /// Encontra o time signature no measure
   ///
   /// Walks `Measure.allElements` (so `MultiVoiceMeasure` works too) and falls
-  /// back to the signature `LayoutEngine` inherited onto the bar.
+  /// back to [Measure.inheritedTimeSignature].
+  ///
+  /// That fallback is the AUTHOR'S opt-in hint, not something the layout wrote:
+  /// since ADR-005 action item 8 `LayoutEngine` derives the inherited meter as
+  /// a value ([LayoutEngine.inheritedTimeSignatures]) and never assigns to the
+  /// caller's model. A bar taken out of its staff therefore knows its inherited
+  /// meter only if somebody set the field; to validate a whole staff, use
+  /// [validateStaff], which derives the inheritance itself.
   static TimeSignature? _findTimeSignature(Measure measure) {
     for (final element in measure.allElements) {
       if (element is TimeSignature) {
@@ -351,34 +358,64 @@ class MeasureValidator {
     }
   }
 
-  /// Valida a sequência de measures (with inheritance de TimeSignature)
+  /// Validates every bar of [staff] against the meter IN FORCE for it, which
+  /// for a bar that declares none is the meter declared by an earlier bar.
+  ///
+  /// Use this rather than calling [validate] bar by bar. [validate] can only
+  /// see what one [Measure] carries, and since ADR-005 action item 8 the layout
+  /// no longer stamps the inherited meter onto the caller's `Measure`: writing
+  /// there made `Measure.add` throw for an element it had accepted moments
+  /// earlier, so rendering a score changed whether a public method threw.
+  /// Measured before that fix, on a two-bar staff whose bar 2 declares no meter
+  /// and holds four quarters under an inherited 4/4 — a fifth quarter was
+  /// accepted before `LayoutEngine.layout()` and threw
+  /// `MeasureCapacityException` after it.
+  ///
+  /// The inheritance is therefore derived HERE, per call, and nothing is
+  /// written back. The rule is the same one
+  /// `LayoutEngine._resolveInheritedTimeSignatures` applies, so the two cannot
+  /// disagree:
+  ///
+  /// * a meter declared IN the staff always wins, and stays in force until the
+  ///   next declaration;
+  /// * [Measure.inheritedTimeSignature] is an author-supplied hint that only
+  ///   SEEDS the walk — it is honoured while nothing has been declared yet and
+  ///   ignored afterwards. That seed is what lets a `GrandStaffPainter`
+  ///   sub-staff validate at all: such a staff starts mid-score, so the meter
+  ///   it runs under was declared in a bar the sub-staff does not contain.
+  ///
+  /// This used to read `_findTimeSignature(measure)` per bar instead, which
+  /// let a stale hint on bar 5 override the 4/4 the staff declared in bar 1.
+  ///
+  /// A bar before the staff's first meter is reported through [validate], i.e.
+  /// valid with the "no time signature" warning, instead of the hard
+  /// "Compasso sem fórmula de compasso definida" error the previous version
+  /// produced for it. [allowAnacrusis] applies to bar 0 only, matching layout.
   static List<MeasureValidationResult> validateStaff(
     Staff staff, {
     bool allowAnacrusis = false,
   }) {
     final results = <MeasureValidationResult>[];
-    TimeSignature? currentTimeSignature;
-    
+    TimeSignature? running;
+
     for (int i = 0; i < staff.measures.length; i++) {
       final measure = staff.measures[i];
-      final isFirstMeasure = i == 0;
-      
-      // Procurar TimeSignature neste measure
-      TimeSignature? measureTimeSignature = _findTimeSignature(measure);
-      
-      // If encontrou, atualizar o TimeSignature corrente
-      if (measureTimeSignature != null) {
-        currentTimeSignature = measureTimeSignature;
+      final declaredHere = measure.timeSignature;
+      if (declaredHere != null) {
+        running = declaredHere;
+      } else {
+        running ??= measure.inheritedTimeSignature;
       }
-      
-      // Validar with TimeSignature inherited
-      final result = validateWithTimeSignature(
-        measure,
-        currentTimeSignature,
-        allowAnacrusis: allowAnacrusis && isFirstMeasure,
+
+      results.add(
+        running == null
+            ? validate(measure, allowAnacrusis: allowAnacrusis && i == 0)
+            : validateWithTimeSignature(
+                measure,
+                running,
+                allowAnacrusis: allowAnacrusis && i == 0,
+              ),
       );
-      
-      results.add(result);
     }
 
     return results;

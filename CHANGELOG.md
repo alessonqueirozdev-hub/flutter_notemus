@@ -4,6 +4,557 @@ All notable changes to Flutter Notemus are documented in this file.
 
 The format is based on Keep a Changelog and this project follows Semantic Versioning.
 
+## [2.8.0] - 2026-08-23
+
+A second adversarial re-audit of 2.7.1 — again by executing the engine, not by
+reading it — was reconciled into a single defect list and remediated in five
+waves. Everything below was MEASURED before and after; where a number is a
+count, it is the count the probe printed, and a final documentation pass
+re-probed every claim on this page against the integrated tree before it was
+allowed to stand.
+
+The fifth wave exists because four of the findings had been *diagnosed* in a
+report by an earlier wave and never *applied* — including the worst of them,
+cross-staff beams silently not being drawn, which two independent waves each
+wrote the correct patch for into a notes field that nothing executes. Every one
+of those four is closed here, and each has a test in
+`test/invariants/w5_leftovers_test.dart` that fails with the broken number
+rather than with an anonymous mismatch.
+
+This is a PATCH release by version number and a BREAKING one by output: beam
+band thickness, tuplet spacing, tuplet bracket thickness and grand-staff
+pagination all change what a correct score looks like, so the pixel goldens
+those changes move are re-recorded in this release. No public API was removed. One behaviour change is worth calling
+out at the top: **`LayoutEngine.layout()` no longer writes `Note.beam`**. Read
+the effective beam through `LayoutEngine.beamOf(note)`; `Note.beam` is now an
+INPUT hint only. See
+[ADR-005](doc/adr/ADR-005-layout-decisions-are-values.md).
+
+### Beaming
+
+- **`LayoutEngine.beamOf(note)` now consults `tupletBeams` as well as `beams`.**
+  It did not, which meant the method documented as *the only supported read*
+  returned `null` for exactly the notes `tupletBeams` exists to describe.
+  Measured on a 3:2 triplet of eighths after `layout()`: `beams[first]` `null`,
+  `tupletBeams[first]` `BeamType.start`, `beamOf(first)` **`null`**. Nothing
+  looked broken only because `TupletRenderer` reads `tupletBeams` directly;
+  every other caller got the wrong answer, and the visible consequence was that
+  `TupletBracket.shouldShow(notes, beamOf: engine.beamOf)` returned `true` — a
+  bracket printed over a fully beamed triplet, against Behind Bars p.201, from
+  the very API added this release to prevent that. The two maps are disjoint by
+  construction (`beams` walks measure/voice elements, `tupletBeams` walks only
+  `Tuplet` children), so no note outside a tuplet changes answer; the full suite
+  and all 53 goldens are unchanged. Found and fixed at the closing sign-off,
+  after two earlier passes had each written the one-line patch into a report
+  without applying it.
+- **A beam decision is a VALUE the layout publishes, not a mutation of your
+  model.** `LayoutEngine.layout()` used to write the answer onto the caller's
+  own [Note] objects (`note.beam = ...`), and `TupletRenderer` used to write it
+  again DURING PAINT. Two consequences were measured. First, the export a user
+  got depended on whether the score had been displayed: the same `Staff` of two
+  bars of loose quavers exported **3 349 characters with 0 `<beam>` tags before
+  and 3 973 characters with 16 `<beam>` tags after**, and on a mixed fixture
+  (a 3/4 bar of six quavers plus a bar holding one triplet) the two stamps land
+  separately — **3 284 characters / 6 `<beam>` tags after the layout stamp,
+  3 399 / 9 after the paint stamp**. Second, the layout's own measuring dry-run
+  wrote every note twice: **32 writes for 16 notes**. The decision is now
+  published as `LayoutEngine.beams` and `LayoutEngine.tupletBeams` and read
+  through `LayoutEngine.beamOf(note)`; `Note.beam` is an INPUT hint only, which
+  is what `BeamingMode.manual` needs. Measured after: MusicXML and JSON exports
+  are byte-identical before and after `layout()` AND before and after
+  `ScoreRasterizer.renderStaffToPng` (3 349 / 3 349 / 3 349 characters,
+  0 / 0 / 0 `<beam>` tags), the model's `Note.beam` values are untouched, and
+  `PositionedElement.computeSignature` returns the same 278 109 605 from two
+  independent engines. This partially supersedes
+  [ADR-001](doc/adr/ADR-001-layout-never-clones-the-model.md), which made
+  `Note.beam` mutable on purpose; see
+  [ADR-005](doc/adr/ADR-005-layout-decisions-are-values.md).
+- **Each beam level beyond the first pays for the gap under it.**
+  `stemExtensionPerBeam` was the literal `0.5` behind the comment "Calculated
+  based on beamSpacing" — a calculation never performed. 0.5 is `beamThickness`
+  alone; the marginal cost of one more level is `beamThickness + beamSpacing`,
+  which Bravura puts at `0.5 + 0.25 = 0.75`, and which is what
+  `BeamRenderer._calculateLevelOffset` has actually been stacking with since
+  2.7.1. Measured at `staffSpace = 12`: a 32nd (3 levels) added
+  `2 x 0.5 = 1.00` staff space of stem while its beam stack reached
+  `2 x 0.75 = 1.50` below the primary — the innermost beam hung **0.50 staff
+  spaces (6.00 px) past the end of the stem it is drawn from**.
+- **The beam subdivision table covers the meters that had no entry at all.**
+  With one beat per denominator unit, a bar whose figure is worth exactly one
+  unit puts exactly one note in every beat and a beam needs two, so the grouper
+  returned nothing. Exhaustively measured before the fix, ZERO beams came out of
+  quavers in 1/8, 2/8, 4/8, 10/8, 13/8, 14/8, 16/8, 2/16, 4/16, 8/16, 10/16,
+  14/16 and 16/16, and semiquavers in 1/16, 2/16, 4/16, 5/16, 7/16, 8/16, 10/16,
+  11/16, 13/16, 14/16 and 16/16 — plus 6/16 and 12/16, where a compound beat of
+  three semiquavers is shorter than the quaver it had to hold and caught only
+  two of the bar's three. Re-measured afterwards, and again independently in the
+  documentation pass, over the full grid of numerators 2, 3, 4, 5, 6, 7, 8, 9
+  and 12 against denominators 2, 4, 8 and 16, each bar filled with eighths,
+  sixteenths or thirty-seconds: **108 combinations, 107 of which hold two or
+  more notes, and exactly 1 of those 107 comes out unbeamed**. That one is 3/16
+  holding two quavers — a bar that OVERFLOWS its own meter (0.25 against
+  0.1875), so there is no beat left for the second quaver to be grouped into.
+  The remaining combination, 2/16 filled with quavers, is a bar of ONE note,
+  where a beam is impossible by definition.
+  (An earlier draft of this entry read "106 combinations, 0 of 89, 17
+  single-note bars". Those three numbers do not reproduce on this tree; they are
+  replaced by the ones above, which two independent probes agree on.)
+- **x/2 is not a compound meter.** The compound branch fired on any meter whose
+  beat divided into three, and in x/2 that beat is a dotted BREVE. Measured: 6/2
+  filled with quavers produced two beams of TWELVE notes, 9/2 three of twelve,
+  12/2 four and 15/2 five. The compound beat is now capped at a dotted minim
+  (0.75 whole notes), which is the limit Behind Bars p. 160 implies.
+- **A trailing beat too short to stand is folded into the one before it.**
+  Measured on 13/8: `[2,2,2,2,2,2]` plus one orphan quaver becomes
+  `[2,2,2,2,2,3]`.
+- **Beam band and gap thicknesses come from the SMuFL metadata.** Measured at
+  `staffSpace = 40` by counting dark pixel runs down the middle of a two-level
+  group: the hardcoded 0.40/0.60 pair gave a 16 px band and a 24 px gap for a
+  56 px stack (1.40 SS); the metadata's 0.50/0.25 gives 20 px and 10 px for
+  50 px (1.25 SS). The old numbers were not "lighter" — the stack the eye reads
+  and the stems have to span was 10.7% taller, and 16.7% taller at three levels.
+
+### Engraving and layout
+
+- **A tuplet's internal spacing no longer depends on the configured spacing
+  model.** `TupletGrid` took an optional `IntelligentSpacingEngine`: the layout
+  passed one and the renderer, which holds none, fell back to the built-in
+  square root. Identical for the default `SpacingModel.squareRoot`, and
+  divergent for every other model — which is the exact class of defect
+  `TupletGrid` exists to remove. Measured across all four models, the tuplet's
+  children sat at identical X positions in all four while the same durations
+  written as plain notes moved by ratios of 1.250 / 1.137 / 1.027 / 1.278.
+  Tuplet-internal spacing is now Gould's square root by construction; the
+  tuplet's placement in the outer flow still follows the configured model.
+- **A tuplet's minimum slot is 1.9 staff spaces, not 1.4.** Measured at
+  `staffSpace = 12` on the corpus case `m04m_tuplet_ratio` (5:4, five stepwise
+  sixteenths): every step came out at 16.800 px and the real ink gap between
+  adjacent noteheads was 2 px = 0.167 SS, under the package's own
+  `SpacingPreferences.normal.minGap` of 0.25 SS. Re-measured after the fix on
+  the same raster: the step is 22.800 px = 1.9000 SS and **the real ink gap is
+  9 px = 0.750 SS**, three times the package's own minimum — not the 11 px that
+  an earlier draft of this entry and the dartdoc in `tuplet_grid.dart` both
+  claimed. (9 px is the gap on the widest notehead row, where the black ink is
+  13-14 px across; the slot arithmetic reserves a nominal 0.72 SS = 8.64 px and
+  the glyph's side bearing supplies the rest.) The old floor was also flat over
+  two thirds of its domain — ten of the fifteen `DurationType`s all received
+  exactly 1.4.
+- **The tuplet bracket is drawn at bracket weight, not stem weight.** It used
+  the literal `staffSpace * 0.12`, which is the value of `stemThickness` — the
+  wrong entry of the wrong table, and a literal, so it did not even follow the
+  font's own stem. Measured on a raster at `staffSpace = 48`: the horizontal
+  bracket line was **6 opaque rows = 0.1250 staff spaces against the 0.16 the
+  font declares, 22% too thin**. It now reads
+  `engravingDefaults.tupletBracketThickness`, which is the weight of a thin
+  barline (Behind Bars p. 201).
+- **A wrapped system restates the clef the bar is actually in, on a single
+  staff too.** The head test was `measure.elements.any((e) => e is Clef)`,
+  which answers "yes" for a bar whose ONLY clef is a mid-measure CHANGE and so
+  suppressed the restatement, and it read `elements` rather than `allElements`,
+  so a clef living in a voice was invisible to it. Measured on twelve bars at
+  300 px with bar 1 carrying a bass clef AFTER its first note:
+  `sys1 clefs=[bass@56]` — **the system opened with no clef at all at x = 30**;
+  on a ten-bar staff whose bar 3 changes to bass mid-voice, systems 3 through 9
+  restated **treble** while bass was in force, i.e. every note from bar 4 on was
+  drawn a twelfth wrong. The single-staff path now applies the same
+  `_statesAtHead` rule `GrandStaffPainter` applies, so the two cannot diverge.
+- **Tuplet children follow their tuplet when a grand staff aligns its hands.**
+  `_alignStaves` remapped X for `Note` and `Chord` only. A `Tuplet` is
+  positioned as ONE element and its children live on a grid anchored on it, so
+  on a grand staff they kept their pre-alignment coordinates — and beams,
+  hit-testing and the public position API all read those coordinates.
+- **A chord's accidental block reports one width to the layout and the
+  renderer.** Measured before the shared, metadata-only geometry existed: a
+  chord with 2, 3, 4 **or** 5 accidentals reported
+  `LayoutEngine.elementLeftExtent = 25.82 px` — one column's worth — while
+  `ChordRenderer` packed them into as many columns as they needed. Measured
+  after, at `staffSpace = 12` on stacked sharps: **29.18 / 43.78 / 58.37 /
+  58.37 px** for 2 / 3 / 4 / 5 accidentals. The last two are equal because the
+  fifth accidental fits into a column an earlier one already opened — that is
+  the renderer's own packing, and the layout now reports it instead of guessing
+  one column for every case.
+- **Two tuplets in the same bar keep their proportion to each other.** The
+  legibility floor of the tuplet grid — the scale that lifts the narrowest slot
+  up to `TupletGrid.minimumSlotSpaces` — was computed per GROUP, so every group
+  independently bottomed out on the same floor and no two of them could be told
+  apart. Measured at `staffSpace = 12` on one 4/4 bar holding a 3:2 triplet of
+  quavers beside a 3:2 triplet of semiquavers: **1.9000 SS per slot for both,
+  ratio 1.0000**, where the quavers should be sqrt(2) = 1.4142 wider per note.
+  The scale is now computed once per MEASURE — `LayoutEngine.tupletContextFloor`
+  publishes the denominator and `TupletRenderer` reads it, the same
+  layout-decisions-are-values shape as `tupletBeams` (ADR-005), so the two
+  cannot draw different grids. Measured after: **2.6870 SS and 1.9000 SS, ratio
+  1.4142**. The floor is untouched where it matters — the narrowest group in the
+  bar still sits exactly on it, and the rasterised ink gap between adjacent
+  noteheads is unchanged at **9 px = 0.750 SS**, three times the package's own
+  `SpacingPreferences.normal.minGap`. A bar holding exactly one tuplet has a
+  context equal to that tuplet, so its geometry is bit-identical to 2.7.1 and no
+  corpus golden moved.
+  The per-slot alternative (`max(raw, minimumSlotSpaces)`, preserving ratios
+  above the floor) was measured and rejected: both raw slots, 1.7678 and 1.2500,
+  are BELOW the 1.9 floor, so both clamp to 1.9 and the ratio stays 1.0000.
+- **An over-full measure is now reported instead of silently overflowing.**
+  `LayoutEngine` gained a `List<String> warnings` — the same shape
+  `MidiConversionResult`, `PdfExporter` and the parsers use — and records, per
+  measure, that the spacing compression bottomed out at
+  `minimumSpacingScale` (0.35) and the bar STILL does not fit, naming the
+  measure and the overflow factor. Measured on 40 whole notes written into one
+  4/4 bar at 900 px: **43 elements on ONE system reaching x = 1 829.2 px, 2.03x
+  the line**, previously produced with no diagnostic at all beyond a boolean
+  `overflowsAvailableWidth` for the whole staff. This is a DIAGNOSTIC only: the
+  geometry is byte-for-byte what it was, asserted by
+  `PositionedElement.computeSignature` equality between an engine that records
+  the warning and one that does not.
+
+### Interaction
+
+- **The hit box of a note covers its flag and its ledger lines.** MEASURED at
+  `staffSpace = 12`, treble: a lone eighth on C4 has its stem 13.44 px right of
+  the note origin and `flag8thUp` is 12.67 px wide from there, so the flag
+  occupied x 95.32 .. 107.99 while the box ended at 99.20 — a click on the outer
+  two thirds of the flag returned null. C6 and A3 quarter notes carry 23.76 px
+  ledger lines (14.16 px notehead + 2 x 4.80 px extension) centred on the head,
+  2.43 px past each side of the box, so a click on either END of a ledger line
+  returned null while the middle worked.
+- **The box top matches the stem the renderer actually draws.** MEASURED at
+  staff position -20, `staffSpace` 12: the stem is 10.000 staff spaces, not 3.5,
+  because Behind Bars p. 47 makes it reach the middle line. A separate 2e-14 px
+  floating-point mismatch at staff position -6 (box top 51.98400000000001
+  against a drawn tip of 51.98399999999999) made a click exactly on the tip
+  miss; the boundary now carries air.
+
+### Interoperability
+
+- **The MusicXML exporter writes `Chord.duration`.** `_buildChordXml` emitted
+  the duration of each INNER `Note` and never looked at the chord's own, while
+  `Measure.musicalValueOf`, `LayoutEngine` and `MidiMapper` all read
+  `Chord.duration`. Measured round trips of `currentMusicalValue`: a dotted
+  quarter chord over plain-quarter inner notes went 0.375 -> 0.25, a
+  double-dotted half over halves 0.875 -> 0.5, and a whole over eighths
+  1.0 -> 0.125. The emitted XML for the dotted chord carried `<divisions>480`,
+  `<duration>480</duration>` twice and ZERO `<dot/>`. All three now round-trip
+  exactly, and the dotted chord exports `<duration>720</duration>` and one
+  `<dot/>` per tone.
+- **A nested tuplet is no longer dropped on export.** The exporter's leaf filter
+  kept `Note`, `Rest` and `Chord` and silently discarded any nested `Tuplet`.
+  Measured on a 4/4 bar holding 3:2 of [quarter, quarter, 3:2 of three eighths]:
+  the bar went 0.5 -> 0.3333 and the inner group's three notes vanished. Leaves
+  now carry the PRODUCT ratio, which is what MusicXML requires, and the bar
+  round-trips 0.5 -> 0.5. Known loss: only the outer bracket is written
+  (`number="2"` is not emitted), so re-importing gives two sibling `Tuplet`s
+  rather than one nested pair.
+- **`<backup>` matches the notes that were written.** The nested-tuplet factor
+  was not multiplied through, so a two-voice bar whose upper voice held the
+  figure above emitted `<backup><duration>1120</duration>` while the notes it
+  had actually written summed to 640. It now emits 961, which is exactly the sum
+  of the five `<duration>` values written.
+- **MusicXML tuplets survive the round trip.** `<notations><tuplet>` is written
+  alongside `<time-modification>`, and the importer opens and closes a group
+  from the ratio even when the bracket is absent. Measured on a 4/4 bar of a 3:2
+  triplet plus a quarter: 0.5 -> 0.625 with the group dissolved into four loose
+  notes before, 0.5 -> 0.5 with the `Tuplet` returning as a `Tuplet` after.
+- **The parsers report what they could not read.** Measured before the channel
+  existed: `grep -rin "warn" lib/src/parsers/` returned 0 hits across 5 935
+  lines, and `<divisions>0</divisions>` silently turned a
+  `<duration>4</duration>` quarter into a whole note. `parseMusicXML`,
+  `scoreFromMusicXML`, `parseMEI` and `parseMeiScore` now take an optional
+  `warnings` list. Re-measured in the documentation pass on nine malformed
+  documents that ALL used to import in silence: a zero `<divisions>` and a
+  non-positive `<duration>` now raise warnings (3 and 1 message respectively,
+  each naming the measure and the value substituted), and **three of the nine
+  are rejected outright** with a `FormatException` instead of importing as
+  something plausible — `<pitch>` with no `<octave>`, an unknown `<step>`, and a
+  document that is not a score at all. **Coverage is not total: four of the nine
+  are still absorbed in silence** — an unknown `<clef><sign>`, an unknown
+  `<type>`, a non-numeric `<alter>` and a missing `<part-list>`.
+- **MEI `<staffGrp>` labels reach the model.** Measured:
+  `<staffGrp symbol="brace"><label>Piano</label><labelAbbr>Pno.</labelAbbr>`
+  produced `StaffGroup.name = null` and `abbreviation = null`, so an imported
+  piano system lost its instrument label while the MusicXML import of the same
+  music kept it.
+- **The JSON round trip keeps the staff's own fields.** `staffToJson` wrote them
+  but `parseStaff` read only `measures`. Measured on a B-flat instrument:
+  `parseStaff(staffToJson(s))` returned `name = null`, `abbreviation = null`,
+  `lineCount = 5` regardless of the source, and `transposition = null`. The JSON
+  importer also duplicated a polyphonic bar's opening block into voice 1, so the
+  layout drew it twice — measured `Clef@30.0, Key@68.2, Time@99.4, Clef@147.4,
+  Key@227.6, Time@300.7`.
+
+### Export and widgets
+
+- **`GrandStaff` scrolls horizontally.** Measured before: one bar of 2 000
+  thirty-second notes at a 300 px viewport laid out to x = 57 436.2 px inside a
+  `CustomPaint` pinned at 300.0 px with ZERO scrollables in the tree — 99.5% of
+  the bar unreachable. The canvas is now sized from the painter's content width,
+  the multi-staff analogue of what `MusicScore` has always done. Measured after,
+  on 200 thirty-seconds in the same 300 px viewport: **1 `Scrollable`,
+  `AxisDirection.right`, `maxScrollExtent 5525.76`**, which plus the 300 px
+  viewport is 5825.76 — exactly `GrandStaffPainter.contentWidth`. 100% of the
+  music is reachable.
+- **PDF export of a grand staff pages instead of cropping.** Measured on a
+  40-bar two-staff piano score: the group wraps into 14 systems at
+  963.78 x 3552 logical px; at A4 the image wanted 1776 pt of height and got
+  706.5 pt, so **39.8% of the music reached the PDF** and eight and a half
+  systems were dropped in silence. Measured after, on the same score:
+  **3 music pages of 5 / 5 / 4 systems = 14 of 14**, every system present
+  exactly once, the largest page raster 1928 x 2520 px against the 8192 px cap,
+  237 157 bytes of PDF carrying 4 page objects (title page + 3), and
+  `PdfExporter.warnings` empty.
+- **The grand-staff rasterizer sizes its canvas from the music and caps its
+  resolution.** Measured, a single bar of sixteen sixteenths requested at 200
+  logical px placed its last element at x = 679.99 (content edge 718.39 with the
+  26.4 px brace pad) against a 200 px canvas — 518 px of music cut off. And a
+  60-bar two-staff group produced a 2 000 x 10 128 px image at `pixelRatio` 2;
+  the audit measured 15 168 px (~97 MB of RGBA, 3 570 ms) on a 30-system group
+  and projected 151 248 px for a 600-bar score, past every mobile texture limit.
+  The guard is a resolution cap, not a crop.
+
+- **The text-font escape hatch is reachable from the package root.** Every
+  non-SMuFL string the engine draws now goes through one fallback chain
+  (`kMusicTextFontFallback`: `Academico, Century Schoolbook, Edwin, serif`), and
+  **the package ships none of those four** — `assets/` holds `Bravura.otf` and
+  `greciliae.ttf`, and `pubspec.yaml` declares exactly those two families, both
+  music fonts. Measured on 2.7.1 by rasterising one score four ways and varying
+  only the registered text face: Bravura + Greciliae alone gave **16 `.notdef` boxes**, a
+  real face named `Academico` gave **0**, and a real face named `serif` gave 16
+  again with a PNG byte-identical to the first — the terminal generic is not a
+  resolution guarantee. `MusicTextFont.use(family)` and
+  `MusicScoreTheme(textFontFamily: ...)` are the supported answer and are now
+  exported from `package:flutter_notemus/flutter_notemus.dart` rather than only
+  reachable through a convenience re-export inside `music_score_theme.dart`.
+- **...and that escape hatch now actually reaches the painter.** It was inert
+  for tempo marks, expression text, word dynamics and repeat instructions: TEN
+  sites in `symbol_and_text_renderer.dart` attached `fontFamilyFallback`
+  themselves before calling `withMusicTextFallback()`, and the extension's
+  contract is that a caller-supplied chain always wins — so supplying it up
+  front made the injection point unreachable by construction. Measured before:
+  the same score rasterised to **76 120 px of ink BOTH with and without**
+  `MusicTextFont.use`. Those ten sites no longer pre-supply the chain. Measured
+  after at `staffSpace = 12` in a 900 px viewport: **14 942 px of ink and 2
+  `.notdef` boxes with no text face registered, 6 886 px and 0 boxes with one
+  injected**. The chain-wins rule itself is unchanged and still correct — a
+  theme that names its own faces is left alone, and the same score built with
+  such a theme measures 14 079 px and 5 boxes either way. Guarded structurally
+  as well: `w5_leftovers_test.dart` fails if any executable line of that file
+  sets `fontFamilyFallback` again.
+- **`ScoreRasterizer.renderStaffToImage` no longer crops the top of the music.**
+  It sized the canvas with `LayoutEngine.calculateTotalHeight`, which already
+  adds `contentTopOverflow`, but passed `topLogicalY: 0` — so the extra headroom
+  was appended to the BOTTOM of the image and everything above logical y = 0 was
+  still cut off. Measured on a 5:4 tuplet on C6-G6 at `staffSpace = 12` in a
+  900 px viewport: `contentTopOverflow` correctly reported **38.40 px**, the
+  image was correctly sized **900x231** — and row 0 carried **74 px of ink**
+  (the E6 ledger lines of the last three notes) while the G6 notehead and its
+  own ledger line were off the canvas entirely. `renderStaffPages` (and so
+  `renderStaffToPng` and `PdfExporter`) never had the bug, because it passes
+  `bandHeight * first - extraTop`; the two paths now agree to the pixel.
+  Measured after: **0 px of ink on row 0 and on the last row**, for the C6-G6
+  case and for a C3-G3 one, and identical total ink from the single-image and
+  the paginated path.
+
+### Tooling and documentation
+
+- **`dart analyze` is clean from the repo root, not only from `lib`.** The
+  throwaway `probe/` measurement scripts are git-ignored but were still
+  analysed: measured 470 problems at the root against 0 in `lib`, which broke
+  any CI gate running the root form. `probe/**` is excluded; measured after, 0
+  problems at the root.
+- **`MidiMapper` no longer carries a field nothing reads.** Measured: 1 write, 0
+  reads in `lib/` and `test/`, kept alive by an `// ignore: unused_field`.
+- **The README no longer advertises delivered work as broken, and the section
+  that did now holds only measured BOUNDARIES.** "Known defects, measured and
+  still open" is renamed "Known limitations, measured and still open" because
+  nothing in it is a defect any more. It held five entries across 2.7.0 and
+  2.7.1, and a sixth added during 2.8.0's own documentation pass: no beams in 26 meter/figure combinations,
+  MusicXML tuplets not surviving a round trip, silent acceptance of malformed
+  MusicXML, `GrandStaff` with no horizontal scroll, and a single-page clipped
+  grand-staff PDF, and cross-staff beams not being drawn. Three were fixed and
+  removed in an earlier wave; two were still printed as CURRENT defects while
+  the engine had already stopped having them — the third consecutive release in
+  which the README asserted that delivered work was broken — and the sixth was
+  fixed after the README bullet describing it was written. All were re-probed by
+  a pass that did not write the fix (1 `Scrollable`, `maxScrollExtent 5525.76`,
+  100% reachable; 3 pages, 14 of 14 systems, no warnings; auto-beamed and
+  hand-beamed cross-staff groups rendering to the same 10 395 px of ink) and
+  deleted. **Twelve documentation claims about a defect being open or closed
+  were re-probed against the integrated tree for this release. Five were
+  confirmed still true and seven statements were corrected** — the README
+  sentence pointing at the cross-staff bug and the README bullet describing it,
+  the two CHANGELOG "Known issues" entries (cross-staff beams and the
+  `Note.beam` dartdoc), the README paragraph that presented the text-font escape
+  hatch as working when it was inert on prose, a comment in
+  `remediation_2_7_1_gaps_test.dart` that recorded the same inertness as
+  permanent, and the performance regression, which the re-audit measured at
+  1.19x-2.89x and which is closed (see "Performance against 2.7.1"). The five
+  confirmed: the package ships no text face, four kinds of malformed MusicXML
+  still import in silence, the `m04m_tuplet_ratio` step is still 22.800 px =
+  1.9000 SS, `GrandStaff` still scrolls to 100% of its content, and a
+  grand-staff PDF is still 14 of 14 systems over 3 pages. The paragraph claiming a grand-staff PDF is "one image
+  on one page" and that "a 40-bar piano piece loses roughly 60% of its music"
+  was rewritten; the half of it that IS still true — the text fallback chain
+  asks for `Academico, Century Schoolbook, Edwin, serif` while `assets/` holds
+  only `Bravura.otf` and `greciliae.ttf` and `pubspec.yaml` declares exactly
+  those two families — survives, and now points at the `MusicTextFont` escape
+  hatch.
+- **Every `dart` code fence in the README compiles.** All 41 were extracted and
+  analysed against the integrated tree. Three were wrong as printed: the
+  Required-Initialization snippet called `runApp` and
+  `WidgetsFlutterBinding.ensureInitialized()` without importing
+  `package:flutter/material.dart`; the MIDI-export snippet declared a `Staff`
+  parameter while importing only `package:flutter_notemus/midi.dart`, which does
+  not export `Staff`; and the chant snippet called `Neume()` with both of its
+  required arguments replaced by a comment. Measured after: **41 of 41 analyse
+  with zero errors**, the only residue being the reader's own `MyApp`.
+- **The numbers in this section were audited against fresh probes.** Four
+  entries carried a figure that did not reproduce, or were missing their
+  "after" half entirely; each is corrected in place above and says so where the
+  correction changes a published number.
+- **`AccidentalRenderer.decoratedWidthSpaces` delegates instead of
+  duplicating.** The layout needs the same arithmetic with no renderer instance
+  in hand, so a metadata-only static was added and the instance method became a
+  second copy. Verified over all 235 `accidental*` glyphs in `glyphnames.json`
+  times the three `AccidentalParenthesis` values, plus `noteheadBlack`, `gClef`
+  and an unknown name to exercise the fallback: 714 of 714 combinations returned
+  bit-identical doubles, 0 disagreements, before the two were collapsed into one.
+
+### Closed since the first draft of this entry
+
+Two items were published in an earlier draft of this section as OPEN. Both were
+fixed inside this release and both were re-verified by a pass that did not write
+the fix, which is the only way an entry is allowed to leave the list.
+
+- **Cross-staff beams ARE drawn on a `GrandStaff`.** `GrandStaffPainter` read
+  `Note.beam` off the model in two places — the cross-staff relocation predicate
+  and `_crossStaffGroups` — instead of asking `LayoutEngine.beamOf`, so after
+  the beams-as-values change the model read `[null, null, null, null]` where the
+  engine's answer was `[start, end, start, end]`, every note was classified as
+  unbeamed, and zero cross-staff beam runs were found. Both sites now go through
+  `LayoutEngine.beamOf`. Verified by DIFFERENCE, which is the measurement the
+  old code could not pass: four quavers with the middle two sent to the other
+  hand were rendered twice, once auto-beamed (model `Note.beam` all null) and
+  once with the beams written by hand into the model. The two rasters agree —
+  **10 395 px of ink each, the same beam runs at rows 69-74 spanning x
+  161-274** — where the auto-beamed one used to draw no cross-staff beam at all.
+  This was the single worst defect of the programme: it was correctly diagnosed
+  by two independent audit waves, each of which wrote the patch into a report,
+  and neither applied it.
+- **`Note.beam`'s dartdoc describes the current contract.**
+  `lib/core/note.dart` now says the field is an INPUT hint, that the layout
+  never writes here since 2.8.0, and that `LayoutEngine.beamOf(note)` is the
+  only supported read.
+
+### Known defects still open
+
+Two, both found by the closing sign-off, both left unfixed on purpose because
+each needs a maintainer's decision rather than a patch, and both measured.
+
+- **The "hide the bracket over a fully beamed tuplet" rule is not applied to
+  any rendered score.** `TupletBracket.shouldShow` — repaired this release to
+  take the layout's beam decision — is reachable only through
+  `Tuplet.shouldShowBracket`, and `Tuplet.shouldShowBracket` has **zero callers
+  in `lib/`, `example/` or `test/`**. `TupletRenderer` decides with the
+  deprecated `tuplet.showBracket` field (default `true`) and
+  `_drawTupletBracket` then draws unconditionally. Measured on a 3:2 triplet of
+  eighths at `staffSpace 12`, width 400: the bracket prints, and
+  `showBracket: false` removes 110 px of ink, so the ink is really there. The
+  fix is to route the renderer through the engine-aware decision, which moves
+  goldens (`m04_triplets`, `m04m_tuplet_ratio` and others) — an engraving-policy
+  change that should be made deliberately, not at sign-off.
+- **`LayoutEngine.layout()` still writes `Measure.inheritedTimeSignature` onto
+  the caller's model, and that flips a public API from accepting to throwing.**
+  Same ADR-005 category as the beam field, and this one changes control flow.
+  Two-bar staff whose second bar declares no meter of its own:
+
+  | | `m2.inheritedTimeSignature` | `m2.add(third quarter)` |
+  |---|---|---|
+  | fresh | `null` | ACCEPTED |
+  | after `layout()` | `TimeSignature(2/4)` | throws `MeasureCapacityException` |
+
+  So whether `Measure.add` accepts a note depends on whether the score happened
+  to have been laid out. The ADR-005 remedy is to publish it as a value
+  (`LayoutEngine.inheritedMeters` / `meterOf(measure)`) and route
+  `layout_engine.dart:1535` and `measure_validator.dart:157` through it; the
+  literal patch is in ADR-005 action item 8. It is not applied here because
+  removing the write also changes what capacity an inheriting bar reports to
+  users who currently rely on the post-layout behaviour — a semantic choice, not
+  a bug fix.
+
+### Known limitations in this release
+
+Not defects — measured boundaries. Each was re-probed against the integrated
+tree for this entry.
+
+- **The package ships no text face.** `pubspec.yaml` declares exactly two
+  families and both are music fonts (`Bravura`, `Greciliae`); `assets/smufl/`
+  holds `Bravura.otf` and no text font. On a host supplying none of
+  `Academico, Century Schoolbook, Edwin, serif` every string is a `.notdef`
+  box, and the terminal generic `serif` was measured NOT to rescue it (a
+  headless binary with a face registered literally as `serif` produced a
+  byte-identical PNG). `MusicTextFont.use` is the supported answer and, as of
+  this release, reaches every string the package draws.
+- **Four kinds of malformed MusicXML import in silence.** Re-probed over seven
+  documents: **2 rejected** with a `FormatException` (a `<pitch>` with no
+  `<octave>`, an unknown `<step>`), **2 warned** (a zero `<divisions>`, a
+  non-positive `<duration>`), **3 silent** (an unknown `<clef><sign>`, an
+  unknown `<type>`, a non-numeric `<alter>`); a missing `<part-list>` is the
+  fourth silent case.
+- **A single measure can be wider than the viewport.** Compression stops at
+  `LayoutEngine.minimumSpacingScale` (0.35) because past it the noteheads
+  collide. Measured: 40 whole notes in one 4/4 bar at 900 px reach
+  x = 1 829.2 px, **2.03x** the line. No music is lost — both widgets scroll —
+  and the engine now names the bar in `LayoutEngine.warnings`.
+- **Advanced MEI modules are model-only**: figured bass, mensural notation and
+  MEI `<neume>` are constructible in Dart but neither imported from MEI XML nor
+  rendered.
+- **Tuplet-internal spacing ignores the configured `SpacingModel`**, by design,
+  so that `TupletRenderer` and `LayoutEngine` cannot draw different grids.
+  Measured across all four models: a tuplet's child X positions are identical in
+  all four, while the same durations as plain notes move by 1.250 / 1.137 /
+  1.027 / 1.278.
+
+### Performance against 2.7.1
+
+The pre-release re-audit measured this release **1.19x-2.89x slower than 2.7.1 at
+1 600-12 800 bars**, from the extra work the correctness fixes added. That
+regression was closed inside this release and is NOT shipping.
+
+The closing sign-off re-measured it independently against 2.7.1 checked out in a
+sibling worktree — same machine, same probe (`8` eighths per bar,
+`availableWidth 1200`, `staffSpace 12`), warm-up of 5x200 bars plus a throwaway,
+7 samples per size, min and median reported. Element counts are identical on
+both sides at every size (3 735 / 7 468 / 14 935 / 29 868 / 59 735 / 119 468),
+so the two are laying out the same score. Three alternating rounds were run
+(tree, 2.7.1, tree, 2.7.1, tree, 2.7.1); the table gives the MEDIAN of the three
+per-size ratios, because a single round on this machine is not a stable
+statistic:
+
+| bars | 2.7.1 min | 2.8.0 min | ratio (median of 3 rounds) |
+|---:|---:|---:|---:|
+| 400 | 35.1-42.0 ms | 41.4-61.9 ms | 1.23x |
+| 800 | 41.6-73.0 ms | 53.3-84.3 ms | 1.28x |
+| 1 600 | 118.3-152.7 ms | 124.5-151.8 ms | 1.09x |
+| 3 200 | 248.6-309.7 ms | 250.3-307.2 ms | 0.99x |
+| 6 400 | 542.3-666.7 ms | 646.4-659.2 ms | 1.06x |
+| 12 800 | 1 156-1 439 ms | 1 214-1 484 ms | 1.03x |
+
+**Read this as parity, not as a win.** At the sizes where the regression was
+reported — 1 600 to 12 800 bars — the release is within ±10% of 2.7.1
+(1.09 / 0.99 / 1.06 / 1.03), so the 1.19x-2.89x regression is gone; it has not
+been turned into a speedup. At 400 and 800 bars the totals are 40-85 ms and one
+young-generation GC moves them more than the code does: the per-size ratio
+ranged 0.80x-1.52x across the three rounds, which is noise, not a measurement.
+An earlier draft of this entry quoted 0.78x / 0.65x / 0.69x at
+1 600 / 3 200 / 6 400 from a single pair of runs; that did not reproduce and has
+been replaced by the numbers above.
+
+Absolute milliseconds here are **not** comparable to figures measured in any
+other session — the same unchanged tree was observed at 313 ms and 2 792 ms for
+6 400 bars an hour apart on this machine. Only same-session ratios mean
+anything. The shape that matters — cost per bar not growing with the number of
+bars — is pinned by `test/invariants/remediation_2_7_1_test.dart` (N-04) and
+`test/invariants/performance_budget_test.dart`; note that N-04's ceiling is a
+single ratio and has been seen to flake under concurrent load.
+
 ## [2.7.1] - 2026-08-22
 
 An independent adversarial RE-AUDIT of 2.7.0 verified the 38 remediation claims

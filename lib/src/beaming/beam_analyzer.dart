@@ -65,6 +65,15 @@ class BeamAnalyzer {
   double minimumStemLengthSpaces({required int beamCount}) =>
       positioningEngine.minimumStemLengthSpaces(beamCount: beamCount);
 
+  /// Maximum length, in staff spaces, targeted for every stem of a beamed
+  /// group with [beamCount] beams.
+  ///
+  /// Unlike [minimumStemLengthSpaces] this is a target and not an invariant:
+  /// see [SMuFLPositioningEngine.maximumStemLengthSpaces] and
+  /// [_enforceMaximumStemLengths].
+  double maximumStemLengthSpaces({required int beamCount}) =>
+      positioningEngine.maximumStemLengthSpaces(beamCount: beamCount);
+
   StemDirection _calculateStemDirection(
     List<Note> notes,
     Map<Note, int>? noteStaffPositions,
@@ -258,6 +267,14 @@ class BeamAnalyzer {
       beamCount: maxBeams,
       stemUp: stemUp,
     );
+
+    _enforceMaximumStemLengths(
+      group,
+      noteYPositions,
+      stemXPositions,
+      beamCount: maxBeams,
+      stemUp: stemUp,
+    );
   }
 
   /// Rigidly shifts the already-sloped beam line of [group] until every stem
@@ -305,6 +322,141 @@ class BeamAnalyzer {
     final delta = stemUp ? -requiredShift : requiredShift;
     group.leftY += delta;
     group.rightY += delta;
+  }
+
+  /// Steepens the beam line of [group] until no stem is longer than
+  /// [maximumStemLengthSpaces], as far as the minimum length of the other
+  /// stems allows.
+  ///
+  /// The rigid shift of [_enforceMinimumStemLengths] cannot be used here: it
+  /// moves every stem by the same amount, so pulling the longest stem back to
+  /// the cap would push the shortest one straight through the beam. The only
+  /// degree of freedom left is the SLOPE, so the line is rotated about the
+  /// note that currently has the shortest stem — the one the minimum pins —
+  /// which shortens the far stem without touching the pinned one.
+  ///
+  /// The rotation is clamped by the same minimum applied to every OTHER note
+  /// of the group, so the invariant of [_enforceMinimumStemLengths] survives
+  /// this pass. Where the geometry does not allow the cap to be reached the
+  /// beam is left as steep as it may legally be: measured, staff positions
+  /// -2 / +5 / -2 (an inner peak) admit no slope at all and keep their
+  /// 3.50 / 7.00 / 3.50 stems, while -2 / -2 / +5 go from 4.25 / 3.50 / 6.25
+  /// to 5.00 / 3.50 / 5.50.
+  ///
+  /// MEASURED on a two-eighth group, outer stem by ambitus, before -> after:
+  ///
+  /// ```text
+  /// steps   0-7      8      10     12     14
+  /// before  3.50-5.50  6.00   7.00   8.00   9.00
+  /// after   unchanged  5.50   5.50   5.50   5.50   (staff spaces)
+  /// ```
+  ///
+  /// Everything up to the octave is left exactly where Gould's slant table put
+  /// it — that is what fixes the ceiling at 5.50 rather than at Gould's 5.00.
+  ///
+  /// This pass deliberately takes the beam past the slant of
+  /// [SMuFLPositioningEngine.kBeamSlantByDiatonicStep]: that table describes
+  /// the slant of a READABLE group, and a group that needs this pass is one
+  /// whose ambitus is already outside what the table was written for.
+  void _enforceMaximumStemLengths(
+    AdvancedBeamGroup group,
+    Map<Note, double> noteYPositions,
+    List<double> stemXPositions, {
+    required int beamCount,
+    required bool stemUp,
+  }) {
+    final maxStemPixels =
+        maximumStemLengthSpaces(beamCount: beamCount) * staffSpace;
+    final minStemPixels =
+        minimumStemLengthSpaces(beamCount: beamCount) * staffSpace;
+    final sign = stemUp ? 1.0 : -1.0;
+
+    final xs = <double>[];
+    final ys = <double>[];
+    for (var i = 0; i < group.notes.length && i < stemXPositions.length; i++) {
+      final noteY = noteYPositions[group.notes[i]];
+      if (noteY == null) continue;
+      xs.add(stemXPositions[i]);
+      ys.add(noteY);
+    }
+    if (xs.length < 2) return;
+
+    // One rotation only pulls back the stem that is longest RIGHT NOW; another
+    // note can take its place, so the rotation is repeated while it keeps
+    // shrinking the longest stem. This is a descent, not a full minimax:
+    // measured on staff positions -2 / -2 / +5 the stems go from
+    // 4.25 / 3.50 / 6.25 to 5.00 / 3.50 / 5.50 on the first rotation, and a
+    // further rotation is REJECTED because pulling the far stem down again
+    // would push the near one past what it saves. The loop stops there rather
+    // than oscillating between two equally bad slopes.
+    const maxIterations = 4;
+    const improvementEpsilon = 1e-6;
+
+    for (var iteration = 0; iteration < maxIterations; iteration++) {
+      final lengths = <double>[
+        for (var i = 0; i < xs.length; i++)
+          sign * (ys[i] - group.interpolateBeamY(xs[i])),
+      ];
+
+      var pivot = 0;
+      var longest = 0;
+      for (var i = 1; i < lengths.length; i++) {
+        if (lengths[i] < lengths[pivot]) pivot = i;
+        if (lengths[i] > lengths[longest]) longest = i;
+      }
+      if (lengths[longest] <= maxStemPixels) return;
+
+      final pivotX = xs[pivot];
+      final pivotBeamY = group.interpolateBeamY(pivotX);
+      final longestArm = sign * (xs[longest] - pivotX);
+      if (longestArm.abs() < 1e-9) return;
+
+      // Stem length of note i as a function of the beam slope s, rotating
+      // about the pivot:
+      //   stem_i(s) = a_i - s * arm_i
+      //   a_i   = sign * (y_i - pivotBeamY)
+      //   arm_i = sign * (x_i - pivotX)
+      final targetSlope =
+          (sign * (ys[longest] - pivotBeamY) - maxStemPixels) / longestArm;
+
+      var lowerBound = double.negativeInfinity;
+      var upperBound = double.infinity;
+      for (var i = 0; i < xs.length; i++) {
+        final arm = sign * (xs[i] - pivotX);
+        if (arm.abs() < 1e-9) continue;
+        final limit = (sign * (ys[i] - pivotBeamY) - minStemPixels) / arm;
+        if (arm > 0) {
+          if (limit < upperBound) upperBound = limit;
+        } else {
+          if (limit > lowerBound) lowerBound = limit;
+        }
+      }
+      if (lowerBound > upperBound) return;
+
+      final slope = targetSlope.clamp(lowerBound, upperBound);
+      final leftY = pivotBeamY + slope * (group.leftX - pivotX);
+      final rightY = pivotBeamY + slope * (group.rightX - pivotX);
+
+      final previousLongest = lengths[longest];
+      final savedLeftY = group.leftY;
+      final savedRightY = group.rightY;
+      group.leftY = leftY;
+      group.rightY = rightY;
+
+      var newLongest = 0.0;
+      for (var i = 0; i < xs.length; i++) {
+        final length = sign * (ys[i] - group.interpolateBeamY(xs[i]));
+        if (length > newLongest) newLongest = length;
+      }
+
+      if (newLongest > previousLongest - improvementEpsilon) {
+        // No progress: put the line back where the minimum pass left it rather
+        // than move the geometry for nothing.
+        group.leftY = savedLeftY;
+        group.rightY = savedRightY;
+        return;
+      }
+    }
   }
 
   void _analyzeSecondaryBeams(

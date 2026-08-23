@@ -1,4 +1,14 @@
 include: package:flutter_lints/flutter.yaml
 
+analyzer:
+  exclude:
+    # Ad-hoc measurement probes written by `probe/<tag>_test.dart` during
+    # forensic audits. They are throwaway scripts (they print, they hard-code
+    # paths) and are git-ignored, but without this exclusion a repo-root
+    # `dart analyze` reported 470 problems while `dart analyze lib` reported 0,
+    # which broke any naive CI gate that runs the root form. Measured after
+    # this exclusion: 0 problems at the repo root.
+    - probe/**
+
 # Additional information about this file can be found at
 # https://dart.dev/guides/language/analysis-options

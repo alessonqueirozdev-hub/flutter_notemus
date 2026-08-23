@@ -42,18 +42,23 @@ class Note extends MusicalElement with BoundingBoxSupport {
   final Pitch pitch;
   final Duration duration;
 
-  /// Beam membership of this note.
+  /// Beam membership of this note, as an **input hint**.
   ///
-  /// This field is a LAYOUT decision, not a purely musical one: when a measure
-  /// has `autoBeaming` enabled, [LayoutEngine] resolves the beam groups from
-  /// the meter and writes the result back here, **in place, on this very
-  /// object**. It deliberately does not clone the note: identity has to survive
-  /// the layout pass so that identity-keyed layout data (accidental decisions,
-  /// note X/Y positions, future selection/hit-testing) keeps matching the
-  /// caller's own objects.
+  /// Set it yourself to encode beams explicitly (and set
+  /// `Measure.autoBeaming = false`, or use `BeamingMode.manual`, so the
+  /// automatic grouping leaves your value alone).
   ///
-  /// Set it yourself to encode beams explicitly, and set
-  /// `Measure.autoBeaming = false` so the layout leaves your value alone.
+  /// Since 2.7.2 the layout NEVER writes here. It publishes its own decision as
+  /// a value on `LayoutEngine.beams` / `LayoutEngine.tupletBeams`, and
+  /// `LayoutEngine.beamOf(note)` is the only supported read: it returns the
+  /// engine's answer when the engine made one and falls back to this field when
+  /// it did not. See `doc/adr/ADR-005-layout-decisions-are-values.md`.
+  ///
+  /// Until 2.7.1 the engine did stamp its answer back in place, which made a
+  /// pure export depend on whether the score had been displayed: MEASURED on
+  /// two bars of loose quavers, the same `Staff` exported 3 349 characters with
+  /// 0 `<beam>` tags before `layout()` and 3 973 with 16 after. Both are
+  /// byte-identical now.
   BeamType? beam;
   final List<ArticulationType> articulations;
   final TieType? tie;

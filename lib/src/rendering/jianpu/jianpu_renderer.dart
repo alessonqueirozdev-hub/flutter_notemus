@@ -10,9 +10,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/core/core.dart';
 
+import '../text_font.dart';
 import 'jianpu_pitch_mapper.dart';
 
 /// Visual configuration for [JianpuPainter] / `JianpuScore`.
+///
+/// There is deliberately no font-family field: Jianpu numerals, dashes and
+/// lyrics all go through the package-wide text chain in
+/// `lib/src/rendering/text_font.dart`, so one setting governs every string the
+/// library draws. That chain names four faces the package does NOT ship, so on
+/// a host providing none of them a Jianpu render comes out as `.notdef` boxes
+/// (measured: 10 solid box runs / 11399 filled px in the probe score). Inject a
+/// face with `MusicTextFont.use(...)` or `MusicScoreTheme.textFontFamily`.
 class JianpuTheme {
   final Color color;
   final double numeralSize;
@@ -138,11 +147,19 @@ class JianpuLayout {
     }
     final beatWhole = timeSig != null ? 1.0 / timeSig.denominator : 0.25;
 
+    // MEASURING painter. It must build the style exactly as `JianpuPainter._text`
+    // does — same family chain included — or every column is laid out against a
+    // width the paint pass will not reproduce. Both now go through
+    // [MusicTextFallback.withMusicTextFallback]; before 2.7.1 neither named a
+    // family at all, so the Jianpu path bypassed the package chain and its PNG
+    // was byte-identical (14 solid `.notdef` boxes) whether or not a text face
+    // the package asks for had been registered.
     final tp = TextPainter(textDirection: TextDirection.ltr);
     double textW(String s, double scale) {
       tp.text = TextSpan(
         text: s,
-        style: TextStyle(fontSize: size * scale, color: theme.color),
+        style: TextStyle(fontSize: size * scale, color: theme.color)
+            .withMusicTextFallback(),
       );
       tp.layout();
       return tp.width;
@@ -279,6 +296,10 @@ class JianpuPainter extends CustomPainter {
 
   JianpuPainter({required this.layout, required this.theme});
 
+  /// Every numeral, dash, accidental and lyric syllable Jianpu paints goes
+  /// through here. Kept in lockstep with the measuring painter in
+  /// `JianpuLayout.build` — see the note there for the measured `.notdef`
+  /// counts that motivated adding the chain.
   TextPainter _text(String s, {double scale = 1.0}) => TextPainter(
         text: TextSpan(
           text: s,
@@ -286,7 +307,7 @@ class JianpuPainter extends CustomPainter {
             fontSize: theme.numeralSize * scale,
             color: theme.color,
             height: 1.0,
-          ),
+          ).withMusicTextFallback(),
         ),
         textDirection: TextDirection.ltr,
       )..layout();

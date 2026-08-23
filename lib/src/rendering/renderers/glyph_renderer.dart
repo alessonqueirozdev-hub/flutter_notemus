@@ -51,29 +51,12 @@ class GlyphRenderer {
       Offset(position.dx + xOffset, position.dy + yOffset),
     );
   }
-
-  /// Draws text with a caller-supplied style.
-  void drawText(
-    Canvas canvas, {
-    required String text,
-    required Offset position,
-    required TextStyle style,
-    TextAlign align = TextAlign.center,
-  }) {
-    final textPainter = TextPainter(
-      text: TextSpan(text: text, style: style),
-      textAlign: align,
-      textDirection: TextDirection.ltr,
-    );
-
-    textPainter.layout();
-
-    textPainter.paint(
-      canvas,
-      Offset(
-        position.dx - textPainter.width / 2,
-        position.dy - textPainter.height / 2,
-      ),
-    );
-  }
 }
+
+// `drawText` was removed in 2.7.1. It painted a caller-supplied `TextStyle`
+// verbatim, i.e. it was a hole in the rule that every text style must pass
+// through `MusicTextFallback.withMusicTextFallback` (see
+// `lib/src/rendering/text_font.dart`). A grep over lib/, test/ and example/
+// found zero call sites — the renderers all use their own private `_drawText`
+// — so it was deleted rather than patched: an unused API cannot be kept
+// correct.

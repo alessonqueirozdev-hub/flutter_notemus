@@ -11,7 +11,10 @@ import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
-import 'package:flutter_notemus/src/rendering/grand_staff_painter.dart';
+// The shared time grid is an implementation constant, not public API, and the
+// N-22 test has to assert against the value the engine and the painter really
+// use — not against a copy of the number.
+import 'package:flutter_notemus/src/layout/onset_grid.dart';
 
 Note _n(String step, int octave,
         {DurationType d = DurationType.quarter,
@@ -232,10 +235,10 @@ void main() {
   });
 
   // ------------------------------------------------------------------ N-04 --
-  test('N-04 — layout stays linear in the number of systems', () {
+  group('N-04 — layout stays linear in the number of systems', () {
     // Measured before: 400 bars 160 ms, 1600 bars 262 ms, 3200 bars 1156 ms,
     // 6400 bars 5991 ms — `_justifyHorizontally` scanned the whole element list
-    // once per system.
+    // once per system, i.e. O(systems x elements).
     Staff big(int bars) => Staff(measures: [
           for (var i = 0; i < bars; i++)
             _bar([
@@ -245,22 +248,104 @@ void main() {
                 _n(p, 4, d: DurationType.eighth),
             ])
         ]);
-    engineFor(big(100), width: 1000).layout(); // warm up
 
-    double timeOf(int bars) {
-      final staff = big(bars);
-      final sw = Stopwatch()..start();
-      engineFor(staff, width: 1000).layout();
-      return sw.elapsedMicroseconds / 1000.0;
-    }
+    const sizes = <int>[400, 800, 1600, 3200];
 
-    final small = timeOf(800);
-    final large = timeOf(3200);
-    // Four times the input must not cost more than ten times the time. The old
-    // engine cost 8x for this step and grew from there.
-    expect(large / math.max(small, 1e-6), lessThan(10.0),
-        reason: 'justification must not be O(systems x elements): '
-            '800 bars ${small}ms vs 3200 bars ${large}ms');
+    test('the work done scales EXACTLY linearly with the input', () {
+      // The deterministic half of the claim, and the half a timing test can
+      // never give: if the engine got faster by SKIPPING work, this fails.
+      // Nine and a half positioned elements per bar (8 notes + a barline, plus
+      // the opening clef and meter and the final double barline) — measured
+      // 3801 / 7601 / 15201 / 30401, which is exactly `9.5 * bars + 1` at all
+      // four sizes.
+      final counts = <int, int>{
+        for (final bars in sizes) bars: engineFor(big(bars), width: 1000).layout().length,
+      };
+      for (final bars in sizes) {
+        expect(counts[bars], (9.5 * bars + 1).round(),
+            reason: 'element count at $bars bars was ${counts[bars]}, so the '
+                'per-bar output is no longer constant: $counts');
+      }
+
+      // …and the geometry is complete at every size, not just the small ones:
+      // every note must have come out of the layout with an X.
+      for (final bars in <int>[400, 3200]) {
+        final engine = engineFor(big(bars), width: 1000);
+        engine.layout();
+        expect(engine.noteXPositions, hasLength(8 * bars),
+            reason: '$bars bars lost note positions');
+      }
+    });
+
+    test('the cost per bar does not grow with the number of bars', () {
+      // How this is measured, and why it is measured this way
+      // -----------------------------------------------------
+      // * WARM-UP. The first `LayoutEngine` call in a process pays JIT and
+      //   metadata-cache costs: measured 163.3 ms cold against a warm median of
+      //   33.8 ms for the same input — a 4.83x penalty that lands entirely on
+      //   whichever size is measured first. Uncorrected it makes the small size
+      //   look slow and any curve look sub-linear, which is precisely how a
+      //   ratio test can be fooled into passing.
+      // * REPEATS, and the MINIMUM as the estimator. Wall clock on a shared
+      //   machine is one-sided noise: a run can only be slowed down. Measured
+      //   over three executions of this exact benchmark while the machine was
+      //   also compiling, the MEDIAN of five runs put `t(3200)/t(400)` at 5.9,
+      //   12.3 and 16.1, while the MINIMUM put it at 4.3, 8.1 and 9.1. The
+      //   median is reported for context; the minimum is what is asserted.
+      //
+      // The bounds
+      // ----------
+      // For an 8x increase in input: linear costs 8x, quadratic 64x. The
+      // defect this test exists to catch cost 4.4x and 5.2x per DOUBLING at
+      // the top of the range (1600 -> 3200 -> 6400 above), which is 34x over
+      // 8x once its cold first sample is corrected. So:
+      //
+      //   min-based    < 16.0   (measured 4.3 / 8.1 / 9.1; defect ~34)
+      //   median-based < 24.0   (measured 5.9 / 12.3 / 16.1; defect ~34)
+      //
+      // The assertion replaced in wave 4 (M-42c) was
+      //     expect(large / math.max(small, 1e-6), lessThan(10.0));
+      // over 800 vs 3200 bars — a 4x increase. Ten for a 4x increase is 3.16
+      // per doubling, and the defective engine measured 4.4 and 5.2 per
+      // doubling only at the TOP of the range; over 800 -> 3200 its cold-start
+      // artefact hid it entirely. The old assertion could not fail for the
+      // regression it was written for.
+      for (var i = 0; i < 5; i++) {
+        engineFor(big(400), width: 1000).layout(); // warm up
+      }
+
+      double sampleOf(int bars) {
+        final staff = big(bars);
+        final sw = Stopwatch()..start();
+        engineFor(staff, width: 1000).layout();
+        return sw.elapsedMicroseconds / 1000.0;
+      }
+
+      final samples = <int, List<double>>{for (final s in sizes) s: <double>[]};
+      for (var round = 0; round < 5; round++) {
+        for (final bars in sizes) {
+          samples[bars]!.add(sampleOf(bars));
+        }
+      }
+      final fastest = <int, double>{};
+      final median = <int, double>{};
+      for (final bars in sizes) {
+        final runs = samples[bars]!..sort();
+        fastest[bars] = runs.first;
+        median[bars] = runs[runs.length ~/ 2];
+      }
+
+      final minGrowth = fastest[3200]! / math.max(fastest[400]!, 1e-6);
+      final medianGrowth = median[3200]! / math.max(median[400]!, 1e-6);
+      final report = 'fastest=$fastest median=$median '
+          '8x growth: min=${minGrowth.toStringAsFixed(2)} '
+          'median=${medianGrowth.toStringAsFixed(2)}';
+
+      expect(minGrowth, lessThan(16.0),
+          reason: 'eight times the input must not cost sixteen times the '
+              'time; O(systems x elements) measured ~34x. $report');
+      expect(medianGrowth, lessThan(24.0), reason: report);
+    }, timeout: const Timeout.factor(30));
   });
 
   // ------------------------------------------------------------ N-05 / F-27 --
@@ -323,8 +408,12 @@ void main() {
     // 30.00 px, and so did an eighth followed by two sixteenths.
     final quarter = _n('C', 4);
     final eighth = _n('D', 4, d: DurationType.eighth);
-    final t1 =
-        Tuplet(elements: [quarter, eighth], actualNotes: 3, normalNotes: 2);
+    // A third child was added in wave 3 so BOTH of t1's inner slots are
+    // observable from the note positions; with only two children the eighth's
+    // own slot is visible solely as the tuplet's total width.
+    final eighth2 = _n('E', 4, d: DurationType.eighth);
+    final t1 = Tuplet(
+        elements: [quarter, eighth, eighth2], actualNotes: 3, normalNotes: 2);
     final e8 = _n('E', 4, d: DurationType.eighth);
     final s1 = _n('F', 4, d: DurationType.sixteenth);
     final s2 = _n('G', 4, d: DurationType.sixteenth);
@@ -342,12 +431,40 @@ void main() {
         width: 100000);
     engine.layout();
 
+    // Slots INSIDE t1 …
     final quarterSlot =
         engine.noteXPositions[eighth]! - engine.noteXPositions[quarter]!;
-    final eighthSlot = engine.noteXPositions[s1]! - engine.noteXPositions[e8]!;
+    final eighthSlotOfT1 =
+        engine.noteXPositions[eighth2]! - engine.noteXPositions[eighth]!;
+    // … and inside t2.
+    final eighthSlotOfT2 =
+        engine.noteXPositions[s1]! - engine.noteXPositions[e8]!;
     final sixteenthSlot = engine.noteXPositions[s2]! - engine.noteXPositions[s1]!;
-    expect(quarterSlot, greaterThan(eighthSlot));
-    expect(eighthSlot, greaterThan(sixteenthSlot));
+
+    // RE-BASELINED in wave 3 (M-08). The two original assertions were
+    //     expect(quarterSlot, greaterThan(eighthSlot));   // eighth of t2
+    //     expect(eighthSlot, greaterThan(sixteenthSlot));
+    // and the first of them compared ACROSS two different tuplets, which is no
+    // longer meaningful — nor was it ever what finding N-07 was about, which is
+    // that a quarter and an eighth INSIDE ONE triplet both got exactly 30.00
+    // px, and so did an eighth followed by two sixteenths.
+    //
+    // The legibility floor is now applied as one scale factor over each tuplet
+    // instead of being clamped per child (the per-child clamp is what flattened
+    // ten of the fifteen DurationTypes onto the same 1.400 staff spaces). Each
+    // group is scaled until ITS OWN narrowest child is legible: t1's narrowest
+    // is an eighth, t2's is a sixteenth, so t2 is scaled 1.520x and t1 only
+    // 1.075x, and t1's quarter lands on exactly the same 32.24 px as t2's
+    // eighth. That is the intended consequence of guaranteeing legibility per
+    // group; what must hold — and now does, exactly — is the RATIO inside each
+    // group, which is the thing N-07 pinned.
+    expect(quarterSlot / eighthSlotOfT1, closeTo(1.4142, 1e-3),
+        reason: 'quarter : eighth inside t1 must be sqrt(2); it was 1.000.');
+    expect(eighthSlotOfT2 / sixteenthSlot, closeTo(1.4142, 1e-3),
+        reason: 'eighth : sixteenth inside t2 must be sqrt(2); it was 1.000 '
+            'before N-07 and 1.2626 while the floor was clamped per child.');
+    expect(quarterSlot, greaterThan(eighthSlotOfT1));
+    expect(eighthSlotOfT2, greaterThan(sixteenthSlot));
   });
 
   // ------------------------------------------------------------------ N-09 --
@@ -501,7 +618,7 @@ void main() {
   test('N-21 — 4/4 groups sixteenths by the beat, quavers by the half bar', () {
     List<int> groupsOf(DurationType d, int count) {
       final notes = [for (var i = 0; i < count; i++) _n('C', 4, d: d)];
-      engineFor(
+      final engine = engineFor(
           Staff(measures: [
             _bar([
               Clef(clefType: ClefType.treble),
@@ -509,11 +626,16 @@ void main() {
               ...notes,
             ])
           ]),
-          width: 100000).layout();
+          width: 100000);
+      engine.layout();
       final sizes = <int>[];
       var current = 0;
       for (final n in notes) {
-        switch (n.beam) {
+        // `LayoutEngine.beamOf`, not `n.beam`: the engine no longer stamps its
+        // decision onto the model (ADR-001 — the layout never mutates what it
+        // was handed), and `beamOf` falls back to the author's own hint, so
+        // this reads the same answer under either contract.
+        switch (engine.beamOf(n)) {
           case BeamType.start:
             current = 1;
           case BeamType.inner:
@@ -535,13 +657,102 @@ void main() {
   });
 
   // ------------------------------------------------------------------ N-22 --
-  test('N-22 — the onset grid resolves the shortest duration', () {
+  group('N-22 — the onset grid resolves the shortest duration', () {
     // Measured before: sixteen distinct 2048th onsets collapsed to nine keys.
-    final keys = <double>{};
-    for (var i = 0; i < 16; i++) {
-      keys.add(((i / 2048) * 8192.0).round() / 8192.0);
-    }
-    expect(keys, hasLength(16));
+    //
+    // REWRITTEN in wave 4 (M-42a). The previous body was
+    //
+    //     final keys = <double>{};
+    //     for (var i = 0; i < 16; i++) {
+    //       keys.add(((i / 2048) * 8192.0).round() / 8192.0);
+    //     }
+    //     expect(keys, hasLength(16));
+    //
+    // which is arithmetic on Dart doubles: it never touched [kOnsetGrid], the
+    // [LayoutEngine] or [GrandStaffPainter], and it would have passed with the
+    // engine deleted. The behaviour it claimed to pin was verified separately
+    // and is correct; these two tests make the ENGINE prove it.
+
+    /// Sixteen consecutive 1/2048 notes in one bar.
+    List<Note> shortest() => [
+          for (var i = 0; i < 16; i++)
+            _n('C', 4, d: DurationType.twoThousandFortyEighth)
+        ];
+
+    test('the engine emits sixteen distinct quantised onsets', () {
+      final notes = shortest();
+      final placed = engineFor(
+          Staff(measures: [
+            _bar([Clef(clefType: ClefType.treble), ...notes])
+          ]),
+          width: 100000).layout();
+
+      final onsets =
+          placed.where((p) => p.element is Note).map((p) => p.onset).toList();
+      expect(onsets, hasLength(16));
+
+      // The grid the engine and the painter actually share.
+      final keys = onsets.map((o) => (o * kOnsetGrid).round()).toSet();
+      expect(keys, hasLength(16),
+          reason: 'kOnsetGrid = $kOnsetGrid must resolve a 2048th; the engine '
+              'produced $onsets');
+      // Measured: the sixteen keys come out 0, 4, 8, … 60 — one 2048th is four
+      // steps of the 8192 grid, which is the factor of four the constant's
+      // dartdoc reserves for nested-tuplet ratios.
+      expect(keys.toList()..sort(), [for (var i = 0; i < 16; i++) i * 4]);
+
+      // The old 1024 grid, run over the SAME engine onsets: nine keys. This is
+      // what makes the test a regression test rather than a tautology.
+      expect(onsets.map((o) => (o * 1024.0).round()).toSet(), hasLength(9),
+          reason: 'the pre-fix grid must still collapse these onsets, or the '
+              'case no longer exercises the defect');
+
+      // And the collapse was visible on the page, not only in a map key.
+      expect(
+        placed.where((p) => p.element is Note).map((p) => p.position.dx).toSet(),
+        hasLength(16),
+      );
+    });
+
+    test('two staves whose onsets coincide are aligned on the shared grid', () {
+      // The grid exists so several staves can be put on ONE time coordinate
+      // (`GrandStaffPainter` keys its alignment on `(onset * kOnsetGrid)`).
+      // The lower staff holds a 1/256 note — exactly eight 2048ths — so its
+      // second note starts at the same instant as the upper staff's ninth.
+      final upper = shortest();
+      final lower = <Note>[
+        _n('C', 3, d: DurationType.twoHundredFiftySixth),
+        for (var i = 0; i < 8; i++)
+          _n('C', 3, d: DurationType.twoThousandFortyEighth),
+      ];
+
+      final painter = GrandStaffPainter(
+        staffGroup: StaffGroup(staves: [
+          Staff(measures: [
+            _bar([Clef(clefType: ClefType.treble), ...upper])
+          ]),
+          Staff(measures: [
+            _bar([Clef(clefType: ClefType.bass), ...lower])
+          ]),
+        ]),
+        staffSpace: 12,
+        metadata: metadata,
+        theme: const MusicScoreTheme(),
+        availableWidth: 1200,
+      );
+
+      final system = painter.alignedSystem(0);
+      double xOf(List<PositionedElement> staff, Note note) => staff
+          .firstWhere((p) => identical(p.element, note))
+          .position
+          .dx;
+
+      expect(xOf(system[0], upper[8]), closeTo(xOf(system[1], lower[1]), 1e-6),
+          reason: 'onset 8/2048 == 1/256: the two staves must share an X');
+      // The instants that do NOT coincide must NOT be merged: the upper
+      // staff's eighth note (7/2048) has no partner below it.
+      expect(xOf(system[0], upper[7]), lessThan(xOf(system[1], lower[1])));
+    });
   });
 
   // ------------------------------------------------------------ N-23 / N-24 --
@@ -666,7 +877,7 @@ void main() {
     final notes = [
       for (var i = 0; i < 10; i++) _n('C', 4, d: DurationType.eighth)
     ];
-    engineFor(
+    final engine = engineFor(
         Staff(measures: [
           _bar([
             Clef(clefType: ClefType.treble),
@@ -674,9 +885,12 @@ void main() {
             ...notes,
           ])
         ]),
-        width: 100000).layout();
-    final starts = notes.where((n) => n.beam == BeamType.start).length;
-    final ends = notes.where((n) => n.beam == BeamType.end).length;
+        width: 100000);
+    engine.layout();
+    // Read through `beamOf` — see the note in N-21.
+    final starts =
+        notes.where((n) => engine.beamOf(n) == BeamType.start).length;
+    final ends = notes.where((n) => engine.beamOf(n) == BeamType.end).length;
     expect(starts, ends, reason: 'every opened beam group must be closed');
     expect(starts, 5, reason: '5/4 beams its quavers in five crotchet pairs');
   });

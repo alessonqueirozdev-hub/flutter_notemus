@@ -1,9 +1,18 @@
-# ADR-003: `Pitch` is the sounding pitch; the clef prints it, the instrument transposes it
+# ADR-003: `Pitch` is clef-invariant; the clef prints it, the instrument transposes it
 
 **Status:** Accepted (implemented in 2.7.1)
 **Date:** 2026-08-22
 **Deciders:** package maintainer
 **Supersedes:** the implicit "`Pitch.octave` is the written octave" convention of 1.x–2.7.0
+**Amended 2.7.1 (wording only, decision unchanged):** the original title and
+Decision said "`Pitch` is the sounding pitch", which is imprecise — it is only
+true on the clef axis. Measured on the shipped code: a B-flat clarinet part
+(`Transposition(diatonic: -1, chromatic: -2)`) importing `<pitch>C4</pitch>`
+yields `Pitch` = C4 and `Pitch.midiNumber` = 60, and **plays MIDI 58**. So
+`Pitch` is *not* the sounding pitch of a transposing instrument. The code is
+right; the wording was not. §Decision and §Consequences below are restated
+precisely. No behaviour, option or action item changed. The "To revisit" note on
+`<double/>` was also corrected against measurement (see there).
 
 ## Context
 
@@ -53,7 +62,18 @@ inertly beside it.
 
 ## Decision
 
-**`Pitch` is the sounding pitch, in the sense MusicXML, MEI and MIDI mean it.**
+**`Pitch` is invariant to the octave-transposing CLEF — the clef only changes
+where the pitch is PRINTED — and the INSTRUMENT's transposition is applied only
+at the MIDI boundary.**
+
+Equivalently, and in the sense MusicXML `<pitch>`, MEI `@pname`/`@oct` and MIDI
+note numbers mean it: `Pitch` is the *written* pitch of the part, read through
+the clef exactly as the interchange formats write it, and no clef arithmetic is
+ever performed on it. For a concert-pitch instrument that written pitch *is* the
+sounding pitch; for a transposing instrument it is not, and the difference
+(`Staff.transposition.semitones`) is added once, in `MidiMapper`, on the way
+out. Measured: B-flat clarinet, `<pitch>C4</pitch>` → `Pitch` C4,
+`Pitch.midiNumber` 60, emitted MIDI note 58.
 
 Two consequences follow, and each belongs to exactly one component:
 
@@ -62,9 +82,10 @@ Two consequences follow, and each belongs to exactly one component:
    positions. `MidiMapper` no longer looks at the clef at all.
 2. **An instrument's transposition affects only how a note SOUNDS.**
    It becomes a first-class property of the model — `Staff.transposition`, of the
-   new `Transposition` type — and `MidiMapper` adds `transposition.semitones`.
-   The notated pitch is never rewritten, because the notated pitch is what the
-   engine draws.
+   new `Transposition` type — and `MidiMapper` adds `transposition.semitones` at
+   the MIDI boundary and nowhere else. The notated pitch is never rewritten,
+   because the notated pitch is what the engine draws; `Pitch.midiNumber` is
+   therefore the pitch *before* that offset, not the pitch you hear.
 
 The importer therefore does no pitch arithmetic in either direction: it stores
 `<pitch>` verbatim and records `<transpose>` on the staff. The exporter is
@@ -120,10 +141,20 @@ component that makes the sound. Neither fact has to be known anywhere else.
 ## Consequences
 
 **Easier**
-- `Pitch.midiNumber` is the pitch that sounds (before instrument transposition).
-- MusicXML/MEI import and export need no pitch arithmetic.
-- `MidiMapper` no longer tracks clefs for pitch purposes.
+- MusicXML/MEI import and export need no pitch arithmetic on the clef axis: the
+  round trip is the identity there.
+- `MidiMapper` no longer tracks clefs at all. (2.7.1 also deleted the vestigial
+  `_activeClef` field it still wrote — measured 1 write, 0 reads — along with the
+  `// ignore: unused_field` that was hiding it.)
 - Transposing instruments play back correctly for the first time.
+
+**Sharper**
+- `Pitch.midiNumber` is the note number of the *written* pitch. It equals the
+  sounding note only when `Staff.transposition` is null or concert pitch; for a
+  transposing part the sounding number is
+  `pitch.midiNumber + staff.transposition!.semitones`. Callers that want "the
+  note the listener hears" must go through `MidiMapper`, not through
+  `Pitch.midiNumber`.
 
 **Harder**
 - A `Staff` built in code with an octave clef must now be spelled with sounding
@@ -133,7 +164,20 @@ component that makes the sound. Neither fact has to be known anywhere else.
 **To revisit**
 - `Transposition.diatonic` is carried but not yet used: respelling a transposed
   part (concert-pitch view) needs it, and that feature does not exist.
-- `<transpose><double/>` is recorded and warned about, not sounded.
+- ~~`<transpose><double/>` is recorded and warned about, not sounded.~~
+  **Corrected 2.7.1 — this described neither the code nor the intent.** It IS
+  sounded and NO warning is emitted. Measured: a part with `diatonic: -5`,
+  `chromatic: -9`, `octave-change: -1` and `<double/>` gives
+  `Transposition.semitones == -33` (the −12 of the doubling included) and plays
+  C4 as MIDI 27, with `MidiSequence.warnings == []`. That is the intended
+  behaviour: MusicXML says a doubled part sounds in *both* octaves, and a
+  single-voice MIDI rendering has to pick one, so it picks the doubling octave.
+- MusicXML 4.0's `<double above="yes"/>` (the doubling is an octave UP) now has
+  a model axis, `Transposition.doubledAbove`. Measured on the same declaration:
+  `semitones == -9`, C4 plays MIDI 51 — a 24-semitone swing from the `above="no"`
+  case, which before 2.7.1 was unrepresentable and silently sounded two octaves
+  low. The MusicXML parser does not yet read the attribute (it always passes
+  `doubledAbove: false`); wiring it is action item 8.
 
 ## Action items
 
@@ -146,3 +190,6 @@ component that makes the sound. Neither fact has to be known anywhere else.
        regression guard for the `c8vb` double-shift.
 7. [ ] Concert-pitch view (`Score.toConcertPitch()`), using `Transposition.diatonic`
        for correct respelling.
+8. [ ] `_musicXmlTranspose` in `lib/src/parsers/parser_support.dart` must read
+       `<double above="yes"/>` and pass it through `MusicXmlTransposition` into
+       `Transposition.doubledAbove` (the model axis exists as of 2.7.1).

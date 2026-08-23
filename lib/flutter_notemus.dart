@@ -65,6 +65,27 @@ export 'src/rendering/staff_renderer.dart';
 export 'src/rendering/accidental_resolver.dart'
     show AccidentalDisplay, AccidentalResolver;
 export 'src/rendering/renderers/base_glyph_renderer.dart';
+// The text-font escape hatch. `MusicTextFont.use` is the ONLY way an embedding
+// app can name the face this package draws non-SMuFL strings with — the
+// built-in chain in `kMusicTextFontFallback` names four faces the package does
+// not ship, and the headless export path has no `Theme` ancestor to rescue it,
+// so without this a `ScoreRasterizer`/`PdfExporter` run on a bare host emits
+// `.notdef` boxes (measured: 16 in one CMN page).
+//
+// It was reachable only through a convenience re-export buried in
+// `music_score_theme.dart` (`export '../rendering/text_font.dart' show
+// MusicTextFont, kMusicTextFontFallback;`), which is a THEME file — nothing
+// tells a consumer to look there, and that `show` clause hides
+// `MusicTextFallback`, the extension whose name the dartdoc of every text site
+// in the library links to.
+//
+// No collision: `MusicTextFont` and `kMusicTextFontFallback` arrive here twice
+// (directly and via `src/theme/music_score_theme.dart`) but they are the SAME
+// declarations from the SAME library, which Dart merges rather than treating as
+// ambiguous. `MusicTextFallback` is newly public and is declared nowhere else
+// in `lib/`. Measured before: 26 exports, 0 of them naming
+// `MusicTextFallback`.
+export 'src/rendering/text_font.dart';
 export 'src/rendering/jianpu/jianpu_pitch_mapper.dart';
 export 'src/rendering/jianpu/jianpu_renderer.dart' show JianpuTheme;
 export 'src/rendering/jianpu/jianpu_score.dart';
@@ -77,6 +98,18 @@ export 'src/layout/collision_detector.dart';
 // Selection / hit-testing over a laid-out score (editor infrastructure).
 export 'src/interaction/score_hit_tester.dart';
 export 'src/widgets/grand_staff.dart' show GrandStaff, ScoreView;
+
+// PDF export is a headline feature of 2.7.x, but until 2.7.1 `PdfExporter`,
+// `ScoreRasterizer` and `GrandStaffPainter` were reachable only through
+// `package:flutter_notemus/src/export/...`, which the `implementation_imports`
+// lint flags and which semver does not cover. Measured before: 26 exports, 0 of
+// which reached the export subtree. Exported through the existing
+// `src/export/export.dart` barrel so the subtree keeps one entry point.
+export 'src/export/export.dart';
+// The painter that draws a multi-staff system. `ScoreRasterizer.rasterize`
+// returns pages painted by it and `GrandStaff` builds one, so consumers writing
+// their own `CustomPaint` need the type to be public.
+export 'src/rendering/grand_staff_painter.dart' show GrandStaffPainter;
 
 /// The main Flutter widget for rendering music notation.
 ///

@@ -585,10 +585,15 @@ void main() {
         TimeSignature(numerator: num, denominator: den),
         for (var i = 0; i < count; i++) _n('C', 5, d: d),
       ]);
-      return engineFor(Staff(measures: [m]), width: 2000)
-          .layout()
+      final engine = engineFor(Staff(measures: [m]), width: 2000);
+      final placed = engine.layout();
+      // `LayoutEngine.beamOf`, not `note.beam`: under ADR-001 the layout no
+      // longer stamps its decision onto the model, and `beamOf` falls back to
+      // the author's own hint — so this reads the same answer under either
+      // contract and the assertions below are untouched.
+      return placed
           .where((p) => p.element is Note)
-          .map((p) => (p.element as Note).beam?.name)
+          .map((p) => engine.beamOf(p.element as Note)?.name)
           .toList();
     }
 

@@ -113,10 +113,19 @@ class NoteRenderer extends BaseGlyphRenderer {
     bool renderOnlyNotehead = false,
     int? voiceNumber,
     AccidentalDisplay accidentalDisplay = AccidentalDisplay.show,
+    int extraOctaveShift = 0,
   }) {
+    // [extraOctaveShift] is the displacement of the 8va/8vb bracket span the
+    // note falls in, resolved by the caller (`StaffRenderer` walks the element
+    // stream with an `OctaveSpanTracker`, the same way it tracks the clef). It
+    // MUST match what the layout engine used for the same note: the notehead,
+    // its stem, its ledger lines and its accidental are all derived from the
+    // single `staffPosition` below, so a renderer that ignored the bracket while
+    // layout honoured it would draw the whole note an octave off its own beam.
     final staffPosition = StaffPositionCalculator.calculate(
       note.pitch,
       currentClef,
+      extraOctaveShift: extraOctaveShift,
     );
 
     // The voice's horizontal offset is already baked into basePosition by the

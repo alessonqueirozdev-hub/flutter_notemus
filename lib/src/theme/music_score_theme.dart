@@ -1,6 +1,14 @@
 // lib/src/theme/music_score_theme.dart
 import 'package:flutter/material.dart';
 
+import '../rendering/text_font.dart';
+
+// `MusicTextFont` is the runtime switch behind [MusicScoreTheme.textFontFamily]
+// and an app cannot use the theme field without it, so it is re-exported from
+// the one theme library the public barrel already exports. (The permanent home
+// for this line is the barrel itself; see the sprint notes.)
+export '../rendering/text_font.dart' show MusicTextFont, kMusicTextFontFallback;
+
 class MusicScoreTheme {
   // Cores básicas
   final Color staffLineColor;
@@ -63,6 +71,31 @@ class MusicScoreTheme {
   final bool antiAlias;
   final double strokeWidth;
 
+  /// Primary text face for every non-SMuFL string the engine draws — measure
+  /// numbers, lyrics, tempo/expression marks, tuplet numerals, rehearsal marks,
+  /// Gregorian syllables, Jianpu numerals.
+  ///
+  /// **Why you may need this.** The package ships no text face at all: its
+  /// `pubspec.yaml` declares only the two music fonts (Bravura, Greciliae), and
+  /// the built-in chain `kMusicTextFontFallback` names four faces
+  /// (`Academico`, `Century Schoolbook`, `Edwin`, `serif`) that the HOST is
+  /// expected to provide. Measured on 2.7.1: a score rasterised headlessly with
+  /// only Bravura and Greciliae registered produced 16 solid `.notdef` boxes in
+  /// the CMN path, and registering a real face literally named `serif` produced
+  /// a byte-identical PNG — the terminal generic is not a resolution guarantee.
+  /// Naming your own bundled face here is the supported fix.
+  ///
+  /// Setting the field is a DECLARATION; it does not install itself, because
+  /// [MusicScoreTheme] has a `const` constructor and the headless export path
+  /// never sees a widget tree. Call [installTextFont] once at startup (or
+  /// `MusicTextFont.use(...)` directly).
+  final String? textFontFamily;
+
+  /// Package that declares [textFontFamily], for a face shipped by another
+  /// package (the way `Bravura` is shipped by `flutter_notemus`). Null when the
+  /// family is declared by the application's own `pubspec.yaml`.
+  final String? textFontPackage;
+
   const MusicScoreTheme({
     // Cores básicas
     this.staffLineColor = Colors.black,
@@ -117,7 +150,20 @@ class MusicScoreTheme {
     this.measureNumberTextStyle,
     this.antiAlias = true,
     this.strokeWidth = 1.0,
+    this.textFontFamily,
+    this.textFontPackage,
   });
+
+  /// Installs [textFontFamily] as the primary of the package-wide text chain.
+  ///
+  /// Process-global on purpose: `ScoreRasterizer`/`PdfExporter` render with no
+  /// `Theme` ancestor and, when driven from a background isolate, no widget
+  /// tree at all, so an inherited value could not reach them. Call once before
+  /// the first render. Passing a theme whose [textFontFamily] is null CLEARS
+  /// any previous injection, which is what makes this idempotent when an app
+  /// swaps themes.
+  void installTextFont() =>
+      MusicTextFont.use(textFontFamily, package: textFontPackage);
 
   /// Creates a tema default
   factory MusicScoreTheme.standard() {
@@ -226,6 +272,8 @@ class MusicScoreTheme {
     TextStyle? measureNumberTextStyle,
     bool? antiAlias,
     double? strokeWidth,
+    String? textFontFamily,
+    String? textFontPackage,
   }) {
     return MusicScoreTheme(
       staffLineColor: staffLineColor ?? this.staffLineColor,
@@ -263,6 +311,8 @@ class MusicScoreTheme {
           measureNumberTextStyle ?? this.measureNumberTextStyle,
       antiAlias: antiAlias ?? this.antiAlias,
       strokeWidth: strokeWidth ?? this.strokeWidth,
+      textFontFamily: textFontFamily ?? this.textFontFamily,
+      textFontPackage: textFontPackage ?? this.textFontPackage,
     );
   }
 }

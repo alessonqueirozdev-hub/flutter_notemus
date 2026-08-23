@@ -94,18 +94,40 @@ class Transposition {
   /// Extra octaves added on top of [chromatic].
   final int octaveChange;
 
-  /// MusicXML `<double/>`: the part also sounds an octave lower.
+  /// MusicXML `<double/>`: the part is doubled an octave away.
+  ///
+  /// The DIRECTION of that octave is [doubledAbove], not this flag.
   final bool doubled;
+
+  /// MusicXML 4.0 `<double above="yes"/>`: the doubling is an octave UP.
+  ///
+  /// The `above` attribute is optional and defaults to `no`, so a bare
+  /// `<double/>` means an octave DOWN — which is why this defaults to `false`
+  /// and why [semitones] subtracts 12 in that case. Before 2.7.1 the model had
+  /// no way to express `above="yes"` at all: a part declaring it sounded 12
+  /// semitones LOW instead of 12 high, a measured 24-semitone (two-octave)
+  /// error.
+  ///
+  /// Ignored when [doubled] is false.
+  final bool doubledAbove;
 
   const Transposition({
     this.diatonic = 0,
     this.chromatic = 0,
     this.octaveChange = 0,
     this.doubled = false,
+    this.doubledAbove = false,
   });
 
   /// Total semitone offset from written to sounding pitch.
-  int get semitones => chromatic + (octaveChange * 12) + (doubled ? -12 : 0);
+  ///
+  /// MusicXML says a doubled part sounds in BOTH octaves; a single-voice MIDI
+  /// rendering has to pick one, and this picks the doubling octave, matching
+  /// what notation programs do when they collapse a doubled part to one line.
+  int get semitones =>
+      chromatic +
+      (octaveChange * 12) +
+      (doubled ? (doubledAbove ? 12 : -12) : 0);
 
   /// True when this declaration leaves the pitch unchanged.
   bool get isConcertPitch => diatonic == 0 && semitones == 0;
@@ -116,13 +138,16 @@ class Transposition {
       other.diatonic == diatonic &&
       other.chromatic == chromatic &&
       other.octaveChange == octaveChange &&
-      other.doubled == doubled;
+      other.doubled == doubled &&
+      other.doubledAbove == doubledAbove;
 
   @override
-  int get hashCode => Object.hash(diatonic, chromatic, octaveChange, doubled);
+  int get hashCode =>
+      Object.hash(diatonic, chromatic, octaveChange, doubled, doubledAbove);
 
   @override
   String toString() =>
       'Transposition(diatonic: $diatonic, chromatic: $chromatic, '
-      'octaveChange: $octaveChange, doubled: $doubled)';
+      'octaveChange: $octaveChange, doubled: $doubled, '
+      'doubledAbove: $doubledAbove)';
 }

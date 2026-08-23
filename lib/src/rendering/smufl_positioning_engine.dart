@@ -34,6 +34,37 @@ class SMuFLPositioningEngine {
   /// shortened, but never below 2.5 staff spaces.
   static const double kAbsoluteMinimumStemLengthSpaces = 2.5;
 
+  /// Longest stem, in staff spaces, that a single-beam group may draw before
+  /// the beam is re-sloped to bring it back.
+  ///
+  /// "Behind Bars", pp. 17-18: inside a beamed group the stems keep the
+  /// standard length as far as the contour allows; a stem that grows far past
+  /// it makes the group read as a leap with a rule through it rather than as a
+  /// beamed figure. Gould works in the 4-5 staff-space range.
+  ///
+  /// The value is the longest stem that a group already resolved by Gould's
+  /// own slant table can legitimately need, at the widest interval that table
+  /// covers:
+  ///
+  /// ```text
+  /// standard stem 3.5 + octave ambitus 3.5 - octave slant 1.5 = 5.5
+  /// ```
+  ///
+  /// Half a staff space above Gould's stated 4-5 range, and deliberately so:
+  /// [kBeamSlantByDiatonicStep] gives an octave leap a slant of 1.5 spaces,
+  /// which MEASURES as an outer stem of exactly 5.50. A ceiling of 5.0 would
+  /// contradict the slant table on the most ordinary wide leap there is. Past
+  /// the octave the slant table saturates (every interval wider than an octave
+  /// shares the 1.5 entry) while the stem keeps growing by half a space per
+  /// diatonic step, and that is precisely where this ceiling takes over.
+  ///
+  /// MEASURED, outer stem of a two-eighth group against its ambitus, before
+  /// any of this existed: 0 steps 3.50, 4 steps 4.50, 7 steps (octave) 5.50,
+  /// 10 steps 7.00, 14 steps 9.00 staff spaces — the last one more than twice
+  /// the height of the staff.
+  static const double kMaximumBeamedStemLengthSpaces =
+      kStandardStemLengthSpaces + 3.5 - 1.5;
+
   /// How much a beamed stem may be shortened below [kStandardStemLengthSpaces].
   ///
   /// Kept at zero: inside a beam group the beam itself already replaces the
@@ -55,6 +86,28 @@ class SMuFLPositioningEngine {
   // Previously were hardcoded static constants, now loaded from engravingDefaults
   late final double standardStemLength;
   late final double minimumStemLength;
+  /// Extra stem length, in staff spaces, that each beam level BEYOND THE FIRST
+  /// costs.
+  ///
+  /// Derived from the font: `beamThickness + beamSpacing` (Bravura:
+  /// `0.5 + 0.25 = 0.75`). It was the literal
+  /// `stemExtensionPerBeam = 0.5; // Calculated based on beamSpacing` — a
+  /// comment describing a calculation that was never performed. 0.5 is
+  /// `beamThickness` alone, so the gap BETWEEN the beams was never paid for
+  /// and every level past the first ate 0.25 staff spaces of stem.
+  ///
+  /// Verified against the code that actually stacks the beams rather than
+  /// against the prose: `BeamRenderer._calculateLevelOffset`
+  /// (`beam_renderer.dart:176`) places level *n* at
+  /// `(n - 1) * (beamThickness + beamGap)` below the primary, and
+  /// `BeamRenderer.beamStackDepth` (`:301`) reports the total as
+  /// `beamThickness + (beamCount - 1) * (beamThickness + beamGap)` — both
+  /// reading the metadata since 2.7.1. The marginal cost of one more level is
+  /// therefore `beamThickness + beamGap`, which is this number. Measured at
+  /// `staffSpace = 12`: a 32nd (3 levels) used to add `2 * 0.5 = 1.00` staff
+  /// space to the stem while its beam stack reached `2 * 0.75 = 1.50` below
+  /// the primary — the innermost beam sat 0.50 staff spaces (6.00 px) past the
+  /// end of the stem it was supposed to hang from.
   late final double stemExtensionPerBeam;
   late final double stemThickness;
 
@@ -99,7 +152,6 @@ class SMuFLPositioningEngine {
     // kStandardStemLengthSpaces): use the documented engraving constants.
     standardStemLength = kStandardStemLengthSpaces;
     minimumStemLength = kAbsoluteMinimumStemLengthSpaces;
-    stemExtensionPerBeam = 0.5; // Calculated based on beamSpacing
     stemThickness = _loadEngravingDefault('stemThickness', 0.12);
     beamThickness = _loadEngravingDefault(
       'beamThickness',
@@ -109,6 +161,11 @@ class SMuFLPositioningEngine {
       'beamSpacing',
       kFallbackBeamSpacingSpaces,
     );
+    // DERIVED, not chosen: one more beam level pushes the beam stack down by
+    // exactly one beam body plus one gap, so the stem has to grow by the same
+    // amount. Assigned after [beamThickness]/[beamSpacing] because it reads
+    // them.
+    stemExtensionPerBeam = beamThickness + beamSpacing;
 
     // Spacing - Behind Bars recommends 0.16-0.25 SS of visual clearance.
     // Using 0.25 SS to ensure clear separation between the accidental and the notehead.
@@ -358,10 +415,15 @@ class SMuFLPositioningEngine {
       length += (beamCount - 1) * stemExtensionPerBeam;
     }
 
-    // Ensure minimum length
-    length = length.clamp(minimumStemLength, 6.0);
-
-    return length;
+    // Floor only. There used to be a ceiling of 6.0 staff spaces here, and it
+    // cut INSIDE the chord: a chord spanning 7 half-positions needs 7.00 staff
+    // spaces, 10 needs 8.50, 14 needs 10.50, 21 needs 14.00 and 28 needs
+    // 17.50 — every one of them was returned as 6.000, so a C3+C6 chord drew a
+    // stem that touched neither of its own noteheads and floated in the middle
+    // of the staff. Behind Bars p.16: the stem of a chord spans the chord plus
+    // the standard length from the outer notehead; there is no upper bound
+    // that may cut inside the chord.
+    return length < minimumStemLength ? minimumStemLength : length;
   }
 
   /// Calculates the correct position of an accidental relative to the notehead.
@@ -483,6 +545,27 @@ class SMuFLPositioningEngine {
     return base + extraBeams * (beamThickness + beamSpacing);
   }
 
+  /// Maximum length, in staff spaces, of a stem of a beamed group with
+  /// [beamCount] beams — the counterpart of [minimumStemLengthSpaces].
+  ///
+  /// The secondary-beam allowance is the same term used by the minimum: the
+  /// beams grow away from the notehead, so a 16th-note group is allowed the
+  /// same headroom above its own (larger) minimum as an 8th-note group.
+  ///
+  /// This is a TARGET, not a hard guarantee: the only way to shorten the
+  /// longest stem of a group without shortening the shortest one below
+  /// [minimumStemLengthSpaces] is to steepen the beam, and a group with an
+  /// inner peak (measured: staff positions -2, +5, -2 give 3.50 / 7.00 / 3.50)
+  /// cannot be helped by any slope at all. `BeamAnalyzer` steepens as far as
+  /// the minimum allows and stops there; the residual case is handled upstream
+  /// by `BeamGrouper.kMaximumBeamAmbitusSteps`, which never lets an automatic
+  /// group span more than twelve diatonic steps in the first place.
+  double maximumStemLengthSpaces({required int beamCount}) {
+    final extraBeams = beamCount > 1 ? beamCount - 1 : 0;
+    return kMaximumBeamedStemLengthSpaces +
+        extraBeams * (beamThickness + beamSpacing);
+  }
+
   /// Calculates the ideal beam height at the position of the first note.
   ///
   /// This is only the INITIAL placement of the beam line; it looks at the
@@ -508,11 +591,15 @@ class SMuFLPositioningEngine {
         height += (highestPosition - 4) * 0.5;
       }
 
-      // Minimum length for multiple beams.
-      // Behind Bars: stem must have at least enough space for all beams + margin.
-      // Adjusted empirically for adequate visual length.
+      // Minimum length for multiple beams: the stem has to be long enough to
+      // carry the whole beam stack. The per-level cost is
+      // [stemExtensionPerBeam] (= `beamThickness + beamSpacing`), the same
+      // number `BeamRenderer` offsets each level by; it used to be a second
+      // `0.5` literal here, i.e. beam bodies only, with the gaps between them
+      // unpaid for.
       if (beamCount > 1) {
-        final minHeightForBeams = standardStemLength + ((beamCount - 1) * 0.5);
+        final minHeightForBeams =
+            standardStemLength + ((beamCount - 1) * stemExtensionPerBeam);
         height = height > minHeightForBeams ? height : minHeightForBeams;
       }
 
@@ -530,11 +617,15 @@ class SMuFLPositioningEngine {
         height += (-4 - lowestPosition) * 0.5;
       }
 
-      // Minimum length for multiple beams.
-      // Behind Bars: stem must have at least enough space for all beams + margin.
-      // Adjusted empirically for adequate visual length.
+      // Minimum length for multiple beams: the stem has to be long enough to
+      // carry the whole beam stack. The per-level cost is
+      // [stemExtensionPerBeam] (= `beamThickness + beamSpacing`), the same
+      // number `BeamRenderer` offsets each level by; it used to be a second
+      // `0.5` literal here, i.e. beam bodies only, with the gaps between them
+      // unpaid for.
       if (beamCount > 1) {
-        final minHeightForBeams = standardStemLength + ((beamCount - 1) * 0.5);
+        final minHeightForBeams =
+            standardStemLength + ((beamCount - 1) * stemExtensionPerBeam);
         height = height > minHeightForBeams ? height : minHeightForBeams;
       }
 

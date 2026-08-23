@@ -1,9 +1,11 @@
 // lib/core/measure.dart
 
+import 'chord.dart';
 import 'musical_element.dart';
 import 'note.dart';
 import 'rest.dart';
 import 'time_signature.dart';
+import 'tuplet.dart';
 import 'duration.dart';
 
 /// Represents a single bar of music containing an ordered list of
@@ -70,7 +72,28 @@ class Measure {
   /// Example: [[0, 1, 2], [3, 4]] groups notes 0,1,2 into one beam and 3,4 into another.
   List<List<int>> manualBeamGroups;
 
-  /// Time signature inherited from a previous measure (used for preventive validation).
+  /// A meter this bar inherits from an earlier one, so that [add] can enforce
+  /// capacity on a bar that declares no [TimeSignature] of its own.
+  ///
+  /// **This is an INPUT you set, never something the engine writes.** It used
+  /// to say "set automatically by `LayoutEngine`", and that was the package's
+  /// most dangerous engine-writes-the-model defect (ADR-005 action item 8):
+  /// [add] reads this field to compute the bar's capacity, so laying a score
+  /// out changed whether a public method THREW. Measured on a two-bar staff
+  /// whose bar 2 declares no meter and already holds four quarters under an
+  /// inherited 4/4:
+  ///
+  /// | | `m2.inheritedTimeSignature` | `m2.add(<fifth quarter>)` |
+  /// |---|---|---|
+  /// | fresh | `null` | accepted |
+  /// | after `LayoutEngine.layout()` | `TimeSignature(4/4)` | **threw [MeasureCapacityException]** |
+  ///
+  /// `LayoutEngine` now DERIVES the inheritance as a value it owns and leaves
+  /// every [Measure] field-for-field identical; read it from
+  /// `LayoutEngine.timeSignatureOf(measure)`, or validate a whole staff with
+  /// `MeasureValidator.validateStaff(staff)`. Set this field yourself only to
+  /// opt a stand-alone bar into preventive validation — and note that doing so
+  /// makes [add] throw where it otherwise would not, which is the point.
   TimeSignature? inheritedTimeSignature;
 
   /// Measure number, corresponding to the MEI `<measure @n>` attribute.
@@ -88,8 +111,9 @@ class Measure {
   /// Example: `[[0, 1, 2], [3, 4]]` groups the first three notes and the
   /// next two notes into separate beams.
   ///
-  /// [inheritedTimeSignature] is set automatically by [LayoutEngine] when no
-  /// [TimeSignature] is present in the measure but one was declared earlier.
+  /// [inheritedTimeSignature] opts a bar that declares no [TimeSignature] of
+  /// its own into capacity checking in [add]. Nothing in the package writes it
+  /// for you — see the field's own documentation for why that changed.
   Measure({
     this.autoBeaming = true,
     this.beamingMode = BeamingMode.automatic,
@@ -245,24 +269,47 @@ class Measure {
   /// signatures, barlines, ...). Tuplets are scaled by their
   /// `normalNotes / actualNotes` ratio.
   ///
-  /// `Chord` and `Tuplet` are resolved dynamically to avoid circular imports.
+  /// ## Grace notes take no time
+  ///
+  /// A [Note] with `isGraceNote == true` returns 0.0. A grace note is an
+  /// ornament: it is printed small, it is drawn, it occupies horizontal WIDTH,
+  /// but it does not advance the musical clock — it is stolen from the
+  /// neighbouring note, not added to the bar (Behind Bars p.125; MusicXML
+  /// `<grace>` notes carry no `<duration>` at all, and MEI `@grace` likewise
+  /// excludes the note from the layer's rhythmic total).
+  ///
+  /// Measured before this rule existed: a 4/4 bar of four quarters plus two
+  /// eighth grace notes reported `currentMusicalValue = 1.1875` instead of
+  /// 1.0, and the layout onsets came out
+  /// `[0, 0.125, 0.1875, 0.4375, 0.6875, 0.9375]` while `MidiMapper` (which
+  /// already skipped grace notes) produced a correct 3840 ticks at 960 ppq.
+  /// Layout and playback therefore disagreed, and the ADR-002 shared onset
+  /// grid — the thing that makes a grand staff line up — broke for any staff
+  /// containing a grace note.
+  ///
+  /// `Chord` and `Tuplet` used to be resolved through
+  /// `runtimeType.toString()` "to avoid circular imports". Verified: there is
+  /// no cycle. `chord.dart` imports musical_element/note/duration/ornament/
+  /// dynamic/bounding_box_support and `tuplet.dart` imports musical_element/
+  /// note/rest/chord/time_signature/tuplet_bracket/tuplet_number — neither
+  /// reaches `measure.dart`, and nothing in their transitive closure does. The
+  /// string comparison was also silently wrong for any subclass of `Chord` or
+  /// `Tuplet`, so both are matched with `is` now.
   static double musicalValueOf(MusicalElement element) {
     if (element is Note) {
-      return element.duration.realValue;
+      return element.isGraceNote ? 0.0 : element.duration.realValue;
     } else if (element is Rest) {
       return element.duration.realValue;
-    } else if (element.runtimeType.toString() == 'Chord') {
-      final dynamic chord = element;
-      return chord.duration?.realValue ?? 0.0;
-    } else if (element.runtimeType.toString() == 'Tuplet') {
-      final dynamic tuplet = element;
+    } else if (element is Chord) {
+      return element.duration.realValue;
+    } else if (element is Tuplet) {
       double tupletValue = 0.0;
-      for (final tupletElement in tuplet.elements) {
-        tupletValue += musicalValueOf(tupletElement as MusicalElement);
+      for (final tupletElement in element.elements) {
+        tupletValue += musicalValueOf(tupletElement);
       }
       // Apply the tuplet ratio
-      if (tuplet.actualNotes > 0) {
-        tupletValue = tupletValue * (tuplet.normalNotes / tuplet.actualNotes);
+      if (element.actualNotes > 0) {
+        tupletValue = tupletValue * (element.normalNotes / element.actualNotes);
       }
       return tupletValue;
     }
@@ -278,15 +325,11 @@ class Measure {
   static int voiceNumberOf(MusicalElement element) {
     if (element is Note) {
       return element.voice ?? defaultVoice;
-    } else if (element.runtimeType.toString() == 'Chord') {
-      final dynamic chord = element;
-      final dynamic voice = chord.voice;
-      return voice is int ? voice : defaultVoice;
-    } else if (element.runtimeType.toString() == 'Tuplet') {
-      final dynamic tuplet = element;
-      for (final tupletElement in tuplet.elements) {
-        final child = tupletElement as MusicalElement;
-        final voice = voiceNumberOf(child);
+    } else if (element is Chord) {
+      return element.voice ?? defaultVoice;
+    } else if (element is Tuplet) {
+      for (final tupletElement in element.elements) {
+        final voice = voiceNumberOf(tupletElement);
         if (voice != defaultVoice) return voice;
       }
       return defaultVoice;
