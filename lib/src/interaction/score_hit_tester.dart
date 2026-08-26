@@ -287,8 +287,18 @@ class ScoreHitTester {
 
     final width = engine?.elementWidth(element) ?? staffSpace * 1.2;
     if (element is Rest) {
+      // A rest glyph is drawn CENTRED on its origin — `RestRenderer` passes
+      // `GlyphDrawOptions.restDefault`, which sets `centerHorizontally: true` —
+      // while every other element is drawn from its origin rightwards. The box
+      // has to follow the ink, not the convention.
+      //
+      // Measured at staffSpace 12 before this: the box ran `[x - air, x + w +
+      // air]` while the ink ran `[x - w/2, x + w/2]`, so clicking the LEFT EDGE
+      // of a rest missed on every duration tested (whole, half, quarter, eighth,
+      // 64th) and the right half of the box was empty staff. For a 64th rest
+      // that is 7.8 px of unclickable ink and 12.6 px of dead zone.
       return Rect.fromLTWH(
-        x - air,
+        x - width / 2 - air,
         positioned.position.dy - staffSpace * 2,
         width + air * 2,
         staffSpace * 4,
@@ -348,9 +358,16 @@ class ScoreHitTester {
     double x,
   ) {
     final air = staffSpace * 0.2;
-    final total = engine?.elementWidth(element) ?? staffSpace * 1.2;
     final left = engine?.elementLeftExtent(element) ?? 0.0;
-    return (left: x - left - air, right: x + (total - left) + air);
+    // The RIGHT edge is the painted extent, not the advance. They differ for a
+    // flagged note: a flag deliberately hangs over the following gap instead of
+    // widening it (Gould), so `elementWidth` correctly stops at the stem — but a
+    // selection box that stops at the stem leaves the flag unclickable.
+    // Measured at staffSpace 48: a stem-up eighth paints 0.93 staff spaces past
+    // its advance.
+    final right = engine?.elementPaintedRightExtent(element) ??
+        ((staffSpace * 1.2) - left);
+    return (left: x - left - air, right: x + right + air);
   }
 
   /// Stem direction under Behind Bars' rule: the note furthest from the middle

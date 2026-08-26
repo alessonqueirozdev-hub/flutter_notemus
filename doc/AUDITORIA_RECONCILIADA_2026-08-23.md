@@ -198,12 +198,19 @@ sem problemas. Na raiz eram **470** no início.
 
 | Item | Sev | O que falta |
 |---|---|---|
-| Bandeirola fora da reserva de `elementWidth` | P3 | Pinta 0,93 SS além do avanço reservado. Espaçar assim é convenção (Gould), mas `elementWidth` é também a caixa de hit-test e a largura de conteúdo do raster — uma bandeirola é inclicável e pode ser cortada na borda da página. Exige separar avanço de extensão pintada |
-| Pausas centradas contra reserva à direita | P4 | A largura confere ao pixel (52,0 contra 51,9 px numa pausa de semínima); só a **banda** está deslocada meio glifo, porque `GlyphDrawOptions.restDefault` centra e o layout reserva `[x, x+avanço]` |
-| Espaçamento de quiáltera ignora o `SpacingModel` | P3 | Decisão **declarada** no dartdoc e no commit `fa2cce5`; fechar exige dar um motor de espaçamento ao `TupletRenderer` |
-| Teto de razão do N-04 | P3 | É uma razão única; sob carga concorrente pisca. Trocar por melhor-de-N |
-| Playback nativo | P3 | 1 plataforma de 6, documentado no README |
+| Playback nativo | P3 | Existe de verdade só no Android (`native_audio_engine.cpp`); iOS, macOS, Linux e Windows são stubs honestos que devolvem `false` de `nativeIsReady`. Fechar exige AVAudioEngine, WASAPI/XAudio2 e ALSA/PulseAudio — código nativo que **não pode ser compilado nem testado neste ambiente**, e escrevê-lo às cegas produziria exatamente a alegação não verificável que este programa existe para eliminar |
+| Layout fora da UI thread | P3 | `GrandStaffPainter` faz o layout no construtor. Tirá-lo de lá é viável; **isolates não são**: `LayoutEngine._measuredTextWidth` usa `TextPainter`, que exige o engine do Flutter e não roda em isolate. Offload real exigiria substituir a medição de texto por métrica pura em Dart — perda de fidelidade, não ganho |
+| Face de texto não embarcada | P3 | `assets/` não contém nenhuma face OFL. A escotilha `MusicTextFont.use` está pronta e provada (tinta 14.942 → 6.886 px, caixas `.notdef` 2 → 0); fechar de vez exige alguém colocar um arquivo de fonte no repositório |
+| Espaçamento de quiáltera ignora o `SpacingModel` | P3 | Trade-off **declarado** no dartdoc e no commit `fa2cce5`: fechá-lo exige dar um motor de espaçamento ao `TupletRenderer`, ou os dois lados divergem de novo |
 | Pipeline gregoriano apartado | P3 | Identidade, onset, hit-test e export PDF do CMN não o alcançam |
+| Exportador MEI | P4 | Nunca existiu; o README nunca prometeu round-trip MEI |
+
+**Fechados depois do relatório de fechamento** (§4 atualizada): `M-33` por inteiro
+— avanço de cabeça por `DurationType`, extensão pintada separada do avanço para a
+bandeirola, e reserva de pausa centrada como a tinta. Os sete casos que carregavam
+orçamento no invariante `elementWidth × tinta` passaram de 27,0/71,0/47,0/47,0/
+29,0/28,0/43,0 px para **3,0 px cada** — antialiasing. Mais `MusicDuration` como
+nome canônico ao lado do alias legado `Duration`.
 
 ---
 

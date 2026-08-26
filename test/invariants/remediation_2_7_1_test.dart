@@ -335,16 +335,31 @@ void main() {
         median[bars] = runs[runs.length ~/ 2];
       }
 
-      final minGrowth = fastest[3200]! / math.max(fastest[400]!, 1e-6);
-      final medianGrowth = median[3200]! / math.max(median[400]!, 1e-6);
+      // The ratio is taken across the LARGEST adjacent pair, not from the
+      // smallest size to the largest.
+      //
+      // It used to be `t(3200) / t(400)`, and the 400-bar point is 20-40 ms of
+      // work — small enough that one young-generation GC moves it further than
+      // the code does. On a loaded machine that denominator collapses and the
+      // ratio explodes, so the test failed for load rather than for a
+      // regression: observed doing exactly that while the engine was untouched.
+      //
+      // `t(3200) / t(1600)` is both more robust (both points are large enough
+      // to amortise fixed cost) and MORE sensitive to the defect this exists to
+      // catch: a doubling costs 2x if linear and 4x if quadratic, so a ceiling
+      // of 3.0 sits squarely between them. The original defect measured 4.4x
+      // and 5.2x per doubling at the top of the range.
+      final minGrowth = fastest[3200]! / math.max(fastest[1600]!, 1e-6);
+      final medianGrowth = median[3200]! / math.max(median[1600]!, 1e-6);
       final report = 'fastest=$fastest median=$median '
-          '8x growth: min=${minGrowth.toStringAsFixed(2)} '
+          'doubling 1600->3200: min=${minGrowth.toStringAsFixed(2)} '
           'median=${medianGrowth.toStringAsFixed(2)}';
 
-      expect(minGrowth, lessThan(16.0),
-          reason: 'eight times the input must not cost sixteen times the '
-              'time; O(systems x elements) measured ~34x. $report');
-      expect(medianGrowth, lessThan(24.0), reason: report);
+      expect(minGrowth, lessThan(3.0),
+          reason: 'doubling the input must not cost three times the time; '
+              'linear is 2x, quadratic is 4x, and the O(systems x elements) '
+              'defect measured 4.4-5.2x per doubling. $report');
+      expect(medianGrowth, lessThan(4.0), reason: report);
     }, timeout: const Timeout.factor(30));
   });
 

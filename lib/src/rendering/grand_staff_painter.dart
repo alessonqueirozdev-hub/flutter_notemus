@@ -157,9 +157,12 @@ class GrandStaffPainter extends CustomPainter {
       for (final layout in system) {
         for (final positioned in layout.elements) {
           final element = positioned.element;
+          // Painted extent, not advance: a flag hangs past the advance on
+          // purpose, and a canvas sized to the advance clips the flag of the
+          // last note on a system (0.93 staff spaces of it, measured at
+          // staffSpace 48).
           final right = positioned.position.dx +
-              layout.engine.elementWidth(element) -
-              layout.engine.elementLeftExtent(element);
+              layout.engine.elementPaintedRightExtent(element);
           if (right > maxRight) maxRight = right;
         }
       }

@@ -115,15 +115,51 @@ enum DurationType {
   }
 }
 
-/// Representa a duração de uma nota ou pausa.
-class Duration {
+/// A rhythmic duration: a [DurationType] plus augmentation dots.
+///
+/// ## Why this type has two names
+///
+/// This class is exported by `package:flutter_notemus/flutter_notemus.dart`
+/// under BOTH `MusicDuration` and the legacy alias [Duration]. `MusicDuration`
+/// is the canonical name and the one to use in new code.
+///
+/// The legacy name shadows `dart:core.Duration` for anyone importing the
+/// package barrel, which is a real and repeatedly-hit trap:
+///
+/// ```dart
+/// import 'package:flutter_notemus/flutter_notemus.dart';
+///
+/// Timeout(Duration(minutes: 5));   // does NOT compile: this is the music one
+/// Future.delayed(Duration(seconds: 1));  // same
+/// ```
+///
+/// Two ways out, both supported today:
+///
+/// ```dart
+/// // 1. Keep the time Duration, name the music one explicitly.
+/// import 'package:flutter_notemus/flutter_notemus.dart' hide Duration;
+/// final quarter = MusicDuration(DurationType.quarter);
+/// await Future.delayed(const Duration(seconds: 1));   // dart:core, unshadowed
+///
+/// // 2. Prefix the package.
+/// import 'package:flutter_notemus/flutter_notemus.dart' as notemus;
+/// final quarter = notemus.MusicDuration(notemus.DurationType.quarter);
+/// ```
+///
+/// The [Duration] alias is kept so that no existing code breaks. It is
+/// scheduled to stop being exported in 3.0; `MusicDuration` will remain. There
+/// is no deprecation annotation on it yet precisely because that would emit a
+/// warning at every one of the several hundred call sites inside this package
+/// and in every app using it, before there is a major version to land the
+/// removal in.
+class MusicDuration {
   /// O tipo de duração (semibreve, mínima, etc.).
   final DurationType type;
 
   /// O número de pontos de aumento.
   final int dots;
 
-  const Duration(this.type, {this.dots = 0});
+  const MusicDuration(this.type, {this.dots = 0});
 
   /// Calcula a duração real incluindo pontos de aumento.
   ///
@@ -150,13 +186,25 @@ class Duration {
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is Duration && other.type == type && other.dots == dots;
+    return other is MusicDuration &&
+        other.type == type &&
+        other.dots == dots;
   }
 
   @override
   int get hashCode => Object.hash(type, dots);
 
-  /// Representação legível, ex.: `Duration(quarter)` ou `Duration(half..)`.
+  /// Representação legível, ex.: `MusicDuration(quarter)` ou `MusicDuration(half..)`.
   @override
-  String toString() => 'Duration(${type.name}${'.' * dots})';
+  String toString() => 'MusicDuration(${type.name}${'.' * dots})';
 }
+
+/// Legacy alias for [MusicDuration].
+///
+/// Kept so that existing code — including the several hundred call sites inside
+/// this package — keeps compiling unchanged. It SHADOWS `dart:core.Duration`
+/// for anyone importing the package barrel; see [MusicDuration] for the two
+/// supported ways around that.
+///
+/// Scheduled to stop being exported in 3.0.
+typedef Duration = MusicDuration;

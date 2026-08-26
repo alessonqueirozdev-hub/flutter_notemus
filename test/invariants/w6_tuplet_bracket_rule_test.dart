@@ -91,14 +91,35 @@ void main() {
       // how far it reaches. This is also the case that breaks if the rule is
       // handed `Tuplet.notes` instead of `Tuplet.elements`: the rest becomes
       // invisible and the two beamed notes look like a fully beamed group.
+      //
+      // Asserted as a RELATION against the same tuplet with the bracket
+      // explicitly suppressed, not as a literal ink total. It was `expect(ink,
+      // 1542)`, and that broke the day rests started reserving the half of
+      // their glyph that is drawn to the LEFT of their origin — the rest moved
+      // by half a glyph, the total moved by 2 px, and a test about whether a
+      // BRACKET IS DRAWN failed for a change in where a rest sits.
+      List<MusicalElement> withRest() => [
+            n('C', 5),
+            Rest(duration: Duration(DurationType.eighth)),
+            n('G', 5),
+          ];
       final ink = await inkOf(
-        staffOf(Tuplet(actualNotes: 3, normalNotes: 2, elements: [
-          n('C', 5),
-          Rest(duration: Duration(DurationType.eighth)),
-          n('G', 5),
-        ])),
+        staffOf(Tuplet(
+            actualNotes: 3, normalNotes: 2, elements: withRest())),
       );
-      expect(ink, 1542);
+      final withoutBracket = await inkOf(
+        staffOf(Tuplet(
+          actualNotes: 3,
+          normalNotes: 2,
+          elements: withRest(),
+          // ignore: deprecated_member_use_from_same_package
+          showBracket: false,
+        )),
+      );
+      expect(ink, greaterThan(withoutBracket),
+          reason: 'the bracket must be drawn: a tuplet containing a rest has '
+              'nothing else to delimit the group. ink=$ink, '
+              'same tuplet with the bracket suppressed=$withoutBracket');
     });
 
     test('a triplet of quarters keeps its bracket', () async {

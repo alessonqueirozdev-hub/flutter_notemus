@@ -504,6 +504,61 @@ something it does not own.
   separating "advance for spacing" from "painted extent" rather than changing a
   constant.
 
+### Closed after the sign-off report
+
+Three things the closing report listed as open, closed with the same protocol.
+
+- **Every note reserved a black notehead's width, whatever its duration.**
+  Bravura gives `noteheadBlack` an advance of 1.18 staff spaces, `noteheadWhole`
+  1.688 and `noteDoubleWhole` wider still; `_getElementWidthSimple` used the
+  first for all fifteen `DurationType`s. Measured at `staffSpace = 48`: a whole
+  note painted 81 px into a 56.6 px reservation and a breve 125 px. It now reads
+  `metadata.getGlyphAdvanceWidth(duration.type.glyphName)`.
+
+- **A flag painted outside every box built from the element's advance.** A
+  stem-up eighth paints 0.93 staff spaces past its advance, because `flag8thUp`
+  alone advances 1.056 staff spaces past the stem. That is not a spacing defect —
+  a flag hangs over the following gap on purpose (Gould) — it is two consumers
+  asking `elementWidth` a question it does not answer. New
+  `LayoutEngine.elementPaintedRightExtent` separates *how far the cursor moves*
+  from *how far the ink reaches*, and the two consumers that want ink use it:
+  `ScoreHitTester` (a flag was unclickable) and the raster/PDF content width (a
+  flag could be clipped at the page edge). Zero pixels moved — spacing is
+  untouched by design.
+
+- **A rest's reservation was in the wrong place.** Rests are drawn CENTRED on
+  their origin (`GlyphDrawOptions.restDefault`) while everything else is drawn
+  from its origin rightwards, and the layout reserved `[x, x + advance]`. The
+  painted WIDTH always matched to within a pixel — 52.0 against 51.9 for a
+  quarter rest — but the BAND sat half a glyph to the left of it. Two measured
+  consequences: under compression a rest's ink runs back into the preceding
+  note, and **clicking the left edge of a rest missed on every duration tested**
+  (whole, half, quarter, eighth, 64th), while the right half of its selection box
+  was empty staff — 7.8 px of unclickable ink and 12.6 px of dead zone for a 64th
+  rest. `_leftExtent` now returns half the advance for a `Rest`, so reservation
+  and ink coincide, and the hit box follows the ink.
+
+  Five goldens moved and were re-recorded: `m10_rests`, `c01_mixed_phrase`,
+  `c02_chromatic_chords`, `m04d_within_measure_accidentals`, `m12_melisma`. The
+  change is a uniform half-glyph shift of every rest into the space that was
+  already reserved for it. The objective check is the structural invariant that
+  budgets painted ink against the reservation: all **seven** cases that used to
+  carry an allowance — whole, breve, stem-up eighth, stem-up 32nd, whole rest,
+  quarter rest, 64th rest — went from 27.0 / 71.0 / 47.0 / 47.0 / 29.0 / 28.0 /
+  43.0 px to **3.0 px each**, which is anti-aliasing.
+
+- **`MusicDuration` is now the canonical name** for the rhythmic duration type.
+  The package exported it only as `Duration`, which shadows `dart:core.Duration`
+  for anyone importing the barrel — so `Future.delayed(Duration(seconds: 1))`
+  does not compile in a file that imports this package. Both names work;
+  `Duration` remains as a legacy alias so nothing breaks, and is scheduled to
+  stop being exported in 3.0. There is deliberately no deprecation annotation
+  yet: it would fire at every one of the several hundred call sites inside this
+  package and in every app using it, before there is a major version to land the
+  removal in. The escape hatch is executed, not just documented —
+  `test/core/music_duration_alias_test.dart` is written the way a consumer has to
+  write it, with `hide Duration` on the package import.
+
 ### Known limitations in this release
 
 Not defects — measured boundaries. Each was re-probed against the integrated

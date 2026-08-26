@@ -534,7 +534,9 @@ each measured:
   compresses an over-full bar down to `LayoutEngine.minimumSpacingScale` (0.35)
   and no further, because past that the noteheads collide. Measured on 40 whole
   notes written into one 4/4 bar at 900 px: 43 elements on one system reaching
-  x = 1 829.2 px, **2.03x** the line. No music is lost — `MusicScore` and
+  x = 2 073.0 px, **2.30x** the line. (It was 2.03x until this release, and
+  grew for a correction: a semibreve now reserves `noteheadWhole`'s real
+  advance of 1.688 staff spaces instead of `noteheadBlack`'s 1.18.) No music is lost — `MusicScore` and
   `GrandStaff` both scroll horizontally — and since this release the engine
   names the bar and the factor in `LayoutEngine.warnings` instead of
   overflowing without a word. For a fixed-width medium the bar has to be

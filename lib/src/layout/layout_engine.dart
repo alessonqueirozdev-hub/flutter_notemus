@@ -2513,6 +2513,69 @@ class LayoutEngine {
   double elementWidth(MusicalElement element) =>
       _getElementWidthSimple(element);
 
+  /// How far this element's INK reaches to the right of its own origin, in
+  /// pixels — which is not the same thing as [elementWidth].
+  ///
+  /// [elementWidth] is the horizontal ADVANCE: how far the cursor moves on, and
+  /// therefore what spacing is built from. A flag deliberately hangs over the
+  /// gap that follows its note rather than widening it (Gould), so the advance
+  /// correctly ignores it.
+  ///
+  /// Two consumers do not want the advance, though — they want the ink:
+  ///
+  ///  * `ScoreHitTester`, because a box built from the advance stops at the
+  ///    stem and the flag is unclickable;
+  ///  * the raster/PDF content width, because a page sized to the advance clips
+  ///    the flag of the last note on a system.
+  ///
+  /// Measured at `staffSpace = 48` before this existed: a stem-up eighth painted
+  /// 101 px into a 56.6 px reservation — 44.5 px, 0.93 staff spaces, of flag
+  /// outside every box built from the advance. `flag8thUp` alone advances 1.056
+  /// staff spaces past the stem.
+  ///
+  /// The flag is only counted when the stem points UP: SMuFL draws the down
+  /// flag on the left of a down stem, which sits at the notehead's left edge, so
+  /// a down flag adds nothing to the right of the origin. Stem direction is
+  /// taken from the layout's own [noteStaffPositions] when the note was laid out
+  /// by this engine, so the answer matches what was drawn rather than guessing.
+  double elementPaintedRightExtent(MusicalElement element) {
+    final advance = _rightExtent(element);
+    final flag = _flagOverhang(element);
+    return flag > advance ? flag : advance;
+  }
+
+  /// Ink the flag adds to the right of the element's origin, or 0.0 when the
+  /// element carries no flag or its flag points the other way.
+  double _flagOverhang(MusicalElement element) {
+    final Note? note = element is Note
+        ? element
+        : (element is Chord && element.notes.isNotEmpty
+            ? element.notes.first
+            : null);
+    if (note == null) return 0.0;
+    if (!note.duration.type.needsFlag) return 0.0;
+    // A beamed note has no flag: the beam replaces it.
+    if (beamOf(note) != null) return 0.0;
+
+    final position = _noteStaffPositions[note];
+    final stemUp = position == null ? true : position < 0;
+    if (!stemUp) return 0.0;
+
+    final glyph = switch (note.duration.type) {
+      DurationType.eighth => 'flag8thUp',
+      DurationType.sixteenth => 'flag16thUp',
+      DurationType.thirtySecond => 'flag32ndUp',
+      DurationType.sixtyFourth => 'flag64thUp',
+      _ => null,
+    };
+    if (glyph == null) return 0.0;
+
+    // The flag hangs off the stem, and the stem of an up-stemmed note sits at
+    // the RIGHT edge of the notehead.
+    final stemX = _noteheadAdvance(note.duration.type) * staffSpace;
+    return stemX + _getGlyphWidth(glyph, 1.056) * staffSpace;
+  }
+
   /// Advance width of an accidental glyph, in staff spaces, straight from the
   /// SMuFL metadata.
   ///
@@ -2555,6 +2618,21 @@ class LayoutEngine {
       if (glyph == null) return 0.0;
       // SMuFL advises 0.25-0.3 staff spaces between accidental and notehead.
       return (_accidentalAdvanceWidth(glyph) + 0.3) * staffSpace;
+    }
+    if (element is Rest) {
+      // A rest is DRAWN CENTRED on its origin (`RestRenderer` passes
+      // `GlyphDrawOptions.restDefault`, i.e. `centerHorizontally: true`) while
+      // every other element is drawn from its origin rightwards. So half of a
+      // rest's glyph lives to the LEFT of the point the layout placed it at, and
+      // that half belongs to the gap BEFORE it — exactly like an accidental.
+      //
+      // It used to report 0, so the reservation was `[x, x + advance]` against
+      // ink at `[x - advance/2, x + advance/2]`: measured at staffSpace 48, a
+      // rest painted 0.6-0.9 staff spaces outside its reserved band on the left,
+      // which under compression is a collision with the preceding note. The
+      // painted WIDTH always matched the reservation to within a pixel (52.0
+      // against 51.9 for a quarter rest) — it was only ever in the wrong place.
+      return _getElementWidthSimple(element) / 2;
     }
     if (element is Chord) {
       // The reservation is whatever `ChordRenderer` actually draws to the left
@@ -3346,9 +3424,11 @@ class LayoutEngine {
     var maxRight = 0.0;
     for (final positioned in elements) {
       final element = positioned.element;
-      final right = positioned.position.dx +
-          _getElementWidthSimple(element) -
-          _leftExtent(element);
+      // Painted extent, not advance. A flag hangs past its note's advance on
+      // purpose (Gould) — sizing the canvas to the advance clips the flag of
+      // the last note on the system.
+      final right =
+          positioned.position.dx + elementPaintedRightExtent(element);
       if (right > maxRight) maxRight = right;
     }
     // Justification already parks the last element on the right margin, so only

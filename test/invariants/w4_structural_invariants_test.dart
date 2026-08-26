@@ -449,28 +449,24 @@ void main() {
       'note double flat': _n('B', 4, alter: -2.0),
       'note dotted': _n('B', 4, dots: 1),
       'note double dotted': _n('B', 4, dots: 2),
-      // The notehead half of this is CLOSED. `_getElementWidthSimple` used to
-      // reserve `noteheadBlackWidth` for EVERY note, and Bravura's
-      // `noteheadWhole` advance is 1.688 staff spaces and `noteDoubleWhole`
-      // wider still, against `noteheadBlack`'s 1.18. Measured at staffSpace 48
-      // BEFORE: a whole note painted 81 px into a 56.6 px reservation (24.5 px
-      // over, 0.51 staff spaces) and a breve 125 px (68.5 px over, 1.43 staff
-      // spaces). It now reads
-      // `metadata.getGlyphAdvanceWidth(note.duration.type.glyphName)`, so the
-      // reservation is 81.0 px and 125.8 px respectively and both cases pass at
-      // a 3 px budget — anti-aliasing, not overrun. The budgets below were 27.0
-      // and 71.0; they are kept at 3.0 rather than deleted so that a regression
-      // to the flat black-notehead constant fails here immediately.
+      // These four used to carry large per-case budgets. All of them are now
+      // CLOSED, and the budgets are kept at 3 px — anti-aliasing — rather than
+      // deleted, so a regression fails here immediately instead of silently
+      // re-opening.
       //
-      // OPEN, MEASURED DEFECT — the FLAG. `_getElementWidthSimple` reserves
-      // nothing for it: a stem-up eighth or 32nd paints 101 px into a 56.6 px
-      // reservation (44.5 px over, 0.93 staff spaces), because `flag8thUp`
-      // alone advances 1.056 staff spaces past the stem. Spacing-wise a flag
-      // hanging over the following gap is conventional (Gould), so the ADVANCE
-      // is arguably right — but `elementWidth` is ALSO the hit-test box and the
-      // raster's content width, so a flag is unclickable and can be clipped at
-      // the right page edge. The real fix is to separate "advance for spacing"
-      // from "painted extent", which is a design change, not a constant.
+      //  * Notehead advance. `_getElementWidthSimple` reserved
+      //    `noteheadBlackWidth` for EVERY duration. Bravura's `noteheadBlack`
+      //    advance is 1.18 staff spaces, `noteheadWhole` 1.688 and
+      //    `noteDoubleWhole` wider still. Measured at staffSpace 48 BEFORE: a
+      //    whole note painted 81 px into a 56.6 px reservation (24.5 px over)
+      //    and a breve 125 px (68.5 px over). It now reads
+      //    `metadata.getGlyphAdvanceWidth(duration.type.glyphName)`.
+      //  * Flags. A stem-up eighth painted 101 px into the same 56.6 px (44.5
+      //    px over, 0.93 staff spaces). That was never an advance defect — a
+      //    flag hangs over the following gap on purpose (Gould) — it was this
+      //    test asking the wrong question. The right edge below is now
+      //    `elementPaintedRightExtent`, which is what the hit-test box and the
+      //    raster's content width are built from, and which does count the flag.
       'note whole': _n('B', 4, d: DurationType.whole),
       'note breve': _n('B', 4, d: DurationType.breve),
       'note eighth stem up': _n('C', 4, d: DurationType.eighth),
@@ -499,17 +495,17 @@ void main() {
       // 44.5 px at staffSpace 48.
       'note whole': 3.0,
       'note breve': 3.0,
-      'note eighth stem up': 47.0,
-      'note thirty-second stem up': 47.0,
-      // Rests are drawn CENTRED on their origin (`GlyphDrawOptions.restDefault`
-      // sets `centerHorizontally: true`) while the layout reserves
-      // `[x, x + advance]`. The WIDTH agrees to a pixel — measured 52 px
-      // painted against 51.9 reserved for a quarter rest — but the band is
-      // offset by half a glyph. Budgeted at half the widest rest advance plus
-      // the anti-aliasing tolerance.
-      'rest whole': 29.0,
-      'rest quarter': 28.0,
-      'rest 64th': 43.0,
+      'note eighth stem up': 3.0,
+      'note thirty-second stem up': 3.0,
+      // Rests were the third case. They are drawn CENTRED on their origin
+      // (`RestRenderer` passes `GlyphDrawOptions.restDefault`) while every other
+      // element is drawn from its origin rightwards, and the layout reserved
+      // `[x, x + advance]`. The painted WIDTH always matched to within a pixel
+      // (52.0 against 51.9 for a quarter rest) — the BAND was offset by half a
+      // glyph, which under compression is a collision with the preceding note,
+      // and which made the left edge of every rest unclickable. `_leftExtent`
+      // now returns half the advance for a Rest, so the reservation is centred
+      // like the ink. Budgets went 29.0 / 28.0 / 43.0 -> 3.0.
     };
 
     // Per-case budget in pixels for painted WIDTH beyond the reserved advance.
@@ -520,8 +516,8 @@ void main() {
     const widthBudgets = <String, double>{
       'note whole': 3.0,
       'note breve': 3.0,
-      'note eighth stem up': 47.0,
-      'note thirty-second stem up': 47.0,
+      'note eighth stem up': 3.0,
+      'note thirty-second stem up': 3.0,
     };
 
     final report = <String>[];
@@ -541,8 +537,18 @@ void main() {
       final positioned =
           placed.firstWhere((p) => identical(p.element, element));
 
+      // The right edge is the PAINTED extent, not the advance.
+      //
+      // These are deliberately different numbers. `elementWidth` is what the
+      // cursor advances by, and a flag hangs over the following gap instead of
+      // widening it (Gould) — so measuring ink against the advance asks a flag
+      // to be something it is not supposed to be, which is why this test used
+      // to carry a 47 px budget for two of its cases. What the ink actually has
+      // to fit inside is `elementPaintedRightExtent`, which is the number the
+      // hit-test box and the raster's content width are built from.
       final left = positioned.position.dx - engine.elementLeftExtent(element);
-      final right = left + engine.elementWidth(element);
+      final right = positioned.position.dx +
+          engine.elementPaintedRightExtent(element);
       expect(right, greaterThan(left),
           reason: '${entry.key} reserved no width at all');
 
