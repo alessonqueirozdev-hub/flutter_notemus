@@ -181,7 +181,7 @@ class CompleteMusicPieceExample extends StatelessWidget {
 
     final measure1 = Measure()
       ..add(Clef(clefType: ClefType.treble))
-      ..add(KeySignature(2))
+      ..add(KeySignature(_key.count))
       ..add(TimeSignature(numerator: 4, denominator: 4))
       ..add(
         TempoMark(
@@ -318,6 +318,9 @@ class CompleteMusicPieceExample extends StatelessWidget {
     return staff;
   }
 
+  /// The piece is in D major; every pitch is spelled against this.
+  static final KeySignature _key = KeySignature(2);
+
   Note _note(
     String step,
     int octave,
@@ -327,7 +330,13 @@ class CompleteMusicPieceExample extends StatelessWidget {
     List<ArticulationType> articulations = const [],
   }) {
     return Note(
-      pitch: Pitch(step: step, octave: octave),
+      // Spelled IN THE KEY. `Pitch.alter` is the sounding alteration and
+      // defaults to 0.0, so `Pitch(step: 'F', octave: 5)` under this piece's
+      // two-sharp signature is an F NATURAL — and the engraver correctly
+      // printed a natural in front of nearly every F to cancel the key. The
+      // resolver was right the whole time; this helper was writing the wrong
+      // notes. See KeySignature.alterFor.
+      pitch: _key.pitch(step, octave),
       duration: Duration(type, dots: dots),
       articulations: articulations,
       dynamicElement: dynamic == null ? null : Dynamic(type: dynamic),
