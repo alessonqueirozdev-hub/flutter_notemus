@@ -277,6 +277,12 @@ class StaffRenderer {
   /// renderer runs with no layout engine at all).
   BeamType? _beamOf(Note note) => _beams?[note] ?? note.beam;
 
+  /// `LayoutEngine.aboveStaffLevels`: which row above the staff each floating
+  /// mark was packed into, so two tempo directions stop being drawn on top of
+  /// each other.
+  Map<MusicalElement, int> _aboveStaffLevels = const {};
+  double _aboveStaffLevelHeight = 0.0;
+
   /// `LayoutEngine.elementLeftExtent`, handed to `TupletRenderer` so the grid
   /// it draws on is the accidental-aware grid the layout reserved space for.
   /// Null only when this renderer runs without a layout engine.
@@ -318,6 +324,10 @@ class StaffRenderer {
     _accidentalDecisions = layoutEngine?.accidentalDecisions ?? const {};
     _tupletBeams = layoutEngine?.tupletBeams;
     _beams = layoutEngine?.beams;
+    // Stacking rows for marks above the staff. A direction has no horizontal
+    // advance by design, so when two of them overlap the only way out is up.
+    _aboveStaffLevels = layoutEngine?.aboveStaffLevels ?? const {};
+    _aboveStaffLevelHeight = layoutEngine?.aboveStaffLevelHeight ?? 0.0;
     _elementLeftExtent = layoutEngine?.elementLeftExtent;
     _tupletContextFloor = layoutEngine?.tupletContextFloor;
 
@@ -1212,7 +1222,13 @@ class StaffRenderer {
     } else if (element is MusicText) {
       symbolAndTextRenderer.renderMusicText(canvas, element, basePosition);
     } else if (element is TempoMark) {
-      symbolAndTextRenderer.renderTempoMark(canvas, element, basePosition);
+      symbolAndTextRenderer.renderTempoMark(
+        canvas,
+        element,
+        basePosition,
+        levelOffset:
+            (_aboveStaffLevels[element] ?? 0) * _aboveStaffLevelHeight,
+      );
     } else if (element is Breath) {
       breathRenderer.render(canvas, element, basePosition);
     } else if (element is Caesura) {

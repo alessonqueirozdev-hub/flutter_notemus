@@ -680,9 +680,18 @@ class SymbolAndTextRenderer {
     );
   }
 
-  void renderTempoMark(Canvas canvas, TempoMark tempo, Offset basePosition) {
+  void renderTempoMark(
+    Canvas canvas,
+    TempoMark tempo,
+    Offset basePosition, {
+    /// Pixels to lift this mark clear of the ones already occupying the space
+    /// above the staff. Computed by `LayoutEngine.aboveStaffLevels`, because a
+    /// direction has no horizontal advance and so cannot get out of another
+    /// one's way sideways.
+    double levelOffset = 0.0,
+  }) {
     final style = _tempoTextStyle();
-    final tempoCenterY = _tempoMarkCenterY();
+    final tempoCenterY = _tempoMarkCenterY() - levelOffset;
     var cursorX = basePosition.dx;
 
     final tempoText = tempo.text?.trim();

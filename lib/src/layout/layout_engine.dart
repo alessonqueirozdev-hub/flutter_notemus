@@ -1488,6 +1488,7 @@ class LayoutEngine {
     // ANÃƒÂLISE DE BEAMING AVANÇADO: criar AdvancedBeamGroups
     _analyzeBeamGroups(currentTimeSignature, positionedElements);
 
+    _assignAboveStaffLevels(positionedElements);
     return positionedElements;
   }
 
@@ -3037,11 +3038,26 @@ class LayoutEngine {
     final tempoText = tempo.text?.trim();
 
     if (tempoText != null && tempoText.isNotEmpty) {
-      double textUnits = tempoText.length * 0.38;
-      if (textUnits < 2.4) {
-        textUnits = 2.4;
-      }
-      width += textUnits * staffSpace;
+      // MEASURED, not counted. This was `tempoText.length * 0.38 * staffSpace`
+      // — a character-count estimate against a renderer that lays the string
+      // out with a real TextPainter at `staffSpace * 1.3`, semi-bold, italic,
+      // with letter spacing. The estimate came out narrower than the ink, so
+      // two tempo marks a few notes apart were reserved as clear of each other
+      // and then drawn overlapping: "Quarter = Eighth (metronome 120)" ran
+      // straight into "Range 120-132" on the tempo page.
+      //
+      // The style below mirrors `SymbolAndTextRenderer._tempoTextStyle`. A
+      // theme that overrides `tempoTextStyle` can still widen the text past
+      // this, which is the same limitation every measured element here has.
+      final measured = _measuredTextWidth(
+        tempoText,
+        staffSpace * 1.3,
+        true,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0.15,
+      );
+      final floor = 2.4 * staffSpace;
+      width += measured > floor ? measured : floor;
     }
 
     if (tempo.bpm != null && tempo.showMetronome) {
@@ -3227,8 +3243,15 @@ class LayoutEngine {
   /// otherwise, and a `TextPainter.layout()` is not free.
   static final LruCache<String, double> _textWidthCache = LruCache(512);
 
-  double _measuredTextWidth(String text, double fontSize, bool italic) {
-    final key = '${fontSize.toStringAsFixed(2)}|${italic ? 'i' : 'r'}|$text';
+  double _measuredTextWidth(
+    String text,
+    double fontSize,
+    bool italic, {
+    FontWeight? fontWeight,
+    double? letterSpacing,
+  }) {
+    final key = '${fontSize.toStringAsFixed(2)}|${italic ? 'i' : 'r'}'
+        '|${fontWeight?.value ?? -1}|${letterSpacing ?? 0}|$text';
     final cached = _textWidthCache.get(key);
     if (cached != null) return cached;
 
@@ -3238,6 +3261,8 @@ class LayoutEngine {
         style: TextStyle(
           fontSize: fontSize,
           fontStyle: italic ? FontStyle.italic : FontStyle.normal,
+          fontWeight: fontWeight,
+          letterSpacing: letterSpacing,
           height: 1.0,
         ).withMusicTextFallback(),
       ),
@@ -3724,6 +3749,79 @@ class LayoutEngine {
     return 0.0;
   }
 
+
+  /// Stacking level for each mark that floats ABOVE the staff, per system.
+  ///
+  /// Level 0 is the row nearest the staff; each level above it is one text
+  /// line further out. Empty for anything that does not float.
+  ///
+  /// Marks like tempo text and rehearsal letters are deliberately given NO
+  /// horizontal advance — they are co-positioned with the rhythmic element
+  /// that follows, so that adding a direction never changes where the notes
+  /// sit. That invariant is right, and it has a consequence nobody handled:
+  /// two directions close together have nothing keeping them apart, and they
+  /// were simply drawn on top of each other. Reported from the tempo page,
+  /// where "Quarter = Eighth (metronome 120)" ran straight through
+  /// "Range 120-132".
+  ///
+  /// Since they cannot move sideways, they move OUT. This packs them into
+  /// rows: each mark takes the lowest row whose previous occupant has already
+  /// finished, which is the standard interval-packing answer and gives the
+  /// minimum number of rows.
+  final Map<MusicalElement, int> aboveStaffLevels = {};
+
+  /// Height of one stacking row, in pixels.
+  double get aboveStaffLevelHeight => staffSpace * 1.9;
+
+  void _assignAboveStaffLevels(List<PositionedElement> positioned) {
+    aboveStaffLevels.clear();
+
+    final bySystem = <int, List<PositionedElement>>{};
+    for (final pe in positioned) {
+      if (!_floatsAboveStaff(pe.element)) continue;
+      bySystem.putIfAbsent(pe.system, () => []).add(pe);
+    }
+
+    for (final entry in bySystem.entries) {
+      final marks = entry.value
+        ..sort((a, b) => a.position.dx.compareTo(b.position.dx));
+      // Right edge currently occupied by each row.
+      final rowEnds = <double>[];
+      for (final pe in marks) {
+        final left = pe.position.dx;
+        final right = left + elementWidth(pe.element);
+        var row = 0;
+        while (row < rowEnds.length && rowEnds[row] > left) {
+          row++;
+        }
+        if (row == rowEnds.length) {
+          rowEnds.add(right);
+        } else {
+          rowEnds[row] = right;
+        }
+        aboveStaffLevels[pe.element] = row;
+      }
+    }
+  }
+
+  /// Marks drawn above the staff that have to share the space up there.
+  ///
+  /// Deliberately NOT every floating element: dynamics and hairpins live below
+  /// the staff, and an octave bracket spans rather than sits.
+  bool _floatsAboveStaff(MusicalElement element) {
+    if (element is TempoMark) return true;
+    if (element is MusicText) {
+      switch (element.type) {
+        case TextType.lyrics:
+        case TextType.dynamics:
+          return false;
+        default:
+          return true;
+      }
+    }
+    return false;
+  }
+
   /// How far above its own anchor an element draws, in pixels.
   ///
   /// Floating elements are positioned by the RENDERER relative to the staff, not
@@ -3735,17 +3833,29 @@ class LayoutEngine {
       return _tupletVerticalReach(element, positioned.position.dy).above;
     }
     if (element is MusicText) {
+      final stack =
+          (aboveStaffLevels[element] ?? 0) * aboveStaffLevelHeight;
       switch (element.type) {
         case TextType.rehearsal:
           // centre 3.2 SS above the top line, plus half the box.
-          return staffSpace * 6.4;
+          return staffSpace * 6.4 + stack;
         case TextType.tempo:
-          return staffSpace * 5.0;
+          return staffSpace * 5.0 + stack;
         default:
-          return staffSpace * 4.6;
+          return staffSpace * 4.6 + stack;
       }
     }
-    if (element is TempoMark) return staffSpace * 5.0;
+    if (element is TempoMark) {
+      // 5.0 was not enough and never had been: a tempo mark's centre sits 3.95
+      // staff spaces above the top line, and the metronome NOTE GLYPH drawn
+      // beside the text is taller than the text is. Measured before this, on a
+      // single tempo mark with no stacking at all: 1 px of ink hard against row
+      // 0 of the canvas. 6.2 clears it with room to spare and still costs
+      // nothing on a score that has no tempo mark.
+      final base = element.bpm != null && element.showMetronome ? 6.2 : 5.0;
+      return staffSpace * base +
+          (aboveStaffLevels[element] ?? 0) * aboveStaffLevelHeight;
+    }
     if (element is OctaveMark) return staffSpace * 4.6;
     if (element is Note || element is Chord) {
       // Notehead half-height plus a stem's worth of clearance; ledger lines and
