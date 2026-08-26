@@ -145,9 +145,9 @@ jobs:
       #
       #   * the working tree is dirty, because resolving dependencies on a
       #     runner writes files the repository tracks;
-      #   * pub hints that 2.8.0 is not incremental over pub.dev's 2.6.0,
-      #     because 2.7.0 and 2.7.1 were released in git and never published.
-      #     That is a release decision, made deliberately, not an accident.
+      #   * pub may hint about the version sequence; the git history carries
+      #     internal milestones that were never published, so what git calls a
+      #     version and what pub.dev calls one do not line up one to one.
       #
       # So this step gates on what actually blocks a publish — validation
       # ERRORS — and prints everything else in full. If pub ever adds an error,

@@ -4,7 +4,28 @@ All notable changes to Flutter Notemus are documented in this file.
 
 The format is based on Keep a Changelog and this project follows Semantic Versioning.
 
-## [2.8.0] - 2026-08-23
+## [2.7.0] - 2026-08-26
+
+The first release published to pub.dev since 2.6.0. **Three internal milestones
+were tagged in git between them and never published**; they are folded in below,
+newest first, with their original headings kept as subsections so nothing about
+what changed when is lost.
+
+Read it as one release if you are upgrading from 2.6.0 — that is the only jump
+this file describes. Read the subsections if you want to know which audit found
+what; each names the version number it carried during development, and each of
+those commits keeps an annotated `milestone/*` tag in git so the history stays
+navigable without three unpublished version numbers competing with the real one.
+
+One naming note, so the engineering record and the published record can be
+reconciled: the documents in `doc/` — the forensic audits, the reconciliation,
+and ADR-005 — call the newest milestone **2.8.0**, because that is the number it
+carried while it was being built. Same code, same measurements, same commits;
+only the published version number differs, and it differs because pub.dev had
+never seen 2.7.0.
+
+
+### Milestone: the reconciled 2.7.1 audit — 50 findings, plus 3 at sign-off  *(developed as 2.8.0; never published)*
 
 A second adversarial re-audit of 2.7.1 — again by executing the engine, not by
 reading it — was reconciled into a single defect list and remediated in five
@@ -30,7 +51,7 @@ the effective beam through `LayoutEngine.beamOf(note)`; `Note.beam` is now an
 INPUT hint only. See
 [ADR-005](doc/adr/ADR-005-layout-decisions-are-values.md).
 
-### Beaming
+#### Beaming
 
 - **`LayoutEngine.beamOf(note)` now consults `tupletBeams` as well as `beams`.**
   It did not, which meant the method documented as *the only supported read*
@@ -114,7 +135,7 @@ INPUT hint only. See
   50 px (1.25 SS). The old numbers were not "lighter" — the stack the eye reads
   and the stems have to span was 10.7% taller, and 16.7% taller at three levels.
 
-### Engraving and layout
+#### Engraving and layout
 
 - **A tuplet's internal spacing no longer depends on the configured spacing
   model.** `TupletGrid` took an optional `IntelligentSpacingEngine`: the layout
@@ -206,7 +227,7 @@ INPUT hint only. See
   `PositionedElement.computeSignature` equality between an engine that records
   the warning and one that does not.
 
-### Interaction
+#### Interaction
 
 - **The hit box of a note covers its flag and its ledger lines.** MEASURED at
   `staffSpace = 12`, treble: a lone eighth on C4 has its stem 13.44 px right of
@@ -223,7 +244,7 @@ INPUT hint only. See
   against a drawn tip of 51.98399999999999) made a click exactly on the tip
   miss; the boundary now carries air.
 
-### Interoperability
+#### Interoperability
 
 - **The MusicXML exporter writes `Chord.duration`.** `_buildChordXml` emitted
   the duration of each INNER `Note` and never looked at the chord's own, while
@@ -280,7 +301,7 @@ INPUT hint only. See
   layout drew it twice — measured `Clef@30.0, Key@68.2, Time@99.4, Clef@147.4,
   Key@227.6, Time@300.7`.
 
-### Export and widgets
+#### Export and widgets
 
 - **`GrandStaff` scrolls horizontally.** Measured before: one bar of 2 000
   thirty-second notes at a 300 px viewport laid out to x = 57 436.2 px inside a
@@ -352,7 +373,7 @@ INPUT hint only. See
   case and for a C3-G3 one, and identical total ink from the single-image and
   the paginated path.
 
-### Tooling and documentation
+#### Tooling and documentation
 
 - **`dart analyze` is clean from the repo root, not only from `lib`.** The
   throwaway `probe/` measurement scripts are git-ignored but were still
@@ -417,7 +438,7 @@ INPUT hint only. See
   and an unknown name to exercise the fallback: 714 of 714 combinations returned
   bit-identical doubles, 0 disagreements, before the two were collapsed into one.
 
-### Closed since the first draft of this entry
+#### Closed since the first draft of this entry
 
 Two items were published in an earlier draft of this section as OPEN. Both were
 fixed inside this release and both were re-verified by a pass that did not write
@@ -443,7 +464,7 @@ the fix, which is the only way an entry is allowed to leave the list.
   never writes here since 2.8.0, and that `LayoutEngine.beamOf(note)` is the
   only supported read.
 
-### Closed at sign-off
+#### Closed at sign-off
 
 The closing sign-off found these two open and they were fixed before release.
 Both are the same ADR-005 category as the beam field — the engine reaching into
@@ -483,7 +504,7 @@ something it does not own.
   systems. `Measure.inheritedTimeSignature` survives as a field a caller may set
   deliberately to opt into preventive validation. Zero pixels moved.
 
-### One more, found while closing
+#### One more, found while closing
 
 - **Every note reserved a black notehead's width, whatever its duration.**
   `_getElementWidthSimple` used `noteheadBlackWidth` for all fifteen
@@ -504,7 +525,7 @@ something it does not own.
   separating "advance for spacing" from "painted extent" rather than changing a
   constant.
 
-### Closed after the sign-off report
+#### Closed after the sign-off report
 
 Three things the closing report listed as open, closed with the same protocol.
 
@@ -559,7 +580,7 @@ Three things the closing report listed as open, closed with the same protocol.
   `test/core/music_duration_alias_test.dart` is written the way a consumer has to
   write it, with `hide Duration` on the package import.
 
-### Known limitations in this release
+#### Known limitations in this release
 
 Not defects — measured boundaries. Each was re-probed against the integrated
 tree for this entry.
@@ -592,7 +613,7 @@ tree for this entry.
   all four, while the same durations as plain notes move by 1.250 / 1.137 /
   1.027 / 1.278.
 
-### Performance against 2.7.1
+#### Performance against 2.7.1
 
 The pre-release re-audit measured this release **1.19x-2.89x slower than 2.7.1 at
 1 600-12 800 bars**, from the extra work the correctness fixes added. That
@@ -635,7 +656,7 @@ bars — is pinned by `test/invariants/remediation_2_7_1_test.dart` (N-04) and
 `test/invariants/performance_budget_test.dart`; note that N-04's ceiling is a
 single ratio and has been seen to flake under concurrent load.
 
-## [2.7.1] - 2026-08-22
+### Milestone: remediation of the 2.7.0 forensic re-audit — 30 findings  *(developed as 2.7.1; never published)*
 
 An independent adversarial RE-AUDIT of 2.7.0 verified the 38 remediation claims
 by executing the engine, confirmed 25 of them outright and 13 partially, and
@@ -647,7 +668,7 @@ Several fixes change what a correct score looks like, so 16 goldens were
 re-baselined. Every one of those changes is a visible improvement and each is
 shown before/after in the audit document.
 
-### Engraving
+#### Engraving
 
 - **A measure now opens clef, key signature, meter — whatever order the source
   used.** MusicXML's `<attributes>` has a fixed content model that puts `<clef>`
@@ -695,7 +716,7 @@ shown before/after in the audit document.
   `text.length * staffSpace * 0.85 * 0.5`, so "WWWWW" and "iiiii" reserved the
   same room and an ideograph reserved a third of what it needs.
 
-### Data loss and robustness
+#### Data loss and robustness
 
 - **`MultiVoiceMeasure.elements` reach the layout.** `_layoutMultiVoiceMeasure`
   read only the voices, so a clef, key, meter or dynamic written to the measure
@@ -715,7 +736,7 @@ shown before/after in the audit document.
 - **`<pitch>` with no `<octave>` fails loudly.** It was the one malformed-input
   case that still dropped the note in silence.
 
-### Interoperability
+#### Interoperability
 
 - **`Pitch` is the sounding pitch** (ADR-003). MusicXML `<pitch>`, MEI
   `@pname`/`@oct` and MIDI all mean it that way; the package meant something
@@ -738,7 +759,7 @@ shown before/after in the audit document.
   `crossStaffMove`.
 - **MEI `clef.shape="TAB"`** produces a tablature clef instead of no clef at all.
 
-### Rendering and export
+#### Rendering and export
 
 - **Text uses the package's own font stack.** Measure numbers, and every other
   text site, built a bare `TextStyle` with no family and no fallback chain, so in
@@ -757,7 +778,7 @@ shown before/after in the audit document.
   `PositionedElement.staffBaselineY` removes the ambiguity that caused it, and
   `PositionedElement.movedTo` stops the post-layout passes from losing fields.
 
-### Performance
+#### Performance
 
 - **Layout is linear again.** `_justifyHorizontally` scanned the whole element
   list once per system — O(systems x elements), and the system count grows with
@@ -776,7 +797,7 @@ shown before/after in the audit document.
 - The measure-width dry run no longer writes tuplet geometry into the engine's
   position maps.
 
-### Testing
+#### Testing
 
 792 to 821 tests. `test/invariants/remediation_2_7_1_test.dart` pins every
 finding above together with the number measured before the fix, so a regression
@@ -785,7 +806,7 @@ because they asserted the defect: both cases in
 `treble8vb_staff_position_test.dart`, and the MEI-layers case in
 `notation_parser_test.dart`.
 
-### Corrections to the re-audit itself
+#### Corrections to the re-audit itself
 
 Verifying the claims also corrected two of the re-audit's own findings, which are
 withdrawn: MEI additive meter (`meter.count="3+2+2"`) **is** preserved —
@@ -794,7 +815,7 @@ bracket **is** collinear, both halves interpolating one line.
 
 ---
 
-## [2.7.0] - 2026-08-21
+### Milestone: remediation of the 2.6.0 forensic audit — 42 findings  *(developed as 2.7.0; never published)*
 
 **Audit-remediation release.** An adversarial forensic audit of 2.6.0
 (`doc/AUDITORIA_FORENSE_2026-08-21.md`) executed the engine against 40+ probe
@@ -810,7 +831,7 @@ clones model objects) and
 [ADR-002](doc/adr/ADR-002-shared-musical-time-grid.md) (multi-staff alignment
 runs on a shared musical time grid).
 
-### Fixed — engraving correctness
+#### Fixed — engraving correctness
 
 - **Compound meters beamed wrongly (F-03).** 3/8, 6/8, 9/8 and 12/8 grouped the
   beat-completing note into the *next* group and left the last note of the bar
@@ -866,7 +887,7 @@ runs on a shared musical time grid).
   had a branch in the tuplet renderer's loop — silent loss of music, found while
   fixing F-25.
 
-### Fixed — data loss
+#### Fixed — data loss
 
 - **Reusing one `Note` instance dropped notes (F-08).** Three identical
   instances in a bar rendered as one. The de-duplication set is gone.
@@ -888,7 +909,7 @@ runs on a shared musical time grid).
   routing, playing techniques, chord-level dynamics/articulations/ornaments,
   `<sound tempo>` and non-5-line staves. All are now emitted.
 
-### Fixed — robustness and security
+#### Fixed — robustness and security
 
 - **Invalid input crashed with an internal error (F-10).** `<step>H</step>`
   reached the model and blew up later as
@@ -906,7 +927,7 @@ runs on a shared musical time grid).
 - **Scores past 1000 systems went blank (F-22).** The painter clamped visible
   systems to `0..999`; a 4000-measure score produced 4000 systems.
 
-### Fixed — API and determinism
+#### Fixed — API and determinism
 
 - **The layout signature was not deterministic (F-02b).** The same `Staff` laid
   out three times produced three different signatures, so `shouldRepaint` was
@@ -927,7 +948,7 @@ runs on a shared musical time grid).
 - **Octave-transposing clefs were ignored by playback (F-24).** The written/
   sounding convention is documented and applied.
 
-### Fixed — found by the review of this very release
+#### Fixed — found by the review of this very release
 
 The remediation was itself reviewed adversarially before shipping. These were
 found in the new code:
@@ -956,7 +977,7 @@ found in the new code:
   measure the real reach, and the painter, the widget, the grand staff and the
   PDF all reserve it.
 
-### Added
+#### Added
 
 - **Rehearsal marks are engraved.** `TextType.rehearsal` had been imported from
   MusicXML since 2.x and fell through the default branch of every text switch —
@@ -991,7 +1012,7 @@ found in the new code:
   notes were being discarded silently), `<sound tempo>` and
   `<staff-details><staff-lines>`.
 
-### Performance
+#### Performance
 
 Measured on the same machine, before and after:
 
@@ -1006,7 +1027,7 @@ Layout absorbed the dry-run width measurement without changing shape. Paint
 stopped scaling with score size — it used to rebuild the system grouping and
 every renderer on each frame — and now fits inside the 16.7 ms frame budget.
 
-### Changed
+#### Changed
 
 - `Voice.getHorizontalOffset` follows Behind Bars: voices pair by stem direction
   (1 and 3 share the stem-up column, 2 and 4 the stem-down one) instead of
@@ -1022,7 +1043,7 @@ every renderer on each frame — and now fits inside the 16.7 ms frame budget.
   `Definesss`, `paUses`, `calculateTeste`, plus double-encoded mojibake) was
   swept from `lib/` — this text was being published to pub.dev.
 
-### Testing
+#### Testing
 
 - **New invariant suites** (`test/invariants/`) encoding the properties the
   audit found unguarded: nothing drawn past the line, every model note reaches
