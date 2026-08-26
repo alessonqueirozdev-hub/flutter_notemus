@@ -13,7 +13,9 @@ what changed when is lost.
 
 Read it as one release if you are upgrading from 2.6.0 — that is the only jump
 this file describes. Read the subsections if you want to know which audit found
-what.
+what; each names the version number it carried during development, and each of
+those commits keeps an annotated `milestone/*` tag in git so the history stays
+navigable without three unpublished version numbers competing with the real one.
 
 One naming note, so the engineering record and the published record can be
 reconciled: the documents in `doc/` — the forensic audits, the reconciliation,
@@ -23,7 +25,7 @@ only the published version number differs, and it differs because pub.dev had
 never seen 2.7.0.
 
 
-### Milestone: the reconciled 2.7.1 audit — 50 findings, plus 3 at sign-off  *(tagged in git as 2.8.0 while in development; never published)*
+### Milestone: the reconciled 2.7.1 audit — 50 findings, plus 3 at sign-off  *(developed as 2.8.0; never published)*
 
 A second adversarial re-audit of 2.7.1 — again by executing the engine, not by
 reading it — was reconciled into a single defect list and remediated in five
@@ -654,7 +656,7 @@ bars — is pinned by `test/invariants/remediation_2_7_1_test.dart` (N-04) and
 `test/invariants/performance_budget_test.dart`; note that N-04's ceiling is a
 single ratio and has been seen to flake under concurrent load.
 
-### Milestone: remediation of the 2.7.0 forensic re-audit — 30 findings  *(tagged in git as 2.7.1; never published)*
+### Milestone: remediation of the 2.7.0 forensic re-audit — 30 findings  *(developed as 2.7.1; never published)*
 
 An independent adversarial RE-AUDIT of 2.7.0 verified the 38 remediation claims
 by executing the engine, confirmed 25 of them outright and 13 partially, and
@@ -813,7 +815,7 @@ bracket **is** collinear, both halves interpolating one line.
 
 ---
 
-### Milestone: remediation of the 2.6.0 forensic audit — 42 findings  *(tagged in git as 2.7.0; never published)*
+### Milestone: remediation of the 2.6.0 forensic audit — 42 findings  *(developed as 2.7.0; never published)*
 
 **Audit-remediation release.** An adversarial forensic audit of 2.6.0
 (`doc/AUDITORIA_FORENSE_2026-08-21.md`) executed the engine against 40+ probe
