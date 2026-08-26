@@ -253,16 +253,43 @@ void main() {
 
   // ------------------------------------------------------------------ M-38 --
   group('M-38: rests and extreme durations no longer kill a tuplet beam', () {
-    test('a rest inside the group is transparent, not fatal', () {
-      // Before: `_applyAutomaticBeams` required EVERY element to be a Note, so
-      // one rest removed the beams from the whole tuplet.
+    test('a rest breaks the run without killing the rest of the group', () {
+      // The defect this guards is that `_applyAutomaticBeams` once required
+      // EVERY element to be a Note, so a single rest removed the beams from
+      // the WHOLE tuplet. That is what must never come back, and this is the
+      // case that actually shows it: notes either side of the rest still beam
+      // among themselves.
+      final plan = TupletBeamPlan.of([
+        note('C', 5),
+        note('D', 5),
+        Rest(duration: const Duration(DurationType.eighth)),
+        note('E', 5),
+        note('F', 5),
+      ]);
+      expect(plan.beams,
+          [BeamType.start, BeamType.end, null, BeamType.start, BeamType.end]);
+      expect(plan.beamCount, 1);
+    });
+
+    test('a lone note either side of a rest carries its own flag', () {
+      // This used to come back `[start, null, end]` — a beam declared across
+      // the rest. The declaration was never honoured: `NoteRenderer` suppresses
+      // a beamed note's stem and flag because the beam owns them, and the beam
+      // renderer then drew nothing across the gap. Measured on a 3:2 triplet of
+      // [eighth, eighth rest, eighth]: two bare noteheads, no stems, no beam,
+      // and a tuplet bracket dangling under them.
+      //
+      // Beaming over a rest is a real engraving option and stays a legitimate
+      // future one — it needs the beam renderer to span non-adjacent members
+      // and the p.201 bracket rule to agree that the group IS spanned. Until
+      // both exist, declaring it produces stemless noteheads, and a rest breaks
+      // the run exactly as it does in `BeamGrouper`.
       final plan = TupletBeamPlan.of([
         note('C', 5),
         Rest(duration: const Duration(DurationType.eighth)),
         note('E', 5),
       ]);
-      expect(plan.beams, [BeamType.start, null, BeamType.end]);
-      expect(plan.beamCount, 1);
+      expect(plan.beams, [null, null, null]);
     });
 
     test('a 128th tuplet beams with five levels', () {

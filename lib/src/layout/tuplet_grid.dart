@@ -497,9 +497,30 @@ class TupletBeamPlan {
     final beams = List<BeamType?>.filled(elements.length, null);
     var maxLevel = 0;
 
-    // Indices of the current run of beamable stem carriers. Rests inside the
-    // run are skipped over, never added — a rest has no stem to hang a beam on,
-    // but the beam passes above it.
+    // Indices of the current run of beamable stem carriers.
+    //
+    // A rest ENDS the run. It used to be treated as transparent, on the
+    // reasoning that "the beam passes above it" — which is a real engraving
+    // option, and was never implemented. The two eighths either side of a rest
+    // were marked `BeamType.start` and `BeamType.end`, `NoteRenderer`
+    // suppressed their stems and flags because a beamed note's stem belongs to
+    // the beam, and the beam renderer then drew nothing across the gap.
+    // Measured on a 3:2 triplet of [eighth, eighth rest, eighth]: two bare
+    // noteheads, no stems, no beam, and a tuplet bracket left dangling under
+    // them.
+    //
+    // Breaking the run also settles a disagreement inside this package. The
+    // p.201 bracket rule is deliberately handed `Tuplet.elements` rather than
+    // `Tuplet.notes` so that a rest KEEPS the bracket, on the reasoning that
+    // nothing spans the group — the exact opposite of what this loop believed.
+    // Now both agree: a rest breaks the beam, the notes carry their own flags,
+    // and the bracket delimits the group. It also matches `BeamGrouper`, whose
+    // own comment already says it treats "rests and non-beamable notes as real
+    // boundaries".
+    //
+    // Beaming over a rest stays a legitimate future option. It needs the beam
+    // renderer to span non-adjacent members and the bracket rule to agree; it
+    // is not something to leave half-built in the meantime.
     final run = <int>[];
 
     void closeRun() {
@@ -517,7 +538,10 @@ class TupletBeamPlan {
 
     for (var i = 0; i < elements.length; i++) {
       final element = elements[i];
-      if (element is Rest) continue; // transparent
+      if (element is Rest) {
+        closeRun();
+        continue;
+      }
       if (_carriesBeam(element)) {
         run.add(i);
       } else {
