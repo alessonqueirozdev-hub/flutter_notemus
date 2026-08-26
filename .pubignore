@@ -23,6 +23,15 @@ linux/flutter/
 temp_notemus_multiplatform/
 temp_notemus_plugin/
 
+# --- Flutter-generated plugin registrants ---
+# Same trap as `probe/` below: these are in `.gitignore`, and this file
+# replaces it. `flutter pub get` rewrites them on every resolve, so shipping
+# them would put one machine's resolution into the archive.
+**/flutter/generated_plugin_registrant.cc
+**/flutter/generated_plugin_registrant.h
+**/flutter/generated_plugins.cmake
+**/lib/generated_plugin_registrant.dart
+
 # --- Ad-hoc measurement probes ---
 # `probe/` is in `.gitignore`, which is exactly why it needs to be here: this
 # file REPLACES `.gitignore` for publishing, so an untracked-but-not-ignored-

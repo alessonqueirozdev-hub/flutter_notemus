@@ -51,3 +51,13 @@ test/**/failures/
 # Also excluded in analysis_options.yaml so `dart analyze` at the repo root
 # matches `dart analyze lib` (measured: 470 issues at root vs 0 in lib).
 probe/
+
+# Flutter-generated plugin registrants for the example app. `flutter pub get`
+# rewrites these on every resolve, so tracking them makes a clean checkout go
+# dirty the moment anyone runs pub get — which is what `pub publish --dry-run`
+# reports as "checked-in files are modified in git", and what turned the CI
+# publish-readiness job red. They are regenerated on demand; nothing is lost.
+**/flutter/generated_plugin_registrant.cc
+**/flutter/generated_plugin_registrant.h
+**/flutter/generated_plugins.cmake
+**/lib/generated_plugin_registrant.dart
