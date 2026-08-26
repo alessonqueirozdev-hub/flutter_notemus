@@ -421,6 +421,6 @@ class NoteRenderer extends BaseGlyphRenderer {
     // Positional rule (single voice, Gould): notes above the middle line get a
     // downward stem, notes below get an upward stem, and a note ON the middle
     // line takes a downward stem by convention.
-    return staffPosition < 0;
+    return StaffPositionCalculator.stemUpFor(staffPosition);
   }
 }

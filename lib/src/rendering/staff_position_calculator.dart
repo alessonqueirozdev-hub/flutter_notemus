@@ -117,6 +117,27 @@ class StaffPositionCalculator {
   /// and then an empty list was iterated — but it made the predicate lie about
   /// its own name, so `abs() > 4` is now `abs() >= 6`: exactly the positions
   /// [getLedgerLinePositions] actually produces a line for.
+  /// Whether a note at [staffPosition] takes an UPWARD stem.
+  ///
+  /// One rule, in one place, because there were three of them and they
+  /// disagreed at exactly one value — the middle line, which is the most
+  /// common position on the staff:
+  ///
+  ///     note_renderer.dart      staffPosition < 0    (DRAWS the stem)
+  ///     ornament_renderer.dart  staffPosition <= 0   (grace-slur side)
+  ///     slur_renderer.dart      staffPosition <= 0   (slur side)
+  ///
+  /// So for a B4 in treble clef the stem was drawn DOWNWARD while the slur
+  /// logic believed it pointed up, and the mini-slur of an appoggiatura was
+  /// placed below the notehead — straight across the stem it was supposed to
+  /// avoid. Reported from the "Upward and Downward Appoggiaturas" page, where
+  /// the D5 in the same bar (also stem-down, but above the middle line) got it
+  /// right and the B4 did not.
+  ///
+  /// The convention is Gould's: a note ON the middle line takes a downward
+  /// stem, so the test is strict.
+  static bool stemUpFor(int staffPosition) => staffPosition < 0;
+
   static bool needsLedgerLines(int staffPosition) {
     return staffPosition >= 6 || staffPosition <= -6;
   }

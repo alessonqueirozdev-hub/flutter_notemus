@@ -1166,7 +1166,7 @@ class SlurRenderer {
     if (effectiveVoice != null) {
       return effectiveVoice.isOdd;
     }
-    return staffPosition <= 0;
+    return StaffPositionCalculator.stemUpFor(staffPosition);
   }
 
   Offset calculateSlurEndpointForTesting(

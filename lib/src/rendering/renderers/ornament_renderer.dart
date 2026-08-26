@@ -7,6 +7,7 @@ import '../../../core/core.dart'; // 🆕 Tipos do core
 import '../grace_note_geometry.dart';
 import '../../theme/music_score_theme.dart';
 import 'base_glyph_renderer.dart';
+import '../staff_position_calculator.dart';
 
 class OrnamentRenderer extends BaseGlyphRenderer {
   final MusicScoreTheme theme;
@@ -406,7 +407,7 @@ class OrnamentRenderer extends BaseGlyphRenderer {
     if (effectiveVoice != null) {
       return effectiveVoice.isOdd;
     }
-    return staffPosition <= 0;
+    return StaffPositionCalculator.stemUpFor(staffPosition);
   }
 
   String? _getOrnamentGlyph(OrnamentType type) {
