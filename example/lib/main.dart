@@ -1,7 +1,14 @@
 import 'dart:ui' show PointerDeviceKind;
 
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart' show Theme, ThemeData, ColorScheme;
+import 'package:flutter/material.dart'
+    show
+        Theme,
+        ThemeData,
+        ColorScheme,
+        ErrorWidget,
+        FlutterErrorDetails,
+        SelectableText;
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'examples/accidentals_example.dart';
@@ -46,7 +53,83 @@ import 'showcase_bootstrap.dart';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // In a release build Flutter's default ErrorWidget paints a plain GREY
+  // RECTANGLE and says nothing. That is a reasonable default for a shipped app
+  // and a terrible one for a showcase: a reviewer looking at this gallery on
+  // GitHub Pages sees an empty panel and can only report "this page is blank",
+  // which is exactly what happened. A demo whose whole purpose is to show what
+  // the engine does must say what went wrong when it does not.
+  ErrorWidget.builder = (FlutterErrorDetails details) => _ExampleErrorView(
+        details: details,
+      );
+
   runApp(const MusicNotationApp());
+}
+
+/// Replaces the grey box with the exception and the first frames of its stack.
+class _ExampleErrorView extends StatelessWidget {
+  final FlutterErrorDetails details;
+
+  const _ExampleErrorView({required this.details});
+
+  @override
+  Widget build(BuildContext context) {
+    final stack = details.stack
+        ?.toString()
+        .split(String.fromCharCode(10))
+        .where((l) => l.trim().isNotEmpty)
+        .take(12)
+        .join(String.fromCharCode(10));
+    return Container(
+      color: const Color(0xFFFEF2F2),
+      padding: const EdgeInsets.all(20),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'This example failed to build',
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF991B1B),
+              ),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Please report this, with the text below.',
+              style: TextStyle(fontSize: 13, color: Color(0xFF7F1D1D)),
+            ),
+            const SizedBox(height: 14),
+            SelectableText(
+              details.exceptionAsString(),
+              style: const TextStyle(
+                fontFamily: 'monospace',
+                fontFamilyFallback: ['Menlo', 'Consolas', 'Courier New'],
+                fontSize: 12,
+                height: 1.5,
+                color: Color(0xFF450A0A),
+              ),
+            ),
+            if (stack != null) ...[
+              const SizedBox(height: 14),
+              SelectableText(
+                stack,
+                style: const TextStyle(
+                  fontFamily: 'monospace',
+                  fontFamilyFallback: ['Menlo', 'Consolas', 'Courier New'],
+                  fontSize: 11,
+                  height: 1.45,
+                  color: Color(0xFF7F1D1D),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class MusicNotationApp extends StatelessWidget {
