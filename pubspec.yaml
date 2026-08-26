@@ -15,9 +15,9 @@ topics:
 
 screenshots:
   - description: 'Complete music score with professional engraving, dynamics, and proper spacing'
-    path: assets/readme/Captura de tela 2025-11-06 141401.png
+    path: assets/readme/screenshot-full-score.png
   - description: 'Detailed musical elements with SMuFL glyphs, dotted notes, and breath marks'
-    path: assets/readme/Captura de tela 2025-11-06 141533.png
+    path: assets/readme/screenshot-smufl-detail.png
 
 environment:
   sdk: ^3.8.1

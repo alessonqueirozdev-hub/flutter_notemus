@@ -1,3 +1,11 @@
+@Tags(['golden'])
+// Pixel goldens are NOT portable across platforms: font rasterisation, hinting
+// and anti-aliasing differ between operating systems, so an image recorded on
+// one and checked on another fails for reasons that have nothing to do with the
+// engraving. They are therefore tagged and run only on the platform they were
+// recorded on (see .github/workflows/ci.yml and dart_test.yaml).
+library;
+
 // Golden regression suite over the engraving corpus.
 //
 // First run (generate figures + baselines):

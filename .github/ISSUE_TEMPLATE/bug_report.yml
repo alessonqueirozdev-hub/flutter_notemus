@@ -1,0 +1,109 @@
+name: Bug report
+description: Something the engine draws, imports, exports or plays incorrectly.
+title: "[bug] "
+labels: ["bug", "needs triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing this.
+
+        The single most useful thing you can give us is **the smallest score that
+        reproduces it, written in Dart**. Two or three measures beats a screenshot
+        and a paragraph, because we can drop it straight into a test.
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproduction
+      description: A `Staff` (or the MusicXML / MEI / JSON input) that shows the problem.
+      render: dart
+      placeholder: |
+        final staff = Staff(measures: [
+          Measure()
+            ..elements.addAll([
+              Clef(clefType: ClefType.treble),
+              TimeSignature(numerator: 4, denominator: 4),
+              Note(pitch: Pitch(step: 'C', octave: 4),
+                   duration: Duration(DurationType.quarter)),
+            ]),
+        ]);
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+      description: >
+        If it is an engraving question, a reference helps a lot — Gould's *Behind
+        Bars* with a page number, the SMuFL spec, or what Sibelius/Finale/MuseScore
+        print for the same music.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened instead
+      description: >
+        Numbers if you have them (positions, widths, MIDI ticks). A screenshot is
+        welcome, but please zoom in — engraving defects are usually a fraction of a
+        staff space and vanish at 1:1.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      multiple: true
+      options:
+        - Engraving / layout
+        - Beaming
+        - Tuplets
+        - Accidentals
+        - Grand staff / multi-staff
+        - Polyphony / voices
+        - MusicXML import or export
+        - MEI import
+        - JSON import or export
+        - MIDI / playback
+        - Gregorian chant
+        - Jianpu
+        - PDF / rasterisation
+        - Hit-testing / selection
+        - Performance
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: flutter_notemus version
+      placeholder: "2.8.0"
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Output of `flutter doctor -v`, or just the Flutter/Dart version and platform.
+      render: shell
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues.
+          required: true
+        - label: >
+            If this is a rendering problem, I checked that the SMuFL font is
+            registered — see *Required Initialization* in the README. Unregistered
+            fonts render every glyph as an empty box.
+          required: false

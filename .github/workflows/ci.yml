@@ -2,45 +2,135 @@ name: CI
 
 on:
   push:
-    branches:
-      - main
-      - master
+    branches: [main, master]
   pull_request:
-    branches:
-      - main
-      - master
   workflow_dispatch:
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  analyze-and-test:
-    name: Analyze & Test
+  # ---------------------------------------------------------------------------
+  # The logic suite runs on all three desktop platforms. Pixel goldens are
+  # EXCLUDED here on purpose: `matchesGoldenFile` is not portable — font
+  # rasterisation, hinting and anti-aliasing differ per OS, so an image recorded
+  # on one platform fails on another for reasons that have nothing to do with the
+  # engraving. Running the rest cross-platform is what actually catches
+  # portability bugs (path separators, locale, float formatting).
+  # ---------------------------------------------------------------------------
+  test:
+    name: Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Analyze (strict — infos are fatal)
+        run: flutter analyze
+
+      - name: Test (excluding pixel goldens)
+        run: flutter test --exclude-tags golden --reporter=expanded
+
+  # ---------------------------------------------------------------------------
+  # Goldens run only on the platform they were recorded on. If you re-record
+  # them on a different OS, change this and say so in the PR.
+  # ---------------------------------------------------------------------------
+  goldens:
+    name: Pixel goldens (windows)
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Golden tests
+        run: flutter test --tags golden --reporter=expanded
+
+      - name: Upload failure diffs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-failures
+          path: test/golden/failures/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  # ---------------------------------------------------------------------------
+  # The example app is a separate pub workspace. Note it is resolved and analyzed
+  # in its own job: running `flutter analyze` inside example/ rewrites the root's
+  # package resolution, which makes `package:pdf` unresolvable for any step that
+  # follows it in the same checkout.
+  # ---------------------------------------------------------------------------
+  example:
+    name: Example app
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          cache: true
 
-      - name: Get dependencies (lib)
-        run: flutter pub get
-
-      - name: Dart analyze (lib)
-        run: flutter analyze --no-fatal-infos
-
-      - name: Run unit tests
-        run: flutter test --reporter=expanded
-
-      - name: Get dependencies (example)
+      - name: Resolve dependencies
         working-directory: example
         run: flutter pub get
 
-      - name: Dart analyze (example)
+      - name: Analyze
         working-directory: example
-        run: flutter analyze --no-fatal-infos
+        run: flutter analyze
 
-      - name: Verify publish readiness
+      - name: Build web (proves the showcase still compiles)
+        working-directory: example
+        run: flutter build web --release
+
+  # ---------------------------------------------------------------------------
+  publish-readiness:
+    name: Publish dry run
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: pub publish --dry-run
         run: flutter pub publish --dry-run
+
+      # Reported, not gated. A threshold would have to be a number somebody
+      # measured, and pana could not be run locally to establish one (its
+      # sandbox rejects Windows temp paths containing ':'). Read the summary in
+      # the job log; turn this into a gate once there is a baseline score to
+      # anchor it to.
+      - name: Package health (pana, report only)
+        continue-on-error: true
+        run: |
+          dart pub global activate pana
+          dart pub global run pana --no-warning . | tail -40

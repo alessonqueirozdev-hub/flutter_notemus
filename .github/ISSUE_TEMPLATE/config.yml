@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or usage help
+    url: https://github.com/alessonqueirozdev-hub/flutter_notemus/discussions
+    about: Ask how to do something, or discuss an idea before opening an issue.
+  - name: Security vulnerability
+    url: https://github.com/alessonqueirozdev-hub/flutter_notemus/security/advisories/new
+    about: Report privately. Please do not open a public issue for a security problem.
