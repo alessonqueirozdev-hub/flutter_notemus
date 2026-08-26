@@ -1,6 +1,7 @@
 ﻿# Flutter Notemus
 
 [![pub.dev](https://img.shields.io/pub/v/flutter_notemus.svg)](https://pub.dev/packages/flutter_notemus)
+[![CI](https://github.com/alessonqueirozdev-hub/flutter_notemus/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/alessonqueirozdev-hub/flutter_notemus/actions/workflows/ci.yml)
 [![Flutter](https://img.shields.io/badge/Flutter-3.0+-blue.svg)](https://flutter.dev/)
 [![Dart](https://img.shields.io/badge/Dart-3.8.1+-blue.svg)](https://dart.dev/)
 [![SMuFL](https://img.shields.io/badge/SMuFL-1.40-green.svg)](https://w3c.github.io/smufl/latest/)
