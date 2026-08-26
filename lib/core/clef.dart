@@ -51,31 +51,97 @@ enum ClefType {
 
 /// Represents a clef at the beginning of a staff.
 class Clef extends MusicalElement {
-  final ClefType clefType;
   final int? staffPosition; // For C clefs that can vary in position
 
-  Clef({this.clefType = ClefType.treble, this.staffPosition, String? type}) {
-    // Backward compatibility — if type is provided, convert to ClefType
-    if (type != null) {
-      switch (type) {
-        case 'g':
-          _clefType = ClefType.treble;
-          break;
-        case 'f':
-          _clefType = ClefType.bass;
-          break;
-        case 'c':
-          _clefType = ClefType.alto;
-          break;
-        default:
-          _clefType = ClefType.treble;
-      }
-    } else {
-      _clefType = clefType;
+  /// The clef this element actually is.
+  ///
+  /// There used to be TWO fields here that could disagree: a public final
+  /// `clefType` set straight from the named parameter, and a private
+  /// `_clefType` that every renderer, every position calculation and every
+  /// exporter in this package read instead. Passing the legacy `type:` string
+  /// set only the private one, so `clef.clefType` reported treble while the
+  /// page drew a bass clef — a model that lies to its own consumer about what
+  /// it is. One field now, resolved once in the initializer list.
+  ClefType get clefType => _clefType;
+
+  Clef({
+    ClefType clefType = ClefType.treble,
+    this.staffPosition,
+    String? type,
+  }) : _clefType = type == null ? clefType : clefTypeFromName(type);
+
+  /// Resolves the legacy string [name] to a [ClefType].
+  ///
+  /// Throws [ArgumentError] on an unrecognised name — deliberately, and this
+  /// is a behaviour change. The switch here used to accept exactly `'g'`,
+  /// `'f'` and `'c'` and fall through to **treble** for everything else, in
+  /// silence. Every legacy call site in this repository (8 of them, across
+  /// three example files) passed `'treble'` or `'bass'` instead: `'treble'`
+  /// happened to be right because treble is also the fallback, and every
+  /// single `'bass'` rendered a TREBLE clef on a bass staff, with the notes
+  /// then engraved on the wrong lines and nothing anywhere saying so.
+  ///
+  /// A fallback that turns a typo into a plausible-looking wrong score is
+  /// worse than a crash, so the vocabulary is now the obvious one, the
+  /// single-letter MusicXML signs still work, and anything else is refused by
+  /// name.
+  static ClefType clefTypeFromName(String name) {
+    switch (name.trim().toLowerCase()) {
+      // MusicXML <sign> letters, kept for the callers that predate the
+      // long-form names.
+      case 'g':
+      case 'treble':
+        return ClefType.treble;
+      case 'f':
+      case 'bass':
+        return ClefType.bass;
+      case 'c':
+      case 'alto':
+        return ClefType.alto;
+      case 'tenor':
+        return ClefType.tenor;
+      case 'soprano':
+        return ClefType.soprano;
+      case 'mezzosoprano':
+      case 'mezzo-soprano':
+        return ClefType.mezzoSoprano;
+      case 'baritone':
+        return ClefType.baritone;
+      case 'percussion':
+        return ClefType.percussion;
+      case 'treble8va':
+        return ClefType.treble8va;
+      case 'treble8vb':
+        return ClefType.treble8vb;
+      case 'treble15ma':
+        return ClefType.treble15ma;
+      case 'treble15mb':
+        return ClefType.treble15mb;
+      case 'bass8va':
+        return ClefType.bass8va;
+      case 'bass8vb':
+        return ClefType.bass8vb;
+      case 'bass15ma':
+        return ClefType.bass15ma;
+      case 'bass15mb':
+        return ClefType.bass15mb;
+      case 'tab':
+      case 'tab6':
+        return ClefType.tab6;
+      case 'tab4':
+        return ClefType.tab4;
     }
+    throw ArgumentError.value(
+      name,
+      'type',
+      'unknown clef name. Use a ClefType directly, or one of: treble, bass, '
+          'alto, tenor, soprano, mezzoSoprano, baritone, percussion, '
+          'treble8va/8vb/15ma/15mb, bass8va/8vb/15ma/15mb, tab6, tab4 '
+          "(the MusicXML signs 'g', 'f' and 'c' also work)",
+    );
   }
 
-  ClefType _clefType = ClefType.treble;
+  final ClefType _clefType;
 
   /// Returns the "real" clef type (without octave transposition).
   ClefType get actualClefType {
