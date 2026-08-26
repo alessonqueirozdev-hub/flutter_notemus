@@ -218,11 +218,11 @@ For a full conformance audit see [`doc/MEI_V5_AUDIT.md`](doc/MEI_V5_AUDIT.md).
 - **2.7.0 is an audit-remediation release, and it bundles three of them.** Three
   internal milestones were tagged in git between 2.6.0 and this release and
   never published; the [CHANGELOG](CHANGELOG.md) folds all three into the 2.7.0
-  entry, newest first. Together they close **124 catalogued findings** from four
-  adversarial forensic audits, each of which executed the engine rather than
-  reading it: 42 against 2.6.0, 30 against the result, then **two independent
-  audits of the same tree** — 42 and 20 findings, reconciled into one master
-  list of 50 in
+  entry, newest first. Together they close **122 catalogued findings**, plus
+  three more found at sign-off, from four adversarial forensic audits, each of
+  which executed the engine rather than reading it: 42 against 2.6.0, 30 against
+  the result, then **two independent audits of the same tree** — 42 and 20
+  findings, reconciled into one master list of 50 in
   [`doc/AUDITORIA_RECONCILIADA_2026-08-23.md`](doc/AUDITORIA_RECONCILIADA_2026-08-23.md).
   That reconciliation is worth reading on its own: **32 of the 50 findings were
   seen by only one of the two audits**, including seven of the nine blockers,
