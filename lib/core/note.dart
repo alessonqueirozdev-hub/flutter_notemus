@@ -9,7 +9,7 @@ import 'technique.dart';
 import 'text.dart';
 import '../src/music_model/bounding_box_support.dart';
 
-/// Definesss the articulation types that a note may have.
+/// Define the articulation types that a note may have.
 enum ArticulationType {
   staccato,         // Dot
   staccatissimo,    // Triangular dot
@@ -42,11 +42,28 @@ class Note extends MusicalElement with BoundingBoxSupport {
   final Pitch pitch;
   final Duration duration;
 
-  final BeamType? beam;
+  /// Beam membership of this note, as an **input hint**.
+  ///
+  /// Set it yourself to encode beams explicitly (and set
+  /// `Measure.autoBeaming = false`, or use `BeamingMode.manual`, so the
+  /// automatic grouping leaves your value alone).
+  ///
+  /// Since 2.7.2 the layout NEVER writes here. It publishes its own decision as
+  /// a value on `LayoutEngine.beams` / `LayoutEngine.tupletBeams`, and
+  /// `LayoutEngine.beamOf(note)` is the only supported read: it returns the
+  /// engine's answer when the engine made one and falls back to this field when
+  /// it did not. See `doc/adr/ADR-005-layout-decisions-are-values.md`.
+  ///
+  /// Until 2.7.1 the engine did stamp its answer back in place, which made a
+  /// pure export depend on whether the score had been displayed: MEASURED on
+  /// two bars of loose quavers, the same `Staff` exported 3 349 characters with
+  /// 0 `<beam>` tags before `layout()` and 3 973 with 16 after. Both are
+  /// byte-identical now.
+  BeamType? beam;
   final List<ArticulationType> articulations;
   final TieType? tie;
 
-  /// Optional: Definesss whether this note starts or ends a slur.
+  /// Optional: Define whether this note starts or ends a slur.
   final SlurType? slur;
 
   /// Concurrent (nested/overlapping) slur boundaries on this note, each with a
@@ -63,7 +80,7 @@ class Note extends MusicalElement with BoundingBoxSupport {
   /// Special playing techniques for the note.
   final List<PlayingTechnique> techniques;
 
-  /// Voice number for polyphonic notetion (1 = soprano, 2 = alto, etc.).
+  /// Voice number for polyphonic notation (1 = soprano, 2 = alto, etc.).
   /// null = single voice (default).
   final int? voice;
 

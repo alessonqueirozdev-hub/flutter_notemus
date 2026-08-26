@@ -7,11 +7,25 @@
 // neume at its first note, and assemble only the descending climacus from
 // Punctum + PunctumInclinatum. Pitch is RELATIVE to the clef line (chant has no
 // fixed pitch); the melodic contour is centered on the staff.
+//
+// The clef may CHANGE mid-chant: GABC lets a clef token appear anywhere, and
+// `GabcParser` emits every clef after the first as a [ChantClefChange] element
+// in the stream. `GregorianLayout.build` therefore tracks the active clef while
+// it walks the elements and stores every glyph at a STAFF-ABSOLUTE position, so
+// notes after a change stay on their real line instead of being drawn (and
+// heard) transposed against the opening clef.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/core/core.dart';
 
+import '../text_font.dart';
+import 'chant_clef.dart';
 import 'greciliae_font.dart';
+
+// The chant clef model lives in its own Flutter-free library so the MIDI mapper
+// can react to clef changes; it is re-exported here (and from chant_score.dart)
+// so importers keep seeing ChantClef/ChantClefType/ChantClefChange.
+export 'chant_clef.dart';
 
 /// Visual configuration for the Gregorian renderer.
 class GregorianTheme {
@@ -21,6 +35,15 @@ class GregorianTheme {
   final double staffSpace;
 
   final double lyricSize;
+
+  /// Text face for the chant syllables and word-internal hyphens.
+  ///
+  /// Null means "use the package text chain" — see
+  /// `lib/src/rendering/text_font.dart`. That chain names four faces the package
+  /// does NOT ship (`Academico`, `Century Schoolbook`, `Edwin`, `serif`), so on
+  /// a host that provides none of them the syllables render as `.notdef` boxes:
+  /// measured 2 solid box runs / 2235 filled px in the probe chant. Name a face
+  /// here, or inject one process-wide with `MusicTextFont.use(...)`.
   final String? lyricTextFamily;
 
   const GregorianTheme({
@@ -31,35 +54,71 @@ class GregorianTheme {
   });
 }
 
-enum ChantClefType { doClef, faClef }
+// ── Greciliae geometry calibration (font units; unitsPerEm = 1000) ──
+//
+// EVERY vertical metric here is MEASURED from the shipped font metrics
+// (assets/gregorian/greciliae_glyphnames.json) rather than hardcoded, so that a
+// future Greciliae release with different outlines re-calibrates itself instead
+// of silently drifting off the staff:
+//
+//  * the diatonic step comes from GreciliaeFont.diatonicStepUnits(): the median
+//    bbox-center increment across the precomposed PesTwo..PesFive glyphs,
+//    doubled (raising the ambitus by one step lifts the center by half a step).
+//    ≈157.5 units on the pinned font;
+//  * the font scale is DERIVED from that step so the staff keeps its contract
+//    `lineGap == theme.staffSpace`: one inter-line gap is two diatonic steps,
+//    hence fontScale = unitsPerEm / (2 * unitsPerStep) ≈ 3.17;
+//  * the first-note anchor is the Punctum's bbox center (≈66.5 units) — the
+//    font-y that must land on the note's staff line/space.
+//
+// Hardcoding the step (it used to be 147.0, picked so the line gap matched a
+// fixed 3.4 font scale) made the staff lines ≈7% tighter than the step BUILT
+// INTO the precomposed neumes: an ambitus-4 neume ended up 42 units — about a
+// third of the line-to-space distance — off its pitch (F-29).
+//
+// INVARIANT (asserted by [_assertPesProgression] in debug builds):
+//   for every N in 3..5,
+//     |centerY(Pes<N>) − centerY(Pes<N−1>) − unitsPerStep / 2| < 3 units.
+//   N == 2 is excluded on purpose: PesOne's two notes touch, so it is drawn as
+//   a different shape and its center sits ≈7.5 units off the progression.
 
-class ChantClef {
-  final ChantClefType type;
+/// Fallback anchor when the font has no Punctum metrics.
+const double _firstNoteAnchorFallback = 70.0;
 
-  /// Staff line the clef sits on, 1 (bottom) .. 4 (top). Default: top line.
-  final int line;
-
-  /// Clef-flat (GABC `cb`/`fb`): a soft B-flat in force like a key signature
-  /// (every si is flat until cancelled by a natural). Drawn just after the clef.
-  final bool flat;
-
-  const ChantClef({
-    this.type = ChantClefType.doClef,
-    this.line = 4,
-    this.flat = false,
-  });
-
-  String get glyphName => type == ChantClefType.doClef ? 'CClef' : 'FClef';
+/// One diatonic step in font units, measured from [font].
+double _unitsPerStepOf(GreciliaeFont font) {
+  final step = font.diatonicStepUnits();
+  assert(_assertPesProgression(font, step));
+  return step;
 }
 
-// ── Greciliae geometry calibration (font units; unitsPerEm = 1000) ──
-// Glyphs scale with fontSize = staffSpace * _fontScale. One diatonic step is
-// _unitsPerStep font units (measured from PesOne..PesThree ambitus increments).
-// _firstNoteAnchor is the font-y of the first/reference note's center above the
-// glyph origin (used to seat the note on its staff line/space).
-const double _fontScale = 3.4; // -> inter-line gap ≈ staffSpace
-const double _unitsPerStep = 147.0;
-const double _firstNoteAnchor = 70.0;
+/// Font scale (fontSize = staffSpace * this) that keeps one inter-line gap —
+/// two diatonic steps of the font — exactly one `theme.staffSpace`.
+double _fontScaleOf(GreciliaeFont font) =>
+    GreciliaeFont.unitsPerEm / (2 * _unitsPerStepOf(font));
+
+/// Font-y of a notehead's center above the glyph origin, used to seat a note on
+/// its staff line/space.
+double _firstNoteAnchorOf(GreciliaeFont font) =>
+    font.centerYUnitsOrNull('Punctum') ?? _firstNoteAnchorFallback;
+
+/// Debug-only check of the Pes progression invariant documented above.
+bool _assertPesProgression(GreciliaeFont font, double unitsPerStep) {
+  const family = ['PesTwoNothing', 'PesThreeNothing', 'PesFourNothing',
+      'PesFiveNothing'];
+  for (var i = 1; i < family.length; i++) {
+    final lo = font.centerYUnitsOrNull(family[i - 1]);
+    final hi = font.centerYUnitsOrNull(family[i]);
+    if (lo == null || hi == null) continue;
+    final drift = (hi - lo - unitsPerStep / 2).abs();
+    if (drift >= 3.0) {
+      throw StateError('Greciliae Pes progression off by '
+          '${drift.toStringAsFixed(1)} units between ${family[i - 1]} and '
+          '${family[i]} (step = ${unitsPerStep.toStringAsFixed(1)})');
+    }
+  }
+  return true;
+}
 
 int _diatonic(String step, int octave) {
   const order = 'CDEFGAB';
@@ -76,7 +135,12 @@ const _words = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven'];
 String? _word(int n) => (n >= 1 && n < _words.length) ? _words[n] : null;
 
 /// A single positioned glyph within a neume (placed so its first-note anchor
-/// lands at staff [step], at x offset [dx]).
+/// lands at staff position [step], at x offset [dx]).
+///
+/// [step] is measured in diatonic steps above the BOTTOM staff line, i.e. it is
+/// absolute on the staff and independent of the clef. That matters because the
+/// clef can change mid-score (see [ChantClefChange]): storing a clef-relative
+/// step would make every glyph after a clef change land on the wrong line.
 class _GlyphOp {
   final String name;
   final int step;
@@ -107,10 +171,19 @@ class _NeumeBox {
 
   /// This syllable is joined to the next of the same word by a hyphen.
   final bool hyphen;
+
+  /// Staff position (steps above the bottom line) of the box's first note —
+  /// what the previous line's custos has to announce.
   final int firstStep;
+
+  /// True when the box is a standalone accidental SIGN (flat/natural/sharp with
+  /// no notehead). Such a box governs the notes that FOLLOW it, so a line break
+  /// must never be taken between the sign and its note.
+  final bool isAccidentalSign;
+
   double startX = 0;
   _NeumeBox(this.glyphs, this.marks, this.width, this.syllable, this.hyphen,
-      this.firstStep);
+      this.firstStep, {this.isAccidentalSign = false});
   double get endX => startX + width;
 }
 
@@ -120,10 +193,25 @@ class _Divisio {
   _Divisio(this.type);
 }
 
+/// A clef change drawn INSIDE a line (see [ChantClefChange]). When the change
+/// falls on a line boundary it becomes that line's own leading clef instead and
+/// is [suppressed] here, so the sign is never printed twice.
+class _ClefBox {
+  final ChantClef clef;
+  final double width;
+  double startX = 0;
+  bool suppressed = false;
+  _ClefBox(this.clef, this.width);
+}
+
 class _Row {
-  final List<Object> items = []; // _NeumeBox | _Divisio
+  final List<Object> items = []; // _NeumeBox | _Divisio | _ClefBox
   int? custosStep;
   double lineEnd = 0;
+
+  /// Clef in force at the START of this line — the one drawn at its left edge.
+  /// Lines after a mid-score clef change repeat the NEW clef, as Gregorio does.
+  ChantClef clef = const ChantClef();
 }
 
 /// Accidental glyph name.
@@ -232,7 +320,7 @@ _NeumeBox _emitNeume(
     final g = _accidentalGlyph(comps[0].accidental);
     final name = font.has(g) ? g : 'Punctum';
     return _NeumeBox([_GlyphOp(name, steps[0], 0)], const [], advPx(name),
-        e.syllable, e.hyphenAfter, steps[0]);
+        e.syllable, e.hyphenAfter, steps[0], isAccidentalSign: true);
   }
 
   // Build the glyph ops, the box width, and a center-x per component (px), used
@@ -293,8 +381,13 @@ _NeumeBox _emitNeume(
         final nextSameStropha = i + 1 < steps.length &&
             steps[i + 1] == steps[i] &&
             forms[i] == NcForm.stropha;
+        // GABC fusion (`@`): the two notes are drawn as ONE fused figure, so
+        // they touch instead of being spaced as independent puncta.
+        final fused = i + 1 < comps.length && comps[i].connected;
         cx += w *
-            (nextDescends ? 0.72 : (nextSameStropha ? 0.78 : 0.98));
+            (fused
+                ? 0.62
+                : (nextDescends ? 0.72 : (nextSameStropha ? 0.78 : 0.98)));
       }
       ops = o;
       compX = cxs;
@@ -324,8 +417,17 @@ _NeumeBox _emitNeume(
 }
 
 /// Builds and lays out chant as width-wrapped systems using [font].
+///
+/// The element stream may contain [ChantClefChange]s; the layout tracks the
+/// active clef as it walks the elements, re-anchors the notes that follow, draws
+/// the new sign in place, and repeats the new clef at the head of every
+/// subsequent line.
 class GregorianLayout {
   final List<_Row> _rows;
+
+  /// The INITIAL clef of the chant (the one governing its first note). Later
+  /// [ChantClefChange] elements do not change this field - each line records the
+  /// clef in force where it starts.
   final ChantClef clef;
   final double clefX;
   final double width;
@@ -351,13 +453,21 @@ class GregorianLayout {
     GreciliaeFont font,
   ) {
     final sp = theme.staffSpace;
-    final scale = sp * _fontScale / GreciliaeFont.unitsPerEm;
+    final scale = sp * _fontScaleOf(font) / GreciliaeFont.unitsPerEm;
 
     // Vertical reference is the CLEF, not the melody: a do-clef makes its line
-    // "do" (C4), an fa-clef "fa" (F4), matching GabcParser._slotToPitch. Step 0
-    // is the clef line, so notes are placed absolutely off the anchored line
-    // (clef, accidentals, custos all line up) rather than centred on the median.
-    final ref = _clefAnchorDiatonic(clef);
+    // "do" (C4), an fa-clef "fa" (F4), matching GabcParser._slotToPitch.
+    //
+    // Because the clef may CHANGE mid-score (GABC allows a clef token anywhere;
+    // GabcParser emits every later one as a [ChantClefChange]), positions are
+    // stored STAFF-ABSOLUTE - diatonic steps above the bottom staff line -
+    // instead of relative to one clef. A note `d` diatonic steps above the line
+    // of a clef on line L therefore sits at `d + 2 * (L - 1)`, since consecutive
+    // staff lines are two diatonic steps apart. Without this, everything after a
+    // clef change would be drawn against the initial clef, i.e. transposed.
+    var active = clef;
+    var ref = _clefAnchorDiatonic(active);
+    var lineOffset = 2 * (active.line - 1);
 
     final ordered = <Object>[];
     var hasSyllables = false;
@@ -367,7 +477,7 @@ class GregorianLayout {
           final di = (c.pitchName != null && c.octave != null)
               ? _diatonic(c.pitchName!, c.octave!)
               : ref;
-          return di - ref;
+          return di - ref + lineOffset;
         }).toList();
         if (steps.isEmpty) continue;
         final box = _emitNeume(e, steps, font, scale);
@@ -375,6 +485,14 @@ class GregorianLayout {
         ordered.add(box);
       } else if (e is NeumeDivision) {
         ordered.add(_Divisio(e.type));
+      } else if (e is ChantClefChange) {
+        active = e.clef;
+        ref = _clefAnchorDiatonic(active);
+        lineOffset = 2 * (active.line - 1);
+        final u = font.advanceUnits(active.glyphName);
+        var w = (u > 0 ? u : 166) * scale;
+        if (active.flat) w += sp * 0.8;
+        ordered.add(_ClefBox(active, w));
       }
     }
 
@@ -385,22 +503,90 @@ class GregorianLayout {
     final rightPad = sp * 1.4;
     final hardWidth = maxWidth.isFinite && maxWidth > sp * 10 ? maxWidth : 0.0;
 
-    double itemWidth(Object o) => o is _NeumeBox ? o.width : sp * 0.3;
+    double itemWidth(Object o) => switch (o) {
+          _NeumeBox b => b.width,
+          _ClefBox c => c.suppressed ? 0.0 : c.width,
+          _ => sp * 0.3,
+        };
+
+    // -- Line-breaking rule (Gregorio / Solesmes practice) -------------------
+    //
+    // The elements are first grouped into ATOMIC chunks; a line may only break
+    // BETWEEN chunks. A chunk is opened by an element that starts a new reading
+    // unit and absorbs everything that must stay glued to it:
+    //
+    //  1. never inside a neume - a neume is a single [_NeumeBox], so a box is
+    //     indivisible by construction;
+    //  2. never inside a syllable - a syllable may span several neumes (GABC
+    //     writes them `a(gh/ij)` or `a(gh!ij)`); only the FIRST carries the
+    //     lyric text, so a box without a syllable continues the previous one and
+    //     is absorbed into its chunk;
+    //  3. an accidental SIGN governs the notes after it, so it opens the chunk
+    //     of the note it precedes rather than closing the previous one;
+    //  4. prefer breaking AT a divisio: a divisio is absorbed by the chunk that
+    //     precedes it, so a bar can never begin a line - it always terminates
+    //     the line it ends, and the break naturally falls after it;
+    //  5. a clef change opens a chunk of its own; if it lands at the head of a
+    //     line it becomes that line's leading clef (see [_ClefBox.suppressed]).
+    //
+    // Word-internal breaks (between two hyphenated syllables) remain legal -
+    // Gregorio breaks words across lines and prints the hyphen - so the rule is
+    // about neumes and syllables, not whole words.
+    final chunks = <List<Object>>[];
+    var current = <Object>[];
+    for (final o in ordered) {
+      final opensUnit = o is _ClefBox ||
+          (o is _NeumeBox &&
+              !o.isAccidentalSign &&
+              (o.syllable?.isNotEmpty ?? false));
+      if (opensUnit && current.isNotEmpty) {
+        // Rule 3: hand any trailing accidental signs to the new chunk.
+        final pulled = <Object>[];
+        while (current.isNotEmpty) {
+          final last = current.last;
+          if (last is _NeumeBox && last.isAccidentalSign) {
+            pulled.insert(0, current.removeLast());
+          } else {
+            break;
+          }
+        }
+        if (current.isNotEmpty) chunks.add(current);
+        current = pulled;
+      }
+      current.add(o);
+    }
+    if (current.isNotEmpty) chunks.add(current);
+
+    double chunkWidth(List<Object> c) => c.fold<double>(
+        0, (a, o) => a + itemWidth(o) + (o is _Divisio ? divisioGap : gap));
 
     final rows = <_Row>[];
-    var row = _Row();
+    var rowClef = clef;
+    var row = _Row()..clef = rowClef;
     var cursor = notesStartX;
     var maxContent = notesStartX;
-    for (final o in ordered) {
-      final w = itemWidth(o) + (o is _Divisio ? divisioGap : gap);
+    for (final chunk in chunks) {
+      final w = chunkWidth(chunk);
       if (hardWidth > 0 &&
           row.items.isNotEmpty &&
           cursor + w > hardWidth - rightPad) {
         rows.add(row);
-        row = _Row();
+        row = _Row()..clef = rowClef;
         cursor = notesStartX;
       }
-      row.items.add(o);
+      for (final o in chunk) {
+        final head = row.items.isEmpty;
+        row.items.add(o);
+        if (o is _ClefBox) {
+          if (head) {
+            // The change coincides with a line start: print it once, as this
+            // line's own leading clef.
+            o.suppressed = true;
+            row.clef = o.clef;
+          }
+          rowClef = o.clef;
+        }
+      }
       cursor += w;
       if (cursor > maxContent) maxContent = cursor;
     }
@@ -409,8 +595,10 @@ class GregorianLayout {
     final fullWidth = hardWidth > 0 ? hardWidth : maxContent + rightPad;
 
     // Asymmetric breathing space around a divisio (Solesmes): more after the
-    // bar than before, scaled by the bar's weight.
+    // bar than before, scaled by the bar's weight. A mid-line clef change gets
+    // symmetric breathing room so it does not crowd the notes around it.
     double breathAfter(Object o) {
+      if (o is _ClefBox) return o.suppressed ? 0 : sp * 0.45;
       if (o is! _Divisio) return 0;
       switch (o.type) {
         case NeumeDivisionType.minima:
@@ -424,7 +612,8 @@ class GregorianLayout {
       }
     }
 
-    double breathBefore(Object o) => breathAfter(o) * 0.4;
+    double breathBefore(Object o) =>
+        o is _ClefBox ? breathAfter(o) : breathAfter(o) * 0.4;
 
     for (var r = 0; r < rows.length; r++) {
       final items = rows[r].items;
@@ -443,13 +632,19 @@ class GregorianLayout {
           o.startX = x;
         } else if (o is _Divisio) {
           o.x = x;
+        } else if (o is _ClefBox) {
+          o.startX = x;
         }
         x += itemWidth(o) + g + breathAfter(o);
       }
       rows[r].lineEnd = isLast ? (x - g + rightPad * 0.4) : fullWidth;
     }
 
+    // Custos: every line but the last ends with the pitch the NEXT line opens
+    // on. It is dropped when the next line re-clefs, because the sign would be
+    // read against a clef that no longer applies (Gregorio omits it there too).
     for (var i = 0; i < rows.length - 1; i++) {
+      if (rows[i + 1].clef != rows[i].clef) continue;
       final next = rows[i + 1].items.whereType<_NeumeBox>();
       if (next.isNotEmpty) rows[i].custosStep = next.first.firstStep;
     }
@@ -485,17 +680,45 @@ class GregorianPainter extends CustomPainter {
   });
 
   double get _sp => theme.staffSpace;
-  double get _fontSize => _sp * _fontScale;
+
+  /// All of these are derived from the font's own metrics (see the calibration
+  /// note above): `_lineGap` stays equal to `theme.staffSpace` by construction,
+  /// while `_halfStep` is the real half-step the precomposed neumes are drawn
+  /// with, so glyph-internal pitch and staff pitch cannot diverge.
+  double get _fontSize => _sp * _fontScaleOf(font);
   double get _scale => _fontSize / GreciliaeFont.unitsPerEm;
-  double get _halfStep => _unitsPerStep * _scale;
+  double get _halfStep => _unitsPerStepOf(font) * _scale;
   double get _lineGap => 2 * _halfStep;
 
   double _lineY(double cy, int line) => cy + (1.5 - (line - 1)) * _lineGap;
 
-  /// Vertical position of a note, anchored to the clef line: step 0 sits on the
-  /// clef line, each diatonic step is half an inter-line gap.
-  double _stepY(double cy, int step) =>
-      _lineY(cy, layout.clef.line) - step * _halfStep;
+  /// Vertical position of a STAFF-ABSOLUTE step: 0 sits on the bottom line and
+  /// each diatonic step is half an inter-line gap, so the mapping does not
+  /// depend on which clef is in force. Consecutive staff lines are two steps
+  /// apart, hence the line of a clef on line L is at step `2 * (L - 1)` and a
+  /// note `d` steps above that clef line is at `d + 2 * (L - 1)` (see
+  /// [GregorianLayout.build]).
+  double _staffY(double cy, int step) => _lineY(cy, 1) - step * _halfStep;
+
+  /// Staff-absolute step of the line a [clef] sits on.
+  static int _clefLineStep(ChantClef clef) => 2 * (clef.line - 1);
+
+  /// Draws a chant clef (and its clef-flat, when any) with its sign centred on
+  /// its staff line, starting at [x].
+  ///
+  /// The clef-flat (GABC `cb`/`fb`) is a soft si-flat in force like a key
+  /// signature; it is engraved on the si line - one diatonic step below "do"
+  /// for a do-clef, three above "fa" for an fa-clef.
+  void _drawClef(Canvas canvas, ChantClef clef, double x, double cy) {
+    final lineStep = _clefLineStep(clef);
+    _glyph(canvas, clef.glyphName, x, _staffY(cy, lineStep),
+        anchorUnits: font.centerYUnits(clef.glyphName));
+    if (clef.flat) {
+      final siSteps = clef.type == ChantClefType.doClef ? -1 : 3;
+      _glyph(canvas, font.has('Flat') ? 'Flat' : 'Punctum', x + _sp * 0.8,
+          _staffY(cy, lineStep + siSteps));
+    }
+  }
 
   /// Draws a Greciliae glyph by [name] so the font-y [anchorUnits] lands at
   /// (x, y). Notes use the first-note anchor; clef/custos register by bbox
@@ -504,7 +727,7 @@ class GregorianPainter extends CustomPainter {
       {double? anchorUnits}) {
     final ch = font.glyph(name);
     if (ch == null) return;
-    final anchor = anchorUnits ?? _firstNoteAnchor;
+    final anchor = anchorUnits ?? _firstNoteAnchorOf(font);
     final tp = TextPainter(
       text: TextSpan(
         text: ch,
@@ -522,19 +745,29 @@ class GregorianPainter extends CustomPainter {
     tp.paint(canvas, Offset(x, y - ascent + anchor * _scale));
   }
 
+  /// Style shared by the syllable text and the word-internal hyphen.
+  ///
+  /// Routed through [MusicTextFallback.withMusicTextFallback] like every other
+  /// text site in the package. Before 2.7.1 this style carried its OWN chain,
+  /// `['Georgia', 'Times New Roman', 'serif']`, with a null primary family —
+  /// which meant chant lyrics bypassed the package chain entirely. The pixel
+  /// proof: rendering one chant four ways, varying only which text face was
+  /// registered (nothing / 'Academico' / 'serif' / an app face), produced four
+  /// BYTE-IDENTICAL PNGs with 20 solid `.notdef` boxes each — registering the
+  /// face the package asks for could not reach this painter. The local chain is
+  /// gone rather than merged because its three names are no more shipped than
+  /// the package's four, and putting them first would have shadowed the
+  /// injection point; an app that wants Georgia now says so, via
+  /// [GregorianTheme.lyricTextFamily] or `MusicTextFont.use('Georgia')`.
+  TextStyle get _lyricStyle => TextStyle(
+        fontSize: theme.lyricSize,
+        color: theme.color,
+        fontFamily: theme.lyricTextFamily,
+      ).withMusicTextFallback();
+
   void _lyric(Canvas canvas, String text, double centerX, double topY) {
     final tp = TextPainter(
-      text: TextSpan(
-        text: text,
-        style: TextStyle(
-          fontSize: theme.lyricSize,
-          color: theme.color,
-          fontFamily: theme.lyricTextFamily,
-          fontFamilyFallback: theme.lyricTextFamily == null
-              ? const ['Georgia', 'Times New Roman', 'serif']
-              : null,
-        ),
-      ),
+      text: TextSpan(text: text, style: _lyricStyle),
       textDirection: TextDirection.ltr,
     )..layout();
     tp.paint(canvas, Offset(centerX - tp.width / 2, topY));
@@ -572,17 +805,7 @@ class GregorianPainter extends CustomPainter {
   /// together. [x1] and [x2] are the centres of the two syllable texts.
   void _hyphen(Canvas canvas, double x1, double x2, double topY) {
     final tp = TextPainter(
-      text: TextSpan(
-        text: '-',
-        style: TextStyle(
-          fontSize: theme.lyricSize,
-          color: theme.color,
-          fontFamily: theme.lyricTextFamily,
-          fontFamilyFallback: theme.lyricTextFamily == null
-              ? const ['Georgia', 'Times New Roman', 'serif']
-              : null,
-        ),
-      ),
+      text: TextSpan(text: '-', style: _lyricStyle),
       textDirection: TextDirection.ltr,
     )..layout();
 
@@ -722,19 +945,9 @@ class GregorianPainter extends CustomPainter {
         canvas.drawLine(Offset(0, y), Offset(row.lineEnd, y), linePaint);
       }
 
-      _glyph(canvas, layout.clef.glyphName, layout.clefX,
-          _lineY(cy, layout.clef.line),
-          anchorUnits: font.centerYUnits(layout.clef.glyphName));
-
-      // Clef-flat (soft si): a flat just after the clef, at the si line — one
-      // diatonic step below do (do-clef) or three above fa (fa-clef).
-      if (layout.clef.flat) {
-        final siSteps =
-            layout.clef.type == ChantClefType.doClef ? -1 : 3;
-        _glyph(canvas, font.has('Flat') ? 'Flat' : 'Punctum',
-            layout.clefX + sp * 0.8,
-            _lineY(cy, layout.clef.line) - siSteps * _halfStep);
-      }
+      // Every line repeats the clef in force where it STARTS, so a chant that
+      // re-clefs mid-piece carries the new clef on the following lines.
+      _drawClef(canvas, row.clef, layout.clefX, cy);
 
       final lyricTop = _lineY(cy, 1) + sp * 1.1;
 
@@ -743,12 +956,18 @@ class GregorianPainter extends CustomPainter {
           _drawDivisio(canvas, item.type, item.x, cy, barPaint);
           continue;
         }
+        if (item is _ClefBox) {
+          // A clef change inside the line. When it fell on a line boundary the
+          // line's leading clef already shows it, so it is suppressed here.
+          if (!item.suppressed) _drawClef(canvas, item.clef, item.startX, cy);
+          continue;
+        }
         final box = item as _NeumeBox;
         for (final op in box.glyphs) {
-          _glyph(canvas, op.name, box.startX + op.dx, _stepY(cy, op.step));
+          _glyph(canvas, op.name, box.startX + op.dx, _staffY(cy, op.step));
         }
         for (final mk in box.marks) {
-          var ny = _stepY(cy, mk.step);
+          var ny = _staffY(cy, mk.step);
           // The mora dot belongs in a space; when the note sits on a line
           // (odd step in this grid) raise the dot into the space above it.
           if (mk.type == _MarkType.mora && mk.step.isOdd) ny -= _halfStep;
@@ -771,14 +990,17 @@ class GregorianPainter extends CustomPainter {
         // The custos marks the next line's first pitch; its note-head seats on
         // the step like a note (the tail flourishes up/down from there), so it
         // uses the note anchor rather than the bbox center.
-        final up = row.custosStep! >= 0;
+        // Direction and length are read RELATIVE to the line's clef (the
+        // reference the singer reads the custos against).
+        final rel = row.custosStep! - _clefLineStep(row.clef);
+        final up = rel >= 0;
         // Pick the length variant by how far the next pitch reaches from the
         // staff centre (Gregorio: short within the staff, longer for big leaps).
-        final reach = row.custosStep!.abs();
+        final reach = rel.abs();
         final size = reach <= 5 ? 'Short' : (reach <= 9 ? 'Medium' : 'Long');
         final g0 = '${up ? 'CustosUp' : 'CustosDown'}$size';
         final g = font.has(g0) ? g0 : 'Punctum';
-        _glyph(canvas, g, row.lineEnd - sp * 1.0, _stepY(cy, row.custosStep!));
+        _glyph(canvas, g, row.lineEnd - sp * 1.0, _staffY(cy, row.custosStep!));
       }
     }
   }

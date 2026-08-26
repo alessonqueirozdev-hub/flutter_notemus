@@ -18,7 +18,7 @@ import '../layout/bounding_box.dart';
 mixin BoundingBoxSupport {
   /// Hierarchical BoundingBox associado a this elemento
   ///
-  /// This is preenchido durante o processo de layout and currentizado
+  /// This is preenchido durante o processo de layout and atualizado
   /// durante a Rendering. Can be null if o layout still not
   /// foi executado.
   BoundingBox? _boundingBox;
@@ -26,7 +26,7 @@ mixin BoundingBoxSupport {
   /// Gets o Hierarchical BoundingBox deste elemento
   BoundingBox? get boundingBox => _boundingBox;
 
-  /// Definess o Hierarchical BoundingBox deste elemento
+  /// Define o Hierarchical BoundingBox deste elemento
   set boundingBox(BoundingBox? bbox) => _boundingBox = bbox;
 
   /// Checks if this elemento tem a Hierarchical BoundingBox válido
@@ -45,8 +45,8 @@ mixin BoundingBoxSupport {
 
   /// Limpa o Hierarchical BoundingBox deste elemento
   ///
-  /// Remove all os filhos and Definess as null.
-  /// Útil for reCalculatestesr layout of the zero.
+  /// Remove all os filhos and Define as null.
+  /// Útil for recalcular layout of the zero.
   void clearBoundingBox() {
     if (_boundingBox != null) {
       _boundingBox!.clearChildren();
@@ -54,7 +54,7 @@ mixin BoundingBoxSupport {
     }
   }
 
-  /// Currentiza a position relativa of the BoundingBox
+  /// Atualiza a position relativa of the BoundingBox
   ///
   /// Conveniência for Define position sem acessar boundingBox diretamente.
   ///
@@ -66,7 +66,7 @@ mixin BoundingBoxSupport {
     }
   }
 
-  /// Currentiza o Size of the BoundingBox
+  /// Atualiza o Size of the BoundingBox
   ///
   /// Conveniência for Define size sem acessar boundingBox diretamente.
   ///
@@ -78,7 +78,7 @@ mixin BoundingBoxSupport {
     }
   }
 
-  /// ReCalculatestes recursivamente as positions absolutas of the BoundingBox
+  /// ReCalcula recursivamente as positions absolutas of the BoundingBox
   ///
   /// Must be chamado after modificar positions relativas na hierarquia.
   void updateBoundingBoxPositions() {
@@ -87,7 +87,7 @@ mixin BoundingBoxSupport {
     }
   }
 
-  /// ReCalculatestes recursivamente os bounds of the BoundingBox
+  /// ReCalcula recursivamente os bounds of the BoundingBox
   ///
   /// Must be chamado after modificar sizes or add/remover filhos.
   void updateBoundingBoxBounds() {
@@ -110,7 +110,7 @@ mixin BoundingBoxSupport {
 
 /// Extension for facilitar uso de BoundingBoxSupport in listas
 extension BoundingBoxSupportList on List {
-  /// Currentiza positions de all os elementos that têm BoundingBoxSupport
+  /// Atualiza positions de all os elementos that têm BoundingBoxSupport
   void updateAllBoundingBoxPositions() {
     for (final element in this) {
       if (element is BoundingBoxSupport) {
@@ -119,7 +119,7 @@ extension BoundingBoxSupportList on List {
     }
   }
 
-  /// Currentiza bounds de all os elementos that têm BoundingBoxSupport
+  /// Atualiza bounds de all os elementos that têm BoundingBoxSupport
   void updateAllBoundingBoxBounds() {
     for (final element in this) {
       if (element is BoundingBoxSupport) {

@@ -3,14 +3,16 @@
 import 'package:flutter/material.dart';
 import '../../smufl/smufl_metadata_loader.dart';
 
-/// Renderer centred for glyphs SMuFL and text
-/// Elimina duplicação de código between all os renderers
+/// Central renderer for SMuFL glyphs and text.
+///
+/// Removes the code duplicated across the individual renderers. The music font
+/// is always taken from [metadata] (`SmuflMetadata.font`), never named here.
 class GlyphRenderer {
   final SmuflMetadata metadata;
 
   GlyphRenderer({required this.metadata});
 
-  /// Desenha a glyph SMuFL with opções de centralização
+  /// Draws a SMuFL glyph with optional centring.
   void drawGlyph(
     Canvas canvas, {
     required String glyphName,
@@ -27,8 +29,10 @@ class GlyphRenderer {
       text: TextSpan(
         text: character,
         style: TextStyle(
-          fontFamily: 'Bravura',
-          package: 'flutter_notemus',
+          // Font independence: never hardcode a family — see
+          // BaseGlyphRenderer's "Font independence" note.
+          fontFamily: metadata.font.fontFamily,
+          package: metadata.font.fontPackage,
           fontSize: size,
           color: color,
           height: 1.0,
@@ -47,29 +51,12 @@ class GlyphRenderer {
       Offset(position.dx + xOffset, position.dy + yOffset),
     );
   }
-
-  /// Desenha text with style customizado
-  void drawText(
-    Canvas canvas, {
-    required String text,
-    required Offset position,
-    required TextStyle style,
-    TextAlign align = TextAlign.center,
-  }) {
-    final textPainter = TextPainter(
-      text: TextSpan(text: text, style: style),
-      textAlign: align,
-      textDirection: TextDirection.ltr,
-    );
-
-    textPainter.layout();
-
-    textPainter.paint(
-      canvas,
-      Offset(
-        position.dx - textPainter.width / 2,
-        position.dy - textPainter.height / 2,
-      ),
-    );
-  }
 }
+
+// `drawText` was removed in 2.7.1. It painted a caller-supplied `TextStyle`
+// verbatim, i.e. it was a hole in the rule that every text style must pass
+// through `MusicTextFallback.withMusicTextFallback` (see
+// `lib/src/rendering/text_font.dart`). A grep over lib/, test/ and example/
+// found zero call sites — the renderers all use their own private `_drawText`
+// — so it was deleted rather than patched: an unused API cannot be kept
+// correct.

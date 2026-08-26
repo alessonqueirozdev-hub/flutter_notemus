@@ -1,0 +1,69 @@
+# What ships to pub.dev, and what does not.
+#
+# `.pubignore` REPLACES `.gitignore` for publishing, so everything that must be
+# kept out of the archive has to be named here — not just the things git also
+# ignores.
+#
+# Measured: the archive carried 674 045 bytes (0.64 MB gzipped) of golden
+# reference PNGs and internal audit prose that no consumer of the package can
+# act on. None of it is reachable from `package:flutter_notemus`.
+
+# --- Build and tool output (also in .gitignore) ---
+.dart_tool/
+.idea/
+.vscode/
+build/
+*.iml
+*.log
+.DS_Store
+.claude
+.vercel
+.playwright-cli/
+linux/flutter/
+temp_notemus_multiplatform/
+temp_notemus_plugin/
+
+# --- Flutter-generated plugin registrants ---
+# Same trap as `probe/` below: these are in `.gitignore`, and this file
+# replaces it. `flutter pub get` rewrites them on every resolve, so shipping
+# them would put one machine's resolution into the archive.
+**/flutter/generated_plugin_registrant.cc
+**/flutter/generated_plugin_registrant.h
+**/flutter/generated_plugins.cmake
+**/lib/generated_plugin_registrant.dart
+
+# --- Ad-hoc measurement probes ---
+# `probe/` is in `.gitignore`, which is exactly why it needs to be here: this
+# file REPLACES `.gitignore` for publishing, so an untracked-but-not-ignored-
+# here directory starts shipping the moment this file appears. Measured:
+# adding this file without this line would have ADDED 0.61 MB gzipped of
+# throwaway before/after comparison rasters to the archive.
+probe/
+
+# --- Golden reference images and their failure dumps ---
+# These exist to be compared against by `flutter test --tags golden` IN THIS
+# REPOSITORY. `matchesGoldenFile` is not portable across platforms — see
+# `dart_test.yaml` — so a consumer cannot meaningfully run them, and 1.3 MB of
+# PNGs would be downloaded by every app that depends on this package.
+# The test SOURCE still ships; only the binary references do not.
+test/golden/goldens/
+test/golden/failures/
+
+# --- Internal engineering record ---
+# Kept in git, where it is auditable, and out of the package, where it is
+# noise. The forensic audits, their superprompts and the running progress log
+# are addressed to this project's maintainers, not to its users, and several
+# are written in Portuguese.
+PROGRESS.md
+doc/AUDITORIA_*.md
+doc/REAUDIT_SUPERPROMPT*.md
+doc/PROGRESS_REPORT_*.md
+doc/*_AUDIT_BACKLOG.md
+doc/TECH_DEBT_*.md
+doc/ARTICLE_HANDOFF.md
+doc/OPEN_ISSUES.md
+
+# Deliberately still shipped: doc/adr/ (the architectural decisions a consumer
+# has to know to use the API correctly), doc/MODEL_ONLY.md, doc/MEI_V5_AUDIT.md,
+# doc/json_schema.md, doc/MAGIC_NUMBERS_REFERENCE.md and the Gregorian design
+# notes — all of them answer questions about the public surface.

@@ -5,6 +5,7 @@ import '../../../core/staff_group.dart';
 import '../../smufl/smufl_metadata_loader.dart';
 import '../staff_coordinate_system.dart';
 import '../../theme/music_score_theme.dart';
+import '../text_font.dart';
 
 /// Renderer for staff group brackets and braces
 ///
@@ -52,7 +53,7 @@ class BracketRenderer {
     // Get Configurestion for bracket type
     final config = _getConfigForType(staffGroup.bracket);
 
-    // calculateTeste bracket position
+    // calculate bracket position
     final bracketX = leftX - (config.horizontalOffset * coordinates.staffSpace);
     final bracketHeight = bottomStaffY - topStaffY;
 
@@ -93,15 +94,16 @@ class BracketRenderer {
     final textPainter = TextPainter(
       text: TextSpan(
         text: name,
-        style: theme.textStyle?.copyWith(
-              fontSize: coordinates.staffSpace * 1.2,
-              fontWeight: FontWeight.w500,
-            ) ??
-            TextStyle(
-              fontSize: coordinates.staffSpace * 1.2,
-              fontWeight: FontWeight.w500,
-              color: theme.textColor,
-            ),
+        style: (theme.textStyle?.copyWith(
+                  fontSize: coordinates.staffSpace * 1.2,
+                  fontWeight: FontWeight.w500,
+                ) ??
+                TextStyle(
+                  fontSize: coordinates.staffSpace * 1.2,
+                  fontWeight: FontWeight.w500,
+                  color: theme.textColor,
+                ))
+            .withMusicTextFallback(),
       ),
       textDirection: TextDirection.ltr,
     );
@@ -174,8 +176,9 @@ class BracketRenderer {
       text: TextSpan(
         text: character,
         style: TextStyle(
-          fontFamily: 'Bravura',
-          package: 'flutter_notemus',
+          // Font independence: the family comes from the loaded descriptor.
+          fontFamily: md.font.fontFamily,
+          package: md.font.fontPackage,
           fontSize: fontSize,
           color: theme.barlineColor,
           height: 1.0,
@@ -302,14 +305,17 @@ class BracketRenderer {
     double x,
     double baselineY,
   ) {
-    final character = metadata!.getCodepoint(glyphName);
+    final md = metadata;
+    if (md == null) return false;
+    final character = md.getCodepoint(glyphName);
     if (character.isEmpty) return false;
     final painter = TextPainter(
       text: TextSpan(
         text: character,
         style: TextStyle(
-          fontFamily: 'Bravura',
-          package: 'flutter_notemus',
+          // Font independence: the family comes from the loaded descriptor.
+          fontFamily: md.font.fontFamily,
+          package: md.font.fontPackage,
           fontSize: coordinates.staffSpace * 4.0,
           color: theme.barlineColor,
           height: 1.0,
@@ -326,7 +332,7 @@ class BracketRenderer {
   /// Render simple vertical line |
   ///
   /// Used for multiple instances of the same instrument
-  /// (and.g., Violin I & II)
+  /// (e.g. Violin I & II)
   void _renderLine(
     Canvas canvas,
     double x,

@@ -7,9 +7,12 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'examples/accidentals_example.dart';
 import 'examples/articulations_example.dart';
 import 'examples/beaming_showcase.dart';
+import 'examples/cautionary_accidentals_example.dart';
 import 'examples/chords_example.dart';
 import 'examples/clefs_example.dart';
 import 'examples/complete_music_piece.dart';
+import 'examples/compound_meter_example.dart';
+import 'examples/cross_staff_alignment_example.dart';
 import 'examples/dots_and_ledgers_example.dart';
 import 'examples/dynamics_example.dart';
 import 'examples/grace_notes_example.dart';
@@ -24,9 +27,11 @@ import 'examples/polyphony_example.dart';
 import 'examples/professional_json_example.dart';
 import 'examples/repeats_example.dart';
 import 'examples/rhythmic_figures_example.dart';
+import 'examples/selection_hittest_example.dart';
 import 'examples/slurs_ties_example.dart';
 import 'examples/tempo_agogics_example.dart';
 import 'examples/tuplets_example.dart';
+import 'examples/voice_playback_example.dart';
 import 'examples/volta_brackets_example.dart';
 import 'showcase_bootstrap.dart';
 
@@ -312,6 +317,14 @@ class _MainScreenState extends State<MainScreen> {
     ),
     _ExampleEntry(
       category: 'Fundamentals',
+      title: 'Cautionary Accidentals',
+      subtitle: 'Reminder accidentals in parentheses and editorial brackets.',
+      icon: CupertinoIcons.exclamationmark_circle,
+      accentColor: const Color(0xFF9333EA),
+      builder: () => const CautionaryAccidentalsExample(),
+    ),
+    _ExampleEntry(
+      category: 'Fundamentals',
       title: 'Chords',
       subtitle: 'Clusters, intervals, stems, and notehead offsets.',
       icon: CupertinoIcons.square_grid_2x2,
@@ -325,6 +338,14 @@ class _MainScreenState extends State<MainScreen> {
       icon: CupertinoIcons.link_circle,
       accentColor: const Color(0xFF2563EB),
       builder: () => const BeamingShowcase(),
+    ),
+    _ExampleEntry(
+      category: 'Fundamentals',
+      title: 'Compound Meters',
+      subtitle: '3/8, 6/8, 9/8 and 12/8 with their 3+3 beam grouping.',
+      icon: CupertinoIcons.chart_bar_alt_fill,
+      accentColor: const Color(0xFF0369A1),
+      builder: () => const CompoundMeterExample(),
     ),
     _ExampleEntry(
       category: 'Fundamentals',
@@ -416,6 +437,14 @@ class _MainScreenState extends State<MainScreen> {
     ),
     _ExampleEntry(
       category: 'Advanced',
+      title: 'Cross-Staff Alignment',
+      subtitle: 'Different rhythms per hand, aligned on a shared onset grid.',
+      icon: CupertinoIcons.arrow_left_right,
+      accentColor: const Color(0xFF7C3AED),
+      builder: () => const CrossStaffAlignmentExample(),
+    ),
+    _ExampleEntry(
+      category: 'Advanced',
       title: 'Octave Marks',
       subtitle: 'Ottava lines with improved contrast and bracket visibility.',
       icon: CupertinoIcons.arrow_up_arrow_down,
@@ -461,6 +490,22 @@ class _MainScreenState extends State<MainScreen> {
       icon: CupertinoIcons.book,
       accentColor: const Color(0xFF92400E),
       builder: () => const GregorianChantExample(),
+    ),
+    _ExampleEntry(
+      category: 'Interaction & Playback',
+      title: 'Selection & Hit-Testing',
+      subtitle: 'Tap to select; pick a whole bar or a whole voice.',
+      icon: CupertinoIcons.hand_point_right,
+      accentColor: const Color(0xFF1D4ED8),
+      builder: () => const SelectionHitTestExample(),
+    ),
+    _ExampleEntry(
+      category: 'Interaction & Playback',
+      title: 'Per-Voice Playback',
+      subtitle: 'MIDI tracks per voice, with mute and solo.',
+      icon: CupertinoIcons.slider_horizontal_3,
+      accentColor: const Color(0xFF16A34A),
+      builder: () => const VoicePlaybackExample(),
     ),
   ];
 

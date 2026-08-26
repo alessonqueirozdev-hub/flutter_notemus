@@ -81,6 +81,37 @@ Staff _staff(List<Measure> measures) {
 // SIMPLE
 // ---------------------------------------------------------------------------
 
+/// Rehearsal marks. `TextType.rehearsal` was imported from MusicXML since 2.x
+/// and never drawn — modelled, not engraved. Behind Bars: upright, bold, boxed,
+/// above everything else at the start of a section.
+Staff _rehearsalMarks() {
+  final bar1 = <MusicalElement>[
+    Clef(clefType: ClefType.treble),
+    TimeSignature(numerator: 4, denominator: 4),
+    MusicText(
+      text: 'A',
+      type: TextType.rehearsal,
+      placement: TextPlacement.above,
+    ),
+    _n('C', 5),
+    _n('D', 5),
+    _n('E', 5),
+    _n('F', 5),
+  ];
+  final bar2 = <MusicalElement>[
+    MusicText(
+      text: 'B12',
+      type: TextType.rehearsal,
+      placement: TextPlacement.above,
+    ),
+    _n('G', 5),
+    _n('F', 5),
+    _n('E', 5),
+    _n('D', 5),
+  ];
+  return _staff([_measure(bar1), _measure(bar2)]);
+}
+
 Staff _cMajorScale() {
   // One octave ascending + descending, eighth notes (auto-beamed),
   // C4 sits below the staff (ledger line).
@@ -829,6 +860,14 @@ Staff _compoundMeter() {
 
 /// The full corpus, ordered simple → complex.
 final List<CorpusCase> corpus = [
+  CorpusCase(
+    id: 'm04s_rehearsal_marks',
+    title: 'Rehearsal marks (boxed, upright, above everything)',
+    tier: 'intermediate',
+    exercises: 'rehearsal mark enclosure, vertical layering, measure numbers',
+    build: _rehearsalMarks,
+    size: const Size(900, 260),
+  ),
   CorpusCase(
     id: 's01_c_major_scale',
     title: 'C major scale (eighth notes, beamed)',

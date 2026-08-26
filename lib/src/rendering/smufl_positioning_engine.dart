@@ -1,7 +1,9 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart' show Offset;
 import '../smufl/smufl_metadata_loader.dart';
 
-/// Class responsible for calculateTesting precise positions using SMuFL metadata
+/// Class responsible for calculating precise positions using SMuFL metadata
 /// and professional music typography rules.
 ///
 /// Based on:
@@ -12,7 +14,70 @@ import '../smufl/smufl_metadata_loader.dart';
 class SMuFLPositioningEngine {
   // REMOVED: stemUpXCorrection / stemDownXCorrection (old pixel-based constants).
   // The offset is now computed dynamically from stemThickness inside
-  // calculateTesteStemAttachmentOffset — see the explanation there.
+  // calculateStemAttachmentOffset — see the explanation there.
+
+  /// Standard stem length, in staff spaces.
+  ///
+  /// This value is deliberately a named constant and NOT read from
+  /// `engravingDefaults`: the SMuFL specification defines 29 engraving default
+  /// keys and none of them describes stem length, so any lookup of a
+  /// `'stemLength'` key would always fall through to its fallback while
+  /// pretending to be font-derived.
+  ///
+  /// Source: Elaine Gould, "Behind Bars", p. 13 — the standard stem length is
+  /// one octave, i.e. 3.5 staff spaces.
+  static const double kStandardStemLengthSpaces = 3.5;
+
+  /// Absolute lower bound for a stem, in staff spaces.
+  ///
+  /// "Behind Bars", p. 13: stems of notes lying far outside the staff may be
+  /// shortened, but never below 2.5 staff spaces.
+  static const double kAbsoluteMinimumStemLengthSpaces = 2.5;
+
+  /// Longest stem, in staff spaces, that a single-beam group may draw before
+  /// the beam is re-sloped to bring it back.
+  ///
+  /// "Behind Bars", pp. 17-18: inside a beamed group the stems keep the
+  /// standard length as far as the contour allows; a stem that grows far past
+  /// it makes the group read as a leap with a rule through it rather than as a
+  /// beamed figure. Gould works in the 4-5 staff-space range.
+  ///
+  /// The value is the longest stem that a group already resolved by Gould's
+  /// own slant table can legitimately need, at the widest interval that table
+  /// covers:
+  ///
+  /// ```text
+  /// standard stem 3.5 + octave ambitus 3.5 - octave slant 1.5 = 5.5
+  /// ```
+  ///
+  /// Half a staff space above Gould's stated 4-5 range, and deliberately so:
+  /// [kBeamSlantByDiatonicStep] gives an octave leap a slant of 1.5 spaces,
+  /// which MEASURES as an outer stem of exactly 5.50. A ceiling of 5.0 would
+  /// contradict the slant table on the most ordinary wide leap there is. Past
+  /// the octave the slant table saturates (every interval wider than an octave
+  /// shares the 1.5 entry) while the stem keeps growing by half a space per
+  /// diatonic step, and that is precisely where this ceiling takes over.
+  ///
+  /// MEASURED, outer stem of a two-eighth group against its ambitus, before
+  /// any of this existed: 0 steps 3.50, 4 steps 4.50, 7 steps (octave) 5.50,
+  /// 10 steps 7.00, 14 steps 9.00 staff spaces — the last one more than twice
+  /// the height of the staff.
+  static const double kMaximumBeamedStemLengthSpaces =
+      kStandardStemLengthSpaces + 3.5 - 1.5;
+
+  /// How much a beamed stem may be shortened below [kStandardStemLengthSpaces].
+  ///
+  /// Kept at zero: inside a beam group the beam itself already replaces the
+  /// flag, so the classical full-octave stem is used as the target minimum.
+  static const double kBeamedStemShorteningSpaces = 0.0;
+
+  /// Fallback beam thickness in staff spaces, used when the loaded font does
+  /// not publish `beamThickness` in its `engravingDefaults` (Bravura: 0.5).
+  static const double kFallbackBeamThicknessSpaces = 0.5;
+
+  /// Fallback beam spacing in staff spaces, used when the loaded font does not
+  /// publish `beamSpacing` in its `engravingDefaults` (Bravura: 0.25).
+  static const double kFallbackBeamSpacingSpaces = 0.25;
 
   // Reference to the metadata loader (required)
   final SmuflMetadata _metadataLoader;
@@ -21,8 +86,37 @@ class SMuFLPositioningEngine {
   // Previously were hardcoded static constants, now loaded from engravingDefaults
   late final double standardStemLength;
   late final double minimumStemLength;
+  /// Extra stem length, in staff spaces, that each beam level BEYOND THE FIRST
+  /// costs.
+  ///
+  /// Derived from the font: `beamThickness + beamSpacing` (Bravura:
+  /// `0.5 + 0.25 = 0.75`). It was the literal
+  /// `stemExtensionPerBeam = 0.5; // Calculated based on beamSpacing` — a
+  /// comment describing a calculation that was never performed. 0.5 is
+  /// `beamThickness` alone, so the gap BETWEEN the beams was never paid for
+  /// and every level past the first ate 0.25 staff spaces of stem.
+  ///
+  /// Verified against the code that actually stacks the beams rather than
+  /// against the prose: `BeamRenderer._calculateLevelOffset`
+  /// (`beam_renderer.dart:176`) places level *n* at
+  /// `(n - 1) * (beamThickness + beamGap)` below the primary, and
+  /// `BeamRenderer.beamStackDepth` (`:301`) reports the total as
+  /// `beamThickness + (beamCount - 1) * (beamThickness + beamGap)` — both
+  /// reading the metadata since 2.7.1. The marginal cost of one more level is
+  /// therefore `beamThickness + beamGap`, which is this number. Measured at
+  /// `staffSpace = 12`: a 32nd (3 levels) used to add `2 * 0.5 = 1.00` staff
+  /// space to the stem while its beam stack reached `2 * 0.75 = 1.50` below
+  /// the primary — the innermost beam sat 0.50 staff spaces (6.00 px) past the
+  /// end of the stem it was supposed to hang from.
   late final double stemExtensionPerBeam;
   late final double stemThickness;
+
+  /// Beam thickness in staff spaces (`engravingDefaults.beamThickness`).
+  late final double beamThickness;
+
+  /// Vertical gap between two adjacent beams, in staff spaces
+  /// (`engravingDefaults.beamSpacing`).
+  late final double beamSpacing;
 
   // Accidental spacing
   late final double accidentalToNoteheadDistance;
@@ -54,22 +148,42 @@ class SMuFLPositioningEngine {
   SMuFLPositioningEngine({required SmuflMetadata metadataLoader})
     : _metadataLoader = metadataLoader {
     // Load values from SMuFL metadata
-    standardStemLength = _loadEngravingDefault('stemLength', 3.5);
-    minimumStemLength =
-        2.5; // Not in engravingDefaults, keeps default value
-    stemExtensionPerBeam = 0.5; // Calculated based on beamSpacing
+    // Stem lengths are NOT part of engravingDefaults (see the dartdoc on
+    // kStandardStemLengthSpaces): use the documented engraving constants.
+    standardStemLength = kStandardStemLengthSpaces;
+    minimumStemLength = kAbsoluteMinimumStemLengthSpaces;
     stemThickness = _loadEngravingDefault('stemThickness', 0.12);
+    beamThickness = _loadEngravingDefault(
+      'beamThickness',
+      kFallbackBeamThicknessSpaces,
+    );
+    beamSpacing = _loadEngravingDefault(
+      'beamSpacing',
+      kFallbackBeamSpacingSpaces,
+    );
+    // DERIVED, not chosen: one more beam level pushes the beam stack down by
+    // exactly one beam body plus one gap, so the stem has to grow by the same
+    // amount. Assigned after [beamThickness]/[beamSpacing] because it reads
+    // them.
+    stemExtensionPerBeam = beamThickness + beamSpacing;
 
     // Spacing - Behind Bars recommends 0.16-0.25 SS of visual clearance.
     // Using 0.25 SS to ensure clear separation between the accidental and the notehead.
     accidentalToNoteheadDistance = 0.25;
     accidentalMinimumClearance = 0.12;
 
-    // Beam angles - based on Behind Bars (conservative values)
-    // Behind Bars recommends relatively flat beams
-    minimumBeamSlant = 0.15; // More subtle minimum angle
-    maximumBeamSlant = 0.5; // Reduced maximum (was 1.0, too steep!)
-    twoNoteBeamMaxSlant = 0.5; // Behind Bars recommended value for 2-note beams
+    // Beam slant - Behind Bars pp.19-25, via [kBeamSlantByDiatonicStep].
+    //
+    // These three were tuned by eye against the package's own screenshots and
+    // ended up encoding only the DIRECTION of the melodic line, not its size:
+    // `maximumBeamSlant` was 0.5 ("was 1.0, too steep!") and `BeamAnalyzer`
+    // clamped pairs to 0.25 to match "the stable beam showcase examples".
+    // Measured: an ascending 2nd, an ascending 6th and a TWO-OCTAVE leap all
+    // produced a slant of exactly 0.25 staff spaces. They are kept as the floor
+    // and the ceiling of the real table.
+    minimumBeamSlant = 0.25;
+    maximumBeamSlant = 2.0;
+    twoNoteBeamMaxSlant = 2.0;
 
     // Ornaments and articulations - standard typographic values
     articulationToNoteDistance = 0.5;
@@ -148,7 +262,7 @@ class SMuFLPositioningEngine {
         ? getStemUpAnchor(noteheadGlyphName)
         : getStemDownAnchor(noteheadGlyphName);
 
-    // SMuFL spec: stemUpSE gives the If CORNER (right edge) of the stem
+    // SMuFL spec: stemUpSE gives the SE CORNER (right edge) of the stem
     // rectangle; stemDownNW gives the NW CORNER (left edge).
     // canvas.drawLine centres the strokeWidth on the coordinate, so we must
     // offset by half the stem thickness to make the visual edge land exactly
@@ -223,7 +337,7 @@ class SMuFLPositioningEngine {
     return Offset.zero;
   }
 
-  /// calculateTestes the stem length based on the note's position in the staff
+  /// Calculates the stem length based on the note's position in the staff
   /// and the number of beams
   double calculateStemLength({
     required int staffPosition,
@@ -261,7 +375,7 @@ class SMuFLPositioningEngine {
     return length;
   }
 
-  /// calculateTestes the stem length for CHORDS.
+  /// Calculates the stem length for CHORDS.
   /// The stem must span ALL notes in the chord!
   ///
   /// Behind Bars (p. 16): "The stem of a chord must connect the most extreme note
@@ -301,13 +415,18 @@ class SMuFLPositioningEngine {
       length += (beamCount - 1) * stemExtensionPerBeam;
     }
 
-    // Ensure minimum length
-    length = length.clamp(minimumStemLength, 6.0);
-
-    return length;
+    // Floor only. There used to be a ceiling of 6.0 staff spaces here, and it
+    // cut INSIDE the chord: a chord spanning 7 half-positions needs 7.00 staff
+    // spaces, 10 needs 8.50, 14 needs 10.50, 21 needs 14.00 and 28 needs
+    // 17.50 — every one of them was returned as 6.000, so a C3+C6 chord drew a
+    // stem that touched neither of its own noteheads and floated in the middle
+    // of the staff. Behind Bars p.16: the stem of a chord spans the chord plus
+    // the standard length from the outer notehead; there is no upper bound
+    // that may cut inside the chord.
+    return length < minimumStemLength ? minimumStemLength : length;
   }
 
-  /// calculateTestes the correct position of an accidental relative to the notehead.
+  /// Calculates the correct position of an accidental relative to the notehead.
   /// Based on professional music typography practices.
   /// Behind Bars: 0.16-0.20 staff spaces from the notehead.
   /// Returns coordinates in STAFF SPACES (SMuFL units)
@@ -341,8 +460,33 @@ class SMuFLPositioningEngine {
     return Offset(xOffset, yOffset);
   }
 
-  /// calculateTestes the angle of a beam based on note positions.
+  /// Calculates the angle of a beam based on note positions.
   /// Follows the rules of Ted Ross and Elaine Gould.
+  /// Beam slant, in staff spaces, for the interval between the FIRST and LAST
+  /// note of a beam group (Gould, *Behind Bars*, pp. 19-25).
+  ///
+  /// Indexed by the diatonic interval in steps: 0 = unison, 1 = 2nd, 2 = 3rd,
+  /// … 7 = octave. Anything wider than an octave uses the last entry. One staff
+  /// position is one diatonic step, so the index is `|lastPos - firstPos|`.
+  ///
+  /// This replaces a linear interpolation between two eyeballed constants
+  /// (`minimumBeamSlant = 0.15`, `maximumBeamSlant = 0.5`, the latter carrying
+  /// the comment "was 1.0, too steep!") plus a separate clamp of 0.25 for
+  /// two-note groups in `BeamAnalyzer`, justified in its own comment as
+  /// matching "the stable beam showcase examples". Between them they encoded
+  /// only the DIRECTION of the line: measured, an ascending 2nd, an ascending
+  /// 6th and a two-octave leap all produced a slant of exactly 0.25 spaces.
+  static const List<double> kBeamSlantByDiatonicStep = <double>[
+    0.00, // unison — a flat beam
+    0.25, // 2nd
+    0.50, // 3rd
+    1.00, // 4th
+    1.00, // 5th
+    1.25, // 6th
+    1.25, // 7th
+    1.50, // octave or wider
+  ];
+
   double calculateBeamAngle({
     required List<int> noteStaffPositions,
     required bool stemUp,
@@ -352,39 +496,82 @@ class SMuFLPositioningEngine {
     final int firstPos = noteStaffPositions.first;
     final int lastPos = noteStaffPositions.last;
     final int positionDifference = (lastPos - firstPos).abs();
+    if (positionDifference == 0) return 0.0;
 
-    // For only two notes, limit the angle
-    if (noteStaffPositions.length == 2) {
-      final double slant = (positionDifference * 0.5).clamp(
-        0.0,
-        twoNoteBeamMaxSlant,
-      );
-      return stemUp
-          ? (lastPos > firstPos ? slant : -slant)
-          : (lastPos > firstPos ? -slant : slant);
-    }
+    final index = positionDifference >= kBeamSlantByDiatonicStep.length
+        ? kBeamSlantByDiatonicStep.length - 1
+        : positionDifference;
+    double slant = kBeamSlantByDiatonicStep[index];
 
-    // For multiple notes, calculateTeste the angle based on position difference
-    double slant;
-    if (positionDifference <= 1) {
-      slant = minimumBeamSlant;
-    } else if (positionDifference >= 7) {
-      slant = maximumBeamSlant;
-    } else {
-      // Linear interpolation between min and max
-      slant =
-          minimumBeamSlant +
-          (positionDifference - 1) * (maximumBeamSlant - minimumBeamSlant) / 6;
-    }
-
-    slant = slant.clamp(minimumBeamSlant, maximumBeamSlant);
+    // A pair carries the same slant as any other group of the same interval;
+    // Behind Bars gives two-note beams no separate table.
+    final ceiling =
+        noteStaffPositions.length == 2 ? twoNoteBeamMaxSlant : maximumBeamSlant;
+    slant = slant.clamp(minimumBeamSlant, ceiling);
 
     return stemUp
         ? (lastPos > firstPos ? slant : -slant)
         : (lastPos > firstPos ? -slant : slant);
   }
 
-  /// calculateTestes the ideal beam height at the position of the first note
+  /// Minimum length, in staff spaces, that every stem of a beamed group must
+  /// have once the beam line has been placed.
+  ///
+  /// This is the invariant enforced by the "fit and shift" step of the beam
+  /// placement (the same approach used by LilyPond and Verovio): after the
+  /// beam slope is chosen, the whole beam line is translated until the
+  /// shortest stem of the group reaches this length.
+  ///
+  /// The value is
+  ///
+  /// ```text
+  /// max(kAbsoluteMinimumStemLengthSpaces,
+  ///     kStandardStemLengthSpaces - kBeamedStemShorteningSpaces)
+  ///   + (beamCount - 1) * (beamThickness + beamSpacing)
+  /// ```
+  ///
+  /// The extra term reserves room for the secondary beams, which grow away
+  /// from the notehead: without it a 32nd-note group would have its innermost
+  /// beam sitting on top of the noteheads ("Behind Bars", pp. 17-18).
+  ///
+  /// [beamCount] is the number of beams of the group (1 for eighths, 2 for
+  /// sixteenths, ...). Values below 1 are treated as 1.
+  double minimumStemLengthSpaces({required int beamCount}) {
+    final extraBeams = beamCount > 1 ? beamCount - 1 : 0;
+    final base = math.max(
+      kAbsoluteMinimumStemLengthSpaces,
+      kStandardStemLengthSpaces - kBeamedStemShorteningSpaces,
+    );
+    return base + extraBeams * (beamThickness + beamSpacing);
+  }
+
+  /// Maximum length, in staff spaces, of a stem of a beamed group with
+  /// [beamCount] beams — the counterpart of [minimumStemLengthSpaces].
+  ///
+  /// The secondary-beam allowance is the same term used by the minimum: the
+  /// beams grow away from the notehead, so a 16th-note group is allowed the
+  /// same headroom above its own (larger) minimum as an 8th-note group.
+  ///
+  /// This is a TARGET, not a hard guarantee: the only way to shorten the
+  /// longest stem of a group without shortening the shortest one below
+  /// [minimumStemLengthSpaces] is to steepen the beam, and a group with an
+  /// inner peak (measured: staff positions -2, +5, -2 give 3.50 / 7.00 / 3.50)
+  /// cannot be helped by any slope at all. `BeamAnalyzer` steepens as far as
+  /// the minimum allows and stops there; the residual case is handled upstream
+  /// by `BeamGrouper.kMaximumBeamAmbitusSteps`, which never lets an automatic
+  /// group span more than twelve diatonic steps in the first place.
+  double maximumStemLengthSpaces({required int beamCount}) {
+    final extraBeams = beamCount > 1 ? beamCount - 1 : 0;
+    return kMaximumBeamedStemLengthSpaces +
+        extraBeams * (beamThickness + beamSpacing);
+  }
+
+  /// Calculates the ideal beam height at the position of the first note.
+  ///
+  /// This is only the INITIAL placement of the beam line; it looks at the
+  /// extreme notes of the group and does not guarantee a minimum length for
+  /// every stem. The caller is expected to run the fit-and-shift pass against
+  /// [minimumStemLengthSpaces] afterwards (see `BeamAnalyzer`).
   double calculateBeamHeight({
     required int staffPosition,
     required bool stemUp,
@@ -404,11 +591,15 @@ class SMuFLPositioningEngine {
         height += (highestPosition - 4) * 0.5;
       }
 
-      // Minimum length for multiple beams.
-      // Behind Bars: stem must have at least enough space for all beams + margin.
-      // Adjusted empirically for adequate visual length.
+      // Minimum length for multiple beams: the stem has to be long enough to
+      // carry the whole beam stack. The per-level cost is
+      // [stemExtensionPerBeam] (= `beamThickness + beamSpacing`), the same
+      // number `BeamRenderer` offsets each level by; it used to be a second
+      // `0.5` literal here, i.e. beam bodies only, with the gaps between them
+      // unpaid for.
       if (beamCount > 1) {
-        final minHeightForBeams = standardStemLength + ((beamCount - 1) * 0.5);
+        final minHeightForBeams =
+            standardStemLength + ((beamCount - 1) * stemExtensionPerBeam);
         height = height > minHeightForBeams ? height : minHeightForBeams;
       }
 
@@ -426,11 +617,15 @@ class SMuFLPositioningEngine {
         height += (-4 - lowestPosition) * 0.5;
       }
 
-      // Minimum length for multiple beams.
-      // Behind Bars: stem must have at least enough space for all beams + margin.
-      // Adjusted empirically for adequate visual length.
+      // Minimum length for multiple beams: the stem has to be long enough to
+      // carry the whole beam stack. The per-level cost is
+      // [stemExtensionPerBeam] (= `beamThickness + beamSpacing`), the same
+      // number `BeamRenderer` offsets each level by; it used to be a second
+      // `0.5` literal here, i.e. beam bodies only, with the gaps between them
+      // unpaid for.
       if (beamCount > 1) {
-        final minHeightForBeams = standardStemLength + ((beamCount - 1) * 0.5);
+        final minHeightForBeams =
+            standardStemLength + ((beamCount - 1) * stemExtensionPerBeam);
         height = height > minHeightForBeams ? height : minHeightForBeams;
       }
 
@@ -438,7 +633,7 @@ class SMuFLPositioningEngine {
     }
   }
 
-  /// calculateTestes the position of an ornament relative to the note
+  /// Calculates the position of an ornament relative to the note
   Offset calculateOrnamentPosition({
     required String ornamentGlyph,
     required int staffPosition,
@@ -463,7 +658,7 @@ class SMuFLPositioningEngine {
     return Offset(0.0, yOffset);
   }
 
-  /// calculateTestes the position of an articulation (staccato, accent, etc.)
+  /// Calculates the position of an articulation (staccato, accent, etc.)
   Offset calculateArticulationPosition({
     required String articulationGlyph,
     required int staffPosition,
@@ -501,7 +696,7 @@ class SMuFLPositioningEngine {
     return Offset(0.0, yOffset);
   }
 
-  /// calculateTestes control points for a smooth slur curve.
+  /// Calculates control points for a smooth slur curve.
   /// Returns [startPoint, controlPoint1, controlPoint2, endPoint] for a cubic Bézier curve.
   List<Offset> calculateSlurControlPoints({
     required Offset startPosition,
@@ -535,7 +730,7 @@ class SMuFLPositioningEngine {
     return [startPosition, cp1, cp2, endPosition];
   }
 
-  /// calculateTestes the position and size of a grace note (appoggiatura)
+  /// Calculates the position and size of a grace note (appoggiatura)
   Map<String, dynamic> calculateGraceNoteLayout({
     required int staffPosition,
     required bool mainNoteStemUp,
@@ -552,7 +747,7 @@ class SMuFLPositioningEngine {
     };
   }
 
-  /// calculateTestes the position and layout of a tuplet
+  /// Calculates the position and layout of a tuplet
   Map<String, dynamic> calculateTupletLayout({
     required List<Offset> notePositions,
     required bool stemsUp,
@@ -589,12 +784,12 @@ class SMuFLPositioningEngine {
     };
   }
 
-  /// calculateTestes the width of a glyph using the metadata loader
+  /// Calculates the width of a glyph using the metadata loader
   double getGlyphWidth(String glyphName) {
     return _metadataLoader.getGlyphWidth(glyphName);
   }
 
-  /// calculateTestes the height of a glyph based on its bounding box
+  /// Calculates the height of a glyph based on its bounding box
   double _getGlyphHeight(String glyphName) {
     return _metadataLoader.getGlyphHeight(glyphName);
   }
@@ -605,7 +800,7 @@ class SMuFLPositioningEngine {
     return _metadataLoader.getGlyphAnchor(glyphName, 'opticalCenter');
   }
 
-  /// calculateTestes the position of repeat signs
+  /// Calculates the position of repeat signs
   Map<String, dynamic> calculateRepeatSignPosition({
     required String repeatGlyph,
     required double barlineX,
@@ -628,7 +823,7 @@ class SMuFLPositioningEngine {
     };
   }
 
-  /// calculateTestes the layout of repeat barlines with endings (voltas)
+  /// Calculates the layout of repeat barlines with endings (voltas)
   Map<String, dynamic> calculateEndingLayout({
     required double startX,
     required double endX,
@@ -644,7 +839,7 @@ class SMuFLPositioningEngine {
     };
   }
 
-  /// calculateTestes the positioning of a time signature
+  /// Calculates the positioning of a time signature
   Map<String, dynamic> calculateTimeSignaturePosition({
     required int numerator,
     required int denominator,
@@ -661,14 +856,14 @@ class SMuFLPositioningEngine {
     };
   }
 
-  /// calculateTestes the appropriate scale for dynamic markings (to avoid overlaps)
+  /// Calculates the appropriate scale for dynamic markings (to avoid overlaps)
   double calculateDynamicsScale(String dynamicGlyph) {
     // Dynamics are generally drawn at normal scale
     // but can be reduced if there are overlaps
     return 1.0;
   }
 
-  /// Gets the cut-outs of a glyph (for advanced spacing calculateTestions)
+  /// Gets the cut-outs of a glyph (for advanced spacing calculations)
   Map<String, Offset> getGlyphCutOuts(String glyphName) {
     final Map<String, Offset> cutOuts = {};
 

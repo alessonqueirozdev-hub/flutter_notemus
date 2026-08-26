@@ -1,3 +1,11 @@
+@Tags(['golden'])
+// Pixel goldens are NOT portable across platforms: font rasterisation, hinting
+// and anti-aliasing differ between operating systems, so an image recorded on
+// one and checked on another fails for reasons that have nothing to do with the
+// engraving. They are therefore tagged and run only on the platform they were
+// recorded on (see .github/workflows/ci.yml and dart_test.yaml).
+library;
+
 // Golden coverage for multi-staff (grand-staff) rendering: a StaffGroup laid
 // out as a vertically-stacked, horizontally-aligned system with a brace and
 // connecting barlines.
@@ -9,7 +17,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_notemus/flutter_notemus.dart' hide Duration;
 import 'package:flutter_notemus/flutter_notemus.dart' as fn show Duration;
-import 'package:flutter_notemus/src/rendering/grand_staff_painter.dart';
 
 import '_harness.dart';
 

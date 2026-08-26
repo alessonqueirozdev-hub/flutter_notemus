@@ -1,7 +1,7 @@
 // lib/core/mensural.dart
 //
 // Noteção Mensural (MEI v5 — Capítulo: Mensural Notetion)
-// Suporte a noteção medieval and renascentista (séc. XIII–XVII).
+// Suporte a notação medieval and renascentista (séc. XIII–XVII).
 
 import 'musical_element.dart';
 import 'duration.dart';
@@ -18,7 +18,7 @@ enum MensuralHeadShape {
   square,
 }
 
-/// Orientação of the plica (stem ornamental in noteção mensural).
+/// Orientação of the plica (stem ornamental in notação mensural).
 enum PlicaDirection { up, down }
 
 /// Value mensural de a note (MEI `dur` in context mensural).
@@ -41,7 +41,7 @@ enum MensuralDuration {
   semifusa,
 }
 
-/// Representa a note in noteção mensural (MEI `<note>` in context mensural).
+/// Representa a note in notação mensural (MEI `<note>` in context mensural).
 ///
 /// Notes mensurais têm atributos específicos that not existem no CMN:
 /// - [headShape]: forma of the cabeça of the note
@@ -103,7 +103,7 @@ enum MensuralNoteQuality {
   alterata,
 }
 
-/// PaUses in noteção mensural (MEI `<rest>` with `dur` mensural).
+/// PaUses in notação mensural (MEI `<rest>` with `dur` mensural).
 class MensuralRest extends MusicalElement {
   final MensuralDuration duration;
   final int? lines;
@@ -114,7 +114,7 @@ class MensuralRest extends MusicalElement {
 /// Ligatura mensural (MEI `<ligature>`).
 ///
 /// A ligatura is a grupo de notes escritas ligadas graficamente, comum
-/// na noteção medieval. A forma gráfica codifica as durações implicitamente.
+/// na notação medieval. A forma gráfica codifica as durações implicitamente.
 ///
 /// ```dart
 /// Ligature(

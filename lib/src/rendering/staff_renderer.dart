@@ -27,6 +27,7 @@ import 'renderers/tuplet_renderer.dart';
 import 'smufl_positioning_engine.dart';
 import 'staff_coordinate_system.dart';
 import 'staff_position_calculator.dart';
+import 'text_font.dart';
 
 class StaffRenderer {
   // CONSTANTES DE AJUSTE MANUAL
@@ -94,15 +95,18 @@ class StaffRenderer {
     required this.metadata,
     required this.theme,
   }) {
-    // CORREÃ‡ÃƒO TIPOGRÃIs: Size correct of the glifo based on SMuFL
+    // CORREÇÃO TIPOGRÃIs: Size correct of the glifo based on SMuFL
     glyphSize = coordinates.staffSpace * 4.0;
 
     // Fix: Use valores corretos of the metadata Bravura
+    // Always pass a fallback: `getEngravingDefault` returns 0.0 for a missing
+    // key, and a 0-thickness staff line is an INVISIBLE staff with no error.
     staffLineThickness =
-        metadata.getEngravingDefault('staffLineThickness') *
+        metadata.getEngravingDefault('staffLineThickness', 0.13) *
         coordinates.staffSpace;
     stemThickness =
-        metadata.getEngravingDefault('stemThickness') * coordinates.staffSpace;
+        metadata.getEngravingDefault('stemThickness', 0.12) *
+        coordinates.staffSpace;
 
     // Initialize SMuFL positioning engine with already loaded metadata
     positioningEngine = SMuFLPositioningEngine(metadataLoader: metadata);
@@ -210,6 +214,8 @@ class StaffRenderer {
       noteRenderer: noteRenderer,
       restRenderer: restRenderer,
       positioningEngine: positioningEngine,
+      // Chords inside tuplets used to be skipped by every render branch.
+      chordRenderer: chordRenderer,
     );
 
     // ✅ Initialise SlurRenderer profissional
@@ -224,12 +230,63 @@ class StaffRenderer {
   final Set<Note> _notesInAdvancedBeams = {};
   final Map<Note, Clef> _noteClefs = {};
 
+  /// 8va/8vb displacement in force at each note, filled during the first pass.
+  ///
+  /// The bracket axis is tracked exactly like [_noteClefs] and for the same
+  /// reason: the later passes (beams, ties, slurs, ornament lines) re-derive a
+  /// notehead's Y from its pitch, so they need the SAME displacement the first
+  /// pass drew with. Before this existed the bracket had no reader at all —
+  /// C6 measured staffPosition 8 / Y 12.0 with no mark and staffPosition 8 /
+  /// Y 12.0 under each of 8va/8vb/15ma/15mb/22da/22db.
+  final Map<Note, int> _noteOctaveShifts = {};
+
+  /// Bracket spans of the element list currently being rendered, resolved by
+  /// (measure, onset) rather than by document position.
+  ///
+  /// The octave bracket belongs to the STAFF, not to one voice
+  /// ([OctaveSpanTimeline] carries the MusicXML/MEI reasoning), and a
+  /// polyphonic bar reaches this renderer with voice 1 serialised in full
+  /// before voice 2 — so a document-order walk gave the same marking two
+  /// different meanings depending on which voice it was typed in. Every
+  /// `PositionedElement` already carries the onset and measure index the
+  /// layout gave it, which is exactly what the timeline needs, so this
+  /// rebuilds the engine's own answer from the list alone.
+  OctaveSpanTimeline _octaveSpan = OctaveSpanTimeline.empty;
+
   // Notes to skip drawing (drawn elsewhere, e.g. by the cross-staff beam pass).
   Set<Note> _skipNotes = const {};
 
   /// Within-measure accidental decisions for the current render pass (set from
   /// the layout engine, which resolves them from the model).
   Map<Note, AccidentalDisplay> _accidentalDecisions = const {};
+
+  /// Beam membership of the notes INSIDE tuplets, decided by the layout engine
+  /// and read (never recomputed, never written back) by `TupletRenderer`.
+  /// See `LayoutEngine.tupletBeams` for why this is a value and not a mutation.
+  Map<Note, BeamType>? _tupletBeams;
+
+  /// Beam membership of the notes OUTSIDE tuplets, decided by the layout engine
+  /// and read — never recomputed, never written back — by this renderer and by
+  /// `GroupRenderer`. See `LayoutEngine.beams`: painting a score must leave the
+  /// caller's `Note.beam` fields exactly as it found them.
+  Map<Note, BeamType>? _beams;
+
+  /// The beam in force for [note]: the engine's decision when it made one, the
+  /// author's own [Note.beam] hint otherwise (and the hint alone when this
+  /// renderer runs with no layout engine at all).
+  BeamType? _beamOf(Note note) => _beams?[note] ?? note.beam;
+
+  /// `LayoutEngine.elementLeftExtent`, handed to `TupletRenderer` so the grid
+  /// it draws on is the accidental-aware grid the layout reserved space for.
+  /// Null only when this renderer runs without a layout engine.
+  double Function(MusicalElement)? _elementLeftExtent;
+
+  /// `LayoutEngine.tupletContextFloor`, handed to `TupletRenderer` for the same
+  /// reason: the legibility scale of the tuplet grid is measured over the whole
+  /// MEASURE (findings M-08 / M-31) and a renderer holding one tuplet cannot
+  /// see the measure. Null only when this renderer runs without a layout
+  /// engine, in which case the grid falls back to the per-group scale.
+  Map<Tuplet, double>? _tupletContextFloor;
 
   void renderStaff(
     Canvas canvas,
@@ -238,12 +295,30 @@ class StaffRenderer {
     LayoutEngine? layoutEngine,
     bool renderBarlines = true,
     Set<Note> skipNotes = const {},
+    bool renderMeasureNumbers = true,
   }) {
     _skipNotes = skipNotes;
     // Limpar set de notes beamed
     _notesInAdvancedBeams.clear();
     _noteClefs.clear();
+    _noteOctaveShifts.clear();
+    _octaveSpan = OctaveSpanTimeline([
+      for (final positioned in elements)
+        if (positioned.element case final OctaveMark mark)
+          OctaveSpanEvent(positioned.measureIndex, positioned.onset, mark),
+    ]);
+    // Prefer the engine's own answer: `renderStaff` may be handed ONE SYSTEM at
+    // a time (`ScoreRasterizer` does), and a tracker restarted per system would
+    // lose a bracket that opened on an earlier one. The tracker below is the
+    // fallback for the no-layout-engine path and for notes the engine did not
+    // register (a bare element list built by hand in a test, for instance).
+    final layoutShifts = layoutEngine?.noteOctaveShifts ?? const <Note, int>{};
+    _noteOctaveShifts.addAll(layoutShifts);
     _accidentalDecisions = layoutEngine?.accidentalDecisions ?? const {};
+    _tupletBeams = layoutEngine?.tupletBeams;
+    _beams = layoutEngine?.beams;
+    _elementLeftExtent = layoutEngine?.elementLeftExtent;
+    _tupletContextFloor = layoutEngine?.tupletContextFloor;
 
     // Coletar notes that are in advanced beam groups
     if (layoutEngine != null) {
@@ -256,7 +331,7 @@ class StaffRenderer {
     _drawStaffLinesBySystem(canvas, elements);
     currentClef = Clef(clefType: ClefType.treble); // Default clef
 
-    // Primeira passagem: Rendersr elementos individuais
+    // Primeira passagem: renderizar elementos individuais
     for (int i = 0; i < elements.length; i++) {
       _renderElement(
         canvas,
@@ -267,7 +342,7 @@ class StaffRenderer {
       );
     }
 
-    // Segunda passagem: Rendersr ADVANCED BEAMS (if disponível)
+    // Segunda passagem: renderizar ADVANCED BEAMS (if disponível)
     if (layoutEngine != null && layoutEngine.advancedBeamGroups.isNotEmpty) {
       final noteXPositions = layoutEngine.noteXPositions;
       final noteYPositions = layoutEngine.noteYPositions;
@@ -288,7 +363,14 @@ class StaffRenderer {
       }
     }
 
-    // Terceira passagem: Rendersr elementos de grupo (beams simples, ties, slurs)
+    // Measure numbers above the first bar of every system (Behind Bars).
+    if (renderMeasureNumbers &&
+        theme.showMeasureNumbers &&
+        layoutEngine != null) {
+      _renderMeasureNumbers(canvas, elements, layoutEngine.measureNumbers);
+    }
+
+    // Terceira passagem: renderizar elementos de grupo (beams simples, ties, slurs)
     if (currentClef != null) {
       _renderLineOrnaments(canvas, elements);
       _renderLyricHyphens(canvas, elements);
@@ -304,7 +386,13 @@ class StaffRenderer {
                 .where((pe) =>
                     !(pe.element is Note && _skipNotes.contains(pe.element)))
                 .toList();
-        groupRenderer.renderBeams(canvas, beamElements, currentClef!);
+        groupRenderer.renderBeams(
+          canvas,
+          beamElements,
+          currentClef!,
+          octaveShifts: _noteOctaveShifts,
+          beamTypes: _beams,
+        );
       }
 
       // Build skyline from positioned elements for slur collision avoidance
@@ -334,12 +422,13 @@ class StaffRenderer {
         }
       }
 
-      // Rebuild slurRenderer with the new skyline calculateTestor
+      // Rebuild slurRenderer with the new skyline calculator
       slurRenderer = SlurRenderer(
         staffSpace: coordinates.staffSpace,
         staffBaselineY: coordinates.staffBaseline.dy,
         metadata: metadata,
         skylineCalculator: skylineCalc,
+        octaveShifts: _noteOctaveShifts,
       );
 
       // ✅ Use SLURRENDERER PROFISSIONAL to the invés of the GroupRenderer
@@ -398,7 +487,8 @@ class StaffRenderer {
 
     double measure(String text, bool italic) {
       final tp = TextPainter(
-        text: TextSpan(text: text, style: styleFor(italic)),
+        text: TextSpan(
+            text: text, style: styleFor(italic).withMusicTextFallback()),
         textDirection: TextDirection.ltr,
       )..layout();
       return tp.width;
@@ -421,7 +511,9 @@ class StaffRenderer {
             final midX = (prevRight + curLeft) / 2;
             final lyricY = firstLineY + verse * lineHeight;
             final hp = TextPainter(
-              text: TextSpan(text: '-', style: styleFor(prevSyl.italic)),
+              text: TextSpan(
+                  text: '-',
+                  style: styleFor(prevSyl.italic).withMusicTextFallback()),
               textDirection: TextDirection.ltr,
             )..layout();
             hp.paint(
@@ -466,11 +558,14 @@ class StaffRenderer {
       final tp = TextPainter(
         text: TextSpan(
           text: text,
-          style: base.copyWith(
-            fontSize: base.fontSize ?? fontSize,
-            fontStyle:
-                italic ? FontStyle.italic : (base.fontStyle ?? FontStyle.normal),
-          ),
+          style: base
+              .copyWith(
+                fontSize: base.fontSize ?? fontSize,
+                fontStyle: italic
+                    ? FontStyle.italic
+                    : (base.fontStyle ?? FontStyle.normal),
+              )
+              .withMusicTextFallback(),
         ),
         textDirection: TextDirection.ltr,
       )..layout();
@@ -621,7 +716,8 @@ class StaffRenderer {
               color: theme.ornamentColor ?? theme.noteheadColor,
             );
         final label = TextPainter(
-          text: TextSpan(text: 'gliss.', style: labelStyle),
+          text: TextSpan(
+              text: 'gliss.', style: labelStyle.withMusicTextFallback()),
           textDirection: TextDirection.ltr,
         )..layout();
 
@@ -635,6 +731,46 @@ class StaffRenderer {
         canvas.restore();
       }
     }
+  }
+
+  /// Records the bracket displacement for every note nested inside [tuplet]
+  /// (recursively), so the later beam/tie/slur passes — which only ever see the
+  /// tuplet as one opaque positioned element — can still look each inner note up
+  /// in [_noteOctaveShifts].
+  void _recordTupletOctaveShifts(Tuplet tuplet, int extraOctaveShift) {
+    for (final inner in tuplet.elements) {
+      if (inner is Note) {
+        // putIfAbsent, never `=`: the layout engine already registered these in
+        // `_registerTupletNotes` and its answer wins.
+        _noteOctaveShifts.putIfAbsent(inner, () => extraOctaveShift);
+      } else if (inner is Chord) {
+        for (final note in inner.notes) {
+          _noteOctaveShifts.putIfAbsent(note, () => extraOctaveShift);
+        }
+      } else if (inner is Tuplet) {
+        _recordTupletOctaveShifts(inner, extraOctaveShift);
+      }
+    }
+  }
+
+  /// Bracket displacement the layout engine gave the first note nested anywhere
+  /// inside [tuplet], or null when the engine registered none of them.
+  int? _tupletOctaveShift(Tuplet tuplet) {
+    for (final inner in tuplet.elements) {
+      if (inner is Note) {
+        final shift = _noteOctaveShifts[inner];
+        if (shift != null) return shift;
+      } else if (inner is Chord) {
+        for (final note in inner.notes) {
+          final shift = _noteOctaveShifts[note];
+          if (shift != null) return shift;
+        }
+      } else if (inner is Tuplet) {
+        final shift = _tupletOctaveShift(inner);
+        if (shift != null) return shift;
+      }
+    }
+    return null;
   }
 
   Offset _resolveRenderedNoteCenter(
@@ -658,6 +794,7 @@ class StaffRenderer {
     final staffPosition = StaffPositionCalculator.calculate(
       element.pitch,
       clef,
+      extraOctaveShift: _noteOctaveShifts[element] ?? 0,
     );
     final renderedY = StaffPositionCalculator.toPixelY(
       staffPosition,
@@ -706,6 +843,67 @@ class StaffRenderer {
 
   /// Desenha staff lines By System
   /// Each system tem their lines ending na última barline daquele system
+  /// Draws the measure number above the first measure of each system.
+  ///
+  /// `Measure.number` (MEI `<measure @n>`) has existed in the model since 2.x
+  /// but nothing ever rendered it — a professional score without bar numbers is
+  /// unusable for rehearsal. Convention (Gould): number at the start of every
+  /// system, above the staff, left-aligned on the first element; bar 1 is not
+  /// numbered.
+  void _renderMeasureNumbers(
+    Canvas canvas,
+    List<PositionedElement> elements,
+    Map<int, int> measureNumbers,
+  ) {
+    if (elements.isEmpty) return;
+
+    // First positioned element of each (system, measure) pair.
+    final firstOfSystem = <int, PositionedElement>{};
+    for (final pe in elements) {
+      if (pe.measureIndex < 0) continue;
+      final current = firstOfSystem[pe.system];
+      if (current == null ||
+          pe.measureIndex < current.measureIndex ||
+          (pe.measureIndex == current.measureIndex &&
+              pe.position.dx < current.position.dx)) {
+        firstOfSystem[pe.system] = pe;
+      }
+    }
+
+    // Merge, do not replace: a theme that only supplies a font family must not
+    // lose the staff-derived size and colour.
+    final base = TextStyle(
+      fontSize: coordinates.staffSpace * 0.9,
+      color: theme.textColor ?? theme.staffLineColor,
+      fontWeight: FontWeight.w500,
+    );
+    final override = theme.measureNumberTextStyle;
+    final style = override == null ? base : base.merge(override);
+
+    for (final entry in firstOfSystem.entries) {
+      final pe = entry.value;
+      final number = measureNumbers[pe.measureIndex];
+      if (number == null || number <= 1) continue;
+
+      final painter = TextPainter(
+        text: TextSpan(text: '$number', style: style.withMusicTextFallback()),
+        textDirection: TextDirection.ltr,
+      )..layout();
+
+      // Staff top line sits 2 staff spaces above the system baseline.
+      // (Never use pe.position.dy: for a Note that is the NOTEHEAD's y.)
+      final staffTopY =
+          coordinates.staffBaseline.dy - 2 * coordinates.staffSpace;
+      painter.paint(
+        canvas,
+        Offset(
+          pe.position.dx,
+          staffTopY - coordinates.staffSpace * 1.4 - painter.height,
+        ),
+      );
+    }
+  }
+
   void _drawStaffLinesBySystem(
     Canvas canvas,
     List<PositionedElement> elements,
@@ -747,10 +945,10 @@ class StaffRenderer {
       ..strokeWidth = staffLineThickness
       ..style = PaintingStyle.stroke;
     final thinBarlineThickness =
-        metadata.getEngravingDefault('thinBarlineThickness') *
+        metadata.getEngravingDefault('thinBarlineThickness', 0.16) *
         coordinates.staffSpace;
     final thickBarlineThickness =
-        metadata.getEngravingDefault('thickBarlineThickness') *
+        metadata.getEngravingDefault('thickBarlineThickness', 0.5) *
         coordinates.staffSpace;
 
     // Desenhar lines for each system separadamente
@@ -801,6 +999,22 @@ class StaffRenderer {
     final element = positioned.element;
     final basePosition = positioned.position;
 
+    // A bracket takes effect at the musical INSTANT the author put it at and
+    // applies to every voice of the staff from there on, so it is resolved
+    // against the timeline by (measure, onset) — not by this list's order,
+    // which puts all of voice 1 before all of voice 2.
+    final trackedOctaveShift = _octaveSpan.shiftAt(
+      measureIndex: positioned.measureIndex,
+      onset: positioned.onset,
+    );
+    final extraOctaveShift = switch (element) {
+      Note() => _noteOctaveShifts[element] ?? trackedOctaveShift,
+      Chord(notes: final ns) when ns.isNotEmpty =>
+        _noteOctaveShifts[ns.first] ?? trackedOctaveShift,
+      Tuplet() => _tupletOctaveShift(element) ?? trackedOctaveShift,
+      _ => trackedOctaveShift,
+    };
+
     if (element is Clef) {
       currentClef = element;
       // A clef appearing after musical content in the same system is a change,
@@ -834,10 +1048,18 @@ class StaffRenderer {
       barElementRenderer.renderTimeSignature(canvas, element, basePosition);
     } else if (element is Note && currentClef != null) {
       _noteClefs[element] = currentClef!;
+      _noteOctaveShifts[element] = extraOctaveShift;
       // Cross-staff notes are drawn (notehead + stem + beam) by the grand-staff
       // pass on the target staff, so skip them here.
       if (_skipNotes.contains(element)) return;
-      final onlyNotehead = _notesInAdvancedBeams.contains(element);
+      // `NoteRenderer` suppresses stem + flag for a beamed note by testing
+      // `note.beam == null`. The engine no longer writes its answer there
+      // (M-26), so the suppression is decided HERE, off the resolved value, and
+      // handed over as `renderOnlyNotehead`. `!renderOnlyNotehead &&
+      // note.beam == null` and `!(onlyNotehead || beam != null)` are the same
+      // predicate, so this moves no ink.
+      final onlyNotehead =
+          _notesInAdvancedBeams.contains(element) || _beamOf(element) != null;
       noteRenderer.render(
         canvas,
         element,
@@ -847,6 +1069,7 @@ class StaffRenderer {
         voiceNumber: positioned.voiceNumber,
         accidentalDisplay:
             _accidentalDecisions[element] ?? AccidentalDisplay.show,
+        extraOctaveShift: extraOctaveShift,
       );
     } else if (element is Rest) {
       restRenderer.render(
@@ -860,6 +1083,9 @@ class StaffRenderer {
         barlineRenderer.render(canvas, element, basePosition);
       }
     } else if (element is Chord && currentClef != null) {
+      for (final note in element.notes) {
+        _noteOctaveShifts[note] = extraOctaveShift;
+      }
       chordRenderer.render(
         canvas,
         element,
@@ -867,9 +1093,25 @@ class StaffRenderer {
         currentClef!,
         voiceNumber: positioned.voiceNumber,
         accidentalDecisions: _accidentalDecisions,
+        extraOctaveShift: extraOctaveShift,
       );
     } else if (element is Tuplet && currentClef != null) {
-      tupletRenderer.render(canvas, element, basePosition, currentClef!);
+      _recordTupletOctaveShifts(element, extraOctaveShift);
+      tupletRenderer.render(
+        canvas,
+        element,
+        basePosition,
+        currentClef!,
+        extraOctaveShift: extraOctaveShift,
+        // M-11: without these the tuplet drew every inner note with the
+        // default `AccidentalDisplay.show`, so a triplet of three C#4 after a
+        // C#4 in the same bar printed three sharps the resolver had decided to
+        // hide — while the identical figure outside a tuplet was correct.
+        accidentalDecisions: _accidentalDecisions,
+        beamTypes: _tupletBeams,
+        leftExtent: _elementLeftExtent,
+        contextSmallestLeafSpaces: _tupletContextFloor?[element],
+      );
     } else if (element is RepeatMark) {
       symbolAndTextRenderer.renderRepeatMark(canvas, element, basePosition);
     } else if (element is Dynamic) {
@@ -1057,10 +1299,10 @@ class StaffRenderer {
     final x = positioned.position.dx;
     final barline = element;
     final thin =
-        metadata.getEngravingDefault('thinBarlineThickness') *
+        metadata.getEngravingDefault('thinBarlineThickness', 0.16) *
         coordinates.staffSpace;
     final thick =
-        metadata.getEngravingDefault('thickBarlineThickness') *
+        metadata.getEngravingDefault('thickBarlineThickness', 0.5) *
         coordinates.staffSpace;
     final glyphWidth = _barlineGlyphWidth(barline.type, thin, thick);
 

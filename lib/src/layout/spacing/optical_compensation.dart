@@ -38,7 +38,7 @@ class OpticalContext {
     this.beamCount,
   });
 
-  /// Createsr context for note
+  /// criar context for note
   factory OpticalContext.note({
     required bool stemUp,
     required double duration,
@@ -56,7 +56,7 @@ class OpticalContext {
     );
   }
 
-  /// Createsr context for paUses
+  /// criar context for pausa
   factory OpticalContext.rest({required double duration}) {
     return OpticalContext(
       type: SymbolType.rest,
@@ -64,7 +64,7 @@ class OpticalContext {
     );
   }
 
-  /// Createsr context for chord
+  /// criar context for chord
   factory OpticalContext.chord({
     required bool stemUp,
     required double duration,

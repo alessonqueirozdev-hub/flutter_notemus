@@ -180,6 +180,31 @@ class MidiGenerationOptions {
   final MidiInstrumentAssignment defaultInstrument;
   final Map<int, MidiInstrumentAssignment> instrumentsByStaff;
 
+  /// When true, every (staff, voice) pair becomes its own [MidiTrack] named
+  /// `'Staff N - Voice M'` (1-based), each on its own MIDI channel, so a DAW
+  /// can solo/mute an individual voice.
+  ///
+  /// Defaults to false, which keeps the historical behaviour: one track per
+  /// staff carrying all of its voices on a single channel.
+  final bool separateTracksPerVoice;
+
+  /// Voice numbers (1-based, as in `Voice.number`) that must stay silent.
+  ///
+  /// Muted voices still consume musical time — only their note events are
+  /// dropped, so every other voice keeps its original timing.
+  final Set<int> mutedVoices;
+
+  /// When non-null and non-empty, ONLY these voice numbers sound. Solo takes
+  /// precedence over [mutedVoices].
+  final Set<int>? soloVoices;
+
+  /// Staff indices (0-based, matching `Score.allStaves`) that must stay silent.
+  final Set<int> mutedStaves;
+
+  /// When non-null and non-empty, ONLY these staff indices sound. Solo takes
+  /// precedence over [mutedStaves].
+  final Set<int>? soloStaves;
+
   const MidiGenerationOptions({
     this.ticksPerQuarter = 960,
     this.defaultBpm = 120,
@@ -200,8 +225,36 @@ class MidiGenerationOptions {
       velocity: 96,
     ),
     this.instrumentsByStaff = const <int, MidiInstrumentAssignment>{},
+    this.separateTracksPerVoice = false,
+    this.mutedVoices = const <int>{},
+    this.soloVoices,
+    this.mutedStaves = const <int>{},
+    this.soloStaves,
   });
 
+  /// Whether the voice numbered [voiceNumber] should sound.
+  ///
+  /// A non-empty [soloVoices] wins over [mutedVoices]; an empty (or null) solo
+  /// set means "no solo active", so only muting applies.
+  bool isVoiceAudible(int voiceNumber) {
+    final solo = soloVoices;
+    if (solo != null && solo.isNotEmpty) return solo.contains(voiceNumber);
+    return !mutedVoices.contains(voiceNumber);
+  }
+
+  /// Whether the staff at [staffIndex] (0-based) should sound. Same solo/mute
+  /// precedence as [isVoiceAudible].
+  bool isStaffAudible(int staffIndex) {
+    final solo = soloStaves;
+    if (solo != null && solo.isNotEmpty) return solo.contains(staffIndex);
+    return !mutedStaves.contains(staffIndex);
+  }
+
+  /// Returns a copy with the given fields replaced.
+  ///
+  /// Note: passing null keeps the current value, so [soloVoices]/[soloStaves]
+  /// cannot be cleared through this method — build a new
+  /// [MidiGenerationOptions] to drop a solo selection.
   MidiGenerationOptions copyWith({
     int? ticksPerQuarter,
     int? defaultBpm,
@@ -218,6 +271,11 @@ class MidiGenerationOptions {
     double? graceDurationScale,
     MidiInstrumentAssignment? defaultInstrument,
     Map<int, MidiInstrumentAssignment>? instrumentsByStaff,
+    bool? separateTracksPerVoice,
+    Set<int>? mutedVoices,
+    Set<int>? soloVoices,
+    Set<int>? mutedStaves,
+    Set<int>? soloStaves,
   }) {
     return MidiGenerationOptions(
       ticksPerQuarter: ticksPerQuarter ?? this.ticksPerQuarter,
@@ -238,6 +296,12 @@ class MidiGenerationOptions {
       graceDurationScale: graceDurationScale ?? this.graceDurationScale,
       defaultInstrument: defaultInstrument ?? this.defaultInstrument,
       instrumentsByStaff: instrumentsByStaff ?? this.instrumentsByStaff,
+      separateTracksPerVoice:
+          separateTracksPerVoice ?? this.separateTracksPerVoice,
+      mutedVoices: mutedVoices ?? this.mutedVoices,
+      soloVoices: soloVoices ?? this.soloVoices,
+      mutedStaves: mutedStaves ?? this.mutedStaves,
+      soloStaves: soloStaves ?? this.soloStaves,
     );
   }
 }

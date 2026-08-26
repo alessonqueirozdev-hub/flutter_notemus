@@ -13,7 +13,37 @@ import '../../smufl/smufl_metadata_loader.dart';
 import '../grace_note_geometry.dart';
 import '../staff_position_calculator.dart';
 import 'chord_renderer.dart';
+import 'group_renderer.dart';
 
+/// Draws slurs and ties, including the ones broken by a system (line) break.
+///
+/// ## Slurs and ties across a system break
+///
+/// A slur or tie whose endpoints land on two different systems is **not** one
+/// curve stretched between them — drawn that way it runs backwards and over the
+/// staff that sits in between. Gould (*Behind Bars*, p.109 for slurs, p.63 for
+/// ties) prescribes two independent segments:
+///
+/// * on the system it leaves, a segment starts at its note and runs a little
+///   past the last barline of that system, ending **in the air** — the curve
+///   lifts away from the staff and simply stops, pointing at nothing;
+/// * on the system it enters, a second segment starts at the beginning of the
+///   staff (after the restated clef and key signature, before the first note)
+///   and lands on the closing note.
+///
+/// [PositionedElement.system] is what identifies the break. Three cases are
+/// handled, because the caller may pass one system at a time (the normal path,
+/// where a straddling span has only one of its two ends in the list) or the
+/// whole staff at once:
+///
+/// * **(a) start present, end missing** — outgoing segment only;
+/// * **(b) end present, start missing** — incoming segment only;
+/// * **(c) both present on different systems** — both segments;
+/// * both present on the same system — one ordinary curve.
+///
+/// The horizontal limits of a system are measured from the elements themselves:
+/// the right edge from the largest X of that system (or its rightmost
+/// [Barline]), the left edge from the smallest X.
 class SlurRenderer {
   final EngravingRules rules;
   final SmuflMetadata metadata;
@@ -21,13 +51,48 @@ class SlurRenderer {
   final double staffBaselineY;
   final SkyBottomLineCalculator? skylineCalculator;
 
+  /// 8va/8vb displacement per note, keyed by note identity (absent = 0).
+  ///
+  /// A slur or tie curve is anchored to the notehead, and the notehead's Y is
+  /// recomputed here from the pitch (positions carry the system baseline, not
+  /// the note's own Y). So this renderer has to apply the SAME bracket
+  /// displacement the layout engine and `NoteRenderer` applied, or every curve
+  /// under an 8va would hang an octave away from the notes it joins.
+  ///
+  /// It is a per-note map, not one int, because a slur legitimately straddles
+  /// the start or the end of a bracket. It is a constructor field rather than a
+  /// parameter because the displacement is needed in a dozen private helpers
+  /// down the endpoint/placement/collision chain; `StaffRenderer` rebuilds this
+  /// renderer once per pass anyway (for the skyline), so there is no stale-state
+  /// window.
+  final Map<Note, int> octaveShifts;
+
   SlurRenderer({
     required this.staffSpace,
     required this.metadata,
     required this.staffBaselineY,
     EngravingRules? rules,
     this.skylineCalculator,
+    this.octaveShifts = const {},
   }) : rules = rules ?? EngravingRules();
+
+  /// Bracket displacement in force for [note] (0 outside every 8va/8vb span).
+  int _octaveShiftOf(Note note) => octaveShifts[note] ?? 0;
+
+  /// Space, in staff spaces, kept past the right edge of a system by the
+  /// outgoing half of a slur/tie broken by a line break (Behind Bars: the curve
+  /// continues "a little beyond the barline").
+  static const double systemBreakTrailingSpaces = 1.0;
+
+  /// Lead-in, in staff spaces, kept before the first note of a system by the
+  /// incoming half of a broken slur/tie, so it starts after the restated
+  /// clef/key signature and before the note it closes on.
+  static const double systemBreakLeadInSpaces = 2.0;
+
+  /// How far the free ("in the air") end of a broken segment lifts away from
+  /// the note end, in staff spaces. The lift is what makes the segment read as
+  /// "continues on the next system" instead of as a short, complete slur.
+  static const double systemBreakAirLiftSpaces = 0.9;
 
   _NoteheadMetrics _resolveNoteheadMetrics(
     Offset notePos,
@@ -95,6 +160,11 @@ class SlurRenderer {
     }
 
     const nestOffsetSS = 1.3;
+
+    // Horizontal limits of every system present in [positions], used to break
+    // spans that straddle a line break (see the class docs).
+    final extents = _measureSystems(positions);
+    final referenceSystem = positions.isEmpty ? 0 : positions.first.system;
 
     for (final group in groupList) {
       if (group.length < 2) {
@@ -173,6 +243,36 @@ class SlurRenderer {
           ? endPoint
           : Offset(endPoint.dx, endPoint.dy + dy);
 
+      // Case (c): the span straddles a line break, so it becomes two segments
+      // instead of one curve running backwards across the page.
+      if (startElement.system != endElement.system) {
+        _drawSystemBreakSegment(
+          canvas: canvas,
+          anchor: nestedStart.translate(
+            0,
+            _systemBaselineShift(startElement, referenceSystem, currentClef),
+          ),
+          extent: extents[startElement.system],
+          above: slurAbove,
+          outgoing: true,
+          isSlur: true,
+          color: color,
+        );
+        _drawSystemBreakSegment(
+          canvas: canvas,
+          anchor: nestedEnd.translate(
+            0,
+            _systemBaselineShift(endElement, referenceSystem, currentClef),
+          ),
+          extent: extents[endElement.system],
+          above: slurAbove,
+          outgoing: false,
+          isSlur: true,
+          color: color,
+        );
+        continue;
+      }
+
       final calculator = SlurCalculator(
         rules: rules,
         skylineCalculator: skylineCalculator,
@@ -187,6 +287,17 @@ class SlurRenderer {
 
       _drawVariableThicknessCurve(canvas, curve, color, isSlur: true);
     }
+
+    // Cases (a) and (b): boundaries whose partner is on another system and so
+    // is absent from [positions].
+    _renderHangingSlurs(
+      canvas: canvas,
+      positions: positions,
+      currentClef: currentClef,
+      color: color,
+      extents: extents,
+      referenceSystem: referenceSystem,
+    );
   }
 
   void renderTies({
@@ -196,6 +307,9 @@ class SlurRenderer {
     required Clef currentClef,
     Color color = Colors.black,
   }) {
+    final extents = _measureSystems(positions);
+    final referenceSystem = positions.isEmpty ? 0 : positions.first.system;
+
     for (final group in tieGroups.values) {
       final startElement = positions[group.first];
       final endElement = positions[group.last];
@@ -230,6 +344,36 @@ class SlurRenderer {
           endStemUp: pair.end.stemUp,
         );
 
+        // Case (c): a tie that straddles a line break is engraved as two
+        // segments (Behind Bars p.63), never as one curve across systems.
+        if (startElement.system != endElement.system) {
+          _drawSystemBreakSegment(
+            canvas: canvas,
+            anchor: startPoint.translate(
+              0,
+              _systemBaselineShift(startElement, referenceSystem, currentClef),
+            ),
+            extent: extents[startElement.system],
+            above: tieAbove,
+            outgoing: true,
+            isSlur: false,
+            color: color,
+          );
+          _drawSystemBreakSegment(
+            canvas: canvas,
+            anchor: endPoint.translate(
+              0,
+              _systemBaselineShift(endElement, referenceSystem, currentClef),
+            ),
+            extent: extents[endElement.system],
+            above: tieAbove,
+            outgoing: false,
+            isSlur: false,
+            color: color,
+          );
+          continue;
+        }
+
         final calculator = SlurCalculator(rules: rules);
         final curve = calculator.calculateTie(
           startPoint: startPoint,
@@ -241,6 +385,463 @@ class SlurRenderer {
         _drawVariableThicknessCurve(canvas, curve, color, isSlur: false);
       }
     }
+
+    // Cases (a) and (b): tied notes whose partner is on another system.
+    _renderHangingTies(
+      canvas: canvas,
+      positions: positions,
+      currentClef: currentClef,
+      color: color,
+      extents: extents,
+      referenceSystem: referenceSystem,
+    );
+  }
+
+  // ==========================================================================
+  // System-break support (Behind Bars: slurs p.109, ties p.63)
+  // ==========================================================================
+
+  /// Measures the horizontal extent of every system found in [positions].
+  ///
+  /// The right edge is the largest X of the system — or its rightmost
+  /// [Barline], whichever is further right — and the left edge the smallest X.
+  /// [_SystemExtent.musicLeft] is the first note/chord/rest of the system, i.e.
+  /// where the restated clef and key signature stop.
+  Map<int, _SystemExtent> _measureSystems(List<PositionedElement> positions) {
+    final left = <int, double>{};
+    final right = <int, double>{};
+    final musicLeft = <int, double>{};
+    final barlineRight = <int, double>{};
+    final headerRight = <int, double>{};
+
+    for (final positioned in positions) {
+      final system = positioned.system;
+      final x = positioned.position.dx;
+      final knownLeft = left[system];
+      left[system] = knownLeft == null ? x : math.min(knownLeft, x);
+      final knownRight = right[system];
+      right[system] = knownRight == null ? x : math.max(knownRight, x);
+
+      final element = positioned.element;
+      if (element is Barline) {
+        final known = barlineRight[system];
+        barlineRight[system] = known == null ? x : math.max(known, x);
+      }
+      if (element is Note || element is Chord || element is Rest) {
+        final known = musicLeft[system];
+        musicLeft[system] = known == null ? x : math.min(known, x);
+      }
+      if (element is Clef || element is KeySignature || element is TimeSignature) {
+        final known = headerRight[system];
+        headerRight[system] = known == null ? x : math.max(known, x);
+      }
+    }
+
+    return {
+      for (final system in left.keys)
+        system: _SystemExtent(
+          left: left[system]!,
+          right: math.max(
+            right[system]!,
+            barlineRight[system] ?? right[system]!,
+          ),
+          musicLeft: musicLeft[system] ?? left[system]!,
+          headerRight: headerRight[system] ?? left[system]!,
+        ),
+    };
+  }
+
+  /// X where the outgoing half of a broken span stops: a little past the last
+  /// barline of the system it leaves, always ahead of its own note.
+  double _outgoingBreakX(_SystemExtent? extent, double anchorX) {
+    final edge =
+        (extent?.right ?? anchorX) + (systemBreakTrailingSpaces * staffSpace);
+    return math.max(edge, anchorX + staffSpace * 1.5);
+  }
+
+  /// X where the incoming half of a broken span starts: at the beginning of the
+  /// staff, after the restated clef/key signature and before the first note.
+  double _incomingBreakX(_SystemExtent? extent, double anchorX) {
+    if (extent == null) {
+      return anchorX - staffSpace * 1.5;
+    }
+
+    // The lead-in must start in the GAP between the system's header (restated
+    // clef, key signature, meter) and its first note — never at the header's
+    // own left edge.
+    //
+    // It used to be `max(extent.left, musicLeft - leadIn)`, and `extent.left`
+    // is the X of the restated CLEF. Whenever the header was wider than
+    // `systemBreakLeadInSpaces`, the max picked the clef's own origin and the
+    // curve was drawn straight through the clef glyph. Visible in any
+    // rasterised multi-system score with a tie across the break.
+    //
+    // Anchoring at the midpoint of the header-to-note gap is self-normalising:
+    // `musicLeft` is by construction already clear of the header, so half of
+    // that gap always is too, however wide the header happens to be.
+    final headerGap = extent.musicLeft - extent.headerRight;
+    final leadIn = headerGap > 0
+        ? math.min(systemBreakLeadInSpaces * staffSpace, headerGap * 0.5)
+        : systemBreakLeadInSpaces * staffSpace;
+    final lead = extent.musicLeft - leadIn;
+
+    // Degenerate case: the closing note IS the leftmost element of the system,
+    // so there is no header to start after — fall back to a fixed lead-in.
+    return (anchorX - lead) < staffSpace ? anchorX - staffSpace * 1.5 : lead;
+  }
+
+  /// Vertical correction for an element that belongs to another system than the
+  /// one this renderer was built for.
+  ///
+  /// Endpoint Y is derived from the pitch and [staffBaselineY], which only
+  /// describes [referenceSystem]. When the caller passes several systems at
+  /// once, the element's own position carries its system baseline (notes hold
+  /// their pixel Y, other elements the baseline itself), so the difference
+  /// gives the shift. Elements of [referenceSystem] are never shifted, so the
+  /// single-system path is bit-for-bit unchanged.
+  double _systemBaselineShift(
+    PositionedElement positioned,
+    int referenceSystem,
+    Clef clef,
+  ) {
+    if (positioned.system == referenceSystem) {
+      return 0.0;
+    }
+    final element = positioned.element;
+    if (element is Note) {
+      final staffPosition = StaffPositionCalculator.calculate(
+        element.pitch,
+        clef,
+        extraOctaveShift: _octaveShiftOf(element),
+      );
+      // Inverse of StaffPositionCalculator.toPixelY.
+      return (positioned.position.dy + (staffPosition * staffSpace * 0.5)) -
+          staffBaselineY;
+    }
+    return positioned.position.dy - staffBaselineY;
+  }
+
+  /// Draws one half of a span broken by a system break.
+  ///
+  /// [anchor] is the endpoint on the note; the other end is free ("in the air"):
+  /// it sits at the system limit and is lifted away from the staff so the
+  /// segment stops without pointing at anything. Curvature, control points and
+  /// the Bravura endpoint/midpoint thicknesses are the ordinary ones.
+  void _drawSystemBreakSegment({
+    required Canvas canvas,
+    required Offset anchor,
+    required _SystemExtent? extent,
+    required bool above,
+    required bool outgoing,
+    required bool isSlur,
+    required Color color,
+  }) {
+    final freeX = outgoing
+        ? _outgoingBreakX(extent, anchor.dx)
+        : _incomingBreakX(extent, anchor.dx);
+    final lift = systemBreakAirLiftSpaces * staffSpace * (above ? -1 : 1);
+    final free = Offset(freeX, anchor.dy + lift);
+
+    final startPoint = outgoing ? anchor : free;
+    final endPoint = outgoing ? free : anchor;
+
+    final calculator = SlurCalculator(
+      rules: rules,
+      skylineCalculator: isSlur ? skylineCalculator : null,
+    );
+    final curve = isSlur
+        ? calculator.calculateSlur(
+            startPoint: startPoint,
+            endPoint: endPoint,
+            placement: above,
+            staffSpace: staffSpace,
+          )
+        : calculator.calculateTie(
+            startPoint: startPoint,
+            endPoint: endPoint,
+            placement: above,
+            staffSpace: staffSpace,
+          );
+
+    _drawVariableThicknessCurve(canvas, curve, color, isSlur: isSlur);
+  }
+
+  /// Draws the slur boundaries in [positions] whose partner is missing because
+  /// it lives on another system (cases (a) and (b) of the class docs).
+  ///
+  /// Pairing uses [GroupRenderer.slurEventsOf] and the same number-keyed
+  /// matching as `GroupRenderer.identifySlurGroups`, so a boundary is reported
+  /// here exactly when no complete group was produced for it — a span is never
+  /// drawn twice.
+  void _renderHangingSlurs({
+    required Canvas canvas,
+    required List<PositionedElement> positions,
+    required Clef currentClef,
+    required Color color,
+    required Map<int, _SystemExtent> extents,
+    required int referenceSystem,
+  }) {
+    final open = <int, int>{}; // slur number -> element index
+    final hanging = <({int index, bool isStart})>[];
+
+    for (int index = 0; index < positions.length; index++) {
+      final element = positions[index].element;
+      if (element is! Note && element is! Chord) {
+        continue;
+      }
+      for (final event in GroupRenderer.slurEventsOf(element)) {
+        if (event.type == SlurType.start) {
+          open[event.number] = index;
+        } else if (event.type == SlurType.end) {
+          if (open.remove(event.number) == null) {
+            hanging.add((index: index, isStart: false));
+          }
+        }
+      }
+    }
+    for (final entry in open.entries) {
+      hanging.add((index: entry.value, isStart: true));
+    }
+
+    for (final boundary in hanging) {
+      final positioned = positions[boundary.index];
+      // Grace-note slurs belong to the grace-note renderer.
+      if (_hasGraceOrnamentOnElement(positioned.element)) {
+        continue;
+      }
+
+      final preferred = boundary.isStart ? SlurType.start : SlurType.end;
+      final probe = _pickNoteFromElement(
+        positioned,
+        above: true,
+        clef: currentClef,
+        preferredSlurType: preferred,
+      );
+      if (probe == null) {
+        continue;
+      }
+
+      // Only one note is available, so the side comes from its stem alone
+      // (Behind Bars: a slur sits on the side opposite the stem).
+      final above = !probe.stemUp;
+      final note = _pickNoteFromElement(
+        positioned,
+        above: above,
+        clef: currentClef,
+        preferredSlurType: preferred,
+      )!;
+
+      final anchor =
+          _calculateSlurEndpoint(
+            note.noteOrigin,
+            note.note,
+            currentClef,
+            isStart: boundary.isStart,
+            above: above,
+            stemUp: note.stemUp,
+          ).translate(
+            0,
+            _systemBaselineShift(positioned, referenceSystem, currentClef),
+          );
+
+      _drawSystemBreakSegment(
+        canvas: canvas,
+        anchor: anchor,
+        extent: extents[positioned.system],
+        above: above,
+        outgoing: boundary.isStart,
+        isSlur: true,
+        color: color,
+      );
+    }
+  }
+
+  /// Draws the tied notes in [positions] whose partner note is missing because
+  /// it lives on another system (cases (a) and (b) of the class docs).
+  void _renderHangingTies({
+    required Canvas canvas,
+    required List<PositionedElement> positions,
+    required Clef currentClef,
+    required Color color,
+    required Map<int, _SystemExtent> extents,
+    required int referenceSystem,
+  }) {
+    for (int index = 0; index < positions.length; index++) {
+      final positioned = positions[index];
+      if (positioned.element is! Note && positioned.element is! Chord) {
+        continue;
+      }
+      final placements = _resolveElementPlacements(positioned, currentClef);
+      final tied = placements
+          .where((placement) => placement.note.tie != null)
+          .toList();
+      if (tied.isEmpty) {
+        continue;
+      }
+
+      // Same fan rule as renderTies: inside a chord the ties spread outward
+      // from the vertical midpoint (Gould p.62-64).
+      double? midPos;
+      if (tied.length > 1) {
+        var maxP = tied.first.staffPosition;
+        var minP = maxP;
+        for (final placement in tied) {
+          if (placement.staffPosition > maxP) maxP = placement.staffPosition;
+          if (placement.staffPosition < minP) minP = placement.staffPosition;
+        }
+        midPos = (maxP + minP) / 2;
+      }
+
+      final shift = _systemBaselineShift(
+        positioned,
+        referenceSystem,
+        currentClef,
+      );
+      final extent = extents[positioned.system];
+
+      for (final placement in tied) {
+        final tie = placement.note.tie;
+        final opensForward = tie == TieType.start || tie == TieType.inner;
+        final closesBackward = tie == TieType.end || tie == TieType.inner;
+        final hangingStart =
+            opensForward &&
+            !_hasTiePartner(positions, index, placement.note, forward: true) &&
+            _isSystemEdgeEvent(positions, index, forward: true);
+        final hangingEnd =
+            closesBackward &&
+            !_hasTiePartner(positions, index, placement.note, forward: false) &&
+            _isSystemEdgeEvent(positions, index, forward: false);
+        if (!hangingStart && !hangingEnd) {
+          continue;
+        }
+
+        final tieAbove = midPos != null
+            ? placement.staffPosition >= midPos
+            : !placement.stemUp;
+
+        if (hangingStart) {
+          _drawSystemBreakSegment(
+            canvas: canvas,
+            anchor: _tieBreakAnchor(
+              placement,
+              tieAbove: tieAbove,
+              isStart: true,
+            ).translate(0, shift),
+            extent: extent,
+            above: tieAbove,
+            outgoing: true,
+            isSlur: false,
+            color: color,
+          );
+        }
+        if (hangingEnd) {
+          _drawSystemBreakSegment(
+            canvas: canvas,
+            anchor: _tieBreakAnchor(
+              placement,
+              tieAbove: tieAbove,
+              isStart: false,
+            ).translate(0, shift),
+            extent: extent,
+            above: tieAbove,
+            outgoing: false,
+            isSlur: false,
+            color: color,
+          );
+        }
+      }
+    }
+  }
+
+  /// Whether [note] has a partner of the same written pitch elsewhere in
+  /// [positions] — later in the list when [forward], earlier otherwise.
+  ///
+  /// A tie with no partner in the list is a tie broken by a system break: the
+  /// other note is on the neighbouring system, which the caller renders in its
+  /// own pass.
+  bool _hasTiePartner(
+    List<PositionedElement> positions,
+    int index,
+    Note note, {
+    required bool forward,
+  }) {
+    final step = forward ? 1 : -1;
+    for (int j = index + step; j >= 0 && j < positions.length; j += step) {
+      final element = positions[j].element;
+      final candidates = element is Note
+          ? <Note>[element]
+          : (element is Chord ? element.notes : const <Note>[]);
+      for (final candidate in candidates) {
+        if (!_sameWrittenPitch(note, candidate)) {
+          continue;
+        }
+        final tie = candidate.tie;
+        if (forward && (tie == TieType.end || tie == TieType.inner)) {
+          return true;
+        }
+        if (!forward && (tie == TieType.start || tie == TieType.inner)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /// Whether the element at [index] is the last event of its system (or the
+  /// first, when [forward] is false), counting only the notes of its own voice.
+  ///
+  /// A tie always joins CONSECUTIVE notes of the same pitch, so it can only be
+  /// broken by a line break when its note sits at the very edge of the system:
+  /// its partner is then the first note of the next system. An unmatched tie
+  /// anywhere else is a defect in the data, not a broken tie, and gets no
+  /// segment — otherwise every stray `TieType.start` would sprout a stub.
+  bool _isSystemEdgeEvent(
+    List<PositionedElement> positions,
+    int index, {
+    required bool forward,
+  }) {
+    final anchor = positions[index];
+    final step = forward ? 1 : -1;
+    for (int j = index + step; j >= 0 && j < positions.length; j += step) {
+      final other = positions[j];
+      if (other.system != anchor.system ||
+          other.voiceNumber != anchor.voiceNumber) {
+        continue;
+      }
+      if (other.element is Note || other.element is Chord) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /// Single-sided tie anchor, used by the broken halves.
+  ///
+  /// Mirrors [_calculateTieEndpoints]; that method keeps a clearance shared by
+  /// both noteheads, which is impossible here because only one of them exists
+  /// in this system.
+  Offset _tieBreakAnchor(
+    _ElementNotePlacement placement, {
+    required bool tieAbove,
+    required bool isStart,
+  }) {
+    final metrics = _resolveNoteheadMetrics(
+      placement.noteOrigin,
+      placement.note,
+    );
+    final clearance = math.max(
+      metrics.halfHeight + staffSpace * 0.1,
+      staffSpace * 0.35,
+    );
+    return Offset(
+      _resolveStemSafeAnchorX(
+        metrics,
+        stemUp: placement.stemUp,
+        above: tieAbove,
+        isStart: isStart,
+      ),
+      placement.noteOrigin.dy + (tieAbove ? -clearance : clearance),
+    );
   }
 
   _ElementNotePlacement? _pickNoteFromElement(
@@ -280,7 +881,11 @@ class SlurRenderer {
     final placements = <_ElementNotePlacement>[];
     if (element.element is Note) {
       final note = element.element as Note;
-      final staffPosition = StaffPositionCalculator.calculate(note.pitch, clef);
+      final staffPosition = StaffPositionCalculator.calculate(
+        note.pitch,
+        clef,
+        extraOctaveShift: _octaveShiftOf(note),
+      );
       final noteY = StaffPositionCalculator.toPixelY(
         staffPosition,
         staffSpace,
@@ -302,16 +907,14 @@ class SlurRenderer {
     }
 
     final chord = element.element as Chord;
+    int chordPosOf(Note n) => StaffPositionCalculator.calculate(
+      n.pitch,
+      clef,
+      extraOctaveShift: _octaveShiftOf(n),
+    );
     final sortedNotes = [...chord.notes]
-      ..sort(
-        (left, right) => StaffPositionCalculator.calculate(
-          right.pitch,
-          clef,
-        ).compareTo(StaffPositionCalculator.calculate(left.pitch, clef)),
-      );
-    final positions = sortedNotes
-        .map((note) => StaffPositionCalculator.calculate(note.pitch, clef))
-        .toList();
+      ..sort((left, right) => chordPosOf(right).compareTo(chordPosOf(left)));
+    final positions = sortedNotes.map(chordPosOf).toList();
     final stemUp = ChordRenderer.resolveStemDirection(
       chord: chord,
       positions: positions,
@@ -431,7 +1034,11 @@ class SlurRenderer {
     final metrics = _resolveNoteheadMetrics(notePos, note);
     final effectiveGraceSlur = isGraceSlur || hasGraceOrnament(note);
 
-    final staffPos = StaffPositionCalculator.calculate(note.pitch, clef);
+    final staffPos = StaffPositionCalculator.calculate(
+      note.pitch,
+      clef,
+      extraOctaveShift: _octaveShiftOf(note),
+    );
     final noteY = StaffPositionCalculator.toPixelY(
       staffPos,
       staffSpace,
@@ -483,8 +1090,13 @@ class SlurRenderer {
     final startStaffPos = StaffPositionCalculator.calculate(
       startNote.pitch,
       clef,
+      extraOctaveShift: _octaveShiftOf(startNote),
     );
-    final endStaffPos = StaffPositionCalculator.calculate(endNote.pitch, clef);
+    final endStaffPos = StaffPositionCalculator.calculate(
+      endNote.pitch,
+      clef,
+      extraOctaveShift: _octaveShiftOf(endNote),
+    );
     final startNoteY = StaffPositionCalculator.toPixelY(
       startStaffPos,
       staffSpace,
@@ -692,6 +1304,29 @@ class SlurRenderer {
 
     canvas.drawPath(closedPath, paint);
   }
+}
+
+/// Horizontal limits of one system, in canvas pixels.
+class _SystemExtent {
+  /// Smallest X of the system (usually the restated clef).
+  final double left;
+
+  /// Largest X of the system, or its rightmost barline.
+  final double right;
+
+  /// X of the first note/chord/rest, i.e. where the clef/key restatement ends.
+  final double musicLeft;
+
+  /// X of the RIGHTMOST system element (clef, key signature or meter) of this
+  /// system — the head of the gap a cross-system slur may lead in through.
+  final double headerRight;
+
+  const _SystemExtent({
+    required this.left,
+    required this.right,
+    required this.musicLeft,
+    required this.headerRight,
+  });
 }
 
 class _NoteheadMetrics {

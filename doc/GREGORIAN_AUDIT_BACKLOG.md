@@ -1,29 +1,75 @@
 # Gregorian SOTA audit backlog (59 confirmed)
 
-> **2.6.0 audit status (2026-06-19).** Cross-checked against the code by a
-> two-pass automated audit (classify, then adversarial verify). An item is
-> listed **RESOLVED** only when the adversarial pass confirmed the desired
-> behavior is implemented; **PARTIAL** = implemented with caveats/gaps; the
-> rest stay open. Overlay over 59 items — the per-item descriptions below
-> are unchanged.
+> **Evidence rule (see the methodological note at the top of
+> `doc/LIBRARY_AUDIT_BACKLOG.md`).** RESOLVED requires a test that would fail if
+> the regression returned. For chant, the metric tests live in
+> `test/gregorian/greciliae_calibration_test.dart` — they assert against the
+> FONT FILE, not against the renderer's own output, which is the only way to
+> catch a calibration error that goldens would happily freeze.
 
-- **RESOLVED (2):**
+> **2.7.0 audit status (2026-08-22).** Re-verified against the code after the
+> two remediation waves that followed `doc/AUDITORIA_FORENSE_2026-08-21.md`.
+> The previous overlay (RESOLVED 2 / PARTIAL 13) was badly stale: several items
+> had been implemented since and never re-marked. Per-item descriptions below
+> are unchanged and still describe the ORIGINAL defect.
+
+- **RESOLVED (7):**
   - **#1** — Vertical placement uses clef-absolute positioning
-  - **#25** — Syllable hyphenation between neumes of same word (repeated h...
-- **PARTIAL (13):**
-  - **#4** — Quilisma-scandicus and quilisma-torculus precomposed glyphs
-  - **#5** — Augmentum mora dot uses AuctumMora glyph
-  - **#6** — Lyric/syllable anchored under first note of neume
-  - **#7** — Divisiones with asymmetric spacing and virgula type
-  - **#8** — Custos with variants, space reserve, and pre-clef-change
+    (`gregorian_renderer.dart:129, 414-417`: `ref = _clefAnchorDiatonic(clef)`,
+    not the melodic median).
+  - **#5** — Augmentum mora dot uses the engraved `AuctumMora` glyph
+    (`gregorian_renderer.dart:694-699`), with the drawn circle kept only as a
+    fallback when the font lacks it.
+  - **#7** — Divisiones get asymmetric breathing space
+    (`gregorian_renderer.dart:441, 468`: a divisio-specific gap, wider after the
+    bar than before).
+  - **#13** — Descending liquescent climacus uses the precomposed `Ancus` glyph
+    (`gregorian_renderer.dart:238-241`) instead of the crude virga+diamond
+    assembly.
+  - **#15** — Horizontal episema uses the shape-specific `HEpisema*` glyphs
+    (`HEpisemaVirga` / `HEpisemaQuilisma` / `HEpisemaPunctum`,
+    `gregorian_renderer.dart:707-716`), chosen from the notehead form under it.
+  - **#20** — Custos picks an up/down × short/medium/long variant by reach
+    (`gregorian_renderer.dart:841`).
+  - **#25** — Syllable hyphenation between neumes of the same word, including the
+    repeated hyphen over long gaps (`gabc_parser.dart:88-101, 140-155`).
+- **Not one of the 59 — new in the forensic audit, and fixed this round:**
+  - **F-29, vertical calibration.** This is the reason the evidence rule above
+    exists. `_unitsPerStep` / `_fontScale` / `_firstNoteAnchor` are no longer the
+    hand-tuned constants `147.0` / `3.4` / `70.0`; they are DERIVED from the
+    Greciliae metrics at load time (`_unitsPerStepOf`, `_fontScaleOf`,
+    `_firstNoteAnchorOf`, `gregorian_renderer.dart:84-101`). The old 147 vs
+    ~157.5 units-per-degree mismatch put the top note of a wide neume ~7% off,
+    cumulative with the ambitus — and every chant golden had frozen that error as
+    correct, which is exactly the failure mode goldens cannot catch. The property
+    test in `test/gregorian/greciliae_calibration_test.dart` measures each `Pes`
+    ambitus step against the FONT FILE and would fail if the constants came back.
+- **PARTIAL (11):**
+  - **#3 / #10** — Repeated-note neumes: same-pitch strophae now take the
+    `Stropha` glyph with a tighter advance (`gregorian_renderer.dart:199,
+    350-354`), so distropha/tristropha stop rendering as generic puncta. The
+    `StrophaAucta` variant for the augmented final stropha is still unused.
+  - **#4** — Quilisma-scandicus / quilisma-torculus — `QuilismaPes` is selected
+    for the two-note rising case (`gregorian_renderer.dart:226, 267`); longer
+    quilisma runs still fall through to generic assembly.
+  - **#6** — Lyric anchored under the first note of the neume
+  - **#8** — Custos: the variant choice is done (#20) but the right-margin space
+    reserve and the pre-clef-change custos are not.
   - **#12** — Punctum-mora dot binding at neume level
-  - **#13** — Climacus as precomposed glyph or proper assembly
-  - **#15** — Horizontal episema as shape-specific HEpisema glyphs
-  - **#17** — Quilisma and oriscus rhythmic treatment; pressus/oriscus-fle...
-  - **#20** — Custos orientation and vertical seating by glyph anchor
-  - **#28** — Accent-based lyric centering (explicit {..} or heuristic)
-  - **#35** — Mark anchor offsets per neume sub-glyph (not uniform spread)
-  - **#46** — Clef/initial spacing reserve and clef-flat glyph rendering
+  - **#17** — Quilisma/oriscus rhythmic treatment; pressus/oriscus-flexus
+  - **#28** — Accent-based lyric centering (explicit `{..}` or heuristic)
+  - **#35 / #54** — Mark anchors within a precomposed glyph are still an even
+    spread across the advance, so episema/ictus/mora can land off-note on wide
+    neumes. This is the largest remaining fidelity gap and it is NOT covered by
+    a metric test — the calibration test only checks the vertical unit.
+  - **#46** — Clef/initial spacing reserve and clef-flat rendering
+- **Still OPEN (41 items):** #2, #9, #11, #14, #16, #18, #19, #21, #22, #23, #24,
+  #26, #27, #29, #30, #31, #32, #33, #34, #36, #37, #38, #39, #40, #41 (ictus is
+  still a plain stroke, `gregorian_renderer.dart:726-733`, not the `VEpisema`
+  glyph), #42–#45, #47–#53, #55–#59. The divisiones are still drawn geometrically rather than with the
+  Greciliae `Divisio*` glyphs — that is a deliberate choice recorded in the code
+  (`_drawDivisio`: those glyphs have unstable bounding boxes and there is no
+  `Finalis`), not an oversight.
 
 ## 1. [HIGH/large [MODEL CHANGE]] (pitch-clef-modal) Vertical placement ignores the clef entirely (median-centred, not clef-absolute)
 **Desejado:** In square notation the staff position is absolute: a c4 do-clef fixes DO on the 4th line, and every pitch is read off that anchored line by line/space. The note's vertical position must be derived from (pitch slot - clef-line slot), independent of the melody's median. This is what makes the clef line, accidentals, custos pitch, and clef changes all line up consistently.

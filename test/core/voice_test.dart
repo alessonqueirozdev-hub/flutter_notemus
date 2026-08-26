@@ -110,26 +110,30 @@ void main() {
       expect(offset, equals(6.0)); // 0.6 * 10.0
     });
 
-    test('Voice 3 has 1.2 staff spaces offset', () {
+    // Behind Bars (Gould p.39-46): voices pair up by STEM DIRECTION, they do
+    // not stack. Odd voices (1, 3) are stem-up and keep the reference column;
+    // even voices (2, 4) are stem-down and shift right by one notehead.
+    // The previous expectation — an ever-growing 0.6 SS ladder that put voice 4
+    // a full 1.8 SS right of voice 1 — is not something an engraver would write,
+    // and the tests were encoding that bug rather than catching it.
+    test('Voice 3 shares the stem-up column with voice 1', () {
       final voice = Voice(number: 3);
-      final offset = voice.getHorizontalOffset(staffSpace);
-
-      expect(offset, equals(12.0)); // 1.2 * 10.0
+      expect(voice.getHorizontalOffset(staffSpace), equals(0.0));
+      expect(voice.getStemDirection(), StemDirection.up);
     });
 
-    test('Voice 4 has 1.8 staff spaces offset', () {
+    test('Voice 4 shares the stem-down column with voice 2', () {
       final voice = Voice(number: 4);
-      final offset = voice.getHorizontalOffset(staffSpace);
-
-      expect(offset, equals(18.0)); // 1.8 * 10.0
+      expect(voice.getHorizontalOffset(staffSpace), equals(6.0));
+      expect(voice.getStemDirection(), StemDirection.down);
     });
 
-    test('Offset increases by 0.6 staff spaces per voice', () {
+    test('Offset follows stem direction, not voice count', () {
       const staffSpace = 10.0;
       for (int i = 1; i <= 5; i++) {
         final voice = Voice(number: i);
         final offset = voice.getHorizontalOffset(staffSpace);
-        final expectedOffset = (i - 1) * 0.6 * staffSpace;
+        final expectedOffset = i.isEven ? 0.6 * staffSpace : 0.0;
 
         expect(offset, equals(expectedOffset),
           reason: 'Voice $i should have offset ${expectedOffset}px');

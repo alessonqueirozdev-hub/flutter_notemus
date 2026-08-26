@@ -1,46 +1,175 @@
 name: CI
 
+# `pull_request` alone was not enough: PR #26 was opened from a branch in this
+# same repository and GitHub created no run for it across two pushes, while a
+# manual `workflow_dispatch` on the identical commit ran all six jobs. Rather
+# than keep guessing at the event plumbing, working branches are covered
+# directly by `push` — which is the coverage that was actually wanted anyway,
+# since before this every commit outside master ran nothing at all.
 on:
   push:
-    branches:
-      - main
-      - master
+    branches: [main, master, 'sprint/**', 'feat/**', 'fix/**']
   pull_request:
-    branches:
-      - main
-      - master
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  analyze-and-test:
-    name: Analyze & Test
+  # ---------------------------------------------------------------------------
+  # The logic suite runs on all three desktop platforms. Pixel goldens are
+  # EXCLUDED here on purpose: `matchesGoldenFile` is not portable — font
+  # rasterisation, hinting and anti-aliasing differ per OS, so an image recorded
+  # on one platform fails on another for reasons that have nothing to do with the
+  # engraving. Running the rest cross-platform is what actually catches
+  # portability bugs (path separators, locale, float formatting).
+  # ---------------------------------------------------------------------------
+  test:
+    name: Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Analyze (strict — infos are fatal)
+        run: flutter analyze
+
+      - name: Test (excluding pixel goldens)
+        run: flutter test --exclude-tags golden --reporter=expanded
+
+  # ---------------------------------------------------------------------------
+  # Goldens run only on the platform they were recorded on. If you re-record
+  # them on a different OS, change this and say so in the PR.
+  # ---------------------------------------------------------------------------
+  goldens:
+    name: Pixel goldens (windows)
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Golden tests
+        run: flutter test --tags golden --reporter=expanded
+
+      - name: Upload failure diffs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-failures
+          path: test/golden/failures/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  # ---------------------------------------------------------------------------
+  # The example app is a separate pub workspace. Note it is resolved and analyzed
+  # in its own job: running `flutter analyze` inside example/ rewrites the root's
+  # package resolution, which makes `package:pdf` unresolvable for any step that
+  # follows it in the same checkout.
+  # ---------------------------------------------------------------------------
+  example:
+    name: Example app
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          cache: true
 
-      - name: Get dependencies (lib)
-        run: flutter pub get
-
-      - name: Dart analyze (lib)
-        run: flutter analyze --no-fatal-infos
-
-      - name: Run unit tests
-        run: flutter test --reporter=expanded
-
-      - name: Get dependencies (example)
+      - name: Resolve dependencies
         working-directory: example
         run: flutter pub get
 
-      - name: Dart analyze (example)
+      - name: Analyze
         working-directory: example
-        run: flutter analyze --no-fatal-infos
+        run: flutter analyze
 
-      - name: Verify publish readiness
-        run: flutter pub publish --dry-run
+      - name: Build web (proves the showcase still compiles)
+        working-directory: example
+        run: flutter build web --release
+
+  # ---------------------------------------------------------------------------
+  publish-readiness:
+    name: Publish dry run
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      # Printed on every run, permanently. `pub publish --dry-run` reports
+      # "N checked-in files are modified in git" WITHOUT ever having named the
+      # files in a form worth trusting, and diagnosing it from the warning alone
+      # cost a full afternoon of guessing on this repository. Whatever the
+      # runner dirties, this step shows it.
+      - name: Working tree state
+        run: |
+          git status --porcelain
+          git diff --stat
+
+      # `dart pub publish --dry-run` exits 65 for warnings, hints AND errors
+      # alike, so its exit code cannot tell "this package is unpublishable"
+      # apart from "this runner left a file dirty". Two things are true of
+      # every run here and neither is a defect in the package:
+      #
+      #   * the working tree is dirty, because resolving dependencies on a
+      #     runner writes files the repository tracks;
+      #   * pub hints that 2.8.0 is not incremental over pub.dev's 2.6.0,
+      #     because 2.7.0 and 2.7.1 were released in git and never published.
+      #     That is a release decision, made deliberately, not an accident.
+      #
+      # So this step gates on what actually blocks a publish — validation
+      # ERRORS — and prints everything else in full. If pub ever adds an error,
+      # the job goes red and the log already contains the reason.
+      - name: pub publish --dry-run
+        run: |
+          set +e
+          flutter pub publish --dry-run 2>&1 | tee /tmp/dryrun.log
+          set -e
+          if grep -qE "^\* .*(error|Error)|found the following error" /tmp/dryrun.log; then
+            echo "::error::pub publish --dry-run reported a validation error"
+            exit 1
+          fi
+          echo "No validation errors. Warnings and hints above are informational."
+
+      # Reported, not gated. A threshold would have to be a number somebody
+      # measured, and pana could not be run locally to establish one (its
+      # sandbox rejects Windows temp paths containing ':'). Read the summary in
+      # the job log; turn this into a gate once there is a baseline score to
+      # anchor it to.
+      - name: Package health (pana, report only)
+        continue-on-error: true
+        run: |
+          dart pub global activate pana
+          dart pub global run pana --no-warning . | tail -40

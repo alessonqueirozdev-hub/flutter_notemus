@@ -6,30 +6,64 @@
 //   * header lines "field: value;" until a line that is exactly "%%", then a
 //     stream of `syllable(notes)` tokens (whitespace separates words);
 //   * pitch letters a..m are STAFF SLOTS relative to the clef (a lowest), never
-//     absolute pitches — mapped here to a consistent relative diatonic sequence
-//     so the renderer draws the correct contour (absolute pitch deferred);
-//   * clefs c1..c4 (do) / f1..f4 (fa), optional clef-flat (cb/fb);
+//     absolute pitches — resolved HERE to a real diatonic pitch under the clef
+//     in force (see [GabcParser._slotToPitch]), so `ChantMidiMapper` can sound
+//     them and a mid-score clef change re-anchors everything after it;
+//   * clefs c1..c4 (do) / f1..f4 (fa), optional clef-flat (cb/fb); the first
+//     clef token is the score's clef, every later one becomes a
+//     [ChantClefChange] element in the stream (document order);
 //   * note shapes: lowercase = punctum, UPPER = punctum inclinatum, v = virga,
 //     w = quilisma, o = oriscus, s = stropha;
 //   * modifiers: ~ deminutus (liquescent), < / > liquescence, . mora, _ episema,
 //     ' ictus, accidentals x/y/#;
 //   * compound neumes auto-classified from the melodic contour;
-//   * divisiones ` , ; : :: and spaces !, /, //.
+//   * divisiones ` , ; : :: and spaces !, /, //;
+//   * fusion `@` between neumes (Gregorio 4.1+): the notes on either side are
+//     welded into ONE neume and the joint is flagged `NeumeComponent.connected`
+//     so the renderer draws them touching;
+//   * `nabc` (adiastematic St. Gall/Laon notation) written after a `|` inside a
+//     note token is IGNORED — the pipe and everything after it are dropped so
+//     nabc letters can never be mistaken for pitches;
+//   * `%` comments to end of line inside the score body.
 //
-// Tier B v1: one syllable group may contain several neumes separated by chant
-// spaces; the syllable text attaches to the first. Complex fusions (@, soft
-// accidentals, double clefs) are not yet handled and degrade gracefully.
+// One syllable group may contain several neumes separated by chant spaces; the
+// syllable text attaches to the first.
+//
+// STILL UNSUPPORTED (parsed defensively, never fatal):
+//   * the SECOND clef of a double clef (`c3@c1`): only the first is used, the
+//     second is reported in `GabcResult.unsupported`;
+//   * nabc CONTENT — it is discarded, not rendered on an nabc line;
+//   * `z`/`Z` (explicit line/page break), `[...]` braces (choral signs, custom
+//     spacing, verses, translations), `<sp>`/`<v>` verbatim text macros beyond
+//     the tag stripping done by [GabcParser._cleanText], the `-` initio
+//     debilis, `r` cavum, numbered episema variants (`_0`.. `_5`) and the
+//     `<eu>`/`<nlba>` block markers: all are skipped without breaking the
+//     surrounding neume.
 
-import 'package:flutter_notemus/core/core.dart';
+import 'package:flutter_notemus/core/musical_element.dart';
+import 'package:flutter_notemus/core/neume.dart';
 
-import 'gregorian_renderer.dart';
+// Only the clef model is needed here, and it lives in a Flutter-free library,
+// so GABC import stays usable outside a UI (CLI tools, tests, MIDI export).
+import 'chant_clef.dart';
 
 /// Result of parsing a GABC document.
 class GabcResult {
+  /// The INITIAL clef (the first clef token of the document). Kept for
+  /// compatibility: mid-score clef changes are elements, not fields — look for
+  /// [ChantClefChange] inside [elements].
   final ChantClef clef;
+
   final List<MusicalElement> elements;
   final Map<String, String> headers;
-  const GabcResult(this.clef, this.elements, this.headers);
+
+  /// Human-readable notes about GABC constructs that were recognised but not
+  /// implemented (the second half of a double clef, discarded nabc, ...). Empty
+  /// when the document used nothing outside the supported subset.
+  final List<String> unsupported;
+
+  const GabcResult(this.clef, this.elements, this.headers,
+      {this.unsupported = const <String>[]});
 }
 
 class GabcParser {
@@ -46,7 +80,11 @@ class GabcParser {
       }
     }
     final headerLines = sep >= 0 ? lines.sublist(0, sep) : const <String>[];
-    final body = (sep >= 0 ? lines.sublist(sep + 1) : lines).join(' ');
+    // GABC comments run from a `%` to the end of the line; strip them before
+    // the score lines are joined, or a comment would be read as lyrics/notes.
+    final body = (sep >= 0 ? lines.sublist(sep + 1) : lines)
+        .map(_stripComment)
+        .join(' ');
     for (final line in headerLines) {
       final idx = line.indexOf(':');
       if (idx > 0) {
@@ -55,33 +93,57 @@ class GabcParser {
       }
     }
 
-    // 2. Walk `text(notes)` tokens. Pitch is resolved RELATIVE to the active
-    // clef (which may change mid-score); GabcResult carries the FIRST clef for
-    // the renderer's initial registration.
+    // 2. Walk `text(notes)` tokens. Pitch is resolved against the active clef,
+    // which may CHANGE mid-score: the first clef token is the document's clef
+    // (reported by GabcResult.clef) and every later one is emitted as a
+    // [ChantClefChange] element so the renderer re-anchors the staff and the
+    // MIDI mapper picks up the new clef-flat.
     var clef = const ChantClef();
     var firstClef = clef;
     var sawClef = false;
     final elements = <MusicalElement>[];
+    final unsupported = <String>[];
     final token = RegExp(r'([^()\s]*)\(([^)]*)\)');
     final matches = token.allMatches(body).toList();
     for (var mi = 0; mi < matches.length; mi++) {
       final m = matches[mi];
       final text = _cleanText(m.group(1) ?? '');
-      final notes = (m.group(2) ?? '').trim();
+      var notes = (m.group(2) ?? '').trim();
 
-      final clefMatch = RegExp(r'^([cf])(b?)([1-4])$').firstMatch(notes);
+      // `nabc`: adiastematic notation written after a `|` inside the token
+      // (enabled by the `nabc-lines` header). It uses its own alphabet, several
+      // of whose letters collide with GABC pitch letters, so it MUST be dropped
+      // before anything else looks at the token.
+      final bar = notes.indexOf('|');
+      if (bar >= 0) {
+        final nabc = notes.substring(bar + 1).trim();
+        notes = notes.substring(0, bar).trim();
+        if (nabc.isNotEmpty && !unsupported.contains(_nabcNote)) {
+          unsupported.add(_nabcNote);
+        }
+      }
+
+      final clefMatch = _clefRe.firstMatch(notes);
       if (clefMatch != null) {
-        clef = ChantClef(
+        final next = ChantClef(
           type: clefMatch.group(1) == 'c'
               ? ChantClefType.doClef
               : ChantClefType.faClef,
           line: int.parse(clefMatch.group(3)!),
           flat: clefMatch.group(2) == 'b',
         );
-        if (!sawClef) {
-          firstClef = clef;
-          sawClef = true;
+        // Double clef (`c3@c1`): Gregorio draws two clefs for two-choir
+        // notation. Only the first governs the pitches here.
+        if (clefMatch.group(4) != null && !unsupported.contains(_doubleClefNote)) {
+          unsupported.add(_doubleClefNote);
         }
+        if (!sawClef) {
+          firstClef = next;
+          sawClef = true;
+        } else if (next != clef) {
+          elements.add(ChantClefChange(next));
+        }
+        clef = next;
         continue;
       }
 
@@ -101,7 +163,25 @@ class GabcParser {
       _parseSyllable(notes, text, elements, clef, hyphenAfter);
     }
 
-    return GabcResult(sawClef ? firstClef : clef, elements, headers);
+    return GabcResult(sawClef ? firstClef : clef, elements, headers,
+        unsupported: List<String>.unmodifiable(unsupported));
+  }
+
+  /// Clef token: `c1..c4` / `f1..f4`, optional `b` for the clef-flat, plus the
+  /// optional second half of a DOUBLE clef (`c3@c1`), which is recognised so it
+  /// cannot be mistaken for notes but is otherwise ignored.
+  static final RegExp _clefRe =
+      RegExp(r'^([cf])(b?)([1-4])(?:@([cf])(b?)([1-4]))?$');
+
+  static const String _nabcNote =
+      'nabc (adiastematic notation after `|`) was discarded.';
+  static const String _doubleClefNote =
+      'double clef (`c3@c1`): only the first clef was applied.';
+
+  /// Drops a `%` comment (to end of line) from one GABC source line.
+  static String _stripComment(String line) {
+    final i = line.indexOf('%');
+    return i < 0 ? line : line.substring(0, i);
   }
 
   /// Maps a GABC staff slot (a=0 .. m=12, the vertical position) to a real
@@ -133,12 +213,21 @@ class GabcParser {
 
   /// Parses the note string of one syllable group into neumes/divisiones.
   static void _parseSyllable(
-    String notes,
+    String rawNotes,
     String syllable,
     List<MusicalElement> out,
     ChantClef clef,
     bool hyphenAfter,
   ) {
+    if (rawNotes.isEmpty) return;
+
+    // FUSION (Gregorio `@`): `@` welds the notes on either side into a single
+    // graphical neume. Because fusion beats spacing, any chant space written
+    // next to the operator (`g/@hi`, `g@!hi`, `g @ hi`) is absorbed here, so the
+    // fused group always ends up inside ONE segment below and therefore in ONE
+    // [Neume]. The joint itself is flagged on the left-hand component
+    // (`NeumeComponent.connected`) by [_buildNeume].
+    final notes = rawNotes.replaceAll(_fusionRe, '@');
     if (notes.isEmpty) return;
 
     // Split into segments on chant spaces (/, //, !) — each becomes a neume.
@@ -197,6 +286,14 @@ class GabcParser {
   /// (pitch + `x`/`y`/`#`) with note neumes: each accidental is emitted as its
   /// own standalone element (no notehead), flushing any pending notes first so
   /// the sign precedes the notes it governs.
+  ///
+  /// SOFT ACCIDENTAL SCOPE (Gregorio): `x` (flat), `y` (natural) and `#`
+  /// (sharp) are written at a staff position and hold from that point **to the
+  /// end of the word, or to the next divisio, whichever comes first**. The sign
+  /// itself is only a mark on the staff, so the scope is applied where the
+  /// pitches are sounded — see `ChantMidiMapper`, which resets its table at
+  /// every divisio and at every word start (a word start being the first
+  /// syllable after one whose `hyphenAfter` is false).
   static List<MusicalElement> _buildNeume(
       String seg, String? syllable, ChantClef clef, bool hyphenAfter) {
     final result = <MusicalElement>[];
@@ -240,6 +337,7 @@ class GabcParser {
       var liquescent = false;
       var morae = 0;
       var accidental = NeumeAccidental.none;
+      var fused = false;
 
       // Consume trailing shape/modifier characters bound to this pitch.
       i++;
@@ -275,8 +373,11 @@ class GabcParser {
             accidental = NeumeAccidental.natural;
           case '#':
             accidental = NeumeAccidental.sharp;
+          case '@':
+            // Fusion joint: this note is welded to the next one.
+            fused = true;
           default:
-            break; // unknowns ignored in Tier B v1
+            break; // unknown/unsupported modifiers are skipped, never fatal
         }
         i++;
       }
@@ -303,6 +404,7 @@ class GabcParser {
         octave: octave,
         form: form,
         isLiquescent: liquescent,
+        connected: fused,
         episema: episema,
         ictus: ictus,
         morae: morae,
@@ -313,6 +415,9 @@ class GabcParser {
     flushNotes();
     return result;
   }
+
+  /// Chant space(s) adjacent to a fusion operator — absorbed by the fusion.
+  static final RegExp _fusionRe = RegExp(r'[\s/!]*@[\s/!]*');
 
   /// Classifies a neume from its melodic contour (and shapes).
   static NeumeType _classify(

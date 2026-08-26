@@ -1,4 +1,4 @@
-// lib/src/rendering/staff_position_calculateTestor.dart
+// lib/src/rendering/staff_position_calculator.dart
 // Calculation unificado de position na staff
 //
 // This class centraliza TODA a lógica de conversão de heights (pitches)
@@ -32,14 +32,27 @@ class StaffPositionCalculator {
   ///
   /// @param pitch Musical pitch (step + octave)
   /// @param clef Clef reference
+  /// @param extraOctaveShift Displacement contributed by an active [OctaveMark]
+  ///        bracket (8va = +1, 8vb = -1, 15ma = +2 …), resolved by
+  ///        [OctaveSpanTracker]. Same sign convention as `clef.octaveShift`.
   /// @return Staff position (0 = middle line, positivo = above, negativo = below)
   ///
-  /// Coordinate system:
-  /// - staffPosition = 0: line of the middle (line \1)
-  /// - staffPosition = 2: space above the line \1
-  /// - staffPosition = -2: space below the line \1
-  /// - Each incremento = meio staff space (meia position diatônica)
-  static int calculate(Pitch pitch, Clef clef) {
+  /// Coordinate system — positions are HALF-space steps, so an EVEN position is
+  /// a staff LINE and an ODD position is a space:
+  /// - staffPosition =  0: the middle (3rd) staff line
+  /// - staffPosition =  1: the space just above the middle line
+  /// - staffPosition =  2: the 4th staff line
+  /// - staffPosition = -1: the space just below the middle line
+  /// - staffPosition = -2: the 2nd staff line
+  /// - the five staff lines are therefore -4, -2, 0, +2, +4
+  ///
+  /// This dartdoc used to claim "staffPosition = 2: space above the middle
+  /// line", which is off by one whole step: position 2 is the 4th LINE, and the
+  /// space above the middle line is position 1. Nothing in the code ever
+  /// followed the wrong description — `_getClefReference` places every staff
+  /// line on an even `basePosition` — but the comment sent readers looking for a
+  /// bug that was not there.
+  static int calculate(Pitch pitch, Clef clef, {int extraOctaveShift = 0}) {
     final pitchStep = _stepToDiatonic[pitch.step] ?? 0;
 
     // Data reference by type de clef
@@ -47,31 +60,65 @@ class StaffPositionCalculator {
     // baseOctave: oitava dessa note
     final ClefReference ref = _getClefReference(clef.actualClefType);
 
-    // Calculate distance diatônica of the note reference
-    // Clefs with deslocamento de oitava (e.g., treble8vb) alteram a height
-    // sonora, mas NAO alteram a escrita no staff.
-    // By isso, o calculo visual Uses only a oitava escrita of the note.
+    // Diatonic distance from the clef's reference note.
     final octaveAdjust = pitch.octave - ref.baseOctave;
     final diatonicDistance = (pitchStep - ref.baseStep) + (octaveAdjust * 7);
 
-    // Convertsr distance diatônica for staff position
-    // staffPosition aumenta for Top (valores positivos = above the centre)
-    // Fix: Somar diatonicDistance (not subtrair) for that notes more agudas
-    // tenham staffPosition more alto
-    return ref.basePosition + diatonicDistance;
+    // Octave-transposing clefs (8va/8vb/15ma/15mb).
+    //
+    // [Pitch] is the SOUNDING pitch — the same thing MusicXML `<pitch>`, MEI
+    // `@pname/@oct` and MIDI all mean (ADR-003). A clef that sounds an octave
+    // LOWER therefore has to PRINT a given sounding pitch an octave HIGHER on
+    // the staff, which is 7 half-space positions up per octave of shift.
+    //
+    // This used to be skipped with the comment "alteram a altura sonora, mas
+    // NÃO alteram a escrita no staff", and `MidiMapper` compensated by shifting
+    // the MIDI number instead. That is a self-consistent convention on its own,
+    // but it is NOT the convention the interchange formats use, so importing a
+    // tenor part on a treble-8vb clef drew it an octave low and played it an
+    // octave low too. It was not even applied consistently: `c8vb` baked the
+    // shift into its own ClefReference (`baseOctave: 3`) and so already
+    // implemented the sounding convention while every other octave clef
+    // implemented the written one.
+    // The 8va/8vb bracket is the SECOND instance of exactly the same rule, and
+    // it lands here for exactly the same reason: an octave displacement moves
+    // where a note is PRINTED, never what it sounds, so it belongs in the one
+    // place that converts a sounding pitch into a staff position — not in the
+    // renderers, and never in `MidiMapper`.
+    //
+    // Measured before this line existed: C6 printed at staffPosition 8 with no
+    // mark AND at staffPosition 8 under every one of 8va/8vb/15ma/15mb/22da/22db
+    // — `OctaveMark.octaveShift` had zero readers in lib/, test/ and example/,
+    // so the page said "8va" while the noteheads stayed put. After: 8va -> 1,
+    // 8vb -> 15, and the two axes compose (treble8va clef PLUS an 8va bracket
+    // moves C6 two octaves down the page, to position -6).
+    final octaveShiftPositions = (clef.octaveShift + extraOctaveShift) * 7;
+
+    // staffPosition grows UPWARD (positive = above the middle line).
+    return ref.basePosition + diatonicDistance - octaveShiftPositions;
   }
 
   /// Checks if a position needs de ledger lines
   ///
   /// @param staffPosition Calculated staff position
-  /// @return true if a note está outside das 5 staff lines
+  /// @return true if drawing this note requires at least one ledger line
+  ///
+  /// This is the GATE in front of [getLedgerLinePositions] (both
+  /// `LedgerLineRenderer.render` and `ChordRenderer._drawLedgerLines` call it
+  /// first and bail out on false), so the two must answer the same question or
+  /// the gate is meaningless.
+  ///
+  /// They did not. The old body was `staffPosition > 4 || staffPosition < -4`,
+  /// which returns TRUE for +-5 while [getLedgerLinePositions] returns `[]` for
+  /// +-5 — measured, both directions. +-5 is the SPACE immediately outside the
+  /// staff (the staff lines are the even positions -4..+4, so +-5 sits between
+  /// the outermost line and the first ledger line at +-6) and a note there needs
+  /// NO ledger line at all. The disagreement drew no wrong ink — the gate passed
+  /// and then an empty list was iterated — but it made the predicate lie about
+  /// its own name, so `abs() > 4` is now `abs() >= 6`: exactly the positions
+  /// [getLedgerLinePositions] actually produces a line for.
   static bool needsLedgerLines(int staffPosition) {
-    // Staff lines vão de -4 a +4
-    // staffPosition -4 = line \1 (lower)
-    // staffPosition +4 = line \1 (upper)
-    // Notes at odd positions (spaces) between -4 and +4 do not need ledger lines
-    // Notes in positions pares (lines) between -4 and +4 not need de ledger lines
-    return staffPosition > 4 || staffPosition < -4;
+    return staffPosition >= 6 || staffPosition <= -6;
   }
 
   /// Calculates quais ledger lines are required
@@ -172,7 +219,14 @@ class StaffPositionCalculator {
         return ClefReference(baseStep: 0, baseOctave: 4, basePosition: 4);
       case ClefType.c8vb:
         // C clef sounding an octave lower; same line as tenor by convention.
-        return ClefReference(baseStep: 0, baseOctave: 3, basePosition: 2);
+        //
+        // The reference is plain C4, like every other C clef: the octave shift
+        // is applied once, uniformly, in [calculate]. It used to be baked in
+        // here as `baseOctave: 3`, which made this the ONLY clef that honoured
+        // the sounding convention — leaving it would now shift c8vb twice.
+        // Observable output is unchanged: a sounding C3 still lands on
+        // position 2.
+        return ClefReference(baseStep: 0, baseOctave: 4, basePosition: 2);
 
       // Clef DE PERCUSSÃO
       case ClefType.percussion:
@@ -206,21 +260,31 @@ class ClefReference {
 }
 
 /// Extension for facilitar uso in Pitch
+///
+/// Every member forwards [extraOctaveShift] to
+/// [StaffPositionCalculator.calculate] so that a caller working through the
+/// extension gets the same 8va/8vb displacement as one calling the calculator
+/// directly — otherwise the ledger lines would be computed for the undisplaced
+/// position and drift away from the notehead.
 extension PitchStaffPosition on Pitch {
   /// Calculates staff position for a clef
-  int staffPosition(Clef clef) {
-    return StaffPositionCalculator.calculate(this, clef);
+  int staffPosition(Clef clef, {int extraOctaveShift = 0}) {
+    return StaffPositionCalculator.calculate(
+      this,
+      clef,
+      extraOctaveShift: extraOctaveShift,
+    );
   }
 
   /// Checks if needs de ledger lines
-  bool needsLedgerLines(Clef clef) {
-    final position = staffPosition(clef);
+  bool needsLedgerLines(Clef clef, {int extraOctaveShift = 0}) {
+    final position = staffPosition(clef, extraOctaveShift: extraOctaveShift);
     return StaffPositionCalculator.needsLedgerLines(position);
   }
 
   /// Gets ledger lines required
-  List<int> getLedgerLinePositions(Clef clef) {
-    final position = staffPosition(clef);
+  List<int> getLedgerLinePositions(Clef clef, {int extraOctaveShift = 0}) {
+    final position = staffPosition(clef, extraOctaveShift: extraOctaveShift);
     return StaffPositionCalculator.getLedgerLinePositions(position);
   }
 }

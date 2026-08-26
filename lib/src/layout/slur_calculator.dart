@@ -1,4 +1,4 @@
-// lib/src/layout/slur_calculateTestor.dart
+// lib/src/layout/slur_calculator.dart
 
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
@@ -9,7 +9,7 @@ import '../engraving/engraving_rules.dart';
 /// Calculator de Slurs with curvas Bézier cúbicas
 ///
 /// Based on:
-/// - OpenSheetMusicDisplay (TiecalculateTestor.ts and SlurcalculateTestor.ts)
+/// - OpenSheetMusicDisplay (Tiecalculator.ts and Slurcalculator.ts)
 /// - Behind Bars (Elaine Gould) - regras de slurs
 /// - SMuFL specification - anchors and positioning
 ///
@@ -21,7 +21,7 @@ import '../engraving/engraving_rules.dart';
 /// 5. Limitar angles tangentes (30° a 80° according to Behind Bars)
 /// 6. Generatesr points de control Bézier cúbica
 /// 7. Rotacionar de volta to the system original
-/// 8. Returnsr curva Bézier final
+/// 8. retornar curva Bézier final
 class SlurCalculator {
   final EngravingRules rules;
   final SkyBottomLineCalculator? skylineCalculator;
@@ -73,9 +73,9 @@ class SlurCalculator {
 
     // 4. Ajustar height if houver colisões with skyline
     // C2 FIX: removed redundant `&& notesBoundingBoxes != null` guard —
-    // _adjustHeightForCollisions only uses skylinecalculateTestor, so collision
+    // _adjustHeightForCollisions only uses skylinecalculator, so collision
     // avoidance was never activated even though staff_renderer passes a
-    // SkyBottomLinecalculateTestor.
+    // SkyBottomLinecalculator.
     double finalHeight = idealHeight;
     if (skylineCalculator != null) {
       finalHeight = _adjustHeightForCollisions(
@@ -155,7 +155,7 @@ class SlurCalculator {
       requiredHeight = (extremeY - midPointY).abs() + clearance;
     }
 
-    // Returnsr o greater between height ideal and height required
+    // retornar o greater between height ideal and height required
     return math.max(idealHeight, requiredHeight);
   }
 
@@ -307,7 +307,7 @@ class SlurCalculator {
   /// Útil for:
   /// - Rendering of the curva
   /// - Detecção de colisões needs
-  /// - Currentização de skyline/bottomline
+  /// - Atualização de skyline/bottomline
   ///
   /// @param curve Curva Bézier
   /// @param numPoints Number de points a Generatesr (default: 20)
@@ -323,10 +323,10 @@ class SlurCalculator {
     return points;
   }
 
-  /// Currentiza o skyline/bottomline with a curva de slur/tie
+  /// Atualiza o skyline/bottomline with a curva de slur/tie
   ///
   /// @param curve Curva Bézier
-  /// @param placement if true, currentiza skyline; if false, bottomline
+  /// @param placement if true, atualiza skyline; if false, bottomline
   /// @param thickness Thickness of the line of the slur in pixels
   void updateSkylineWithCurve(
     CubicBezierCurve curve, {
@@ -338,13 +338,13 @@ class SlurCalculator {
     // Amostrar points to the longo of the curva
     final points = sampleBezierCurve(curve, numPoints: 30);
 
-    // Currentizar skyline/bottomline for each point
+    // Atualizar skyline/bottomline for each point
     for (final point in points) {
       if (placement) {
-        // Slur above: currentizar skyline (subtrair thickness)
+        // Slur above: atualizar skyline (subtrair thickness)
         skylineCalculator!.updateSkyLine(point.dx, point.dy - thickness / 2);
       } else {
-        // Slur below: currentizar bottomline (add thickness)
+        // Slur below: atualizar bottomline (add thickness)
         skylineCalculator!.updateBottomLine(point.dx, point.dy + thickness / 2);
       }
     }

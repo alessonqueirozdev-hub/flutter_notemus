@@ -4,7 +4,7 @@ import 'package:flutter_notemus/core/note.dart';
 import 'package:flutter_notemus/src/beaming/beam_segment.dart';
 import 'package:flutter_notemus/src/beaming/beam_types.dart';
 
-/// Represents a group of notes connected by beams with calculateTested geometry.
+/// Represents a group of notes connected by beams with calculated geometry.
 /// (Advanced version with slope analysis and beam segments.)
 class AdvancedBeamGroup {
   /// Notes in the group (must be consecutive).

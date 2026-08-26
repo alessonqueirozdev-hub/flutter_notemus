@@ -7,7 +7,7 @@ import 'smufl_metadata_loader.dart';
 
 /// Coordinate system SMuFL (Staff Music Font Layout)
 ///
-/// O SMuFL Definess a coordinate system based on unidades de staff space.
+/// O SMuFL Define a coordinate system based on unidades de staff space.
 /// 1 staff space = distance between duas staff lines
 /// Valores in metadata SMuFL are expressos in staff spaces (1.0 = 1 staff space)
 /// Fix: Metadados SMuFL usam staff spaces diretos, not 1/4 de staff space
@@ -430,7 +430,7 @@ class SmuflGlyphPositioner {
     final anchor = anchors.getAnchor(anchorName);
 
     if (anchor != null) {
-      // Convertsr anchor for pixels and Appliesr to the position of the note
+      // Convertsr anchor for pixels and aplicar to the position of the note
       final anchorPixels = anchor.toPixels(staffSpace);
       return Offset(
         notePosition.dx + anchorPixels.dx,

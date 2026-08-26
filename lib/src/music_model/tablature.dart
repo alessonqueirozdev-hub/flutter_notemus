@@ -1,3 +1,9 @@
+// DEAD CODE — a SECOND, shadowed tablature model.
+//
+// `TabNote` here collides by name with the exported `lib/core/tablature.dart`,
+// and nothing imports this file. The rendered tablature support is
+// `Note.tabFret` / `Note.tabString`. Status is tracked in
+// `doc/MODEL_ONLY.md` (deletion candidate).
 // lib/src/music_model/tablature.dart
 
 import '../../core/core.dart'; // Tipos do core

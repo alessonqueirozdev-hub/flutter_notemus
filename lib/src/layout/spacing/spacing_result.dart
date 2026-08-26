@@ -1,12 +1,123 @@
-/// Structures de data for results de spacing
-/// 
-/// Representa as positions Calculated dos symbols musicais
-/// in diferentes estágios of the algoritmo de spacing.
+/// Structures de data for results de spacing.
+///
+/// # What in this file is real
+///
+/// * [SpacingResult] and [ElementSpacing] are the return type of
+///   `IntelligentSpacingEngine.analyzeMeasure`, which measures a measure with
+///   the SAME rhythmic law the renderer uses
+///   (`IntelligentSpacingEngine.interNoteSpacing`). Use them to reason about
+///   widths and collisions.
+/// * [TimeSlice] and [SystemData] are shared helpers: they answer "what is the
+///   shortest sounding value here" and "how wide is this slice", and they are
+///   covered by `test/layout/spacing_result_test.dart`.
+/// * [SymbolPosition], [TextualSpacing], [DurationalSpacing] and
+///   [FinalSpacing] belong to the dual-algorithm EXPERIMENT. They are analysis
+///   scaffolding, never produced nor consumed by the render pass. Do not treat
+///   a test over them as evidence about rendered output.
 library;
 
 import 'package:flutter_notemus/core/core.dart';
 
-/// Position de a symbol or grupo de symbols
+import 'collision_detector.dart';
+
+/// Spacing of one rhythmic element inside a measured measure.
+///
+/// Produced by `IntelligentSpacingEngine.analyzeMeasure`. All distances are in
+/// pixels and relative to the start of the analysed measure.
+class ElementSpacing {
+  /// Index of [element] in the list handed to `analyzeMeasure`.
+  final int index;
+
+  /// The element that was measured (note, chord or rest).
+  final MusicalElement element;
+
+  /// Left edge of the element's glyph.
+  final double xPosition;
+
+  /// Gap allocated BEFORE this element (`0.0` for the first one).
+  ///
+  /// This is `interNoteSpacing(previous) + opticalAdjustment(previous, this)`.
+  final double leadingGap;
+
+  /// Estimated advance width of the element's glyph.
+  final double width;
+
+  const ElementSpacing({
+    required this.index,
+    required this.element,
+    required this.xPosition,
+    required this.leadingGap,
+    required this.width,
+  });
+
+  /// Right edge of the element's glyph.
+  double get right => xPosition + width;
+
+  @override
+  String toString() {
+    return 'ElementSpacing(#$index, x: ${xPosition.toStringAsFixed(2)}, '
+        'w: ${width.toStringAsFixed(2)}, '
+        'gap: ${leadingGap.toStringAsFixed(2)})';
+  }
+}
+
+/// Measurement report for one measure.
+///
+/// Returned by `IntelligentSpacingEngine.analyzeMeasure`. It is a *read-only
+/// answer*, not a layout: it never mutates the elements and the renderer never
+/// consumes it. Its numbers are trustworthy precisely because they come from
+/// the production rhythmic law rather than from a parallel implementation.
+class SpacingResult {
+  /// One entry per rhythmic element, in source order.
+  ///
+  /// Non-rhythmic elements (clef, barline, …) are omitted: their spacing is
+  /// owned by the layout engine, not by the rhythmic law.
+  final List<ElementSpacing> elements;
+
+  /// Shortest sounding value found, in fractions of a whole note.
+  ///
+  /// `0.0` when the measure contains no rhythmic element.
+  final double shortestDuration;
+
+  /// Distance from the left edge of the first glyph to the right edge of the
+  /// last one.
+  final double totalWidth;
+
+  /// Overlapping glyph pairs detected in the measured layout.
+  ///
+  /// Empty in a healthy measure; a non-empty list is a spacing bug.
+  final List<CollisionPair> collisions;
+
+  const SpacingResult({
+    required this.elements,
+    required this.shortestDuration,
+    required this.totalWidth,
+    required this.collisions,
+  });
+
+  /// Whether any two glyphs overlap.
+  bool get hasCollisions => collisions.isNotEmpty;
+
+  /// Gap allocated before each element, in source order.
+  List<double> get gaps =>
+      elements.map((element) => element.leadingGap).toList(growable: false);
+
+  /// Estimated glyph width of each element, in source order.
+  List<double> get widths =>
+      elements.map((element) => element.width).toList(growable: false);
+
+  @override
+  String toString() {
+    return 'SpacingResult(elements: ${elements.length}, '
+        'totalWidth: ${totalWidth.toStringAsFixed(2)}, '
+        'shortest: ${shortestDuration.toStringAsFixed(4)}, '
+        'collisions: ${collisions.length})';
+  }
+}
+
+/// **ANALYSIS SCAFFOLDING — not on the render path.**
+///
+/// Position de a symbol or grupo de symbols in the dual-algorithm experiment.
 class SymbolPosition {
   /// Symbols nesta position (can be múltiplos if simultâneos)
   final List<MusicalElement> symbols;
@@ -45,7 +156,7 @@ class SymbolPosition {
 
   /// Width intrínseca dos symbols (sem spacing added)
   double get intrinsicWidth {
-    // Será Calculatestesdo pelo spacing engine
+    // Será Calculado pelo spacing engine
     return width - compressibleSpace;
   }
 
@@ -58,6 +169,8 @@ class SymbolPosition {
   }
 }
 
+/// **ANALYSIS SCAFFOLDING — not on the render path.**
+///
 /// Result de textual spacing (anti-colisão)
 class TextualSpacing {
   /// Positions Calculated
@@ -97,6 +210,8 @@ class TextualSpacing {
   }
 }
 
+/// **ANALYSIS SCAFFOLDING — not on the render path.**
+///
 /// Result de durational spacing (proporcional to the tempo)
 class DurationalSpacing {
   /// Positions Calculated
@@ -144,6 +259,9 @@ class DurationalSpacing {
   }
 }
 
+/// **ANALYSIS SCAFFOLDING — not on the render path.** The renderer's own
+/// answer is [SpacingResult].
+///
 /// Result final de spacing (combinação adaptativa)
 class FinalSpacing {
   /// Positions finais Calculated

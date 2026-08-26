@@ -35,6 +35,57 @@ class RestRenderer extends BaseGlyphRenderer {
          collisionDetector: collisionDetector, // CORREÇÃO: Passar para super
        );
 
+  /// SMuFL glyph this renderer draws for a rest of [durationType].
+  ///
+  /// Exposed as a pure function because `LayoutEngine` has to reserve the
+  /// advance width of the glyph that will ACTUALLY be drawn. It used to give
+  /// every rest a flat 1.5 staff spaces whatever its duration, while Bravura's
+  /// measured advances are `restWhole` 1.132, `restHalf` 1.132,
+  /// `restQuarter` 1.08, `rest8th` 1.0, `rest16th` 1.28, `rest32nd` 1.452,
+  /// `rest64th` 1.696 — so an eighth rest was over-reserved by half a staff
+  /// space (6.00 px at staffSpace 12) while a 64th, which is wider than the
+  /// flat constant, was under-reserved.
+  ///
+  /// Durations below a 64th fall back to `restQuarter`, which is what this
+  /// renderer has always drawn for them; the reservation matches the drawing
+  /// by construction, and adding the missing `rest128th`/`rest256th`/… glyphs
+  /// is a rendering change, not a spacing one.
+  static String glyphNameFor(DurationType durationType) {
+    switch (durationType) {
+      case DurationType.whole:
+        return 'restWhole';
+      case DurationType.half:
+        return 'restHalf';
+      case DurationType.quarter:
+        return 'restQuarter';
+      case DurationType.eighth:
+        return 'rest8th';
+      case DurationType.sixteenth:
+        return 'rest16th';
+      case DurationType.thirtySecond:
+        return 'rest32nd';
+      case DurationType.sixtyFourth:
+        return 'rest64th';
+      default:
+        return 'restQuarter';
+    }
+  }
+
+  /// Staff position the rest glyph hangs from / sits on, per Behind Bars
+  /// (Gould p.109-110) and the SMuFL baseline convention documented in
+  /// [render]. Even voice numbers are placed below the middle line.
+  static int staffPositionFor(DurationType durationType, {int? voiceNumber}) {
+    final isVoiceDown = voiceNumber != null && voiceNumber.isEven;
+    switch (durationType) {
+      case DurationType.whole:
+        return isVoiceDown ? -2 : 2;
+      case DurationType.half:
+        return isVoiceDown ? -4 : 0;
+      default:
+        return isVoiceDown ? -4 : 0;
+    }
+  }
+
   void render(Canvas canvas, Rest rest, Offset position, {int? voiceNumber}) {
     String glyphName;
     int staffPosition;
@@ -57,41 +108,9 @@ class RestRenderer extends BaseGlyphRenderer {
     //     Voice 2: lower half → staffPos = −4 (2 spaces below centre)
     //
     // Convenção: voices pares = for bottom, voices ímpares = for top (default)
-    final isVoiceDown = voiceNumber != null && voiceNumber.isEven;
-
-    switch (rest.duration.type) {
-      case DurationType.whole:
-        glyphName = 'restWhole';
-        staffPosition = isVoiceDown ? -2 : 2;
-        break;
-      case DurationType.half:
-        glyphName = 'restHalf';
-        staffPosition = isVoiceDown ? -4 : 0;
-        break;
-      case DurationType.quarter:
-        glyphName = 'restQuarter';
-        staffPosition = isVoiceDown ? -4 : 0;
-        break;
-      case DurationType.eighth:
-        glyphName = 'rest8th';
-        staffPosition = isVoiceDown ? -4 : 0;
-        break;
-      case DurationType.sixteenth:
-        glyphName = 'rest16th';
-        staffPosition = isVoiceDown ? -4 : 0;
-        break;
-      case DurationType.thirtySecond:
-        glyphName = 'rest32nd';
-        staffPosition = isVoiceDown ? -4 : 0;
-        break;
-      case DurationType.sixtyFourth:
-        glyphName = 'rest64th';
-        staffPosition = isVoiceDown ? -4 : 0;
-        break;
-      default:
-        glyphName = 'restQuarter';
-        staffPosition = isVoiceDown ? -4 : 0;
-    }
+    glyphName = glyphNameFor(rest.duration.type);
+    staffPosition =
+        staffPositionFor(rest.duration.type, voiceNumber: voiceNumber);
 
     final restY =
         coordinates.staffBaseline.dy -
@@ -129,7 +148,7 @@ class RestRenderer extends BaseGlyphRenderer {
       }
     }
 
-    // Rendersr ornaments if presentes
+    // renderizar ornaments if presentes
     if (rest.ornaments.isNotEmpty) {
       final placeholderNote = Note(
         pitch: Pitch(step: 'B', octave: 4), // Posição central da pauta

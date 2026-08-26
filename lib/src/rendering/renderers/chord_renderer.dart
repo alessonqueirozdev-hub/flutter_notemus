@@ -3,12 +3,99 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../../core/core.dart';
+import '../../smufl/smufl_metadata_loader.dart';
 import '../../theme/music_score_theme.dart';
 import '../accidental_resolver.dart';
 import '../staff_position_calculator.dart';
 import 'base_glyph_renderer.dart';
 import 'note_renderer.dart';
+import 'primitives/accidental_renderer.dart';
 import 'primitives/dot_renderer.dart';
+
+/// Everything about a chord's HORIZONTAL geometry, resolved once so the layout
+/// engine and [ChordRenderer] cannot disagree about it.
+///
+/// This class exists because they did. Measured before it:
+///
+/// * a chord with 2, 3, 4 **or** 5 accidentals reported
+///   `LayoutEngine.elementLeftExtent = 25.82 px` — one column's worth — while
+///   [ChordRenderer] packed the accidentals into as many columns as they
+///   needed and drew each one further left by the previous column's width, so
+///   a five-accidental stack overran its reservation and collided with the
+///   previous note;
+/// * `C5-D5-E5` (two seconds, therefore a displaced notehead) and `C5-E5-G5`
+///   (no seconds, no displacement) both reserved exactly 14.16 px and gave all
+///   three notes the SAME `noteXPositions`, while the renderer offset the
+///   second-cluster noteheads by a full notehead width at draw time.
+///
+/// Both numbers now come from [ChordRenderer.resolveGeometry], which is the
+/// single implementation of the Behind Bars (Gould p.68-69 seconds, p.79-80
+/// accidental columns) packing. Everything is expressed in pixels RELATIVE TO
+/// THE CHORD'S ORIGIN — the X the layout gives the chord — so a caller only
+/// ever adds `basePosition.dx`.
+class ChordGeometry {
+  /// The chord's notes sorted top -> bottom (descending staff position); every
+  /// other list in this class is parallel to it.
+  final List<Note> notesTopToBottom;
+
+  /// Printed staff position of each note (0 = middle line), already including
+  /// any 8va/8vb displacement.
+  final List<int> staffPositions;
+
+  /// Horizontal displacement of each notehead from the chord origin, in px:
+  /// 0 for a note in the main column, `±` one notehead width for the members
+  /// of a cluster of seconds.
+  final List<double> clusterOffsets;
+
+  /// Stem direction resolved for the whole chord.
+  final bool stemUp;
+
+  /// Left X of each accidental column, relative to the chord origin, indexed
+  /// by column number (0 = closest to the noteheads). Empty when no accidental
+  /// displays.
+  final List<double> accidentalColumnLeftX;
+
+  /// Column assigned to each accidental, keyed by the note's index in
+  /// [notesTopToBottom]. Notes whose accidental is suppressed are absent.
+  final Map<int, int> accidentalColumnOfNote;
+
+  /// Total width of the accidental block, in px — every used column plus one
+  /// gap each, the last of which separates column 0 from the leftmost
+  /// notehead. 0 when nothing displays.
+  final double accidentalBlockWidth;
+
+  /// How far the chord reaches to the LEFT of its origin: the accidental block
+  /// plus whatever a stem-down cluster pushed past the origin.
+  final double leftExtent;
+
+  /// How far the chord reaches to the RIGHT of its origin: the rightmost
+  /// notehead's right edge plus its augmentation dots.
+  final double rightExtent;
+
+  const ChordGeometry({
+    required this.notesTopToBottom,
+    required this.staffPositions,
+    required this.clusterOffsets,
+    required this.stemUp,
+    required this.accidentalColumnLeftX,
+    required this.accidentalColumnOfNote,
+    required this.accidentalBlockWidth,
+    required this.leftExtent,
+    required this.rightExtent,
+  });
+
+  /// Total horizontal advance of the chord, in px.
+  double get width => leftExtent + rightExtent;
+
+  /// X of [note]'s notehead relative to the chord origin, or 0.0 for a note
+  /// that does not belong to this chord.
+  double offsetOf(Note note) {
+    for (var i = 0; i < notesTopToBottom.length; i++) {
+      if (identical(notesTopToBottom[i], note)) return clusterOffsets[i];
+    }
+    return 0.0;
+  }
+}
 
 class ChordRenderer extends BaseGlyphRenderer {
   final MusicScoreTheme theme;
@@ -100,10 +187,25 @@ class ChordRenderer extends BaseGlyphRenderer {
     return mostExtremePos < 0;
   }
 
+  /// Horizontal gap, in staff spaces, between two accidental columns and
+  /// between column 0 and the leftmost notehead.
+  static const double defaultColumnGapSpaces = 0.22;
+
   /// Assigns chord accidentals to columns (0 = closest to the chord) by greedy
   /// top-to-bottom first-fit: each accidental is placed in the rightmost column
-  /// where it clears every accidental already there by the corresponding entry
-  /// in [clearancesHalfSpaces] (the glyph height + gap, in half staff spaces).
+  /// where it clears every accidental already there by the required vertical
+  /// clearance, following "Behind Bars" (Gould, p. 79-80) — the highest
+  /// accidental takes column 0, and every following accidental that would
+  /// collide moves one column further LEFT.
+  ///
+  /// [clearancesHalfSpaces] carries, per accidental, the vertical space its own
+  /// glyph needs (glyph height + gap, in half staff spaces). Two accidentals
+  /// sharing a column must be at least the AVERAGE of their two clearances
+  /// apart: each contributes half its own height to the required centre-to-
+  /// centre distance. For two equal glyphs — the overwhelmingly common case —
+  /// the average is that same clearance, so uniform chords are unaffected;
+  /// mixed heights (a double-flat above a sharp) are no longer judged by the
+  /// second glyph's clearance alone.
   ///
   /// [staffPositionsTopToBottom] and [clearancesHalfSpaces] are parallel and
   /// must be ordered top -> bottom (descending staff position). Returns the
@@ -115,16 +217,17 @@ class ChordRenderer extends BaseGlyphRenderer {
     final columns = List<int>.filled(staffPositionsTopToBottom.length, 0);
     final members = <int, List<int>>{};
     for (var i = 0; i < staffPositionsTopToBottom.length; i++) {
-      final clearance = clearancesHalfSpaces[i];
       var column = 0;
       while (true) {
         final ms = members[column];
         var collides = false;
         if (ms != null) {
           for (final k in ms) {
+            final required =
+                (clearancesHalfSpaces[i] + clearancesHalfSpaces[k]) * 0.5;
             if ((staffPositionsTopToBottom[i] - staffPositionsTopToBottom[k])
                     .abs() <
-                clearance) {
+                required) {
               collides = true;
               break;
             }
@@ -139,6 +242,266 @@ class ChordRenderer extends BaseGlyphRenderer {
     return columns;
   }
 
+  /// Total horizontal space, in staff spaces, reserved by a chord's accidental
+  /// block: every used column's width plus one [columnGapSpaces] gap per column
+  /// (the last of which separates column 0 from the leftmost notehead).
+  ///
+  /// [columnWidthsSpaces] is indexed by column number, so its length is exactly
+  /// the number of columns actually used — the reserved width therefore grows
+  /// only with the columns the packing produced.
+  static double accidentalBlockWidthSpaces(
+    List<double> columnWidthsSpaces, {
+    double columnGapSpaces = defaultColumnGapSpaces,
+  }) {
+    var total = 0.0;
+    for (final width in columnWidthsSpaces) {
+      total += width + columnGapSpaces;
+    }
+    return total;
+  }
+
+  /// Effective accidental glyph of [note] after within-measure resolution:
+  /// null = suppress, the natural glyph on a revert, else the note's own.
+  ///
+  /// F-02: chord accidentals are chosen HERE and nowhere else, so the layout's
+  /// reservation and the drawing always agree about which glyphs exist.
+  static String? effectiveAccidentalGlyph(
+    Note note,
+    Map<Note, AccidentalDisplay>? decisions,
+  ) {
+    switch (decisions?[note] ?? AccidentalDisplay.show) {
+      case AccidentalDisplay.hide:
+        return null;
+      case AccidentalDisplay.natural:
+        return 'accidentalNatural';
+      case AccidentalDisplay.show:
+        return note.pitch.accidentalGlyph;
+    }
+  }
+
+  /// Width of one accidental column entry, in staff spaces, INCLUDING any
+  /// cautionary parentheses or editorial brackets around it (F-16).
+  ///
+  /// Same rule as `AccidentalRenderer.decoratedWidthSpaces`, expressed as a
+  /// pure function of the metadata so the layout engine — which has no
+  /// renderer instance and no canvas — can ask for the identical number.
+  /// Everything it is built from — the enclosing glyph names, the gap AND the
+  /// single-glyph width lookup — comes from [AccidentalRenderer], so this is
+  /// only the arithmetic that combines them.
+  ///
+  /// The glyph width used to be a private `widthOf` closure restating
+  /// [AccidentalRenderer.glyphWidthSpacesFor] line for line — the second copy
+  /// wave 2 extracted the shared helper to remove, left behind. Verified
+  /// before collapsing (`probe/W4G_widthof_test.dart`): over all 235
+  /// `accidental*` glyph names in `assets/smufl/glyphnames.json` plus
+  /// `noteheadBlack`, `gClef`, `restQuarter`, an unknown name and the empty
+  /// string — 240 glyphs bare, and the same 240 times the 3
+  /// [AccidentalParenthesis] values decorated, 960 comparisons — the closure
+  /// and the shared helper returned bit-identical doubles in 960/960 cases,
+  /// 0 disagreements. No pixel can move.
+  static double decoratedAccidentalWidthSpaces(
+    SmuflMetadata metadata,
+    String glyphName,
+    AccidentalParenthesis paren,
+  ) {
+    double widthOf(String glyph) =>
+        AccidentalRenderer.glyphWidthSpacesFor(metadata, glyph);
+
+    final left = AccidentalRenderer.leftSignGlyph(paren);
+    final right = AccidentalRenderer.rightSignGlyph(paren);
+    if (left == null || right == null) return widthOf(glyphName);
+    return widthOf(left) +
+        widthOf(glyphName) +
+        widthOf(right) +
+        (2 * AccidentalRenderer.parenthesisGapSpaces);
+  }
+
+  /// Vertical clearance, in staff positions (= half spaces), that two
+  /// accidentals sharing a column need between their centres: the glyph's own
+  /// height plus a small gap.
+  static double accidentalClearanceHalfSpaces(
+    SmuflMetadata metadata,
+    String glyph,
+  ) {
+    final box = metadata.getGlyphInfo(glyph)?.boundingBox;
+    final heightSpaces = box?.height ?? 2.7;
+    return (heightSpaces * 2.0) + 0.5;
+  }
+
+  /// Notehead width, in staff spaces, of the glyph a chord of this duration
+  /// draws. Bravura's `noteheadBlack` is 1.18.
+  static double noteheadWidthSpaces(
+    SmuflMetadata metadata,
+    DurationType durationType,
+  ) =>
+      metadata.getGlyphInfo(durationType.glyphName)?.boundingBox?.width ?? 1.18;
+
+  /// Extra width, in px, that [dots] augmentation dots add to the right of a
+  /// notehead.
+  ///
+  /// `DotRenderer` puts the first dot at the notehead CENTRE + 1.0 staff space
+  /// and each further dot 0.6 further right, so the block ends about 0.7 staff
+  /// spaces past the notehead's right edge.
+  static double dotExtentPx(int dots, double staffSpace) =>
+      dots <= 0 ? 0.0 : (0.7 + (dots - 1) * 0.6) * staffSpace;
+
+  /// Resolves the one horizontal geometry both the layout engine and [render]
+  /// use. See [ChordGeometry] for what each field means and for the
+  /// measurements that motivated extracting it.
+  ///
+  /// [extraOctaveShift] is the 8va/8vb displacement in force (ADR-003: it
+  /// changes only WHERE the chord is printed), and it matters here because the
+  /// staff positions drive the stem-direction vote, the cluster detection and
+  /// the accidental column packing alike.
+  static ChordGeometry resolveGeometry({
+    required Chord chord,
+    required Clef clef,
+    required SmuflMetadata metadata,
+    required double staffSpace,
+    int extraOctaveShift = 0,
+    int? voiceNumber,
+    Map<Note, AccidentalDisplay>? accidentalDecisions,
+  }) {
+    int posOf(Note n) => StaffPositionCalculator.calculate(
+          n.pitch,
+          clef,
+          extraOctaveShift: extraOctaveShift,
+        );
+
+    final sortedNotes = [...chord.notes]
+      ..sort((a, b) => posOf(b).compareTo(posOf(a)));
+    final positions = sortedNotes.map(posOf).toList();
+    final dots = dotExtentPx(chord.duration.dots, staffSpace);
+
+    if (sortedNotes.isEmpty) {
+      return ChordGeometry(
+        notesTopToBottom: const <Note>[],
+        staffPositions: const <int>[],
+        clusterOffsets: const <double>[],
+        stemUp: true,
+        accidentalColumnLeftX: const <double>[],
+        accidentalColumnOfNote: const <int, int>{},
+        accidentalBlockWidth: 0.0,
+        leftExtent: 0.0,
+        rightExtent: dots,
+      );
+    }
+
+    final stemUp = resolveStemDirection(
+      chord: chord,
+      positions: positions,
+      voiceNumber: voiceNumber,
+    );
+
+    final noteheadWidthPx =
+        noteheadWidthSpaces(metadata, chord.duration.type) * staffSpace;
+    final clusterOffsets = calculateClusterOffsets(
+      positions: positions,
+      stemUp: stemUp,
+      clusterOffset: noteheadWidthPx * 1.04,
+    );
+
+    // Accidentals that actually display, top -> bottom.
+    final accIdx = <int>[
+      for (var i = 0; i < sortedNotes.length; i++)
+        if (effectiveAccidentalGlyph(sortedNotes[i], accidentalDecisions) !=
+            null)
+          i,
+    ];
+    final assignedColumns = assignAccidentalColumns(
+      [for (final i in accIdx) positions[i]],
+      [
+        for (final i in accIdx)
+          accidentalClearanceHalfSpaces(
+            metadata,
+            effectiveAccidentalGlyph(sortedNotes[i], accidentalDecisions)!,
+          ),
+      ],
+    );
+
+    final columnOfNote = <int, int>{};
+    final columnWidthSpaces = <int, double>{};
+    for (var n = 0; n < accIdx.length; n++) {
+      final i = accIdx[n];
+      final column = assignedColumns[n];
+      columnOfNote[i] = column;
+      columnWidthSpaces[column] = math.max(
+        columnWidthSpaces[column] ?? 0.0,
+        decoratedAccidentalWidthSpaces(
+          metadata,
+          effectiveAccidentalGlyph(sortedNotes[i], accidentalDecisions)!,
+          sortedNotes[i].accidentalParenthesis,
+        ),
+      );
+    }
+
+    final minOffset = clusterOffsets.reduce(math.min);
+    final maxOffset = clusterOffsets.reduce(math.max);
+
+    var blockWidth = 0.0;
+    final columnLeftX = <double>[];
+    if (columnOfNote.isNotEmpty) {
+      final maxColumn = columnOfNote.values.reduce(math.max);
+      // Greedy first-fit never skips a column, so 0..maxColumn are all in use
+      // and this list's length IS the number of columns used.
+      final columnWidths = <double>[
+        for (var c = 0; c <= maxColumn; c++) (columnWidthSpaces[c] ?? 1.0),
+      ];
+      blockWidth = accidentalBlockWidthSpaces(columnWidths) * staffSpace;
+
+      // Column 0 sits one gap to the LEFT of the leftmost notehead edge (which
+      // may itself be cluster-shifted); each further column is offset left by
+      // the previous column's own width plus a gap.
+      const gapSpaces = defaultColumnGapSpaces;
+      var cursorRightEdge = minOffset - gapSpaces * staffSpace;
+      for (var c = 0; c <= maxColumn; c++) {
+        final widthPx = columnWidths[c] * staffSpace;
+        columnLeftX.add(cursorRightEdge - widthPx);
+        cursorRightEdge = columnLeftX[c] - gapSpaces * staffSpace;
+      }
+    }
+
+    return ChordGeometry(
+      notesTopToBottom: sortedNotes,
+      staffPositions: positions,
+      clusterOffsets: clusterOffsets,
+      stemUp: stemUp,
+      accidentalColumnLeftX: columnLeftX,
+      accidentalColumnOfNote: columnOfNote,
+      accidentalBlockWidth: blockWidth,
+      // A stem-down cluster pushes a notehead LEFT of the origin, so the space
+      // the chord needs on its left is the accidental block plus that
+      // displacement. `minOffset` is <= 0 by construction.
+      leftExtent: blockWidth - minOffset,
+      rightExtent: maxOffset + noteheadWidthPx + dots,
+    );
+  }
+
+  /// [suppressStem] and [suppressFlag] exist so a chord can PARTICIPATE IN A
+  /// BEAM drawn by someone else, which it could not do before.
+  ///
+  /// `TupletBeamPlan._carriesBeam` (`tuplet_grid.dart:339`) still refuses to
+  /// auto-beam a bare [Chord], and its own dartdoc says why: "`ChordRenderer`
+  /// draws a flag whenever [Chord.beam] is null and the duration is shorter
+  /// than a quarter - so auto-beaming a bare chord here would print a beam AND
+  /// a flag on the same stem". That was true: this method had no way to be told
+  /// not to. It now does.
+  ///
+  /// * [suppressFlag] drops the flag but keeps the chord's own stem - for a
+  ///   caller that draws the beam but not the stems.
+  /// * [suppressStem] drops BOTH (a stem with no flag would be the wrong
+  ///   length: the beam decides where the stem ends, and only the caller knows
+  ///   the beam line). Pair it with [chordStemAnchor], which hands the caller
+  ///   the exact point the stem must start from.
+  /// * [stemEndY], when given, draws the stem from that same anchor to exactly
+  ///   this Y - the beam line - instead of to a computed length, and implies
+  ///   [suppressFlag]. It is the one-call form for a caller that already knows
+  ///   the beam geometry before the chord is drawn.
+  ///
+  /// None of the three touches [resolveGeometry], so the noteheads, the cluster
+  /// displacement and the accidental columns are bit-identical to an ordinary
+  /// render and still match what the LAYOUT reserved. A chord drawn with the
+  /// default arguments produces exactly the pixels it produced before.
   void render(
     Canvas canvas,
     Chord chord,
@@ -146,37 +509,30 @@ class ChordRenderer extends BaseGlyphRenderer {
     Clef currentClef, {
     int? voiceNumber,
     Map<Note, AccidentalDisplay>? accidentalDecisions,
+    int extraOctaveShift = 0,
+    bool suppressFlag = false,
+    bool suppressStem = false,
+    double? stemEndY,
   }) {
-    // Effective accidental glyph for a chord note after within-measure
-    // resolution: null = suppress, the natural glyph on revert, else the note's.
-    String? effAcc(Note n) {
-      switch (accidentalDecisions?[n] ?? AccidentalDisplay.show) {
-        case AccidentalDisplay.hide:
-          return null;
-        case AccidentalDisplay.natural:
-          return 'accidentalNatural';
-        case AccidentalDisplay.show:
-          return n.pitch.accidentalGlyph;
-      }
-    }
-    final sortedNotes = [...chord.notes]
-      ..sort(
-        (a, b) => StaffPositionCalculator.calculate(
-          b.pitch,
-          currentClef,
-        ).compareTo(StaffPositionCalculator.calculate(a.pitch, currentClef)),
-      );
-
-    final positions = sortedNotes
-        .map(
-          (note) => StaffPositionCalculator.calculate(note.pitch, currentClef),
-        )
-        .toList();
-    final stemUp = resolveStemDirection(
+    // Everything horizontal — staff positions (8va-displaced, ADR-003), stem
+    // direction, seconds/cluster offsets and the Behind Bars accidental column
+    // packing — comes from [resolveGeometry], which is the SAME call the layout
+    // engine makes to reserve space. Recomputing any of it here is what let the
+    // drawing outgrow its reservation (M-16/M-17).
+    final geometry = resolveGeometry(
       chord: chord,
-      positions: positions,
+      clef: currentClef,
+      metadata: metadata,
+      staffSpace: coordinates.staffSpace,
+      extraOctaveShift: extraOctaveShift,
       voiceNumber: voiceNumber,
+      accidentalDecisions: accidentalDecisions,
     );
+
+    final sortedNotes = geometry.notesTopToBottom;
+    final positions = geometry.staffPositions;
+    final stemUp = geometry.stemUp;
+    final clusterOffsets = geometry.clusterOffsets;
 
     final noteheadGlyph = chord.duration.type.glyphName;
     final noteheadInfo = metadata.getGlyphInfo(noteheadGlyph);
@@ -188,97 +544,42 @@ class ChordRenderer extends BaseGlyphRenderer {
     final noteheadCenterY = noteheadBox != null
         ? noteheadBox.centerY * coordinates.staffSpace
         : 0.0;
-    final noteheadWidth = noteheadBox?.width ?? 1.18;
-    final clusterOffset = noteheadWidth * coordinates.staffSpace * 1.04;
-    final clusterOffsets = calculateClusterOffsets(
-      positions: positions,
-      stemUp: stemUp,
-      clusterOffset: clusterOffset,
-    );
     final noteCenters = <Offset>[];
 
-    // ── Accidental column packing (Behind Bars / Gould) ──
-    // sortedNotes is already top -> bottom. Each accidental is placed in the
-    // rightmost column (0 = closest to the chord) where it does NOT vertically
-    // overlap an accidental already in that column. Both the vertical clearance
-    // and the column width come from each glyph's real SMuFL bounding box, so
-    // accidentals neither overlap vertically nor horizontally (the previous
-    // version used a fixed 6-half-space threshold and the advance width — which
-    // is narrower than the glyph — so columns collided).
-    double accWidthSpaces(String glyph) {
-      final box = metadata.getGlyphInfo(glyph)?.boundingBox;
-      final w = box?.width ?? metadata.getGlyphWidth(glyph);
-      return w > 0 ? w : 1.0;
-    }
+    final accidentalRenderer = noteRenderer.accidentalRenderer;
+    final accidentalColumns = geometry.accidentalColumnOfNote;
 
-    // Vertical clearance (in staff positions = half-spaces) needed between two
-    // accidentals sharing a column: the glyph height + a small gap.
-    double accClearanceHalfSpaces(String glyph) {
-      final box = metadata.getGlyphInfo(glyph)?.boundingBox;
-      final heightSpaces = box?.height ?? 2.7;
-      return (heightSpaces * 2.0) + 0.5;
-    }
-
-    // Notes whose accidental DISPLAYS (after within-measure resolution),
-    // ordered top -> bottom.
-    final accIdx = <int>[
-      for (int i = 0; i < sortedNotes.length; i++)
-        if (effAcc(sortedNotes[i]) != null) i,
-    ];
-    final assignedColumns = assignAccidentalColumns(
-      [for (final i in accIdx) positions[i]],
-      [
-        for (final i in accIdx)
-          accClearanceHalfSpaces(effAcc(sortedNotes[i])!),
-      ],
-    );
-
-    final accidentalColumns = <int, int>{}; // note index -> column
-    final columnMembers = <int, List<int>>{}; // column -> note indices
-    final columnWidthSpaces = <int, double>{}; // column -> max glyph width (SS)
-
-    for (int n = 0; n < accIdx.length; n++) {
-      final i = accIdx[n];
-      final column = assignedColumns[n];
-      accidentalColumns[i] = column;
-      (columnMembers[column] ??= <int>[]).add(i);
-      columnWidthSpaces[column] = math.max(
-        columnWidthSpaces[column] ?? 0.0,
-        accWidthSpaces(effAcc(sortedNotes[i])!),
-      );
-    }
-
-    // Resolve each column's left X. Column 0 sits a small gap to the LEFT of the
-    // leftmost notehead edge (accounts for left-shifted second-cluster notes);
-    // each further column is offset left by the previous column's glyph width.
     if (accidentalColumns.isNotEmpty) {
-      const columnGapSpaces = 0.22;
-      final leftmostNoteDx =
-          basePosition.dx + clusterOffsets.reduce(math.min);
-      final maxColumn = columnMembers.keys.reduce(math.max);
-      final columnLeftX = <int, double>{};
-      var cursorRightEdge =
-          leftmostNoteDx - columnGapSpaces * coordinates.staffSpace;
-      for (int c = 0; c <= maxColumn; c++) {
-        final widthPx = (columnWidthSpaces[c] ?? 1.0) * coordinates.staffSpace;
-        columnLeftX[c] = cursorRightEdge - widthPx;
-        cursorRightEdge =
-            columnLeftX[c]! - columnGapSpaces * coordinates.staffSpace;
-      }
+      // F-31: the space actually consumed by the block must equal the width
+      // reserved for the columns that were used — no more, no less.
+      assert(
+        (geometry.accidentalColumnLeftX.last -
+                (clusterOffsets.reduce(math.min) -
+                    geometry.accidentalBlockWidth))
+            .abs() <
+            1e-3,
+        'chord accidental block width does not match the columns in use',
+      );
 
       for (final entry in accidentalColumns.entries) {
         final i = entry.key;
-        final accidentalGlyph = effAcc(sortedNotes[i])!;
+        final accidentalGlyph =
+            effectiveAccidentalGlyph(sortedNotes[i], accidentalDecisions)!;
         final noteY = StaffPositionCalculator.toPixelY(
           positions[i],
           coordinates.staffSpace,
           coordinates.staffBaseline.dy,
         );
-        drawGlyphWithBBox(
+        // Draw through AccidentalRenderer so chord accidentals get the same
+        // cautionary/editorial enclosure as single notes (F-16).
+        accidentalRenderer.drawDecoratedAccidental(
           canvas,
           glyphName: accidentalGlyph,
-          position: Offset(columnLeftX[entry.value]!, noteY),
+          leftX: basePosition.dx +
+              geometry.accidentalColumnLeftX[entry.value],
+          y: noteY,
           color: theme.accidentalColor ?? theme.noteheadColor,
+          paren: sortedNotes[i].accidentalParenthesis,
           options: const GlyphDrawOptions(trackBounds: true),
         );
       }
@@ -324,30 +625,62 @@ class ChordRenderer extends BaseGlyphRenderer {
       );
     }
 
-    if (chord.duration.type != DurationType.whole && positions.isNotEmpty) {
+    if (chord.duration.type != DurationType.whole &&
+        positions.isNotEmpty &&
+        !suppressStem) {
       final stemNoteIndex = stemUp ? positions.length - 1 : 0;
       final stemY = StaffPositionCalculator.toPixelY(
         positions[stemNoteIndex],
         coordinates.staffSpace,
         coordinates.staffBaseline.dy,
       );
-      final beamCount = _getBeamCount(chord.duration.type);
-      final customStemLength = noteRenderer.positioningEngine
-          .calculateChordStemLength(
-            noteStaffPositions: positions,
-            stemUp: stemUp,
-            beamCount: beamCount,
-          );
-
-      final stemEnd = _renderChordStem(
-        canvas,
-        Offset(basePosition.dx + clusterOffsets[stemNoteIndex], stemY),
-        noteheadGlyph,
-        stemUp,
-        customStemLength,
+      final stemNotePosition = Offset(
+        basePosition.dx + clusterOffsets[stemNoteIndex],
+        stemY,
       );
 
-      if (chord.duration.type.value < 0.25 && chord.beam == null) {
+      final Offset stemEnd;
+      if (stemEndY != null) {
+        // The caller owns the beam line, so the stem length is whatever reaches
+        // it. Routed through the same [_renderChordStem] so the stem X, the
+        // notehead attachment anchor and the paint are identical to the normal
+        // path; only the length differs.
+        final anchorY = noteRenderer.positioningEngine.calculateStemStartY(
+          noteY: stemNotePosition.dy,
+          noteheadGlyphName: noteheadGlyph,
+          stemUp: stemUp,
+          staffSpace: coordinates.staffSpace,
+        );
+        stemEnd = _renderChordStem(
+          canvas,
+          stemNotePosition,
+          noteheadGlyph,
+          stemUp,
+          (stemUp ? anchorY - stemEndY : stemEndY - anchorY) /
+              coordinates.staffSpace,
+        );
+      } else {
+        final beamCount = _getBeamCount(chord.duration.type);
+        final customStemLength = noteRenderer.positioningEngine
+            .calculateChordStemLength(
+              noteStaffPositions: positions,
+              stemUp: stemUp,
+              beamCount: beamCount,
+            );
+
+        stemEnd = _renderChordStem(
+          canvas,
+          stemNotePosition,
+          noteheadGlyph,
+          stemUp,
+          customStemLength,
+        );
+      }
+
+      if (chord.duration.type.value < 0.25 &&
+          chord.beam == null &&
+          !suppressFlag &&
+          stemEndY == null) {
         noteRenderer.flagRenderer.render(
           canvas,
           stemEnd,
@@ -478,6 +811,92 @@ class ChordRenderer extends BaseGlyphRenderer {
         paint,
       );
     }
+  }
+
+  /// Everything a caller drawing a BEAM needs about this chord's stem.
+  ///
+  /// * `x` - the stem's X.
+  /// * `nearY` - where the stem starts: on the notehead the stem ATTACHES to,
+  ///   which is the BOTTOM notehead when [stemUp] and the TOP one when not
+  ///   (SMuFL `stemUpSE` / `stemDownNW`).
+  /// * `farY` - the notehead at the OTHER extreme, the one the beam has to
+  ///   clear. For a single note the two coincide; for a chord they are the
+  ///   whole span apart, and confusing them is how a beam ends up drawn THROUGH
+  ///   a chord: measured on a stem-down `C4-E4-G4` eighth triplet at
+  ///   `staffSpace = 24`, `nearY` (G4) is 312.0 and `farY` (C4) is 360.0, and a
+  ///   beam placed from `nearY` landed at y = 348 - twelve pixels ABOVE the C4
+  ///   notehead it was supposed to hang below, straight through the E4.
+  ///
+  /// The other half of the beamed-chord API (see [render]'s [suppressStem]).
+  /// A caller that draws the beam needs this BEFORE it can place the beam line,
+  /// and it cannot reconstruct it from the chord's origin: the stem hangs off
+  /// the top notehead for a stem-up chord and the bottom one for stem-down,
+  /// either of which may be cluster-displaced by a full notehead width (Gould
+  /// p.68-69), and the attachment point itself is the font's `stemUpSE` /
+  /// `stemDownNW` anchor, not the notehead's bounding-box corner. Measured on
+  /// `C4-E4-G4` at `staffSpace = 12` with `basePosition.dx = 100`: this returns
+  /// x = 114.16, while the chord-origin x that `TupletRenderer`'s beam pass fed
+  /// to `calculateStemX` for its own stems is 100.00 - 14.16 px of error, more
+  /// than a whole notehead.
+  ///
+  /// [stemUp] is the CALLER's decision, not the chord's own: every stem in a
+  /// beamed group points the same way, and that direction belongs to the group.
+  /// It is deliberately NOT fed back into [resolveGeometry] - the layout
+  /// reserved this chord's width from the chord's own stem vote, and overriding
+  /// the vote here would make the drawing outgrow its reservation, which is the
+  /// exact defect (M-16/M-17) [ChordGeometry] exists to prevent. The residual
+  /// is narrow and cosmetic: a chord that contains a SECOND and whose group
+  /// direction disagrees with its own vote keeps its cluster displacement
+  /// mirrored. Nothing overlaps, and the stem still starts on the correct
+  /// extreme notehead.
+  ///
+  /// Returns null for a chord with no notes.
+  ({double x, double nearY, double farY})? chordStemAnchor({
+    required Chord chord,
+    required Offset basePosition,
+    required Clef currentClef,
+    required bool stemUp,
+    int? voiceNumber,
+    Map<Note, AccidentalDisplay>? accidentalDecisions,
+    int extraOctaveShift = 0,
+  }) {
+    final geometry = resolveGeometry(
+      chord: chord,
+      clef: currentClef,
+      metadata: metadata,
+      staffSpace: coordinates.staffSpace,
+      extraOctaveShift: extraOctaveShift,
+      voiceNumber: voiceNumber,
+      accidentalDecisions: accidentalDecisions,
+    );
+    final positions = geometry.staffPositions;
+    if (positions.isEmpty) return null;
+
+    // `positions` is sorted top -> bottom, so index 0 is the highest notehead
+    // and the last index the lowest.
+    final nearIndex = stemUp ? positions.length - 1 : 0;
+    final farIndex = stemUp ? 0 : positions.length - 1;
+    final glyph = chord.duration.type.glyphName;
+    double pixelYOf(int index) => StaffPositionCalculator.toPixelY(
+          positions[index],
+          coordinates.staffSpace,
+          coordinates.staffBaseline.dy,
+        );
+    return (
+      x: noteRenderer.positioningEngine.calculateStemX(
+        noteX: basePosition.dx + geometry.clusterOffsets[nearIndex],
+        noteheadGlyphName: glyph,
+        stemUp: stemUp,
+        staffSpace: coordinates.staffSpace,
+      ),
+      nearY: noteRenderer.positioningEngine.calculateStemStartY(
+        noteY: pixelYOf(nearIndex),
+        noteheadGlyphName: glyph,
+        stemUp: stemUp,
+        staffSpace: coordinates.staffSpace,
+      ),
+      farY: pixelYOf(farIndex),
+    );
   }
 
   Offset _renderChordStem(

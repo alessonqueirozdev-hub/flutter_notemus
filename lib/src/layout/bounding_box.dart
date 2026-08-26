@@ -210,7 +210,7 @@ class BoundingBox {
 
   /// Calculates a position absoluta recursivamente a partir dos pais
   ///
-  /// Must be chamado after modificar positions relativas for currentizar
+  /// Must be chamado after modificar positions relativas for atualizar
   /// a position absoluta de all os elementos na hierarquia
   void calculateAbsolutePosition() {
     absolutePosition.x = relativePosition.x;
@@ -235,7 +235,7 @@ class BoundingBox {
 
   /// Calculates o bounding box envolvendo all os filhos
   ///
-  /// Currentiza borderLeft, borderRight, borderTop, borderBottom
+  /// Atualiza borderLeft, borderRight, borderTop, borderBottom
   /// for englobar all os elementos filhos
   void calculateBoundingBox() {
     if (childElements.isEmpty) {
@@ -273,7 +273,7 @@ class BoundingBox {
       borderBottom = math.max(borderBottom, childBottom);
     }
 
-    // Currentizar size
+    // Atualizar size
     size.width = borderRight - borderLeft;
     size.height = borderBottom - borderTop;
 
@@ -363,7 +363,7 @@ class BoundingBox {
     final otherLeft = other.absolutePosition.x + other.borderLeft;
 
     if (horizontalOverlap(other)) {
-      // Overlapping: Returnsr distance negativa
+      // Overlapping: retornar distance negativa
       final thisLeft = absolutePosition.x + borderLeft;
       final otherRight = other.absolutePosition.x + other.borderRight;
       return math.max(thisLeft - otherRight, otherLeft - thisRight);
@@ -381,7 +381,7 @@ class BoundingBox {
     final otherTop = other.absolutePosition.y + other.borderTop;
 
     if (verticalOverlap(other)) {
-      // Overlapping: Returnsr distance negativa
+      // Overlapping: retornar distance negativa
       final thisTop = absolutePosition.y + borderTop;
       final otherBottom = other.absolutePosition.y + other.borderBottom;
       return math.max(thisTop - otherBottom, otherTop - thisBottom);
@@ -442,7 +442,7 @@ class BoundingBox {
   // UTILITÁRIOS
   // ====================
 
-  /// Definess o bounding box from a Rect
+  /// Define o bounding box from a Rect
   void setFromRect(Rect rect) {
     borderLeft = rect.left;
     borderRight = rect.right;
@@ -452,7 +452,7 @@ class BoundingBox {
     size.height = rect.height;
   }
 
-  /// Definess margin uniforme
+  /// Define margin uniforme
   void setUniformMargin(double margin) {
     marginSize.width = margin;
     marginSize.height = margin;

@@ -1,12 +1,12 @@
 // lib/src/rendering/renderers/note_renderer.dart
-// Refactored implementation: Usa StaffPositionCalculator and BaseGlyphRenderer
+// Refactored implementation: uses StaffPositionCalculator and BaseGlyphRenderer.
 //
-// MELHORIAS IMPLEMENTADAS:
-// ✅ Uses StaffPositioncalculateTestor unificado for calculation de positions
-// ✅ Uses BaseGlyphRenderer.drawGlyphWithBBox for Rendering consistente
-// ✅ Elimina código duplicado de _calculateTesteStaffPosition
-// ✅ Elimina uso de centerVertically/centerHorizontally inconsistente
-// ✅ Cache de TextPainters for melhor performance
+// What this buys us:
+//  * one unified StaffPositionCalculator for every position computation;
+//  * BaseGlyphRenderer.drawGlyphWithBBox for consistent SMuFL rendering — it
+//    also caches TextPainters, so no glyph allocates a painter per frame;
+//  * no duplicated staff-position code and no ad-hoc, inconsistent use of
+//    centerVertically / centerHorizontally.
 
 import 'package:flutter/material.dart';
 import '../../../core/core.dart';
@@ -25,6 +25,7 @@ import 'primitives/flag_renderer.dart';
 import 'primitives/ledger_line_renderer.dart';
 import 'primitives/stem_renderer.dart';
 import 'symbol_and_text_renderer.dart';
+import '../text_font.dart';
 
 class NoteRenderer extends BaseGlyphRenderer {
   final MusicScoreTheme theme;
@@ -32,7 +33,7 @@ class NoteRenderer extends BaseGlyphRenderer {
   final OrnamentRenderer ornamentRenderer;
   final SMuFLPositioningEngine positioningEngine;
 
-  // 🆕 COMPONENTES ESPECIALIZADOS (SRP)
+  // Specialized sub-renderers (single-responsibility split).
   late final DotRenderer dotRenderer;
   late final LedgerLineRenderer ledgerLineRenderer;
   late final StemRenderer stemRenderer;
@@ -55,7 +56,7 @@ class NoteRenderer extends BaseGlyphRenderer {
          metadata: metadata,
          glyphSize: glyphSize,
        ) {
-    // 🆕 Initialise componentes especializados
+    // Initialise the specialized sub-renderers.
     dotRenderer = DotRenderer(
       metadata: metadata,
       theme: theme,
@@ -112,14 +113,23 @@ class NoteRenderer extends BaseGlyphRenderer {
     bool renderOnlyNotehead = false,
     int? voiceNumber,
     AccidentalDisplay accidentalDisplay = AccidentalDisplay.show,
+    int extraOctaveShift = 0,
   }) {
+    // [extraOctaveShift] is the displacement of the 8va/8vb bracket span the
+    // note falls in, resolved by the caller (`StaffRenderer` walks the element
+    // stream with an `OctaveSpanTracker`, the same way it tracks the clef). It
+    // MUST match what the layout engine used for the same note: the notehead,
+    // its stem, its ledger lines and its accidental are all derived from the
+    // single `staffPosition` below, so a renderer that ignored the bracket while
+    // layout honoured it would draw the whole note an octave off its own beam.
     final staffPosition = StaffPositionCalculator.calculate(
       note.pitch,
       currentClef,
+      extraOctaveShift: extraOctaveShift,
     );
 
-    // O offset horizontal of the voice already está embutido in basePosition (Applied pelo layout engine).
-    // Not Appliesr offset newmente aqui.
+    // The voice's horizontal offset is already baked into basePosition by the
+    // layout engine; do NOT apply it a second time here.
     final noteY = StaffPositionCalculator.toPixelY(
       staffPosition,
       coordinates.staffSpace,
@@ -151,8 +161,18 @@ class NoteRenderer extends BaseGlyphRenderer {
 
     final noteCenter = Offset(basePosition.dx + centerX, noteY + centerY);
 
-    accidentalRenderer.render(canvas, note, notePos, staffPosition.toDouble(),
-        display: accidentalDisplay);
+    // F-02: the accidental ALWAYS goes through the resolved [accidentalDisplay]
+    // (show / hide / natural) decided by the layout engine — never straight from
+    // Pitch.accidentalGlyph. F-16: the cautionary/editorial enclosure travels
+    // with it.
+    accidentalRenderer.render(
+      canvas,
+      note,
+      notePos,
+      staffPosition.toDouble(),
+      display: accidentalDisplay,
+      parenthesis: note.accidentalParenthesis,
+    );
 
     drawGlyphWithBBox(
       canvas,
@@ -165,7 +185,8 @@ class NoteRenderer extends BaseGlyphRenderer {
     if (!renderOnlyNotehead &&
         note.duration.type != DurationType.whole &&
         note.beam == null) {
-      // Direction of the stem: forçada by voice in context polifônico, senão by position
+      // Stem direction: forced by voice in a polyphonic context, otherwise by
+      // staff position.
       final beamCount = _getBeamCount(note.duration.type);
 
       final stemEnd = stemRenderer.render(
@@ -177,7 +198,7 @@ class NoteRenderer extends BaseGlyphRenderer {
         beamCount,
       );
 
-      // Desenhar bandeirola if required
+      // Draw the flag when the duration needs one.
       if (note.duration.type.value < 0.25) {
         flagRenderer.render(canvas, stemEnd, note.duration.type, stemUp);
       }
@@ -201,7 +222,7 @@ class NoteRenderer extends BaseGlyphRenderer {
       }
     }
 
-    // Rendersr articulations using o Centre of the notehead
+    // Render articulations against the centre of the notehead.
     articulationRenderer.render(
       canvas,
       note.articulations,
@@ -209,7 +230,7 @@ class NoteRenderer extends BaseGlyphRenderer {
       stemUp: stemUp,
     );
 
-    // Rendersr ornaments using o Centre of the notehead
+    // Render ornaments against the centre of the notehead.
     ornamentRenderer.renderForNote(
       canvas,
       note,
@@ -218,23 +239,23 @@ class NoteRenderer extends BaseGlyphRenderer {
       voiceNumber: voiceNumber,
     );
 
-    // Rendersr dynamics if presente
+    // Render the dynamic marking, if present.
     if (note.dynamicElement != null) {
       _renderDynamic(canvas, note.dynamicElement!, basePosition, staffPosition);
     }
 
-    // 🆕 Delegar for DotRenderer
+    // Augmentation dots are delegated to DotRenderer.
     if (note.duration.dots > 0) {
       dotRenderer.render(canvas, note, noteCenter, staffPosition);
     }
 
-    // Rendersr syllables/lyrics below the staff
+    // Render lyric syllables below the staff.
     if (note.syllables != null && note.syllables!.isNotEmpty) {
       _renderSyllables(canvas, note.syllables!, noteCenter.dx);
     }
   }
 
-  // 🆕 Method auxiliar: Calculate number de barras
+  // Helper: number of beams/flags required by a duration.
   int _getBeamCount(DurationType duration) {
     return switch (duration) {
       DurationType.eighth => 1,
@@ -245,7 +266,7 @@ class NoteRenderer extends BaseGlyphRenderer {
     };
   }
 
-  /// Rendersr dynamic associada to the note
+  /// Renders the dynamic marking attached to the note.
   void _renderDynamic(
     Canvas canvas,
     Dynamic dynamic,
@@ -255,17 +276,20 @@ class NoteRenderer extends BaseGlyphRenderer {
     symbolAndTextRenderer.renderDynamic(canvas, dynamic, basePosition);
   }
 
-  /// Renders as syllables de lyric below the staff.
+  /// Renders lyric syllables below the staff, centered at [centerX].
   ///
-  /// Posicionamento: below the 1ª staff line + 1.5 staff spaces de margin.
-  /// Each verse ocupa a line vertical separate (spacing = 1.2 * fontSize).
+  /// Placement: 1.5 staff spaces below the bottom staff line; each verse gets
+  /// its own line (line height = 1.3 * font size).
   ///
-  /// Convenções tipográficas:
-  /// - [SyllableType.initial] / [SyllableType.middle]: Adds "-" after o text
-  ///   (o hífen ideal seria centred between as notes, mas requer 2ª passagem)
-  /// - [SyllableType.hyphen]: desenha only "-"
-  /// - Melisma: extension de line horizontal after o text (connects to the próxima note)
-  /// Renders lyric syllables centered at [centerX]. Public so that
+  /// Typographic conventions:
+  /// - [SyllableType.initial] / [SyllableType.middle]: the connecting hyphen is
+  ///   drawn centered BETWEEN syllables by StaffRenderer's post-layout pass,
+  ///   not glued to the text here;
+  /// - [SyllableType.hyphen]: draws just "-";
+  /// - melismas get a horizontal extension line, also drawn post-layout so it
+  ///   can reach the actual end of the melisma.
+  ///
+  /// Public so that
   /// ChordRenderer can render `Note.syllables` for chords (issue #12),
   /// reusing the same typographic rules as single notes.
   void renderSyllables(
@@ -277,12 +301,12 @@ class NoteRenderer extends BaseGlyphRenderer {
   }
 
   void _renderSyllables(Canvas canvas, List<Syllable> syllables, double noteX) {
-    // Line \1 (lower) of the staff: baseline.dy + 2 * staffSpace
+    // Bottom staff line: baseline.dy + 2 * staffSpace.
     final staffBottomY =
         coordinates.staffBaseline.dy + 2 * coordinates.staffSpace;
     final fontSize = coordinates.staffSpace * 0.85;
     final lineHeight = fontSize * 1.3;
-    // Clearance between line lower of the staff and primeira line de lyric
+    // Clearance between the bottom staff line and the first lyric line.
     final firstLineY = staffBottomY + coordinates.staffSpace * 1.5;
 
     for (int verseIndex = 0; verseIndex < syllables.length; verseIndex++) {
@@ -329,11 +353,12 @@ class NoteRenderer extends BaseGlyphRenderer {
     );
 
     final painter = TextPainter(
-      text: TextSpan(text: displayText, style: textStyle),
+      text: TextSpan(
+          text: displayText, style: textStyle.withMusicTextFallback()),
       textDirection: TextDirection.ltr,
     )..layout();
 
-    // Centralizar o text na X position of the note
+    // Centre the text on the note's X position.
     final textX = noteX - painter.width * 0.5;
     painter.paint(canvas, Offset(textX, y - painter.height * 0.5));
 
@@ -342,32 +367,33 @@ class NoteRenderer extends BaseGlyphRenderer {
     // extend the line to the actual end of the melisma instead of a fixed stub.
   }
 
-  /// Determina a direction of the stem pela voice (polyphony) or pela staff position.
+  /// Determines the stem direction from the voice (polyphony) or, failing that,
+  /// from the staff position.
   ///
-  /// in context polifônico (voiceNumber != null):
-  ///   - Voice ímpar (1, 3, ...): stem always for top
-  ///   - Voice par (2, 4, ...): stem always for bottom
+  /// In a polyphonic context (voiceNumber != null):
+  ///   - odd voices (1, 3, ...): stem always up;
+  ///   - even voices (2, 4, ...): stem always down.
   ///
-  /// Sem voice: regra traditional — stem up if a note está na line of the
-  /// meio or below (staffPosition <= 0).
+  /// Without a voice, the traditional rule applies: stem up when the note sits
+  /// below the middle line.
   bool _getStemDirectionByVoice(
     Note note,
     int staffPosition,
     int? voiceNumber,
   ) {
-    // Voice explícita via parameter (propagated pelo layout engine)
+    // Voice passed explicitly by the layout engine.
     if (voiceNumber != null) {
-      return voiceNumber.isOdd; // ímpar = up, par = down
+      return voiceNumber.isOdd; // odd = stem up, even = stem down
     }
 
-    // Voice definida diretamente na note
+    // Voice declared directly on the note.
     if (note.voice != null) {
       return note.voice!.isOdd;
     }
 
-    // Regra posicional (voz única, Gould): notas acima da linha do meio →
-    // haste para baixo; abaixo → para cima; NA linha do meio (staffPosition 0)
-    // → haste para baixo por convenção.
+    // Positional rule (single voice, Gould): notes above the middle line get a
+    // downward stem, notes below get an upward stem, and a note ON the middle
+    // line takes a downward stem by convention.
     return staffPosition < 0;
   }
 }

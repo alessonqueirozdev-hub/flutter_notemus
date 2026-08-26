@@ -191,7 +191,16 @@ void main() {
       expect(measureOne.whereType<TempoMark>().single.bpm, 88);
       expect(measureOne.whereType<Dynamic>().single.type, DynamicType.mf);
       expect(measureOne.whereType<MusicText>().single.text, 'espressivo');
-      expect(measureOne.whereType<OctaveMark>().single.type, OctaveType.va8);
+      // RE-BASELINED (W1-M09). The fixture above carries
+      // `<octave-shift type="up" size="8"/>`, and this line used to expect
+      // `OctaveType.va8` — it was pinning an inverted mapping. The MusicXML
+      // spec defines the shift as the displacement FROM the performed pitch
+      // ("a treble clef line noted with 8va will be indicated with an
+      // octave-shift down"), so `type="up"` is 8vb and `type="down"` is 8va.
+      // The importer had every arm of its switch reversed, and additionally
+      // keyed on `placement ?? type` where `placement` is "above"/"below" and
+      // so never matched at all.
+      expect(measureOne.whereType<OctaveMark>().single.type, OctaveType.vb8);
       expect(measureOne.whereType<Chord>().single.notes, hasLength(2));
       expect(
         measureOne.whereType<Rest>().single.duration.type,
@@ -291,19 +300,43 @@ void main() {
       final measure = staff.measures.single as MultiVoiceMeasure;
 
       expect(measure.voiceCount, 2);
+
+      // The bar's OPENING BLOCK belongs to the MEASURE, not to voice 1, and it
+      // is stored exactly once.
+      //
+      // This used to assert that voice 1 carried the clef, key and meter — and
+      // it did, but so did `measure.elements`: the parser wrote every system
+      // element twice. That duplication was invisible only because
+      // `LayoutEngine._layoutMultiVoiceMeasure` ignored `measure.elements`
+      // altogether. Once the layout started reading them the clef, key and
+      // meter were drawn twice (measured: clefs=2, keys=2, times=2), so the
+      // parser stopped duplicating and this expectation moved with it.
       expect(
-        measure.voice1!.elements.whereType<Clef>().single.actualClefType,
+        measure.elements.whereType<Clef>().single.actualClefType,
         ClefType.treble,
       );
+      expect(measure.elements.whereType<KeySignature>().single.count, 2);
       expect(
-        measure.voice1!.elements.whereType<KeySignature>().single.count,
-        2,
-      );
-      expect(
-        measure.voice1!.elements.whereType<TimeSignature>().single.denominator,
+        measure.elements.whereType<TimeSignature>().single.denominator,
         4,
       );
-      expect(measure.voice1!.elements.whereType<TempoMark>().single.bpm, 104);
+      expect(
+        measure.voice1!.elements.whereType<Clef>(),
+        isEmpty,
+        reason: 'the opening clef must not be duplicated into voice 1',
+      );
+      expect(measure.voice1!.elements.whereType<KeySignature>(), isEmpty);
+      expect(measure.voice1!.elements.whereType<TimeSignature>(), isEmpty);
+
+      // `allElements` still sees the whole bar, opening block included.
+      expect(measure.allElements.whereType<Clef>(), hasLength(1));
+
+      // A tempo mark at the head of the bar is system-level too (the parser's
+      // `_isSystemElement` counts it), so it rides with the opening block
+      // rather than with a voice. It is still reachable through `allElements`,
+      // which is the one iteration path documented to see everything.
+      expect(measure.allElements.whereType<TempoMark>().single.bpm, 104);
+      expect(measure.allElements.whereType<TempoMark>(), hasLength(1));
       expect(
         measure.voice1!.elements.whereType<Dynamic>().single.type,
         DynamicType.mf,
@@ -313,6 +346,10 @@ void main() {
         'cantabile',
       );
       expect(
+        // NOT re-baselined by W1-M09: this fixture is MEI, and MEI states the
+        // direction the other way round (`@dis.place="above"` = the notes sound
+        // an octave higher than written = 8va). `_meiOctaveMark` was already
+        // correct; only the MusicXML importer's switch was inverted.
         measure.voice1!.elements.whereType<OctaveMark>().single.type,
         OctaveType.va8,
       );
@@ -386,6 +423,83 @@ void main() {
       expect(fromJson.staff.measures, hasLength(1));
       expect(fromMusicXml.staff.measures, hasLength(1));
       expect(fromMei.staff.measures, hasLength(1));
+    });
+
+    test('<octave-shift> direction follows the MusicXML sign convention', () {
+      // The spec defines the element as the displacement of the PRINTED notes
+      // away from the pitch they perform: "a treble clef line noted with 8va
+      // will be indicated with an octave-shift down from the pitch data
+      // indicated in the notes". So down = 8va/15ma/22da and up = 8vb/15mb/22db,
+      // and `size` is the interval label (8/15/22), not a count of octaves.
+      //
+      // Measured before the fix: `8:down` produced vb8, `8:up` fell through the
+      // default to va8, `15:up` produced va15 — every arm inverted — and a
+      // document carrying `placement="above"` matched no arm at all because the
+      // switch keyed on `placement ?? type`.
+      String doc(String type, int size) =>
+          '<score-partwise version="4.0"><part-list><score-part id="P1">'
+          '<part-name>P</part-name></score-part></part-list>'
+          '<part id="P1"><measure number="1">'
+          '<direction placement="above"><direction-type>'
+          '<octave-shift type="$type" size="$size"/>'
+          '</direction-type></direction>'
+          '<note><pitch><step>C</step><octave>5</octave></pitch>'
+          '<duration>1</duration><type>quarter</type></note>'
+          '</measure></part></score-partwise>';
+
+      OctaveType read(String type, int size) => MusicXMLParser.parseMusicXML(
+            doc(type, size),
+          ).measures.first.allElements.whereType<OctaveMark>().single.type;
+
+      expect(read('down', 8), OctaveType.va8);
+      expect(read('up', 8), OctaveType.vb8);
+      expect(read('down', 15), OctaveType.va15);
+      expect(read('up', 15), OctaveType.vb15);
+      expect(read('down', 22), OctaveType.va22);
+      expect(read('up', 22), OctaveType.vb22);
+
+      // A `stop` (and a mid-span `continue`) emits no element at all: the span
+      // end is not modelled, so `OctaveSpanTracker` closes the span at the end
+      // of the measure the start was found in.
+      for (final closing in ['stop', 'continue']) {
+        expect(
+          MusicXMLParser.parseMusicXML(doc(closing, 8))
+              .measures
+              .first
+              .allElements
+              .whereType<OctaveMark>(),
+          isEmpty,
+        );
+      }
+    });
+
+    test('an OctaveMark displaces the PRINTED pitch, never the sounding one',
+        () {
+      // Measured before W1-M09: C6 printed at staffPosition 8 with no mark AND
+      // at staffPosition 8 under all six mark types — `OctaveMark.octaveShift`
+      // had no reader anywhere in the package.
+      int printedPosition(OctaveType? type) {
+        final clef = Clef(clefType: ClefType.treble);
+        final span = OctaveSpanTracker();
+        if (type != null) {
+          span.advance(
+            OctaveMark(type: type, startMeasure: 0, endMeasure: 0),
+          );
+        }
+        return StaffPositionCalculator.calculate(
+          Pitch(step: 'C', octave: 6, alter: 0.0),
+          clef,
+          extraOctaveShift: span.octaveShift,
+        );
+      }
+
+      expect(printedPosition(null), 8);
+      expect(printedPosition(OctaveType.va8), 1);
+      expect(printedPosition(OctaveType.vb8), 15);
+      expect(printedPosition(OctaveType.va15), -6);
+      expect(printedPosition(OctaveType.vb15), 22);
+      expect(printedPosition(OctaveType.va22), -13);
+      expect(printedPosition(OctaveType.vb22), 29);
     });
   });
 }

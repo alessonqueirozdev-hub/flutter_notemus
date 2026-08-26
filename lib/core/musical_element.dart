@@ -13,10 +13,10 @@ abstract class MusicalElement {
 /// Descreve o estado de a note in relação a a barra de ligação (beam).
 enum BeamType { start, inner, end }
 
-/// Definess if a note inicia or ends a tie (tie).
+/// Define if a note inicia or ends a tie (tie).
 enum TieType { start, inner, end }
 
-/// Definess if a note inicia or ends a slur (slur).
+/// Define if a note inicia or ends a slur (slur).
 enum SlurType { start, inner, end }
 
 /// A single numbered slur boundary on a note, enabling concurrent

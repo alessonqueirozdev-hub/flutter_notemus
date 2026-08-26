@@ -2,12 +2,34 @@
 
 > **Data da auditoria inicial:** 2026-03-23
 > **Reauditoria adversarial (cruzada com o código):** 2026-06-19
-> **Versão auditada:** flutter_notemus 2.6.0
+> **Reconciliação com o código (pós-auditoria forense):** 2026-08-22
+> **Versão auditada:** flutter_notemus 2.7.0
 > **Especificação de referência:** Music Encoding Initiative Guidelines v5
 > **URL:** https://music-encoding.org/guidelines/v5/content/index.html
-> **Resultado (reauditado):** ◐ **~58% dos itens totalmente conformes** (79 de 137 linhas implementadas **e** ligadas ao import/render MEI). O **modelo de dados** cobre amplamente os conceitos do MEI v5, mas o **import/render MEI foca em CMN**; módulos avançados (metadados/FRBR, análise harmônica, baixo cifrado, mensural, tablatura-via-MEI, neuma-via-MEI) existem apenas no modelo. Legenda das tabelas: ✅ modelado **e** importado/renderizado · ⚠️ parcial · ○ só modelo.
 
-> **Nota de honestidade (2026-06-19):** a alegação anterior de "100% de conformidade" era um *overclaim* — confundia *cobertura do modelo de dados* com *suporte real de import/render MEI*. As tabelas abaixo foram corrigidas para refletir o que o código de fato faz.
+> **Nota de honestidade (2026-06-19).** A alegação de "100% de conformidade" era
+> um *overclaim* — confundia *cobertura do modelo de dados* com *suporte real de
+> import/render MEI*. As tabelas foram corrigidas para refletir o que o código
+> de fato faz, e o número honesto continua sendo aproximadamente **~58% (79/137)
+> dos itens catalogados totalmente conformes**.
+
+> **Reconciliação de 2026-08-22.** A auditoria forense
+> (`doc/AUDITORIA_FORENSE_2026-08-21.md`) creditou explicitamente esta tabela de
+> conformância como **não divergente** — ela já dizia a verdade. O que ela pediu
+> foi mais **resolução**: um único rótulo ("✅ conforme") mistura cinco perguntas
+> diferentes que têm respostas diferentes. A §4.31 abaixo é essa separação; as
+> seções 4.1–4.30 permanecem como estão e continuam descrevendo a **cobertura do
+> modelo**.
+>
+> **Um fato precisa aparecer antes de qualquer tabela:** **não existe
+> serializador MEI.** `lib/src/parsers/` contém `mei_parser.dart` e nenhum
+> escritor. MEI é **import-only**. Portanto a coluna "EXPORTED" abaixo se refere
+> a **MusicXML**, e a coluna "ROUND-TRIP" a **MusicXML → modelo → MusicXML**.
+> Nenhum caminho MEI→MEI existe, e nenhum item deste documento pode ser lido
+> como round-trip MEI.
+
+**Legenda das tabelas 4.1–4.30 (cobertura do modelo):** ✅ modelado **e**
+importado/renderizado · ⚠️ parcial · ○ só modelo · ➕ extensão fora do escopo MEI.
 
 ---
 
@@ -47,6 +69,7 @@
    - 4.28 [Marcações de Oitava](#428-marcações-de-oitava)
    - 4.29 [Técnicas de Execução e Andamento](#429-técnicas-de-execução-e-andamento)
    - 4.30 [Parser MEI Nativo](#430-parser-mei-nativo)
+   - 4.31 [Matriz MODEL / PARSED / RENDERED / EXPORTED / ROUND-TRIP](#431-matriz-model--parsed--rendered--exported--round-trip)
 5. [Pontuação de Conformidade](#5-pontuação-de-conformidade)
 6. [Conclusão](#6-conclusão)
 
@@ -54,10 +77,10 @@
 
 ## 1. Resumo Executivo
 
-O **modelo de dados** do **flutter_notemus v2.6.0** cobre amplamente os conceitos do MEI v5 (você consegue construir os objetos em Dart). Porém o **import/render MEI real** é focado em **CMN**: a reauditoria adversarial de 2026-06-19 (cruzando cada linha com o código) encontrou **79 de 137 itens (~58%) totalmente conformes** — modelados **e** efetivamente importados/renderizados. Os demais existem apenas no modelo (classes definidas, sem parsing/render MEI) ou são parciais.
+O **modelo de dados** do **flutter_notemus v2.7.0** cobre amplamente os conceitos do MEI v5 (você consegue construir os objetos em Dart). Porém o **import/render MEI real** é focado em **CMN**: a reauditoria adversarial de 2026-06-19 (cruzando cada linha com o código) encontrou **79 de 137 itens (~58%) totalmente conformes** — modelados **e** efetivamente importados/renderizados. Os demais existem apenas no modelo (classes definidas, sem parsing/render MEI) ou são parciais. **A reconciliação de 2026-08-22 não mudou esse número**: as correções de 2.7.0 melhoraram a *fidelidade* de itens já contados como conformes (multi-`<section>`, `<verse>`/`<syl>`, contêineres) em vez de ligar módulos novos.
 
 Bem suportado (CMN, import + render):
-- Pitch/duration (`maxima`→`2048`), eventos (nota/pausa/acorde/espaço), compasso & pauta
+- Pitch/duration (`maxima`→`2048`), eventos (nota/pausa/acorde), compasso & pauta
 - Clave, ligaduras (slur/tie/beam, incl. `SlurEvent` numerado), quiálteras, polifonia
 - Estrutura de partitura (`scoreDef`/grupos), repetições/volta, sílabas de letra
 
@@ -65,27 +88,19 @@ Apenas no modelo (○) ou parcial (⚠️) — **sem import/render MEI completo*
 - Metadados/FRBR (`meiHead`), análise harmônica (`harm`/`intm`/`deg`/`ChordTable`), baixo cifrado (`fb`/`f`)
 - Notação mensural, tablatura via MEI (`@tab.*`), neuma via MEI (`<neume>` — render só por GABC)
 - `@mode` e metros aditivos (`meterSigGrp`) existem no modelo mas não são lidos do MEI
+- `<space>`, `<mSpace>`, `<mRest>`, `<multiRest>` são modelados e **não** lidos pelo parser MEI
 
-| Módulo MEI v5 | Status |
-|---|---|
-| CMN — Pitch & Duration | ✅ |
-| CMN — Events (Note/Rest/Chord/Space) | ✅ |
-| CMN — Measure & Staff | ✅ |
-| CMN — Clef / Key / Meter | ⚠️ (`@mode`/aditivo não lidos do MEI) |
-| CMN — Articulation | ✅ |
-| CMN — Dynamics / Ornaments | ⚠️ (contagens corrigidas; subconjunto renderizado) |
-| CMN — Slur / Tie / Beam / Tuplet | ✅ |
-| CMN — Polyphony / Score structure | ✅ |
-| CMN — Navigation (Repeats / Volta) | ✅ |
-| Lyrics & Text (Syllable) | ⚠️ (`Verse` não populado pelo parser) |
-| Metadata (meiHead / FRBR) | ○ só modelo |
-| Harmonic Analysis | ○ só modelo |
-| Figured Bass | ○ só modelo |
-| Microtonality & Solmization | ✅ (modelo/render) |
-| Tablature | ⚠️ (render via modelo; sem import MEI) |
-| Mensural Notation | ○ só modelo |
-| Neume Notation | ⚠️ (render via GABC; sem import MEI `<neume>`) |
-| MEI Parser nativo | ⚠️ (escopo CMN, não MEI v5 completo) |
+**A tabela por módulo virou uma matriz de cinco colunas** — ver **§4.31**. Um
+único rótulo escondia que "modelado", "importado", "desenhado", "exportado" e
+"round-trip" são cinco respostas distintas para o mesmo conceito.
+
+### Corrigido em 2.7.0 (import MEI)
+
+| Achado | O que mudou | Onde |
+|---|---|---|
+| **F-17** — só a primeira `<section>` era lida; a segunda metade da peça sumia sem aviso | o parser itera **todas** as `<section>` de topo (com detecção de aninhamento) e usa `findAllElements('measure')`, que também alcança compassos dentro de `<ending>`/`<expansion>` | `parser_support.dart::_MeiImportParser.parse`, `_topLevelSections` · invariante: `test/invariants/engraving_invariants_test.dart` → "F-17 — MEI reads every section" |
+| **F-42** — `_slurById`/`_tieById`/`_afterNoteById` nunca eram limpos, então `xml:id` duplicados produziam ligaduras fantasma no compasso seguinte | os índices são limpos na entrada de cada compasso | `parser_support.dart::_collectMeiControlEvents` |
+| `<verse>`/`<syl>` não populavam `Verse` | `<verse @n>` é lido e ordenado, e `@wordpos`/`@con` viram `SyllableType` | `parser_support.dart:3123-3140` |
 
 ---
 
@@ -523,50 +538,126 @@ Todos os 20+ tipos de clave MEI implementados em `ClefType`: treble, bass, alto,
 
 ---
 
+### 4.31 Matriz MODEL / PARSED / RENDERED / EXPORTED / ROUND-TRIP
+
+> **Por que esta seção existe.** A auditoria forense pediu que "conforme" fosse
+> desmontado nas perguntas que ele esconde. Cada coluna é uma pergunta diferente,
+> verificada no código em 2026-08-22:
+>
+> - **MODEL** — a classe/campo existe em `lib/core/` e pode ser construída em Dart.
+> - **PARSED** — o **parser MEI** (`_MeiImportParser`) instancia isso a partir do XML.
+>   Um conceito lido só do MusicXML **não** conta aqui; a coluna é sobre MEI.
+> - **RENDERED** — algum renderizador desenha isso na tela.
+> - **EXPORTED** — o escritor **MusicXML** emite isso. **Não existe escritor MEI**,
+>   então esta coluna nunca pode significar "exportado como MEI".
+> - **ROUND-TRIP** — MusicXML → modelo → MusicXML preserva o dado. A invariante
+>   L9 (`test/invariants/engraving_invariants_test.dart`) cobre altura, duração,
+>   articulação, ligadura de valor e letra; o resto é leitura de código.
+>
+> Legenda: ✅ sim · ⚠️ parcial · ❌ não · — não se aplica.
+
+| Conceito MEI v5 | MODEL | PARSED (MEI) | RENDERED | EXPORTED (MusicXML) | ROUND-TRIP |
+|---|:--:|:--:|:--:|:--:|:--:|
+| Estrutura `<mei>`/`<music>`/`<body>`/`<mdiv>`/`<score>` | ✅ | ✅ | — | ❌ | ❌ |
+| `<section>` (incl. múltiplas, `<ending>`, `<expansion>`) | ✅ | ✅ *(F-17 corrigido)* | — | ❌ | ❌ |
+| Pitch `@pname`/`@oct`/`@accid`/`@accid.ges` | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Microtons (`@alter` fracionário, quartos de tom) | ✅ | ❌ *(o parser MEI deriva `alter` só do `@accid`)* | ✅ | ⚠️ | ❌ |
+| `@dur` `maxima`→`2048` + `@dots` | ✅ | ✅ | ⚠️ *(glifos na faixa usual; o espaçamento agora cobre os 15 valores — L6)* | ✅ | ✅ |
+| `<note>` / `<rest>` / `<chord>` | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `<space>` / `<mSpace>` / `<mRest>` / `<multiRest>` | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Notas de ornamento (`@grace`) | ✅ | ✅ | ✅ | ✅ | ⚠️ *(acciaccatura vs appoggiatura perdida)* |
+| `<measure>` + `@n` | ✅ | ✅ | ✅ *(números agora **desenhados**: `theme.showMeasureNumbers`, `staff_renderer.dart:299`)* | ✅ | ⚠️ |
+| Barlines `@left`/`@right` | ✅ | ✅ | ✅ | ✅ | ⚠️ |
+| `<clef>` / `@clef.*` (incl. `@dis`/`@dis.place`) | ✅ | ✅ | ✅ *(mudança intra-compasso agora em tamanho de cue e na ordem do documento — F-01)* | ⚠️ *(mapeamento de linha e claves de oitava — IO #10)* | ⚠️ |
+| `<keySig>` / `@key.sig` | ✅ | ✅ | ✅ | ✅ | ⚠️ |
+| `@mode` (modo da armadura) | ✅ | ❌ | ❌ | ❌ | ❌ |
+| `<meterSig>` / `@meter.count`/`@meter.unit` | ✅ | ✅ | ✅ | ✅ | ⚠️ |
+| `<meterSigGrp>` (metro aditivo) e senza misura | ✅ | ❌ | ✅ *(pelo modelo)* | ❌ | ❌ |
+| `@artic` (articulações) | ✅ | ✅ | ✅ *(tipos estendidos e empilhamento canônico)* | ✅ | ✅ |
+| `<dynam>` (incl. por `@startid`) | ✅ | ✅ | ⚠️ *(~30 dos 36 tipos com glifo + 6 formas em palavra; hairpin é geométrico)* | ✅ | ⚠️ |
+| `@ornam` / `<fermata>` | ✅ | ✅ | ⚠️ | ✅ | ⚠️ |
+| `<slur>` / `<tie>` (`@slur`/`@tie` e `@startid`/`@endid`) | ✅ | ✅ | ✅ *(agora partida em dois segmentos na quebra de sistema — F-26)* | ⚠️ *(sem continuação)* | ⚠️ |
+| `<beam>` contêiner | ✅ | ✅ | ✅ *(compostos 3/8–12/8 agora agrupam certo — F-03)* | ✅ | ⚠️ |
+| Níveis de barra 2..4 | ❌ *(`Note` só tem um `BeamType?`)* | ❌ | ❌ | ⚠️ | ❌ |
+| `<tuplet>` contêiner (`@num`/`@numbase`) | ✅ | ✅ | ✅ *(aninhado, colchete inclinado, geometria interna registrada)* | ⚠️ | ⚠️ |
+| `<layer>` (polifonia) | ✅ | ✅ | ⚠️ *(vozes 1–2 reais; 3–4 são empilhamento cego)* | ✅ *(`<backup>`)* | ⚠️ |
+| `<scoreDef>` / `<staffDef>` / `<staffGrp>` | ✅ | ⚠️ *(defaults do `<scoreDef>` semeiam o 1º compasso; grupos/colchetes não são construídos do MEI)* | ✅ *(`GrandStaff`/`ScoreView`)* | ⚠️ | ❌ |
+| Repetições / `<ending>` / voltas | ✅ | ✅ | ✅ | ⚠️ *(barra sim; `RepeatMark`/`VoltaBracket` não)* | ❌ |
+| `<verse>` / `<syl>` (letras) | ✅ | ✅ | ✅ *(a sílaba agora **reserva largura** no layout — F-15)* | ✅ | ✅ |
+| `<octave>` (marcas de oitava) | ✅ | ✅ | ✅ | ✅ | ⚠️ |
+| `<tempo>` (`@mm`/`@midi.bpm`/`@unit`) | ✅ | ✅ | ⚠️ | ✅ | ⚠️ |
+| `<meiHead>` / FRBR | ✅ | ❌ | — | ❌ | ❌ |
+| Análise harmônica (`<harm>`, `@intm`, `@deg`) | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Baixo cifrado (`<fb>`/`<f>`) | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Tablatura (`@tab.fret`/`@tab.string`, `<tabGrp>`) | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Notação mensural | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Notação de neuma (`<neume>`/`<nc>`) | ✅ | ❌ | ✅ **por um caminho diferente** — o render vem de **GABC**, por um pipeline próprio (`gabc_parser.dart` → `gregorian_renderer.dart`), não do MEI | ❌ | ❌ |
+
+**Como ler a linha do neuma.** É a única do documento em que ✅ e ❌ convivem na
+mesma ideia, e é onde um leitor apressado erra: o canto gregoriano **é** de fato
+renderizado, com neumas pré-compostos da Greciliae e classificação por contorno
+melódico — mas nada disso é alcançável a partir de um arquivo MEI. Quem entregar
+`<neume>` a `MusicScore.fromMei` não vê nada.
+
+**Resumo em uma frase:** MEI entra (CMN, uma fatia grande e agora completa em
+`<section>`), MEI não sai, e cinco famílias inteiras do modelo (`meiHead`,
+harmonia, baixo cifrado, mensural, tablatura) nunca chegam a ser lidas.
+
+---
+
 ## 5. Pontuação de Conformidade
 
 > Cobertura = itens **modelados e ligados ao import/render MEI** sobre o total
-> catalogado (reauditoria 2026-06-19). "Só modelo" não conta como coberto.
+> catalogado (reauditoria 2026-06-19, revisada em 2026-08-22). "Só modelo" não
+> conta como coberto. Para a decomposição em cinco perguntas, ver **§4.31**.
 
 ### Por Módulo MEI v5
 
-| Módulo MEI v5 | Cobertura | Observação |
+| Módulo MEI v5 | Cobertura | Observação (2026-08-22) |
 |---|---|---|
-| CMN — Pitch & Duration | **100%** | |
-| CMN — Events (Note/Rest/Chord/Space) | **100%** | |
-| CMN — Measure & Staff | **100%** | |
-| CMN — Clef / Key / Meter | **parcial** | `@mode`/metro aditivo não lidos do MEI |
-| CMN — Articulation | **100%** | |
-| CMN — Dynamics / Ornaments | **parcial** | subconjunto renderizado (9/36 din.; 33/43 ornam.) |
-| CMN — Slur / Tie / Beam / Tuplet | **100%** | |
-| CMN — Polyphony / Score structure | **100%** | |
-| CMN — Navigation (Repeats / Volta) | **100%** | |
-| Lyrics, Text & Syllables | **parcial** | `Verse` não populado pelo parser |
+| CMN — Pitch & Duration | **100%** | microtons continuam **não** lidos do MEI (`@accid` apenas) |
+| CMN — Events (Note/Rest/Chord) | **100%** | |
+| CMN — Espaços (`<space>`/`<mSpace>`/`<mRest>`/`<multiRest>`) | **só modelo** | não casados pelo leitor de `<layer>` |
+| CMN — Measure & Staff | **100%** | `@n` agora também é **desenhado**, não só guardado |
+| CMN — Clef / Key / Meter | **parcial** | `@mode` e `<meterSigGrp>` continuam não lidos do MEI |
+| CMN — Articulation | **100%** | render estendido (portato/snap/stopped/open/thumb) e empilhado |
+| CMN — Dynamics / Ornaments | **parcial** | ~30 dos 36 tipos de dinâmica com glifo + 6 formas em palavra (era 9/36); ornamentos 33/43 |
+| CMN — Slur / Tie / Beam / Tuplet | **parcial** | contêineres ✅; **níveis de barra 2..4 não existem no modelo** (`Note.beam` é único) |
+| CMN — Polyphony / Score structure | **parcial** | `<layer>` ✅; `<staffGrp>`/colchetes não são construídos a partir do MEI |
+| CMN — Navigation (Repeats / Volta) | **100%** | import ✅; export MusicXML de `RepeatMark`/`VoltaBracket` ainda não |
+| Lyrics, Text & Syllables | **100%** | *corrigido: `<verse>`/`<syl>` agora são lidos e `Verse` é populado* |
 | Metadata / meiHead / FRBR | **só modelo** | sem parsing MEI |
 | Harmonic Analysis | **só modelo** | sem parsing/render |
 | Figured Bass | **só modelo** | sem parsing/render |
-| Microtonality & Solmization | **100%** | modelo/render |
-| Tablature | **parcial** | render via modelo; sem import MEI |
+| Microtonality & Solmization | **parcial** | modelo + render ✅; **não** importável do MEI |
+| Tablature | **só modelo** | sem import MEI e sem renderizador de tablatura |
 | Mensural Notation | **só modelo** | sem import/render |
-| Neume Notation | **parcial** | render via GABC; sem import MEI `<neume>` |
+| Neume Notation | **parcial** | render real, mas por **GABC**; `<neume>` do MEI não é lido |
+| **Serialização MEI (qualquer módulo)** | **0%** | **não existe escritor MEI** |
 
 ### Pontuação Global
 
 | Escopo | Cobertura |
 |---|---|
-| **CMN (Notação Musical Comum) — import/render** | **alta** (núcleo completo; ressalvas em din./ornam./`@mode`/letra) |
-| **Itens MEI v5 catalogados totalmente conformes** | **~58%** (79/137) |
+| **CMN (Notação Musical Comum) — import MEI** | **alta** (núcleo completo; agora incluindo múltiplas `<section>` e letras) |
+| **Itens MEI v5 catalogados totalmente conformes** | **~58%** (79/137) — inalterado por 2.7.0 |
 | **Cobertura do modelo de dados (representável em Dart)** | ampla (todos os repertórios) |
+| **Export MEI** | **0%** — import-only |
+| **Round-trip MEI→MEI** | **impossível hoje** (sem serializador) |
 
 ---
 
 ## 6. Conclusão
 
-O **modelo de dados** do **flutter_notemus v2.6.0** representa amplamente o MEI v5
-(todos os repertórios são construtíveis em Dart). O **import/render MEI**, porém,
+O **modelo de dados** do **flutter_notemus v2.7.0** representa amplamente o MEI v5
+(todos os repertórios são construtíveis em Dart). O **import MEI**, porém,
 é focado em **CMN** — a reauditoria de 2026-06-19 mediu **~58% (79/137)** dos
 itens catalogados como totalmente conformes (modelados **e** importados/
-renderizados). A tabela abaixo lista as classes **do modelo** adicionadas; muitas
+renderizados), e a reconciliação de 2026-08-22 confirmou o número: 2.7.0 tornou
+alguns desses itens *mais fiéis* (todas as `<section>`, `<verse>`/`<syl>`,
+índices de eventos de controle limpos por compasso) sem ligar módulos novos.
+**Não há exportação MEI de nenhum módulo.** A tabela abaixo lista as classes
+**do modelo** adicionadas; muitas
 (metadados/FRBR, análise harmônica, baixo cifrado, mensural, tablatura/neuma via
 MEI) ainda **não têm parsing/render MEI** — são "só modelo":
 
@@ -596,5 +687,6 @@ MEI) ainda **não têm parsing/render MEI** — são "só modelo":
 
 ---
 
-*Auditoria conduzida por análise estática do código-fonte flutter_notemus v2.5.1 contra as MEI v5 Guidelines.*
-*Última atualização: 2026-03-24.*
+*Auditoria original conduzida por análise estática do código-fonte contra as MEI v5 Guidelines (v2.5.1, 2026-03-24).*
+*Reauditoria adversarial cruzada com o código: 2026-06-19 (v2.6.0) — origem do número honesto de ~58%.*
+*Reconciliação com o código e matriz de cinco colunas (§4.31): 2026-08-22 (v2.7.0), após `doc/AUDITORIA_FORENSE_2026-08-21.md`.*

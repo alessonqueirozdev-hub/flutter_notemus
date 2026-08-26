@@ -289,8 +289,9 @@ class BarElementRenderer {
     );
   }
 
-  /// Pixel advance of a Bravura glyph (SMuFL advance is in staff spaces; falls
-  /// back to the rendered width when metadata lacks the glyph).
+  /// Pixel advance of a glyph in the loaded music font (the SMuFL advance is
+  /// in staff spaces; falls back to the rendered width when the metadata lacks
+  /// the glyph).
   double _glyphAdvancePx(String glyphName) {
     final adv = metadata.getGlyphAdvanceWidth(glyphName);
     if (adv != null) return adv * coordinates.staffSpace;
@@ -300,8 +301,9 @@ class BarElementRenderer {
       text: TextSpan(
         text: ch,
         style: TextStyle(
-          fontFamily: 'Bravura',
-          package: 'flutter_notemus',
+          // Font independence: the family comes from the loaded descriptor.
+          fontFamily: metadata.font.fontFamily,
+          package: metadata.font.fontPackage,
           fontSize: glyphSize,
         ),
       ),
@@ -343,7 +345,7 @@ class BarElementRenderer {
     bool centerVertically = false,
     bool centerHorizontally = false,
     // A2 FIX: when true, position.y is treated as the SMuFL y=0 baseline
-    // (and.g. G-line for gClef, F-line for fClef) and the glyph is anchored
+    // (e.g. G-line for gClef, F-line for fClef) and the glyph is anchored
     // to the font's alphabetic baseline rather than the layout-box centre.
     bool useBaseline = false,
   }) {
@@ -353,8 +355,9 @@ class BarElementRenderer {
       text: TextSpan(
         text: character,
         style: TextStyle(
-          fontFamily: 'Bravura',
-          package: 'flutter_notemus',
+          // Font independence: the family comes from the loaded descriptor.
+          fontFamily: metadata.font.fontFamily,
+          package: metadata.font.fontPackage,
           fontSize: size,
           color: color,
           height: 1.0,

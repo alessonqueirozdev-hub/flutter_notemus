@@ -194,7 +194,7 @@ class CollisionDetector {
     return collisions;
   }
 
-  /// Checks if a position caUsesria colisão
+  /// Checks if a position causaria colisão
   bool wouldCollide(
     BoundingBox proposedBox,
     List<String> ignoreTypes,
@@ -222,7 +222,7 @@ class CollisionDetector {
     List<String> ignoreTypes = const [],
     double maxAdjustment = 2.0,
   }) {
-    // If not há colisão, Returnsr position preferida
+    // If not há colisão, retornar position preferida
     final testBox = BoundingBox(
       position: preferredPosition,
       width: proposedBox.width,
@@ -275,7 +275,7 @@ class CollisionDetector {
       }
     }
 
-    // If not encontrou position, Returnsr a preferida same with colisão
+    // If not encontrou position, retornar a preferida same with colisão
     return preferredPosition;
   }
 
@@ -318,7 +318,7 @@ class CollisionDetector {
         continue;
       }
 
-      // Createsr bounding box for o elemento
+      // criar bounding box for o elemento
       final bbox = _createBoundingBox(element);
       if (bbox == null) {
         optimized.add(element);
@@ -333,12 +333,11 @@ class CollisionDetector {
       );
 
       // add elemento otimizado
-      final optimizedElement = PositionedElement(
-        element.element,
-        newPosition,
-        system: element.system,
-      );
-      optimized.add(optimizedElement);
+      //
+      // `movedTo` keeps voice, onset, measure index and staff baseline; the
+      // hand-written copy this replaced dropped all four, so anything routed
+      // through the collision optimiser lost its selection metadata.
+      optimized.add(element.movedTo(newPosition));
 
       // Registrar região ocupada
       registerElement(

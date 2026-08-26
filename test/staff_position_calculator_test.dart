@@ -243,11 +243,28 @@ void main() {
     );
 
     test(
-      'needsLedgerLines should return true for notes outside the staff',
+      'needsLedgerLines agrees with getLedgerLinePositions',
       () {
-        expect(StaffPositionCalculator.needsLedgerLines(5), isTrue);
+        // RE-BASELINED (M-48). This used to assert
+        // `needsLedgerLines(5) == true` and `needsLedgerLines(-5) == true`,
+        // pinning a predicate that disagreed with the function it gates:
+        // measured, `getLedgerLinePositions(5)` and `getLedgerLinePositions(-5)`
+        // both return `[]`. +-5 is the SPACE immediately outside the staff (the
+        // staff lines are the even positions -4..+4, and the first ledger line
+        // is at +-6), so a note there needs no ledger line at all. Both callers
+        // — `LedgerLineRenderer.render` and `ChordRenderer._drawLedgerLines` —
+        // used the predicate only as a gate in front of the position list, so
+        // no ink changes; the predicate simply stopped lying about its name.
+        for (var position = -12; position <= 12; position++) {
+          expect(
+            StaffPositionCalculator.needsLedgerLines(position),
+            StaffPositionCalculator.getLedgerLinePositions(position).isNotEmpty,
+            reason: 'staffPosition $position',
+          );
+        }
+        expect(StaffPositionCalculator.needsLedgerLines(5), isFalse);
+        expect(StaffPositionCalculator.needsLedgerLines(-5), isFalse);
         expect(StaffPositionCalculator.needsLedgerLines(6), isTrue);
-        expect(StaffPositionCalculator.needsLedgerLines(-5), isTrue);
         expect(StaffPositionCalculator.needsLedgerLines(-6), isTrue);
       },
     );

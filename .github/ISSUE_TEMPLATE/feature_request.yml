@@ -1,0 +1,69 @@
+name: Feature request
+description: Notation, an interchange element, or an API this package should support.
+title: "[feat] "
+labels: ["enhancement", "needs triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before opening: the README's **MEI v5 Conformance** table and
+        `doc/MODEL_ONLY.md` list what is modelled but not yet imported or
+        rendered. If your feature is already in the model, say so — wiring it up
+        is usually much smaller work than building it from scratch.
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What notation or capability is missing
+      description: >
+        Name it the way the standards do where you can — the MusicXML element,
+        the MEI attribute, the SMuFL glyph, the *Behind Bars* section.
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: What you are trying to do
+      description: The actual score or app that needs it. Concrete beats general.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reference
+    attributes:
+      label: Reference
+      description: >
+        A spec link, a page from Gould, a sample file, or a screenshot from
+        another engraver showing the expected result.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      multiple: true
+      options:
+        - Engraving / layout
+        - Notation element (new symbol)
+        - MusicXML
+        - MEI
+        - JSON
+        - MIDI / playback
+        - Gregorian chant
+        - Jianpu / alternative notations
+        - Export (PDF, image)
+        - Editor infrastructure (cursor, selection, undo)
+        - API surface
+        - Documentation
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and the README conformance tables.
+          required: true

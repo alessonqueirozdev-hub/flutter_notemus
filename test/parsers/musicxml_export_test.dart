@@ -197,10 +197,30 @@ void main() {
       // time-modification present (3:2), and the notes are emitted.
       expect(xml.contains('<time-modification>'), isTrue);
       expect(xml.contains('<actual-notes>3</actual-notes>'), isTrue);
+      // The BRACKET is written too. Without it a tuplet was not a round trip
+      // at all: measured, the bar came back as four loose notes and its value
+      // went 0.5 -> 0.625 (M-02).
+      expect(xml.contains('<tuplet'), isTrue);
 
       final reimported = MusicXMLParser.parseMusicXML(xml);
-      // The three triplet notes survived (previously the Tuplet was dropped).
-      expect(notesOf(reimported).length, 3);
+      // RE-BASELINED (2.7.1, M-02). This used to assert
+      // `notesOf(reimported).length == 3`, where `notesOf` only reaches
+      // `measure.elements.whereType<Note>()` — i.e. it passed precisely
+      // BECAUSE the group had been flattened into three loose notes, which is
+      // the defect. The three notes must now come back INSIDE a Tuplet, so the
+      // measure carries 0 loose notes and 1 Tuplet holding all three.
+      final tuplets =
+          reimported.measures.single.elements.whereType<Tuplet>().toList();
+      expect(tuplets, hasLength(1));
+      expect(tuplets.single.elements.whereType<Note>().length, 3);
+      expect(tuplets.single.actualNotes, 3);
+      expect(tuplets.single.normalNotes, 2);
+      expect(notesOf(reimported), isEmpty);
+      // And the bar is worth what it was worth before the trip.
+      expect(
+        reimported.measures.single.currentMusicalValue,
+        closeTo(staff.measures.single.currentMusicalValue, 1e-9),
+      );
     });
   });
 }

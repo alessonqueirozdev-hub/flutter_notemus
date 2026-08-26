@@ -56,7 +56,7 @@ class FigureElement {
 /// Representa a indicação de bottom cifrado (thoroughbass / figured bass),
 /// correspwherendo to the elemento `<fb>` (figured bass) of the MEI v5.
 ///
-/// O bottom cifrado is a convenção de noteção barroca where numbers and accidentals
+/// O bottom cifrado is a convenção de notação barroca where numbers and accidentals
 /// above or below de a note de bottom indicate quais harmonias must be
 /// realizadas pelo instrumentista.
 ///

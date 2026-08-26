@@ -1,50 +1,168 @@
 # Library CMN rendering audit backlog (72 confirmed)
 
-> **2.6.0 audit status (2026-06-19).** Cross-checked against the code by a
-> two-pass automated audit (classify, then adversarial verify). An item is
-> listed **RESOLVED** only when the adversarial pass confirmed the desired
-> behavior is implemented; **PARTIAL** = implemented with caveats/gaps; the
-> rest stay open. Overlay over 72 items — the per-item descriptions below
-> are unchanged.
+## Methodological note — what "RESOLVED" is allowed to mean
 
-- **RESOLVED (22):**
+> **An item may be marked RESOLVED only when a test exists that would fail if
+> the regression came back.** Reading the code and agreeing that it "looks
+> right" is *not* sufficient evidence, and neither is a passing golden image:
+> goldens freeze whatever the renderer currently produces, so they detect
+> *change*, not *correctness*. An item with no such test is PARTIAL at best,
+> whatever the code looks like.
+>
+> This rule was written because it was broken. The 2026-06-19 overlay marked
+> **#2 (within-measure accidental persistence) as RESOLVED while it was broken
+> for every beamed note**: the layout replaced beamed `Note` objects with
+> clones, so the identity-keyed decision map from `AccidentalResolver` no longer
+> matched and four F sharps printed four sharps instead of one. Two passes of
+> "adversarial verification" by reading code missed it; the executable probe in
+> `doc/AUDITORIA_FORENSE_2026-08-21.md` (F-02) found it in one run. The forensic
+> audit's own ranking rule applies here: *the larger the divergence between the
+> documentation and the code, the higher the priority of the finding* — and a
+> falsely-RESOLVED item is the largest divergence a backlog can produce.
+>
+> **Where those tests live:** `test/invariants/` — `engraving_invariants_test.dart`
+> (L1–L10 plus the named F-xx regressions) and `grand_staff_alignment_test.dart`
+> (the shared time grid). Chant calibration lives in
+> `test/gregorian/greciliae_calibration_test.dart`. When you resolve an item,
+> add the invariant there and cite it on the item's line; when you cannot state
+> the invariant, the item is not resolved.
+
+> **2.7.0 audit status (2026-08-22).** Re-verified item by item against the code
+> after the two remediation waves that followed the forensic audit
+> (`doc/AUDITORIA_FORENSE_2026-08-21.md`). Statuses below were re-derived from
+> the source, not carried over from the previous overlay. Items fixed in this
+> round carry a one-line note saying what changed and where. Overlay over 72
+> items — the per-item descriptions further down are unchanged and still
+> describe the ORIGINAL defect.
+
+- **RESOLVED (37):**
   - **#1** — Multi-digit time signatures
-  - **#2** — Within-measure accidental persistence
+  - **#2** — Within-measure accidental persistence — *re-fixed this round: the
+    layout no longer clones beamed notes (`Note.beam` is mutable and written in
+    place, `layout_engine.dart::_processBeamsWithAnacrusis`), so the
+    identity-keyed `AccidentalResolver` map survives beaming. Invariant:
+    `test/invariants/engraving_invariants_test.dart` → "the rule also applies to
+    BEAMED notes".*
   - **#3** — Clef repeated at system start
-  - **#5** — Last system not justified
+  - **#5** — Last system not justified — *this round the arbitrary
+    `fillThreshold = 0.7` was also removed, so only the LAST system stays ragged
+    (`layout_engine.dart::_justifyHorizontally`).*
+  - **#6** — Dot width reserved in layout — *fixed this round:
+    `layout_engine.dart::_getElementWidthSimple` now adds
+    `0.7 + (dots-1) * 0.6` staff spaces for Note and Chord. Invariant: L6 → "a
+    dotted note takes more room than its plain form".*
   - **#7** — Rest spacing ratio applied
   - **#10** — Key signature cancellation width reserved
   - **#11** — MusicXML alter without accidental
   - **#12** — Chord articulations rendered
+  - **#13** — Multiple articulations stack — *fixed this round:
+    `articulation_renderer.dart` sorts by `_stackRank` and accumulates the
+    clearance outward instead of placing every mark at its own fixed offset.*
+  - **#14** — Articulation types extended — *fixed this round: portato, snap,
+    thumb, stopped, open and halfStopped now map to real SMuFL glyphs
+    (`articulation_renderer.dart::_getArticulationGlyph`).*
+  - **#16** — Dotted rests render with dots — *fixed this round:
+    `rest_renderer.dart:113-120`.*
+  - **#18** — Mid-measure clef at cue size — *fixed this round as a side effect
+    of F-01: the layout no longer hoists clef/key/meter to the head of the bar,
+    so a mid-measure clef reaches `StaffRenderer._renderElement` in document
+    order and gets the cue `sizeFactor`. Invariant: "F-01 — a mid-measure clef
+    change stays where it was written and only affects later notes".*
   - **#19** — Key sig cancellation width (duplicate)
   - **#20** — Free-time signature renders nothing
   - **#21** — Middle-line stem DOWN (not UP)
   - **#22** — MEI tuplet container nesting
   - **#23** — MusicXML export lyrics
+  - **#25** — Stem-length floor in beamed groups — *fixed this round:
+    `beam_analyzer.dart` rigidly shifts the already-sloped beam line until every
+    stem clears `minimumStemLengthSpaces`. Invariant: L5.*
+  - **#27** — Accidental width on leading side — *fixed this round:
+    `_calculateRhythmicSpacing` adds the lead-in for the CURRENT element's
+    accidental, i.e. on the side the glyph is actually drawn.*
+  - **#28** — System-break width estimate — *fixed this round:
+    `_calculateMeasureWidthCursor` measures by dry-running the real layout with
+    a scratch cursor, so estimate and drawing cannot drift apart (F-12). Was the
+    root cause of the overflow in #51/F-05.*
   - **#37** — Tuplet ratio display
   - **#38** — Multi-digit tuplet numbers
   - **#39** — Whole-measure rest centered
+  - **#40** — Nested tuplets rendered — *fixed this round:
+    `tuplet_renderer.dart:138-149` recurses into a child `Tuplet` instead of
+    skipping it.*
+  - **#41** — Tuplet bracket slope honoured — *fixed this round:
+    `tuplet_renderer.dart:232-259` slopes the bracket to parallel the notes,
+    with a rise clamp.*
   - **#47** — MusicXML divisions/duration
+  - **#48** — Import ignores divisions/duration — *fixed this round:
+    `parser_support.dart` keeps a per-part `_divisions` and derives the notated
+    value from `<duration>` when `<type>` is absent. Invariant: "F-06 / F-07 —
+    divisions drive the duration when `<type>` is absent".*
   - **#49** — MusicXML export beams/grace/ornaments
+  - **#51** — Square-root spacing on the live path — *fixed this round: the live
+    `_calculateRhythmicSpacing` now COMPUTES `sqrt(absoluteValue / quarter)`
+    instead of looking up a 7-entry table that fell back to `1.0`, which had
+    inverted the rhythmic proportion outside quarter..64th (a breve was narrower
+    than a whole note). Invariant: L6 → "all fifteen duration types are
+    ordered". See the caveat under OPEN #52 about the engine object itself.*
+  - **#62** — Marcato always above staff — *fixed this round:
+    `articulation_renderer.dart:27-31` forces `above` for marcato/strongAccent
+    regardless of stem direction.*
   - **#64** — Heavy-light barline type
   - **#65** — Time sig numerator/denominator centered
   - **#66** — Ledger line thickness from metadata
+  - **#68** — Justification stretches only the elastic region — *fixed this
+    round: the opening clef→key→meter block is excluded from the stretch
+    (`_justifyHorizontally`). Slack is still distributed by position within the
+    elastic region, not by local compressibility — see OPEN.*
+  - **#70** — Cautionary / courtesy accidentals — *fixed this round:
+    `accidental_resolver.dart:140` never suppresses a note carrying
+    `AccidentalParenthesis`. Invariant: "a cautionary accidental is never
+    hidden".*
   - **#71** — Additive meter display (3+2+2 format)
-- **PARTIAL (14):**
-  - **#6** — Dot width reserved in layout
-  - **#13** — Multiple articulations stack
-  - **#14** — Articulation types extended
-  - **#16** — Dotted rests render with dots
+- **PARTIAL (12):**
   - **#17** — C-clefs on correct staff lines
-  - **#27** — Accidental width on leading side
+  - **#26** — Spacing keyed on the previous element's duration — for a single
+    voice that IS the inter-onset interval, so the common case is right; a voice
+    whose next event starts before the previous one ends is still not modelled.
   - **#29** — Slur skyline uses pitch Y
-  - **#31** — Chord accidental column width
+  - **#31** — Chord accidental column width — the renderer stacks N columns
+    (`chord_renderer.dart:103-125`) but the layout still reserves ONE
+    (`max` accidental width, `layout_engine.dart:1620-1633`).
   - **#45** — MEI beam/tuplet containers
   - **#46** — MusicXML tuplet export
   - **#50** — Cross-staff beaming
+  - **#52** — Collision detection on the main spacing path — a real anti-collision
+    FLOOR now runs on every gap (`_minimumInterNoteGap`, which is also what keeps
+    compressed measures legible), but the full `CollisionDetector`/skyline pass
+    is still opt-in.
   - **#53** — Nested slurs with id
-  - **#55** — Cross-voice collision (second/unison)
-  - **#62** — Marcato always above staff
+  - **#55** — Cross-voice collision (second/unison) — *improved this round:
+    simultaneity is matched by MUSICAL ONSET (`pe.onset`), not by `dx.round()`,
+    so two attacks landing at 123.4 and 123.6 px no longer miss each other.
+    Still displacement-only: unisons are not merged onto a shared notehead.*
+  - **#69** — Tuplet horizontal width — inner notes now get registered geometry
+    (`_registerTupletGeometry`), but the tuplet's own advance is still a flat
+    per-element grid, not the sum of the inner durations.
+  - **#72** — Chord ledger lines across cluster-shifted noteheads
+- **Also RESOLVED this round, previously open:**
+  - **#33** — Hairpin length anchored to the next dynamic/barline instead of a
+    fixed default (`staff_renderer.dart:950`).
+- **Still OPEN — and why (spot-checked in the code, 2026-08-22):**
+  - **#4** — Beam thickness/gap still hardcoded at `0.4` / `0.60` staff spaces
+    (`beam_renderer.dart:29-30`) against Bravura's `beamThickness 0.5` /
+    `beamSpacing 0.25`. The metadata is loaded and unused here.
+  - **#8, #9** — Slur direction and shape still decided from the two endpoints;
+    articulations on the slur side are still not cleared.
+  - **#15** — Hairpins are still drawn as two line segments; no niente circle,
+    no dashed variant.
+  - **#24** — Beamed-group stems still use raw pixel nudges
+    (`beam_renderer.dart:56-57`: `+0.7` / `-0.8`, not even scaled by
+    `staffSpace`) instead of the SMuFL `stemUpSE`/`stemDownNW` anchor path that
+    the single-note stem path already uses. Note for `doc/MAGIC_NUMBERS_REFERENCE.md`:
+    those two constants did not disappear, they MOVED here.
+  - **#30, #32, #34, #35, #36, #42, #43, #44, #54, #56, #57, #58, #59, #60,
+    #61, #63, #67** — untouched by this round; no code change found against the
+    description recorded below.
 
 ## 1. [HIGH/small] (clefs-meter-barlines) Multi-digit time signatures (12/8, 16, 10/4, etc.) render as nothing
 **Current:** bar_element_renderer.dart:200-215 `renderTimeSignature` builds the glyph name as `'timeSig${ts.numerator}'` and `'timeSig${ts.denominator}'`. SMuFL only defines single-digit glyphs timeSig0..timeSig9 (confirmed: glyphnames.json has no `timeSig12`/`timeSig16`). For any numerator or denominator >= 10, `metadata.getCodepoint` returns empty and `_drawGlyph` early-returns (bar_element_renderer.dart:231-232), so the time signature is silently omitted. 12/8 — one of the most common compound meters — draws no glyph at all.

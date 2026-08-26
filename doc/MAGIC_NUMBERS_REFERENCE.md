@@ -4,45 +4,38 @@ Este documento explica todos os "magic numbers" (valores numéricos aparentement
 
 ---
 
-## 1. Stem Renderer
+## 1. Stem Renderer — RESOLVIDO (não há mais magic number aqui)
 
-### `stemUpXOffset = 0.7` (pixels)
-**Arquivo:** `lib/src/rendering/renderers/primitives/stem_renderer.dart:20`
+> **Atualizado em 2026-08-21 (2.7.0).** Este documento afirmava, até então, que
+> `stem_renderer.dart:20` e `:25` continham `stemUpXOffset = 0.7` e
+> `stemDownXOffset = -0.8` **em pixels** — valores calibrados visualmente e
+> explicitamente não proporcionais ao `staffSpace` ("para staffSpace muito
+> grande (>20px), pode ser necessário ajuste").
+>
+> **Essas constantes não existem mais.** O `StemRenderer` obtém a anexação da
+> haste de `SMuFLPositioningEngine.calculateStemAttachmentOffset`, que soma a
+> âncora SMuFL do notehead (`stemUpSE` / `stemDownNW`) com metade da espessura
+> da haste (`stemThickness` dos `engravingDefaults`), tudo em *staff spaces* e
+> escalado por `staffSpace`. O resultado é invariante à escala — que era
+> exatamente o defeito dos offsets em pixels.
+>
+> A auditoria forense de 2.6.0 registrou esta seção como divergência
+> documentação↔código (F-39). Se você voltar a ver um offset em pixels crus no
+> renderizador de hastes, é uma regressão.
 
-#### Origem matemática:
-A âncora SMuFL `stemUpSE` para noteheadBlack é **[1.18, 0.168]** em staff spaces, que corresponde ao canto inferior direito (South-East) da cabeça da nota. Porém, devido à renderização do TextPainter do Flutter, há um offset visual adicional que precisa ser compensado.
+### `kStandardStemLengthSpaces = 3.5` (staff spaces)
+**Arquivo:** `lib/src/rendering/smufl_positioning_engine.dart`
 
-#### Valor:
-- **0.7 pixels** = ~0.058 staff spaces (com staffSpace = 12px)
-- Esse valor foi calibrado visualmente comparando com:
-  - Verovio (https://www.verovio.org/)
-  - MuseScore 4
-  - LilyPond
+Comprimento padrão de haste segundo *Behind Bars* (Gould): uma oitava, isto é
+3,5 espaços de pauta. **Não** vem de `engravingDefaults`: o SMuFL não define
+nenhuma chave `stemLength` (confira: as 29 chaves de
+`assets/smufl/bravura_metadata.json` não a incluem). Até 2.6.0 o código fazia
+`_loadEngravingDefault('stemLength', 3.5)`, o que dava aparência de derivação
+com realidade de constante — a leitura sempre caía no fallback. Agora a
+constante é declarada como constante e citada como tal.
 
-#### Por que não é proporcional ao staffSpace?
-O offset é causado por características de renderização do TextPainter do Flutter (antialiasing, hinting), que são relativamente constantes em pixels. Para staffSpace muito grande (>20px), pode ser necessário ajuste.
-
-#### Referências:
-- SMuFL 1.4 specification: https://w3c.github.io/smufl/latest/
-- Bravura metadata: `stemUpSE` anchor
-
----
-
-### `stemDownXOffset = -0.8` (pixels)
-**Arquivo:** `lib/src/rendering/renderers/primitives/stem_renderer.dart:25`
-
-#### Origem matemática:
-A âncora SMuFL `stemDownNW` para noteheadBlack é **[0.0, -0.168]** em staff spaces, que corresponde ao canto superior esquerdo (North-West) da cabeça da nota. O offset negativo compensa o deslocamento visual do TextPainter.
-
-#### Valor:
-- **-0.8 pixels** = ~-0.067 staff spaces (com staffSpace = 12px)
-- Ligeiramente maior que `stemUpXOffset` devido à assimetria da fonte Bravura
-
-#### Referências:
-- SMuFL 1.4 specification: https://w3c.github.io/smufl/latest/
-- Bravura metadata: `stemDownNW` anchor
-
----
+Mínimo absoluto usado pelo agrupador de barras: **2,5 espaços**, mais
+`(beamCount - 1) * (beamThickness + beamSpacing)` lidos do metadado.
 
 ## 2. Base Glyph Renderer
 
@@ -140,7 +133,20 @@ Largura mínima de um compasso para evitar compressão excessiva de elementos mu
 
 ---
 
-### `noteMinSpacing = 3.5` (staff spaces)
+### `noteMinSpacing = 3.5` (staff spaces) — base da lei de espaçamento
+
+> **Atualizado em 2.7.0.** Este é o espaçamento da SEMÍNIMA. O espaçamento de
+> qualquer outra duração é **calculado**, não tabelado:
+>
+> ```
+> fator   = sqrt(duracao.absoluteValue / DurationType.quarter.value)
+> espaco  = noteMinSpacing * fator * staffSpace * compressao
+> ```
+>
+> A tabela fixa anterior cobria apenas `whole`..`sixtyFourth` e caía em `1.0`
+> para o resto, de modo que uma breve era espaçada como semínima (mais estreita
+> que uma semibreve!) e uma 1/128 recebia 2,3× o espaço de uma 1/64. A fórmula
+> cobre os 15 `DurationType` e inclui pontos de aumento via `absoluteValue`.
 **Arquivo:** `lib/src/layout/layout_engine.dart:175`
 
 #### Origem:
@@ -183,7 +189,13 @@ Espaço adequado ANTES da barline, conforme práticas profissionais.
 
 ---
 
-### `barlineSeparation = 2.5` (staff spaces)
+### `barlineTrailingSpace = 2.5` (staff spaces) — renomeado
+
+> Chamava-se `barlineSeparation`, o que colidia com a chave homônima do SMuFL
+> (`barlineSeparation: 0.4`), que significa outra coisa: a distância **entre os
+> dois traços** de uma barra dupla/final. São conceitos diferentes e o nome
+> igual induzia a erro (a constante é 6× o valor do metadado). O alias antigo
+> continua existindo marcado como `@Deprecated`.
 **Arquivo:** `lib/src/layout/layout_engine.dart:169`
 
 #### Origem:

@@ -2,7 +2,7 @@
 // Refactored implementation: Usa StaffPositionCalculator
 //
 // MELHORIAS IMPLEMENTADAS (Fase 2):
-// ✅ Uses StaffPositioncalculateTestor unificado (elimina 41 lines duplicadas)
+// ✅ Uses StaffPositioncalculator unificado (elimina 41 lines duplicadas)
 // ✅ Corrige possible bug de sinal invertido no calculation de position
 // ✅ 100% conformidade with system unificado de posicionamento
 
@@ -40,18 +40,41 @@ class GroupRenderer {
     positioningEngine = SMuFLPositioningEngine(metadataLoader: metadata);
   }
 
-  Map<int, List<int>> _identifyBeamGroups(List<PositionedElement> elements) {
+  /// Collects the runs of notes joined by a single beam.
+  ///
+  /// A beam NEVER crosses a line break: when the music runs out of system the
+  /// group is closed at the last note of that system and the remainder is
+  /// re-beamed on the next one (Gould, *Behind Bars*, p.17 — "beams are broken
+  /// at the end of a system"; the very few cross-system beams that exist in the
+  /// literature are an editorial device, not automatic engraving). The scan
+  /// therefore stops as soon as [PositionedElement.system] changes, otherwise a
+  /// `start..end` run whose `end` was pushed to the next line would be drawn as
+  /// one long beam running backwards over the staff below.
+  ///
+  /// [beamTypes] is `LayoutEngine.beams` — the engine's resolved beam
+  /// membership, published as a VALUE (M-26). It is consulted first and
+  /// [Note.beam] is the fallback, so a caller that hands this renderer a bare
+  /// element list with author-set beams and no layout engine still works.
+  /// Reading `note.beam` alone would find NOTHING here now that the engine no
+  /// longer writes its answer back into the model.
+  Map<int, List<int>> _identifyBeamGroups(
+    List<PositionedElement> elements,
+    Map<Note, BeamType>? beamTypes,
+  ) {
+    BeamType? beamOf(Note note) => beamTypes?[note] ?? note.beam;
     final groups = <int, List<int>>{};
     int groupId = 0;
     for (int i = 0; i < elements.length; i++) {
       final element = elements[i].element;
-      if (element is Note && element.beam == BeamType.start) {
+      if (element is Note && beamOf(element) == BeamType.start) {
+        final system = elements[i].system;
         final group = <int>[i];
         for (int j = i + 1; j < elements.length; j++) {
+          if (elements[j].system != system) break;
           final nextElement = elements[j].element;
           if (nextElement is Note) {
             group.add(j);
-            if (nextElement.beam == BeamType.end) break;
+            if (beamOf(nextElement) == BeamType.end) break;
           } else {
             break;
           }
@@ -64,12 +87,19 @@ class GroupRenderer {
     return groups;
   }
 
+  /// [octaveShifts] maps a note to the 8va/8vb displacement of the bracket span
+  /// it falls in (0, and so absent, outside every span). A LIST-level renderer
+  /// needs the map rather than a single int because one beam, tie or slur can
+  /// straddle the start or the end of a bracket, and each end has to be drawn at
+  /// the position the layout engine actually registered for its own note.
   void renderBeams(
     Canvas canvas,
     List<PositionedElement> elements,
-    Clef currentClef,
-  ) {
-    final beamGroups = _identifyBeamGroups(elements);
+    Clef currentClef, {
+    Map<Note, int> octaveShifts = const {},
+    Map<Note, BeamType>? beamTypes,
+  }) {
+    final beamGroups = _identifyBeamGroups(elements, beamTypes);
     for (final group in beamGroups.values) {
       if (group.length < 2) continue;
 
@@ -83,10 +113,11 @@ class GroupRenderer {
         groupElements.add(element);
         if (element.element is Note) {
           final note = element.element as Note;
-          // MELHORIA: Use StaffPositioncalculateTestor unificado
+          // MELHORIA: Use StaffPositioncalculator unificado
           final staffPos = StaffPositionCalculator.calculate(
             note.pitch,
             currentClef,
+            extraOctaveShift: octaveShifts[note] ?? 0,
           );
           final noteY = StaffPositionCalculator.toPixelY(
             staffPos,
@@ -109,6 +140,7 @@ class GroupRenderer {
           durations,
           stemUp,
           currentClef,
+          octaveShifts,
         );
       }
     }
@@ -121,6 +153,7 @@ class GroupRenderer {
     List<DurationType> durations,
     bool stemUp,
     Clef currentClef,
+    Map<Note, int> octaveShifts,
   ) {
     if (positions.length < 2) return;
 
@@ -157,6 +190,7 @@ class GroupRenderer {
       final staffPos = StaffPositionCalculator.calculate(
         element.pitch,
         currentClef,
+        extraOctaveShift: octaveShifts[element] ?? 0,
       );
       staffPositions.add(staffPos);
 
@@ -275,8 +309,9 @@ class GroupRenderer {
           text: TextSpan(
             text: character,
             style: TextStyle(
-              fontFamily: 'Bravura',
-              package: 'flutter_notemus',
+              // Font independence: family from the loaded descriptor.
+              fontFamily: metadata.font.fontFamily,
+              package: metadata.font.fontPackage,
               fontSize: glyphSize,
               color: theme.noteheadColor,
               height: 1.0,
@@ -339,11 +374,17 @@ class GroupRenderer {
     return groups;
   }
 
+  /// [octaveShifts] maps a note to the 8va/8vb displacement of the bracket span
+  /// it falls in (0, and so absent, outside every span). A LIST-level renderer
+  /// needs the map rather than a single int because one beam, tie or slur can
+  /// straddle the start or the end of a bracket, and each end has to be drawn at
+  /// the position the layout engine actually registered for its own note.
   void renderTies(
     Canvas canvas,
     List<PositionedElement> elements,
-    Clef currentClef,
-  ) {
+    Clef currentClef, {
+    Map<Note, int> octaveShifts = const {},
+  }) {
     final tieGroups = identifyTieGroups(elements);
     for (final group in tieGroups.values) {
       final startElement = elements[group.first];
@@ -353,10 +394,11 @@ class GroupRenderer {
       }
 
       final startNote = startElement.element as Note;
-      // MELHORIA: Use StaffPositioncalculateTestor
+      // MELHORIA: Use StaffPositioncalculator
       final startStaffPos = StaffPositionCalculator.calculate(
         startNote.pitch,
         currentClef,
+        extraOctaveShift: octaveShifts[startNote] ?? 0,
       );
 
       // Fix: LACERDA: "Ties/slurs are of the lado OPOSTO das stem"
@@ -366,15 +408,17 @@ class GroupRenderer {
           0; // Haste para cima quando nota está abaixo/na linha central
       final tieAbove = !stemUp; // Ligadura oposta à haste
 
-      // MELHORIA: Use StaffPositioncalculateTestor.toPixelY
+      // MELHORIA: Use StaffPositioncalculator.toPixelY
       final startNoteY = StaffPositionCalculator.toPixelY(
         startStaffPos,
         coordinates.staffSpace,
         coordinates.staffBaseline.dy,
       );
+      final endNoteOfTie = endElement.element as Note;
       final endStaffPos = StaffPositionCalculator.calculate(
-        (endElement.element as Note).pitch,
+        endNoteOfTie.pitch,
         currentClef,
+        extraOctaveShift: octaveShifts[endNoteOfTie] ?? 0,
       );
       final endNoteY = StaffPositionCalculator.toPixelY(
         endStaffPos,
@@ -444,7 +488,9 @@ class GroupRenderer {
   /// Slur boundary events on an element. Uses the numbered [Note.slurs] when
   /// present (concurrent slurs); otherwise synthesizes a single number-0 event
   /// from the unnumbered [Note.slur]/[Chord.slur].
-  List<SlurEvent> _slurEventsOf(dynamic element) {
+  /// Public so `SlurRenderer` can pair slur boundaries with exactly the same
+  /// rule when it looks for spans broken by a system break.
+  static List<SlurEvent> slurEventsOf(dynamic element) {
     if (element is Note) {
       if (element.slurs.isNotEmpty) return element.slurs;
       if (element.slur == SlurType.start) {
@@ -483,7 +529,7 @@ class GroupRenderer {
       final element = elements[i].element;
       if (!_elementCanParticipateInSlur(element)) continue;
 
-      for (final ev in _slurEventsOf(element)) {
+      for (final ev in slurEventsOf(element)) {
         if (ev.type == SlurType.start) {
           open[ev.number] = i;
         } else if (ev.type == SlurType.end) {
@@ -503,11 +549,17 @@ class GroupRenderer {
     return groups;
   }
 
+  /// [octaveShifts] maps a note to the 8va/8vb displacement of the bracket span
+  /// it falls in (0, and so absent, outside every span). A LIST-level renderer
+  /// needs the map rather than a single int because one beam, tie or slur can
+  /// straddle the start or the end of a bracket, and each end has to be drawn at
+  /// the position the layout engine actually registered for its own note.
   void renderSlurs(
     Canvas canvas,
     List<PositionedElement> elements,
-    Clef currentClef,
-  ) {
+    Clef currentClef, {
+    Map<Note, int> octaveShifts = const {},
+  }) {
     final slurGroups = identifySlurGroups(elements);
     for (final group in slurGroups.values) {
       if (group.length < 2) continue;
@@ -519,14 +571,16 @@ class GroupRenderer {
       }
       final startNote = startElement.element as Note;
       final endNote = endElement.element as Note;
-      // MELHORIA: Use StaffPositioncalculateTestor
+      // MELHORIA: Use StaffPositioncalculator
       final startStaffPos = StaffPositionCalculator.calculate(
         startNote.pitch,
         currentClef,
+        extraOctaveShift: octaveShifts[startNote] ?? 0,
       );
       final endStaffPos = StaffPositionCalculator.calculate(
         endNote.pitch,
         currentClef,
+        extraOctaveShift: octaveShifts[endNote] ?? 0,
       );
 
       // Fix: LACERDA: Tie/slur de expressão segue same regra de tie
@@ -534,7 +588,7 @@ class GroupRenderer {
       final startStemUp = startStaffPos <= 0;
       final slurAbove = !startStemUp;
 
-      // MELHORIA: Use StaffPositioncalculateTestor.toPixelY
+      // MELHORIA: Use StaffPositioncalculator.toPixelY
       final startNoteY = StaffPositionCalculator.toPixelY(
         startStaffPos,
         coordinates.staffSpace,
@@ -653,6 +707,6 @@ class GroupRenderer {
         left.pitch.alter == right.pitch.alter;
   }
 
-  // REMOVIDO: _calculateTesteStaffPosition duplicado (41 lines)
-  // AGORA Uses: StaffPositioncalculateTestor unificado
+  // REMOVIDO: _calculateStaffPosition duplicado (41 lines)
+  // AGORA Uses: StaffPositioncalculator unificado
 }

@@ -5,11 +5,11 @@ import 'duration.dart';
 import 'ornament.dart';
 import '../src/music_model/bounding_box_support.dart';
 
-/// Representa a paUses.
+/// Representa a pausa.
 class Rest extends MusicalElement with BoundingBoxSupport {
   final Duration duration;
 
-  /// List of ornaments Appliesdos to the paUses (ex: fermata)
+  /// List of ornaments aplicados to the pausa (ex: fermata)
   final List<Ornament> ornaments;
 
   Rest({required this.duration, this.ornaments = const []});

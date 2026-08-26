@@ -1,10 +1,11 @@
 name: flutter_notemus
 description: "Professional music notation for Flutter: SMuFL/Bravura engraving, grand-staff & cross-staff beaming, Gregorian chant (Greciliae), and MusicXML/MEI/MIDI I/O."
-version: 2.6.0
+version: 2.8.0
 license: Apache-2.0
-homepage: https://github.com/alessonqueirozdev-hub
+homepage: https://alessonqueirozdev-hub.github.io/flutter_notemus/
 repository: https://github.com/alessonqueirozdev-hub/flutter_notemus
 issue_tracker: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues
+documentation: https://pub.dev/documentation/flutter_notemus/latest/
 
 topics:
   - flutter
@@ -15,9 +16,9 @@ topics:
 
 screenshots:
   - description: 'Complete music score with professional engraving, dynamics, and proper spacing'
-    path: assets/readme/Captura de tela 2025-11-06 141401.png
+    path: assets/readme/screenshot-full-score.png
   - description: 'Detailed musical elements with SMuFL glyphs, dotted notes, and breath marks'
-    path: assets/readme/Captura de tela 2025-11-06 141533.png
+    path: assets/readme/screenshot-smufl-detail.png
 
 environment:
   sdk: ^3.8.1

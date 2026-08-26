@@ -1,0 +1,17 @@
+# Test tags for flutter_notemus.
+#
+# `golden` marks the pixel-comparison suites in test/golden/. They are separated
+# because `matchesGoldenFile` is NOT portable across operating systems: font
+# rasterisation, hinting and anti-aliasing differ, so an image recorded on one
+# platform fails on another for reasons unrelated to the engraving.
+#
+# CI therefore runs the logic suite on Linux, macOS and Windows with
+# `--exclude-tags golden`, and the goldens only on the platform they were
+# recorded on. See .github/workflows/ci.yml.
+#
+#   flutter test --exclude-tags golden   # everything but the pixel comparisons
+#   flutter test --tags golden           # only the pixel comparisons
+tags:
+  golden:
+    # Rasterising 55 scores is slower than the rest of the suite put together.
+    timeout: 2x

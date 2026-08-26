@@ -8,6 +8,7 @@ import '../../layout/collision_detector.dart'; // CORREÇÃO: Import collision d
 import '../../smufl/smufl_metadata_loader.dart';
 import '../../theme/music_score_theme.dart';
 import '../staff_coordinate_system.dart';
+import '../text_font.dart';
 
 class HairpinGeometry {
   final Offset upperStart;
@@ -24,13 +25,40 @@ class HairpinGeometry {
 }
 
 class SymbolAndTextRenderer {
-  /// SMuFL/Bravura recommended text font families (engravingDefaults.textFontFamily)
-  static const List<String> smuflTextFontFallback = [
-    'Academico',
-    'Century Schoolbook',
-    'Edwin',
-    'serif',
-  ];
+  /// Text (non-music) font families recommended by SMuFL for the prose that
+  /// accompanies a score — dynamics words, tempo marks, instructions.
+  ///
+  /// These are the families listed by `engravingDefaults.textFontFamily` in the
+  /// SMuFL reference metadata; they are *text* faces, unrelated to the music
+  /// font, which is never named here (see BaseGlyphRenderer, "Font
+  /// independence") and always comes from `metadata.font`.
+  ///
+  /// Canonical list lives in `lib/src/rendering/text_font.dart` so every text
+  /// site in the package shares one chain; this stays as the published name.
+  ///
+  /// DELIBERATELY NOT APPLIED INSIDE THIS CLASS ANY MORE (2.7.2, finding M-30).
+  /// Every style built here now ends in [MusicTextFallback.withMusicTextFallback]
+  /// and nothing else touches `fontFamilyFallback`. The reason is the extension's
+  /// documented contract — *"a caller-supplied family or fallback chain always
+  /// wins"* — which makes pre-supplying this chain self-defeating: the style
+  /// arrived at the injection point already carrying a chain, so
+  /// `withMusicTextFallback()` treated it as a deliberate caller choice, returned
+  /// it untouched, and [MusicTextFont.use] could never promote an app face to
+  /// primary. Ten sites in this file did exactly that.
+  ///
+  /// Measured before the fix: the same score rasterised with and without
+  /// `MusicTextFont.use('AppSerif')` produced **76,120 px of ink in BOTH cases**
+  /// (byte-identical PNGs) for tempo marks, expression text, word dynamics and
+  /// repeat instructions — the escape hatch was inert on every prose string this
+  /// class draws. After the fix the two rasters differ (see
+  /// `test/invariants/w5_text_font_hatch_test.dart`, which asserts the ink
+  /// changes and that the `.notdef` box count drops to 0 once a real face is
+  /// injected).
+  ///
+  /// The constant stays public and unchanged because apps reference it when
+  /// building their own [MusicScoreTheme] text styles; it is simply no longer
+  /// the mechanism this class uses.
+  static const List<String> smuflTextFontFallback = kMusicTextFontFallback;
 
   final StaffCoordinateSystem coordinates;
   final SmuflMetadata metadata;
@@ -86,7 +114,7 @@ class SymbolAndTextRenderer {
     // - repeats/simile/percent: centralizados na staff
     final signY = _getRepeatMarkY(repeatMark.type);
 
-    // Fix: SMuFL: Use opticalCenter anchor if disponível
+    // SMuFL: use the opticalCenter anchor when the font provides one.
     _drawGlyph(
       canvas,
       glyphName: glyphName,
@@ -262,16 +290,17 @@ class SymbolAndTextRenderer {
               fontSize: 15,
               fontStyle: FontStyle.italic,
               fontWeight: FontWeight.w600,
-              fontFamilyFallback: smuflTextFontFallback,
             ))
-        .copyWith(color: baseColor, fontFamilyFallback: smuflTextFontFallback);
+        .copyWith(color: baseColor)
+        .withMusicTextFallback();
   }
 
   TextStyle _repeatCountStyle() {
     final baseColor = theme.repeatColor ?? theme.noteheadColor;
     return (theme.repeatTextStyle ??
             const TextStyle(fontSize: 16, fontWeight: FontWeight.w700))
-        .copyWith(color: baseColor);
+        .copyWith(color: baseColor)
+        .withMusicTextFallback();
   }
 
   void renderDynamic(
@@ -293,7 +322,7 @@ class SymbolAndTextRenderer {
     }
 
     final glyphName = _getDynamicGlyph(dynamic.type);
-    // CORREÃ‡ÃƒO TIPOGRÃIs SMuFL: DinÃ¢micas must be placed 2.5 staff spaces below the Ãºltima line
+    // CORREÇÃO TIPOGRÃIs SMuFL: DinÃ¢micas must be placed 2.5 staff spaces below the Ãºltima line
     // Fix: LACERDA: Add verticalOffset for avoid overlap
     final dynamicY =
         coordinates.getStaffLineY(1) +
@@ -344,10 +373,10 @@ class SymbolAndTextRenderer {
         coordinates.getStaffLineY(1) +
         (coordinates.staffSpace * 2.5) +
         verticalOffset;
-    // CORREÃ‡ÃƒO TIPOGRÃIs SMuFL: Height recomendada de 0.75-1.0 staff spaces
+    // SMuFL typography: recommended height is 0.75-1.0 staff spaces.
     final height = coordinates.staffSpace * 0.5;
 
-    // CORREÃ‡ÃƒO CRÃTICA SMuFL: Use hairpinThickness to the invÃ©s de thinBarlineThickness
+    // CRITICAL SMuFL fix: use hairpinThickness, not thinBarlineThickness.
     final hairpinThickness = metadata.getEngravingDefault('hairpinThickness');
     final paint = Paint()
       ..color = theme.dynamicColor ?? theme.noteheadColor
@@ -487,16 +516,15 @@ class SymbolAndTextRenderer {
               fontSize: glyphSize * fontScale,
               fontStyle: FontStyle.italic,
               fontWeight: FontWeight.w500,
-              fontFamilyFallback: smuflTextFontFallback,
             ))
         .copyWith(
           color: baseColor,
-          fontFamilyFallback: smuflTextFontFallback,
           fontSize:
               (theme.dynamicTextStyle?.fontSize ??
               theme.expressionTextStyle?.fontSize ??
               (glyphSize * fontScale)),
-        );
+        )
+        .withMusicTextFallback();
   }
 
   TextStyle _resolveMusicTextStyle(MusicText text) {
@@ -517,8 +545,19 @@ class SymbolAndTextRenderer {
               fontSize: coordinates.staffSpace * 1.1,
               fontStyle: FontStyle.italic,
               fontWeight: FontWeight.w500,
-              fontFamilyFallback: smuflTextFontFallback,
             );
+        break;
+      case TextType.rehearsal:
+        // Behind Bars: rehearsal marks are UPRIGHT and BOLD (never italic, so
+        // they never read as an expression mark), set larger than surrounding
+        // text and enclosed in a box.
+        // Merge rather than replace, so a theme that only sets a font family
+        // keeps the staff-derived size and the upright/bold convention.
+        baseStyle = TextStyle(
+          fontSize: coordinates.staffSpace * 1.5,
+          fontStyle: FontStyle.normal,
+          fontWeight: FontWeight.w700,
+        ).merge(theme.rehearsalTextStyle);
         break;
       default:
         baseStyle =
@@ -526,7 +565,6 @@ class SymbolAndTextRenderer {
             TextStyle(
               fontSize: coordinates.staffSpace,
               fontWeight: FontWeight.w500,
-              fontFamilyFallback: smuflTextFontFallback,
             );
         break;
     }
@@ -543,14 +581,15 @@ class SymbolAndTextRenderer {
       fontWeight = FontWeight.w700;
     }
 
-    return baseStyle.copyWith(
-      color: baseStyle.color ?? baseColor,
-      fontFamily: text.fontFamily ?? baseStyle.fontFamily,
-      fontFamilyFallback: smuflTextFontFallback,
-      fontSize: text.fontSize ?? baseStyle.fontSize,
-      fontStyle: fontStyle,
-      fontWeight: fontWeight,
-    );
+    return baseStyle
+        .copyWith(
+          color: baseStyle.color ?? baseColor,
+          fontFamily: text.fontFamily ?? baseStyle.fontFamily,
+          fontSize: text.fontSize ?? baseStyle.fontSize,
+          fontStyle: fontStyle,
+          fontWeight: fontWeight,
+        )
+        .withMusicTextFallback();
   }
 
   double _resolveMusicTextY(MusicText text) {
@@ -564,6 +603,11 @@ class SymbolAndTextRenderer {
           case TextType.dynamics:
             return coordinates.getStaffLineY(5) -
                 (coordinates.staffSpace * 1.75);
+          case TextType.rehearsal:
+            // Highest layer above the staff: a rehearsal mark outranks tempo
+            // and expression text (Gould).
+            return coordinates.getStaffLineY(5) -
+                (coordinates.staffSpace * 3.2);
           default:
             return coordinates.getStaffLineY(5) -
                 (coordinates.staffSpace * 1.55);
@@ -578,13 +622,61 @@ class SymbolAndTextRenderer {
   void renderMusicText(Canvas canvas, MusicText text, Offset basePosition) {
     final style = _resolveMusicTextStyle(text);
     final yPosition = _resolveMusicTextY(text);
+    final position = Offset(basePosition.dx, yPosition);
+
+    if (text.type == TextType.rehearsal) {
+      _drawRehearsalEnclosure(canvas, text.text, position, style);
+    }
 
     _drawText(
       canvas,
       text: text.text,
-      position: Offset(basePosition.dx, yPosition),
+      position: position,
       style: style,
       centerHorizontally: false,
+    );
+  }
+
+  /// Boxes a rehearsal mark.
+  ///
+  /// `TextType.rehearsal` was imported from MusicXML `<rehearsal>` since 2.x
+  /// and then fell through the default branch of every text switch — modelled,
+  /// never drawn. A rehearsal mark without its enclosure is just bold text and
+  /// is not what a player scans for, so the box is part of the feature.
+  ///
+  /// Behind Bars: a thin rectangle with a small, even margin around the glyphs;
+  /// the SMuFL `textEnclosureThickness` engraving default gives the line width.
+  void _drawRehearsalEnclosure(
+    Canvas canvas,
+    String label,
+    Offset position,
+    TextStyle style,
+  ) {
+    if (label.trim().isEmpty) return;
+
+    final painter = TextPainter(
+      text: TextSpan(text: label, style: style),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    final pad = coordinates.staffSpace * 0.32;
+    final rect = Rect.fromLTWH(
+      position.dx - pad,
+      position.dy - painter.height / 2 - pad,
+      painter.width + pad * 2,
+      painter.height + pad * 2,
+    );
+
+    final thickness =
+        metadata.getEngravingDefault('textEnclosureThickness', 0.16) *
+            coordinates.staffSpace;
+
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = thickness
+        ..color = style.color ?? theme.textColor ?? theme.noteheadColor,
     );
   }
 
@@ -696,13 +788,12 @@ class SymbolAndTextRenderer {
               fontSize: coordinates.staffSpace * 1.3,
               fontWeight: FontWeight.w600,
               fontStyle: FontStyle.italic,
-              fontFamilyFallback: smuflTextFontFallback,
               letterSpacing: 0.15,
             ))
         .copyWith(
           color: theme.tempoTextStyle?.color ?? baseColor,
-          fontFamilyFallback: smuflTextFontFallback,
-        );
+        )
+        .withMusicTextFallback();
   }
 
   double _tempoMarkCenterY() {
@@ -786,7 +877,9 @@ class SymbolAndTextRenderer {
     final tp = TextPainter(
       text: TextSpan(
         text: octaveMark.text,
-        style: style.copyWith(color: octaveColor),
+        // The 8va/8vb label is TEXT, not a SMuFL glyph, and was one of two
+        // sites in this file still handing a bare style to a TextPainter.
+        style: style.copyWith(color: octaveColor).withMusicTextFallback(),
       ),
       textAlign: TextAlign.left,
       textDirection: TextDirection.ltr,
@@ -864,14 +957,15 @@ class SymbolAndTextRenderer {
       canvas.drawLine(Offset(xRight, yTop), Offset(xRight, yBottom), paint);
     }
 
-    // Label text
+    // Label text. Named no family before 2.7.1, so an analysis bracket exported
+    // headlessly rendered its label as `.notdef` boxes.
     final tp = TextPainter(
       text: TextSpan(
         text: bracket.displayLabel,
         style: TextStyle(
           fontSize: coordinates.staffSpace * 1.1,
           color: theme.barlineColor,
-        ),
+        ).withMusicTextFallback(),
       ),
       textDirection: TextDirection.ltr,
     );
@@ -943,8 +1037,9 @@ class SymbolAndTextRenderer {
       text: TextSpan(
         text: character,
         style: TextStyle(
-          fontFamily: 'Bravura',
-          package: 'flutter_notemus',
+          // Font independence: the family comes from the loaded descriptor.
+          fontFamily: metadata.font.fontFamily,
+          package: metadata.font.fontPackage,
           fontSize: size,
           color: color,
           height: 1.0,

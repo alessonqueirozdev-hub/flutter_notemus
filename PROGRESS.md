@@ -1,8 +1,15 @@
 # PROGRESS — Sprint de qualidade tipográfica (pré-ANPPOM)
 
-> Diário de auditoria e correções da biblioteca `flutter_notemus` (v2.6.0).
+> Diário de auditoria e correções da biblioteca `flutter_notemus` (v2.7.0).
 > Cláusula de honestidade ativa: preferir "parcial" a "pronto"; sinalizar overclaims do artigo.
-> Início do sprint: 2026-06-17.
+> Início do sprint: 2026-06-17. Última reconciliação com o código: 2026-08-22.
+>
+> **Este arquivo é um diário, e diário envelhece.** As seções de Fase 0 a Fase 4
+> registram o que era verdade **na data em que foram escritas** e foram
+> preservadas por isso. Onde uma afirmação delas ficou **falsa**, há uma
+> correção inline marcada `⛔ SUPERADO`. A seção final —
+> **"2.7.0 — audit remediation"** — é o estado atual e prevalece sobre qualquer
+> coisa acima dela.
 
 ---
 
@@ -34,12 +41,44 @@ Pipeline: `Staff/Score → LayoutEngine → List<PositionedElement> → MusicSco
 - **Unidade fundamental:** *staff space* (SS). `staffSpace` padrão = 12.0 px. Tudo é dimensionado em SS e multiplicado por `staffSpace`.
 - **Sistema de coordenadas:** `StaffPositionCalculator` mapeia altura→`staffPosition` (meios-espaços; 0 = linha do meio, positivo acima). `toPixelY = baseline.dy − staffPosition * staffSpace * 0.5` (eixo Y do Flutter é invertido em relação à música).
 - **Metadados SMuFL/Bravura:** `SmuflMetadata` (singleton) carrega `bravura_metadata.json` + `glyphnames.json` via `rootBundle` com prefixo `packages/flutter_notemus/...`. Fornece bounding boxes, *advance widths*, âncoras de haste (`stemUpSE`/`stemDownNW`) e `engravingDefaults`.
+  - ⛔ **SUPERADO (2026-08-22):** o caminho do asset não é mais literal.
+    `SmuflFontDescriptor` + `SmuflMetadata.forFont(...)` + `load({font})` permitem
+    apontar para outra fonte SMuFL sem editar o pacote (F-40 parcialmente
+    endereçado; o *singleton de processo* continua sendo o padrão).
 - **Espaçamento horizontal (mais sofisticado do que aparenta):**
   - Largura de compasso por cursor (`_calculateMeasureWidthCursor`), espaçamento mínimo nota-a-nota = 3.5 SS.
   - **Espaçamento rítmico proporcional à duração** — `IntelligentSpacingEngine` com 4 modelos; padrão `squareRoot` (`s = √(dur/menorDur)`), o mais próximo da tabela de Gould (validado por `compareAgainstGould()`).
   - Algoritmo dual-fase (textual anticolisão + duracional) + **compensação óptica** (alternância de haste, acidentes, pontos, feixes).
+  - ⛔ **SUPERADO — este parágrafo estava errado quando foi escrito.** O
+    `IntelligentSpacingEngine` era construído (`layout_engine.dart:404`) e
+    **nunca invocado**: só `restSpacingRatio` era lido dele. O caminho vivo usava
+    uma tabela de 7 durações com fallback `1.0`, que **invertia a proporção
+    rítmica** fora da faixa semínima–semifusa (uma breve ficava mais estreita que
+    uma semibreve; uma 1/128 ocupava 2,3× o espaço de uma 1/64). O achado F-11 da
+    auditoria forense mediu isso. **Hoje a lei da raiz quadrada é COMPUTADA no
+    caminho vivo** — `sqrt(absoluteValue / quarter)` em
+    `_calculateRhythmicSpacing`, cobrindo os 15 `DurationType` e incluindo pontos
+    de aumento. A leitura correta desta linha é: a lei de Gould está aplicada; o
+    *objeto* `IntelligentSpacingEngine` continua fora do caminho vivo, e essa
+    dívida (backlog #51/#52) segue aberta.
+  - ⛔ **SUPERADO:** havia **duas** fórmulas de largura — a estimativa que decidia
+    a quebra de sistema usava 3,5 SS fixos por nota enquanto o desenho usava
+    espaçamento proporcional (F-12), e um compasso denso estourava a linha sem
+    rolagem (F-05). Hoje `_calculateMeasureWidthCursor` **mede por dry-run do
+    próprio layout**, existe compressão por compasso com piso anticolisão, e o
+    widget dimensiona o canvas por `contentWidth`, então a rolagem horizontal
+    deixou de ser inerte.
 - **Skyline / colisão:** `SkyBottomLineCalculator` (grade de ocupação) e `CollisionDetector` (caixas delimitadoras O(n²)) existem e funcionam, mas **só são usados para elementos flutuantes** (dinâmicas, ligaduras, texto). **Não** estão integrados ao espaçamento nota-a-nota — colisão de notas é opt-in (`layoutWithCollisionDetection()`), não no caminho principal.
 - **Justificação:** `_justifyHorizontally` (`layout_engine.dart:574-595`) redistribui a folga **proporcionalmente à posição** no sistema. Preserva os *ratios* de espaçamento do layout interno (não os "perde", como um achado automatizado sugeriu); o refinamento ausente é redistribuir a folga proporcional ao espaçamento *local*, não à posição. Impacto **baixo/médio**, não é um defeito grosseiro.
+  - ⛔ **SUPERADO em parte (F-13).** A defesa acima subestimava dois problemas
+    reais: (a) esticar proporcional à posição **incluía o bloco fixo
+    clave→armadura→fórmula**, que por convenção não se estica; (b) o
+    `fillThreshold = 0.7` deixava sistemas **no meio da partitura** com a margem
+    direita irregular (um viewport de 1400 px media 69% de preenchimento e não
+    justificava). Ambos foram corrigidos: só a região a partir do primeiro evento
+    rítmico é elástica, e apenas o **último** sistema fica irregular. O
+    refinamento que continua ausente é o originalmente descrito — distribuir a
+    folga pela compressibilidade *local* em vez da posição.
 
 ### Estado real das issues conhecidas (CONFIRMADO via código)
 
@@ -99,6 +138,15 @@ Clave, armadura (sustenidos/bemóis), fórmula (C/comum), cabeças, hastes, feix
 
 ### H3 — Exportação PDF é **placeholder** (CONFIRMADO via OPEN_ISSUES + recon) — MÉDIA
 - `pdf_exporter.dart` exporta metadados, mas a "partitura" é apenas 5 linhas de pauta vazias (`// TODO: Implement actual music rendering`). Já honesto em OPEN_ISSUES #2; o artigo não deve listar "export PDF da partitura" como pronto.
+- ⛔ **SUPERADO (2026-08-22) — esta lacuna foi FECHADA.** O `TODO` não existe
+  mais. `lib/src/export/score_rasterizer.dart` roda o **mesmo `LayoutEngine`** do
+  widget e rasteriza a notação real; `pdf_exporter.dart:291-331` pagina por
+  sistemas inteiros (um sistema nunca é cortado ao meio entre páginas).
+  **Ressalvas que o artigo precisa manter:** a página carrega um **raster**, não
+  notação vetorial (sem texto selecionável, zoom limitado pela resolução), e a
+  rasterização exige um Flutter engine vivo — numa Dart VM pura a pauta é
+  **pulada com um warning explícito**, não silenciosamente vazia. PDF vetorial
+  exigiria o back-end único de draw-ops descrito em §23 da auditoria forense.
 
 ### H4 — Áudio nativo: só Android, e mesmo assim limitado (CONFIRMADO via recon) — MÉDIA
 - iOS/macOS/Windows: métodos de playback são *no-ops*. Linux/Web: sem implementação localizada (apesar de registrados no `pubspec`).

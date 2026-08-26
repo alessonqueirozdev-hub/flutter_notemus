@@ -1,87 +1,55 @@
-# Open Issues Backlog
+# Open work
 
-This file mirrors the current GitHub backlog for pending work in `flutter_notemus`.
+**GitHub Issues is the source of truth**, and as of 2026-08-26 it actually is —
+which it was not before. This file used to mirror the backlog issue by issue,
+with a measured "current state" under each one. That mirror drifted: it was
+still describing melisma extension lines, lyric hyphen centering, PDF
+placeholder pages and score hit-testing as open work months after each of them
+shipped.
 
-GitHub issues remain the source of truth:
+A tracker and its mirror will always drift, and the mirror is the copy that
+nobody re-reads. So the measurements moved into the issues themselves, where
+the person deciding whether to pick the work up will actually see them, and
+this file stopped being a second backlog.
+
 https://github.com/alessonqueirozdev-hub/flutter_notemus/issues
 
-## Playback, audio, and export
+## How the tracker is organised
 
-1. Native audio backend parity for non-Android platforms
-   - Issue: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/1
-   - Current state: iOS, macOS, Linux, and Windows still need real playback engines.
+Issues carry a domain label, not just `bug` / `enhancement`:
 
-2. PDF export still uses placeholder score pages
-   - Issue: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/2
-   - Current state: metadata export is real, notation engraving export is not.
+| Label | What it covers |
+|---|---|
+| `engraving` | Glyph placement, spacing, beams, stems, ties — how the notation looks on the page |
+| `interop` | MusicXML, MEI and JSON import/export |
+| `playback` | MIDI mapping, native audio backends, transport |
+| `performance` | Layout and render cost, threading, large scores |
+| `gregorian` | Square notation, neumes, Greciliae |
+| `jianpu` | Numbered notation (简谱), GB/T 46845-2025 |
+| `editor` | Hit-testing, selection, editing, live playhead |
+| `api` | Public surface, naming, deprecations |
+| `breaking-change` | Removes or changes public API; lands in a major release |
+| `packaging` | pub.dev release, assets, archive contents, CI |
 
-3. Web playback shim is still a no-op
-   - Issue: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/15
-   - Current state: playback calls resolve without producing real audio behavior.
+## Where the measurements live
 
-4. Production-ready MIDI and audio workflow
-   - Issue: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/20
-   - Current state: end-to-end playback/export/session API still needs consolidation across platforms.
+Every finding this project has acted on was measured before and after, and the
+numbers are kept in three places, none of which is a backlog:
 
-## Engraving and layout follow-up
+- **`CHANGELOG.md`** — what changed in each release, with the before → after
+  measurement inline. This is the one a consumer reads.
+- **`doc/AUDITORIA_*.md`** — the forensic audits themselves, in full, including
+  the findings that were **retracted** as wrong.
+- **`doc/AUDITORIA_RECONCILIADA_2026-08-23.md`** — the reconciliation of two
+  independent adversarial audits of 2.7.1 into one master list of 50, with the
+  cross-coverage statistics and the four published headline numbers that do not
+  reproduce.
 
-5. Slur/tie inter-note lyric hyphen centering still needs a second layout pass
-   - Issue: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/14
-   - Current state: hyphen is glued to the syllable; centering between
-     consecutive syllable X positions requires a post-layout pass.
+## Standing rule
 
-Resolved in 2.6.0 (closed): #3 (SMuFL brace glyph workflow), #4 (stem/flag
-engraving-default parameterization), #5 (robust `repeatBoth` fallback),
-#8 (tuplet ratios in `MeasureValidator` — verified + tested; dead TODO removed),
-#9 (`SpacingResult` `Chord`/`Tuplet` width & shortest-duration).
-
-## Examples, text, and content quality
-
-11. `multi_staff_example` still depends on missing `MultiStaffRenderer` support
-    - Issue: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/7
-    - Current state (2.6.0): largely addressed — public `GrandStaff` (one
-      `StaffGroup`) and `ScoreView` (a whole `Score`) widgets now render
-      multi-staff systems (grand staff, SATB, full score, cross-staff beaming,
-      multi-system wrapping), and the example gallery uses them
-      (`GrandStaffExample`). The legacy local multi-staff demo was retired.
-
-12. Melisma extension lines still need multi-note context
-    - Issue: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/13
-    - Current state: a fixed 1-SS stub is drawn; the full extension to the
-      next note's onset requires a post-layout pass (shared with #14).
-
-Resolved in 2.6.0 (closed): #12 (`Chord` now renders `Note.syllables` via the
-shared `NoteRenderer.renderSyllables`).
-
-## Styling, editing, and interactivity roadmap
-
-15. Expose comprehensive theming and styling controls across engraving primitives
-    - Issue: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/16
-
-16. Add editable score model and notation editing workflows
-    - Issue: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/17
-
-17. Implement score hit-testing and interactive selection APIs
-    - Issue: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/18
-
-18. Support real-time interactive score state and live playback feedback
-    - Issue: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/19
-
-## Alternative notation systems
-
-19. Jianpu (numbered notation) rendering — GB/T 46845-2025 conformance epic
-    - Epic: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/24
-    - Request: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/21
-    - Current state: **work in progress / experimental.** A `JianpuRenderer` /
-      `JianpuScore` parallel to the SMuFL staff path now exists (reusing the
-      notation-agnostic music model) and basic rendering is shown in the example
-      gallery, but coverage is partial and the API may still change — not yet
-      production-ready. Tracked section-by-section against GB/T 46845-2025 in
-      epic #24 (phased: §6 MVP, §5 structure, §7 auxiliary). The SMuFL staff
-      path stays untouched.
-
-## Update policy
-
-- Every pending feature or bug must have a GitHub issue.
-- Update this file whenever an issue is opened, closed, or renumbered in the roadmap.
-- If an issue is resolved in code, close the GitHub issue and update this file in the same commit.
+Nothing leaves the open list until a pass that **did not write the fix**
+re-measures it. Four times in this project's history a shipped document
+asserted that a delivered fix was still broken, and once the reverse — a
+document asserted a fix that two waves had diagnosed and neither had applied.
+The executable guards in `test/invariants/` exist because of that second case:
+they fail the build rather than the prose.

@@ -10,6 +10,11 @@ import 'gabc_parser.dart';
 import 'greciliae_font.dart';
 import 'gregorian_renderer.dart';
 
+// Re-exported here (this library is exported wholesale by the package barrel)
+// so `ChantClef`, `ChantClefType` and the mid-score `ChantClefChange` element
+// are part of the public API.
+export 'chant_clef.dart';
+
 /// Renders a sequence of [Neume]/[NeumeDivision] elements as Gregorian chant
 /// under the given [clef].
 class ChantScore extends StatefulWidget {
