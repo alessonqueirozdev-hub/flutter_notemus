@@ -13,9 +13,21 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
+# Two triggers can land on the SAME ref: a manual `workflow_dispatch` and the
+# `push` that follows it. On this repository GitHub has been delivering push
+# events several minutes late, so the two collide — and with a bare
+# `cancel-in-progress: true` they kill each other. Observed three times in a row
+# on master: a dispatch reached 614 of 1015 tests and died one second after a
+# lagged push run started, then the next push run died when the rerun began, and
+# the branch's badge read "cancelled" for a tree whose tests all pass.
+#
+# So the group separates a PR's runs from a branch's, and cancelling in flight is
+# reserved for branches where a newer commit genuinely supersedes an older one.
+# A run on the default branch is the release record and the source of the README
+# badge; killing it destroys evidence rather than saving a runner minute.
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' && github.ref != 'refs/heads/main' }}
 
 jobs:
   # ---------------------------------------------------------------------------
