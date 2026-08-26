@@ -213,26 +213,30 @@ For a full conformance audit see [`doc/MEI_V5_AUDIT.md`](doc/MEI_V5_AUDIT.md).
 
 ## Current Status
 
-- Current package release target: `2.8.0`
+- Current release: `2.7.0`
 - Previous pub.dev baseline: `2.6.0`
-- **2.7.0 is an audit-remediation release.** An adversarial forensic audit of
-  2.6.0 executed the engine against 40+ probe cases and catalogued 42 findings,
-  eight of them P1 (wrong pitches from a mid-measure clef change, compound
-  meters beamed wrongly, grand-staff hands out of alignment, dense bars clipped
-  and unreachable, silently dropped notes, MusicXML timing ignored on import).
-  The audit and the remediation are both in the repository:
-  [`doc/AUDITORIA_FORENSE_2026-08-21.md`](doc/AUDITORIA_FORENSE_2026-08-21.md)
-  and the [CHANGELOG](CHANGELOG.md#270---2026-08-21).
+- **2.7.0 is an audit-remediation release, and it bundles three of them.** Three
+  internal milestones were tagged in git between 2.6.0 and this release and
+  never published; the [CHANGELOG](CHANGELOG.md) folds all three into the 2.7.0
+  entry, newest first. Together they close **124 catalogued findings** from four
+  adversarial forensic audits, each of which executed the engine rather than
+  reading it: 42 against 2.6.0, 30 against the result, then **two independent
+  audits of the same tree** — 42 and 20 findings, reconciled into one master
+  list of 50 in
+  [`doc/AUDITORIA_RECONCILIADA_2026-08-23.md`](doc/AUDITORIA_RECONCILIADA_2026-08-23.md).
+  That reconciliation is worth reading on its own: **32 of the 50 findings were
+  seen by only one of the two audits**, including seven of the nine blockers,
+  and two were seen by neither.
 - Single-staff and multi-staff CMN rendering, MIDI mapping and `.mid` export
   (CMN and chant), and Gregorian square notation are the load-bearing features.
 - Android native audio backend is active; iOS, macOS, Windows, Linux and Web are
   **no-op stubs** (`nativeIsReady` returns `false`) — tracked as
   [#1](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/1)/[#15](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/15).
 
-### What's New in 2.8.0
+### What's New in 2.7.0
 
 A second adversarial re-audit — again by executing the engine — was reconciled
-into one defect list and remediated in four waves, the last of which re-probed
+into one defect list and remediated in five waves, the last of which re-probed
 every claim below before it was written down. Full detail and every measured
 before/after is in the [CHANGELOG](CHANGELOG.md#272---2026-08-22).
 
@@ -319,7 +323,7 @@ before/after is in the [CHANGELOG](CHANGELOG.md#272---2026-08-22).
   in a 900 px viewport: **14 942 px of ink and 2 `.notdef` boxes with no face
   registered, 6 886 px and 0 boxes with one injected.**
 
-### What's New in 2.7.1
+### Also new in 2.7.0 — from the milestone git tagged as 2.7.1
 
 An independent adversarial **re-audit** of 2.7.0 verified its 38 remediation
 claims by executing the engine — 25 confirmed outright, 13 partially, none
@@ -455,7 +459,7 @@ not against intent. `SUPPORTED` means it survives the whole path
 |---|---|---|
 | Measure numbers | **SUPPORTED** | engraved at every system start; `Measure.number` honoured (2.7.0) |
 | Courtesy / editorial accidentals | **SUPPORTED** | resolved *and* drawn with SMuFL parentheses/brackets (2.7.0) |
-| Instrument / group names | **SUPPORTED** | `StaffGroup.name` and `Staff.name`/`abbreviation`, drawn beside the brace/bracket; imported from MusicXML `<part-name>`/`<group-name>` and exported since 2.7.1, and from MEI `<staffGrp><label>`/`<labelAbbr>` since 2.8.0 (measured: `Piano` / `Pno.`, both `null` before) |
+| Instrument / group names | **SUPPORTED** | `StaffGroup.name` and `Staff.name`/`abbreviation`, drawn beside the brace/bracket; imported from MusicXML `<part-name>`/`<group-name>` and exported, and from MEI `<staffGrp><label>`/`<labelAbbr>`, since 2.7.0 (measured: `Piano` / `Pno.`, both `null` before) |
 | Transposing instruments | **SUPPORTED** | `Staff.transposition` is imported, applied by `MidiMapper` and exported (2.7.1). `Pitch` is the SOUNDING pitch and octave clefs are applied on the drawing side only — see [ADR-003](doc/adr/ADR-003-pitch-is-the-sounding-pitch.md). Concert-pitch RESPELLING is still missing |
 | Cue notes | **NOT SUPPORTED** | `<cue/>` is not modelled; cue-*size* is used only for mid-system clef changes |
 | Rehearsal marks | **SUPPORTED** | imported from MusicXML and engraved in a SMuFL box (2.7.0); the golden is `m04s_rehearsal_marks` |
@@ -467,7 +471,7 @@ not against intent. `SUPPORTED` means it survives the whole path
 | Conductor score | **SUPPORTED** | `Score` → `StaffGroup`s → `ScoreView` |
 | System text | **PARTIAL** | `MusicText` renders tempo/expression/instruction; other types fall through |
 | Figured bass, mensural, harmonic analysis | **MODEL ONLY** | see [`doc/MODEL_ONLY.md`](doc/MODEL_ONLY.md) |
-| MEI header (`meiHead`) | **PARTIAL** | *imported* since 2.7.0 (`MEIParser.scoreFromMei` / `headerFromMei`) and re-verified for 2.8.0 (`fileDesc/titleStmt/title` round-trips into `MeiHeader.fileDescription.title`); never written back — `grep -rn 'toMei' lib/` returns 0 hits, there is no MEI serializer |
+| MEI header (`meiHead`) | **PARTIAL** | *imported* and re-verified in 2.7.0 (`MEIParser.scoreFromMei` / `headerFromMei`) (`fileDesc/titleStmt/title` round-trips into `MeiHeader.fileDescription.title`); never written back — `grep -rn 'toMei' lib/` returns 0 hits, there is no MEI serializer |
 
 ---
 
@@ -1325,7 +1329,7 @@ result**, never a write back onto your model
 ([ADR-005](doc/adr/ADR-005-layout-decisions-are-values.md)): beam membership is
 published as `LayoutEngine.beams` / `LayoutEngine.tupletBeams` and read through
 `LayoutEngine.beamOf(note)`. `Note.beam` is an INPUT hint you may set yourself;
-since 2.8.0 the engine never overwrites it, so `staffToMusicXML` and
+since 2.7.0 the engine never overwrites it, so `staffToMusicXML` and
 `staffToJson` return the same bytes whether or not the score has been laid out
 or painted.
 

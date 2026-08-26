@@ -82,7 +82,7 @@ body:
     id: version
     attributes:
       label: flutter_notemus version
-      placeholder: "2.8.0"
+      placeholder: "2.7.0"
     validations:
       required: true
 
