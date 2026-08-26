@@ -13,14 +13,20 @@ import 'examples/clefs_example.dart';
 import 'examples/complete_music_piece.dart';
 import 'examples/compound_meter_example.dart';
 import 'examples/cross_staff_alignment_example.dart';
+import 'examples/diagnostics_example.dart';
 import 'examples/dots_and_ledgers_example.dart';
 import 'examples/dynamics_example.dart';
+import 'examples/ensemble_score_example.dart';
 import 'examples/grace_notes_example.dart';
 import 'examples/grand_staff_example.dart';
 import 'examples/gregorian_chant_example.dart';
 import 'examples/jianpu_example.dart';
 import 'examples/key_signatures_example.dart';
+import 'examples/long_score_export_example.dart';
 import 'examples/lyrics_text_example.dart';
+import 'examples/mei_interop_example.dart';
+import 'examples/midi_export_example.dart';
+import 'examples/musicxml_interop_example.dart';
 import 'examples/octave_marks_example.dart';
 import 'examples/ornaments_example.dart';
 import 'examples/polyphony_example.dart';
@@ -30,6 +36,8 @@ import 'examples/rhythmic_figures_example.dart';
 import 'examples/selection_hittest_example.dart';
 import 'examples/slurs_ties_example.dart';
 import 'examples/tempo_agogics_example.dart';
+import 'examples/theming_example.dart';
+import 'examples/transposing_and_tab_example.dart';
 import 'examples/tuplets_example.dart';
 import 'examples/voice_playback_example.dart';
 import 'examples/volta_brackets_example.dart';
@@ -490,6 +498,70 @@ class _MainScreenState extends State<MainScreen> {
       icon: CupertinoIcons.book,
       accentColor: const Color(0xFF92400E),
       builder: () => const GregorianChantExample(),
+    ),
+    _ExampleEntry(
+      category: 'Scores & Layout',
+      title: 'Ensemble Scores',
+      subtitle: 'Several StaffGroups on one grid, with braces and brackets.',
+      icon: CupertinoIcons.rectangle_grid_1x2,
+      accentColor: const Color(0xFF1D4ED8),
+      builder: () => const EnsembleScoreExample(),
+    ),
+    _ExampleEntry(
+      category: 'Scores & Layout',
+      title: 'Long Scores and Wrapping',
+      subtitle: 'Multi-system breaks, restated clefs, and paginated export.',
+      icon: CupertinoIcons.doc_on_doc,
+      accentColor: const Color(0xFF0F766E),
+      builder: () => const LongScoreExportExample(),
+    ),
+    _ExampleEntry(
+      category: 'Scores & Layout',
+      title: 'Theming',
+      subtitle: 'Every colour role, switchable live, and the text-font hatch.',
+      icon: CupertinoIcons.paintbrush,
+      accentColor: const Color(0xFF0891B2),
+      builder: () => const ThemingExample(),
+    ),
+    _ExampleEntry(
+      category: 'Interoperability',
+      title: 'MusicXML Import and Export',
+      subtitle: 'A document in, a document out, and the round trip shown.',
+      icon: CupertinoIcons.arrow_2_squarepath,
+      accentColor: const Color(0xFF047857),
+      builder: () => const MusicXmlInteropExample(),
+    ),
+    _ExampleEntry(
+      category: 'Interoperability',
+      title: 'MEI Import',
+      subtitle: 'CMN from MEI v5, with octave clefs and transposing parts.',
+      icon: CupertinoIcons.arrow_down_doc,
+      accentColor: const Color(0xFF6D28D9),
+      builder: () => const MeiInteropExample(),
+    ),
+    _ExampleEntry(
+      category: 'Interoperability',
+      title: 'MIDI Export',
+      subtitle: 'Staff to MidiSequence to the bytes of a .mid file.',
+      icon: CupertinoIcons.waveform,
+      accentColor: const Color(0xFFB91C1C),
+      builder: () => const MidiExportExample(),
+    ),
+    _ExampleEntry(
+      category: 'Interoperability',
+      title: 'Transposing Parts and Tablature',
+      subtitle: 'Written pitch against sounding pitch, and fret notation.',
+      icon: CupertinoIcons.arrow_up_arrow_down,
+      accentColor: const Color(0xFF9333EA),
+      builder: () => const TransposingAndTabExample(),
+    ),
+    _ExampleEntry(
+      category: 'Interoperability',
+      title: 'Diagnostics and Warnings',
+      subtitle: 'What the engine says when it cannot do what you asked.',
+      icon: CupertinoIcons.exclamationmark_triangle,
+      accentColor: const Color(0xFFC2410C),
+      builder: () => const DiagnosticsExample(),
     ),
     _ExampleEntry(
       category: 'Interaction & Playback',

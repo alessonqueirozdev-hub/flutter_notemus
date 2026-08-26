@@ -371,3 +371,49 @@ class _ShowcaseHeader extends StatelessWidget {
     );
   }
 }
+
+/// Monospaced block for showing source, exported output or diagnostics.
+///
+/// Scrolls horizontally rather than wrapping: XML, JSON and warning text all
+/// carry meaning in their line structure, and rewrapping a line of MusicXML to
+/// fit a card is how a reader stops being able to tell what the parser saw.
+class ShowcaseCodeBlock extends StatelessWidget {
+  final String text;
+
+  /// Caps the height and scrolls vertically past it. Null lets the block grow
+  /// to its content, which is what you want for a short diagnostic list.
+  final double? maxHeight;
+
+  const ShowcaseCodeBlock({super.key, required this.text, this.maxHeight});
+
+  @override
+  Widget build(BuildContext context) {
+    final block = Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F172A),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFF1E293B)),
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Text(
+          text,
+          style: const TextStyle(
+            fontFamily: 'monospace',
+            fontFamilyFallback: ['Menlo', 'Consolas', 'Courier New'],
+            fontSize: 11.5,
+            height: 1.5,
+            color: Color(0xFFE2E8F0),
+          ),
+        ),
+      ),
+    );
+    if (maxHeight == null) return block;
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: maxHeight!),
+      child: SingleChildScrollView(child: block),
+    );
+  }
+}

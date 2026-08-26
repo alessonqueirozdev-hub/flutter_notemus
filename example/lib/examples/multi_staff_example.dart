@@ -218,13 +218,30 @@ class MultiStaffExampleWidget extends StatelessWidget {
                 ),
               ),
 
-            // TODO: Render score using MultiStaffRenderer
-            // For now, show staff groups info
+            // Issue #7 asked for a "MultiStaffRenderer". It exists, under a
+            // different name: `ScoreView` renders a whole `Score` — every
+            // `StaffGroup` stacked vertically, each one aligned on the shared
+            // horizontal onset grid (ADR-002), with its brace or bracket and
+            // its system-spanning barlines actually drawn.
+            //
+            // What stood here was a fallback that printed the group metadata
+            // as text because nothing could draw it. Printing the bracket TYPE
+            // next to a score that has no bracket in it is the kind of
+            // placeholder that reads as a feature.
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: ScoreView(score: score, staffSpace: 13),
+            ),
+            const SizedBox(height: 24),
+
+            // The metadata is still worth showing — but as a description of
+            // the score ABOVE it, not as a substitute for one.
             ...score.staffGroups.asMap().entries.map((entry) {
               final index = entry.key;
               final group = entry.value;
               return Card(
-                margin: const EdgeInsets.all(16.0),
+                margin: const EdgeInsets.symmetric(
+                    horizontal: 16.0, vertical: 8.0),
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
@@ -233,14 +250,14 @@ class MultiStaffExampleWidget extends StatelessWidget {
                       Text(
                         'Group ${index + 1}: ${group.name ?? 'Unnamed'}',
                         style: const TextStyle(
-                          fontSize: 18,
+                          fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       const SizedBox(height: 8),
-                      Text('Bracket Type: ${group.bracket.name}'),
-                      Text('Staff Count: ${group.staffCount}'),
-                      Text('Connect Barlines: ${group.connectBarlines}'),
+                      Text('Bracket: ${group.bracket.name}'),
+                      Text('Staves: ${group.staffCount}'),
+                      Text('Barlines connected: ${group.connectBarlines}'),
                       if (group.abbreviation != null)
                         Text('Abbreviation: ${group.abbreviation}'),
                     ],

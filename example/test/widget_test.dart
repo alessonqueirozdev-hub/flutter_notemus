@@ -6,6 +6,14 @@ import 'package:flutter_notemus_example/examples/articulations_example.dart';
 import 'package:flutter_notemus_example/examples/beaming_showcase.dart';
 import 'package:flutter_notemus_example/examples/chords_example.dart';
 import 'package:flutter_notemus_example/examples/clefs_example.dart';
+import 'package:flutter_notemus_example/examples/diagnostics_example.dart';
+import 'package:flutter_notemus_example/examples/ensemble_score_example.dart';
+import 'package:flutter_notemus_example/examples/long_score_export_example.dart';
+import 'package:flutter_notemus_example/examples/mei_interop_example.dart';
+import 'package:flutter_notemus_example/examples/midi_export_example.dart';
+import 'package:flutter_notemus_example/examples/musicxml_interop_example.dart';
+import 'package:flutter_notemus_example/examples/theming_example.dart';
+import 'package:flutter_notemus_example/examples/transposing_and_tab_example.dart';
 import 'package:flutter_notemus_example/examples/complete_music_piece.dart';
 import 'package:flutter_notemus_example/examples/dots_and_ledgers_example.dart';
 import 'package:flutter_notemus_example/examples/dynamics_example.dart';
@@ -80,6 +88,21 @@ void main() {
     'Volta Brackets': () => const VoltaBracketsExample(),
     'Complete Piece': () => const CompleteMusicPieceExample(),
     'JSON Import': () => const ProfessionalJsonExample(),
+
+    // Added with the gallery expansion. These pages do more than lay out a
+    // staff: they run the parsers, the MIDI mapper and the layout engine at
+    // BUILD time and print what came back. That is the point of them — and it
+    // is also why a smoke test matters more here than on a page that only
+    // draws notes. A malformed-input card that throws instead of reporting is
+    // exactly the failure these pages exist to disprove.
+    'Ensemble Scores': () => const EnsembleScoreExample(),
+    'Long Scores and Wrapping': () => const LongScoreExportExample(),
+    'Theming': () => const ThemingExample(),
+    'MusicXML Import and Export': () => const MusicXmlInteropExample(),
+    'MEI Import': () => const MeiInteropExample(),
+    'MIDI Export': () => const MidiExportExample(),
+    'Transposing Parts and Tablature': () => const TransposingAndTabExample(),
+    'Diagnostics and Warnings': () => const DiagnosticsExample(),
   };
 
   for (final entry in pages.entries) {
