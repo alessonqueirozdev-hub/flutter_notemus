@@ -443,41 +443,66 @@ the fix, which is the only way an entry is allowed to leave the list.
   never writes here since 2.8.0, and that `LayoutEngine.beamOf(note)` is the
   only supported read.
 
-### Known defects still open
+### Closed at sign-off
 
-Two, both found by the closing sign-off, both left unfixed on purpose because
-each needs a maintainer's decision rather than a patch, and both measured.
+The closing sign-off found these two open and they were fixed before release.
+Both are the same ADR-005 category as the beam field — the engine reaching into
+something it does not own.
 
-- **The "hide the bracket over a fully beamed tuplet" rule is not applied to
-  any rendered score.** `TupletBracket.shouldShow` — repaired this release to
-  take the layout's beam decision — is reachable only through
-  `Tuplet.shouldShowBracket`, and `Tuplet.shouldShowBracket` has **zero callers
-  in `lib/`, `example/` or `test/`**. `TupletRenderer` decides with the
-  deprecated `tuplet.showBracket` field (default `true`) and
-  `_drawTupletBracket` then draws unconditionally. Measured on a 3:2 triplet of
-  eighths at `staffSpace 12`, width 400: the bracket prints, and
-  `showBracket: false` removes 110 px of ink, so the ink is really there. The
-  fix is to route the renderer through the engine-aware decision, which moves
-  goldens (`m04_triplets`, `m04m_tuplet_ratio` and others) — an engraving-policy
-  change that should be made deliberately, not at sign-off.
-- **`LayoutEngine.layout()` still writes `Measure.inheritedTimeSignature` onto
-  the caller's model, and that flips a public API from accepting to throwing.**
-  Same ADR-005 category as the beam field, and this one changes control flow.
-  Two-bar staff whose second bar declares no meter of its own:
+- **A fully beamed tuplet no longer prints a bracket.** Gould, *Behind Bars*
+  p.201: when a beam already delimits the group, only the number is shown.
+  `TupletBracket.shouldShow` implemented the rule and was repaired this release
+  to read the layout's beam decision — but it had **zero callers in `lib/`,
+  `example/` or `test/`**. `TupletRenderer` decided with the deprecated
+  `tuplet.showBracket` field, default `true`, and `_drawTupletBracket` drew
+  unconditionally. Measured at `staffSpace 12`, width 600, full-raster dark
+  pixels: a beamed triplet of eighths went 1960 -> 1832 px (the bracket line and
+  its two hooks gone, the numeral kept); a triplet containing a rest stayed at
+  1542 and one of quarters at 1859, both keeping their bracket; an explicit
+  `showBracket: false` still suppresses. A second, unreported defect fell out of
+  the same missing call site: a `bracketConfig` of `TupletBracket(show: false)`
+  had been producing output byte-identical to the default, i.e. the documented
+  configuration object did nothing. `m04_triplets` and `m04m_tuplet_ratio` were
+  re-recorded; no other golden moved.
+- **`LayoutEngine.layout()` no longer writes `Measure.inheritedTimeSignature`
+  onto the caller's model**, which was flipping a public API from accepting to
+  throwing. Two-bar staff whose second bar declares no meter of its own:
 
-  | | `m2.inheritedTimeSignature` | `m2.add(third quarter)` |
+  | | `m2.inheritedTimeSignature` | `m2.add(fifth quarter)` |
   |---|---|---|
-  | fresh | `null` | ACCEPTED |
-  | after `layout()` | `TimeSignature(2/4)` | throws `MeasureCapacityException` |
+  | before, fresh | `null` | ACCEPTED |
+  | before, after `layout()` | `TimeSignature(4/4)` | throws `MeasureCapacityException` |
+  | now, fresh / after `layout()` / after paint | `null` | ACCEPTED in all three |
 
-  So whether `Measure.add` accepts a note depends on whether the score happened
-  to have been laid out. The ADR-005 remedy is to publish it as a value
-  (`LayoutEngine.inheritedMeters` / `meterOf(measure)`) and route
-  `layout_engine.dart:1535` and `measure_validator.dart:157` through it; the
-  literal patch is in ADR-005 action item 8. It is not applied here because
-  removing the write also changes what capacity an inheriting bar reports to
-  users who currently rely on the post-layout behaviour — a semantic choice, not
-  a bug fix.
+  Whether `Measure.add` accepted a note depended on whether the score happened
+  to have been laid out. The derived meter is a value now
+  (`LayoutEngine.inheritedTimeSignatures` / `timeSignatureOf`), read by the
+  engine and by `MeasureValidator`; validation is unaffected — an over-full bar
+  inheriting its meter from an earlier bar is still detected, and a wrapped
+  grand staff whose meter is declared only in bar 1 still validates its later
+  systems. `Measure.inheritedTimeSignature` survives as a field a caller may set
+  deliberately to opt into preventive validation. Zero pixels moved.
+
+### One more, found while closing
+
+- **Every note reserved a black notehead's width, whatever its duration.**
+  `_getElementWidthSimple` used `noteheadBlackWidth` for all fifteen
+  `DurationType`s. Bravura's `noteheadBlack` advance is 1.18 staff spaces but
+  `noteheadWhole` is 1.688 and `noteDoubleWhole` wider still, so a semibreve and
+  a breve were reserved a crotchet's room and painted past it. Measured at
+  `staffSpace = 48`: reservation 56.6 px for both, against 81.0 px and 125.8 px
+  of glyph. It now reads
+  `metadata.getGlyphAdvanceWidth(duration.type.glyphName)`. The structural
+  invariant that budgets painted ink against reserved advance had these two
+  cases carrying 27.0 px and 71.0 px of allowance; both now pass at 3.0 px,
+  which is anti-aliasing. No golden moved — a long note normally receives far
+  more proportional space than its glyph needs, which is why this survived: it
+  only bites under compression, and at the two places that read the advance
+  rather than the spacing (the hit-test box and the raster's content width).
+  The FLAG half of the same finding is still open: a stem-up eighth paints
+  0.93 staff spaces past its reservation, and fixing it properly means
+  separating "advance for spacing" from "painted extent" rather than changing a
+  constant.
 
 ### Known limitations in this release
 

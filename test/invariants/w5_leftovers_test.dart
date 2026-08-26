@@ -573,9 +573,19 @@ void main() {
       final warning = engine.warnings.single;
       expect(warning, contains('measure 1'));
       expect(warning, contains('index 0'));
-      // 2.03x, from the bar's own right edge; the audit's 2.07x is the same
-      // overflow measured from the staff-wide maxX.
-      expect(warning, contains('2.03x'));
+
+      // The factor is asserted as a NUMBER with a floor, not as a literal
+      // string. It was `contains('2.03x')` and that was brittle in exactly the
+      // way this suite exists to prevent: the moment `_getElementWidthSimple`
+      // started reserving each duration's REAL notehead advance instead of
+      // `noteheadBlack` for everything (Bravura gives `noteheadWhole` 1.688
+      // staff spaces against 1.18), forty semibreves legitimately got wider and
+      // the factor moved 2.03x -> 2.30x. The old assertion failed for a
+      // CORRECTION. What the warning has to prove is that it quotes a real,
+      // large overflow — not that the engraving never improves.
+      final factor = RegExp(r'\(([0-9.]+)x\)').firstMatch(warning);
+      expect(factor, isNotNull, reason: 'the warning must quote a factor: $warning');
+      expect(double.parse(factor!.group(1)!), greaterThan(2.0), reason: warning);
     });
 
     test('the list belongs to ONE pass and stays empty for music that fits',

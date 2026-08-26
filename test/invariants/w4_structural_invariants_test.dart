@@ -449,26 +449,28 @@ void main() {
       'note double flat': _n('B', 4, alter: -2.0),
       'note dotted': _n('B', 4, dots: 1),
       'note double dotted': _n('B', 4, dots: 2),
-      // OPEN, MEASURED DEFECTS — kept in the matrix with their own budget so
-      // they cannot grow silently, and so the day the reservation is fixed the
-      // budget can simply be deleted. All three live in one method,
-      // `LayoutEngine._getElementWidthSimple`, in its `element is Note` branch:
+      // The notehead half of this is CLOSED. `_getElementWidthSimple` used to
+      // reserve `noteheadBlackWidth` for EVERY note, and Bravura's
+      // `noteheadWhole` advance is 1.688 staff spaces and `noteDoubleWhole`
+      // wider still, against `noteheadBlack`'s 1.18. Measured at staffSpace 48
+      // BEFORE: a whole note painted 81 px into a 56.6 px reservation (24.5 px
+      // over, 0.51 staff spaces) and a breve 125 px (68.5 px over, 1.43 staff
+      // spaces). It now reads
+      // `metadata.getGlyphAdvanceWidth(note.duration.type.glyphName)`, so the
+      // reservation is 81.0 px and 125.8 px respectively and both cases pass at
+      // a 3 px budget — anti-aliasing, not overrun. The budgets below were 27.0
+      // and 71.0; they are kept at 3.0 rather than deleted so that a regression
+      // to the flat black-notehead constant fails here immediately.
       //
-      //  * it reserves `noteheadBlackWidth` for EVERY note. Bravura's
-      //    `noteheadWhole` advance is 1.688 staff spaces and
-      //    `noteheadDoubleWhole` 2.396, against `noteheadBlack`'s 1.18.
-      //    Measured at staffSpace 48: a whole note paints 81 px into a 56.6 px
-      //    reservation (24.5 px over, 0.51 staff spaces) and a breve 125 px
-      //    (68.5 px over, 1.43 staff spaces). The fix is to read
-      //    `metadata.getGlyphAdvanceWidth(note.duration.type.glyphName)`
-      //    instead of the black-notehead constant.
-      //  * it reserves nothing for a FLAG. A stem-up eighth or 32nd paints
-      //    101 px into the same 56.6 px (44.5 px over, 0.93 staff spaces) —
-      //    `flag8thUp` alone advances 1.056 staff spaces past the stem.
-      //    Spacing-wise a flag over the following gap is conventional (Gould),
-      //    but `elementWidth` is ALSO the hit-test box and the raster's content
-      //    width, so today a flag is unclickable and can be clipped at the
-      //    right page edge.
+      // OPEN, MEASURED DEFECT — the FLAG. `_getElementWidthSimple` reserves
+      // nothing for it: a stem-up eighth or 32nd paints 101 px into a 56.6 px
+      // reservation (44.5 px over, 0.93 staff spaces), because `flag8thUp`
+      // alone advances 1.056 staff spaces past the stem. Spacing-wise a flag
+      // hanging over the following gap is conventional (Gould), so the ADVANCE
+      // is arguably right — but `elementWidth` is ALSO the hit-test box and the
+      // raster's content width, so a flag is unclickable and can be clipped at
+      // the right page edge. The real fix is to separate "advance for spacing"
+      // from "painted extent", which is a design change, not a constant.
       'note whole': _n('B', 4, d: DurationType.whole),
       'note breve': _n('B', 4, d: DurationType.breve),
       'note eighth stem up': _n('C', 4, d: DurationType.eighth),
@@ -495,8 +497,8 @@ void main() {
     const budgets = <String, double>{
       // See the notes on the four cases above. Measured: 24.5 / 68.5 / 44.5 /
       // 44.5 px at staffSpace 48.
-      'note whole': 27.0,
-      'note breve': 71.0,
+      'note whole': 3.0,
+      'note breve': 3.0,
       'note eighth stem up': 47.0,
       'note thirty-second stem up': 47.0,
       // Rests are drawn CENTRED on their origin (`GlyphDrawOptions.restDefault`
@@ -516,8 +518,8 @@ void main() {
     // whose painted width matches their reservation to within a pixel (54.0 vs
     // 54.3, 52.0 vs 51.8, 81.0 vs 81.4) and which fail only the BAND half.
     const widthBudgets = <String, double>{
-      'note whole': 27.0,
-      'note breve': 71.0,
+      'note whole': 3.0,
+      'note breve': 3.0,
       'note eighth stem up': 47.0,
       'note thirty-second stem up': 47.0,
     };

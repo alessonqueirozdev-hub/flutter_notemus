@@ -499,15 +499,17 @@ lowered; those bullets are gone because the engine stopped having them. A
 seventh — silent acceptance of malformed MusicXML — left it only PARTLY, and
 the residue is the second bullet below.
 
-**Two defects are still open**, both found by the closing sign-off and both
-recorded with their measurements in `CHANGELOG.md` under *Known defects still
-open*: the "hide the bracket over a fully beamed tuplet" rule is not applied to
-any rendered score (`Tuplet.shouldShowBracket` has no caller — `TupletRenderer`
-decides with the deprecated `tuplet.showBracket`), and `LayoutEngine.layout()`
-still writes `Measure.inheritedTimeSignature` onto the caller's model, which
-flips `Measure.add` from accepting a note to throwing
-`MeasureCapacityException`. Each needs an engraving-policy or API decision
-rather than a patch, so neither was changed at sign-off.
+The closing sign-off found **two more** and both were fixed before release; they
+are recorded with their measurements in `CHANGELOG.md` under *Closed at
+sign-off*. Gould's rule that a fully beamed tuplet shows only its number is now
+applied to rendered scores — the rule existed but `Tuplet.shouldShowBracket` had
+no caller, so `TupletRenderer` decided with the deprecated `tuplet.showBracket`
+and drew a bracket unconditionally (measured: a beamed triplet went from 1960 to
+1832 px of ink; one containing a rest, and one of quarters, keep their bracket).
+And `LayoutEngine.layout()` no longer writes `Measure.inheritedTimeSignature`
+onto the caller's model, which used to flip `Measure.add` from accepting a note
+to throwing `MeasureCapacityException` purely because the score had been laid
+out; the derived meter is a value now and validation is unaffected.
 
 Everything below is **not** a defect — it is a set of deliberate boundaries,
 each measured:

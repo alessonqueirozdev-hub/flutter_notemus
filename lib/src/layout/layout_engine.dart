@@ -1087,6 +1087,28 @@ class LayoutEngine {
   double get noteheadBlackWidth =>
       _getGlyphWidth('noteheadBlack', _noteheadBlackWidthFallback);
 
+  /// Advance width, in staff spaces, of the notehead a note of [type] is drawn
+  /// with — straight from the SMuFL metadata, keyed on the same
+  /// `DurationType.glyphName` the renderers pass to the glyph painter.
+  ///
+  /// This used to be `noteheadBlackWidth` for EVERY duration. Bravura's
+  /// `noteheadBlack` advance is 1.18 staff spaces, but `noteheadWhole` is 1.688
+  /// and `noteDoubleWhole` 2.396, so a semibreve and a breve were reserved a
+  /// black notehead's worth of room and painted well past it. Measured at
+  /// `staffSpace = 48`: a whole note painted 81 px into a 56.6 px reservation
+  /// (24.5 px over, 0.51 staff spaces) and a breve 125 px (68.5 px over, 1.43
+  /// staff spaces). Under compression that overrun becomes a collision, and
+  /// because `elementWidth` is also the hit-test box and the raster's content
+  /// width, the right edge of a whole note was unclickable and could be clipped
+  /// at the page edge.
+  ///
+  /// Long values normally receive far more proportional space than their glyph
+  /// needs, which is why this went unnoticed: it only bites when the bar is
+  /// compressed, or at the two places that read the advance rather than the
+  /// spacing.
+  double _noteheadAdvance(DurationType type) =>
+      _getGlyphWidth(type.glyphName, _noteheadBlackWidthFallback);
+
   /// Width of the sharp
   double get accidentalSharpWidth =>
       _getGlyphWidth('accidentalSharp', _accidentalSharpWidthFallback);
@@ -2634,7 +2656,7 @@ class LayoutEngine {
     }
 
     if (element is Note) {
-      double width = noteheadBlackWidth * staffSpace;
+      double width = _noteheadAdvance(element.duration.type) * staffSpace;
       final accGlyph = _effectiveAccidentalGlyph(element);
       if (accGlyph != null) {
         // SMuFL advises 0.25-0.3 staff spaces between accidental and notehead.

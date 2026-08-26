@@ -121,7 +121,7 @@ Legenda: **✅** corrigido e medido · **◐** parcial · **○** aberto · **�
 |---|---|---|
 | M-23 | Colchete/numeral de quiáltera cortados na borda do canvas | ✅ 74 px na linha 0 → **0 px**, para oitava 6 e oitava 3 |
 | M-32 | `staffBaselineY` é local à pauta sob `alignedSystem()` | ✅ dartdoc corrigido; delta de 132,0 px documentado |
-| M-33 | Larguras de cabeça por `DurationType` | ◐ pinado por teste com orçamento; 3 casos ainda em aberto |
+| M-33 | Larguras de cabeça por `DurationType` | ◐ **metade fechada**: semibreve/breve reservavam 1,18 SS contra 1,688 e 2,396 reais → agora do metadado; orçamento do invariante caiu de 27,0/71,0 px para **3,0 px** (antialiasing). Aberto: a **bandeirola** pinta 0,93 SS além da reserva — separar "avanço para espaçamento" de "extensão pintada" é mudança de design, não de constante |
 | M-34 | `stemExtensionPerBeam` literal | ✅ 0,5 → `beamThickness + beamSpacing` = 0,75 |
 | M-35 | Espessura do colchete usava `stemThickness` | ✅ 0,1199 → **0,1598 SS** = `tupletBracketThickness` |
 | M-36 | `contentWidth` conta o `leftExtent` duas vezes | ✅ |
@@ -198,7 +198,8 @@ sem problemas. Na raiz eram **470** no início.
 
 | Item | Sev | O que falta |
 |---|---|---|
-| `M-33` larguras de cabeça | P3 | 3 casos (semibreve, colchete, pausa) ainda fora do orçamento de `elementWidth ≥ tinta pintada` |
+| Bandeirola fora da reserva de `elementWidth` | P3 | Pinta 0,93 SS além do avanço reservado. Espaçar assim é convenção (Gould), mas `elementWidth` é também a caixa de hit-test e a largura de conteúdo do raster — uma bandeirola é inclicável e pode ser cortada na borda da página. Exige separar avanço de extensão pintada |
+| Pausas centradas contra reserva à direita | P4 | A largura confere ao pixel (52,0 contra 51,9 px numa pausa de semínima); só a **banda** está deslocada meio glifo, porque `GlyphDrawOptions.restDefault` centra e o layout reserva `[x, x+avanço]` |
 | Espaçamento de quiáltera ignora o `SpacingModel` | P3 | Decisão **declarada** no dartdoc e no commit `fa2cce5`; fechar exige dar um motor de espaçamento ao `TupletRenderer` |
 | Teto de razão do N-04 | P3 | É uma razão única; sob carga concorrente pisca. Trocar por melhor-de-N |
 | Playback nativo | P3 | 1 plataforma de 6, documentado no README |
