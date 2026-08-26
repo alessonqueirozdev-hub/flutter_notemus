@@ -3669,7 +3669,7 @@ class LayoutEngine {
       if (syllables != null && syllables.isNotEmpty) {
         extent = staffSpace * (4.0 + 1.1 * syllables.length);
       }
-      return extent;
+      return extent + _curveAllowance(element);
     }
     if (element is Chord) {
       final sung = element.notes
@@ -3680,6 +3680,48 @@ class LayoutEngine {
     if (element is Dynamic) return staffSpace * 4.5;
     if (element is Rest) return staffSpace * 2.2;
     return staffSpace * 2.0;
+  }
+
+  /// Extra vertical room a note needs because a slur or tie arches off it.
+  ///
+  /// The layout could not see curves AT ALL. A slur is drawn BETWEEN two notes
+  /// by `SlurRenderer`; it is not a positioned element, so it never appeared in
+  /// the list `contentTopOverflow` walks, and the canvas was sized as if the
+  /// arc were not there. Measured on a seven-note rising phrase under one slur
+  /// at `staffSpace = 12`: the raster came back 219 px tall with **12 px of ink
+  /// hard against row 0** — the apex of the arc, cut off by the top edge.
+  ///
+  /// The allowance is the bound `SlurCalculator` itself draws by rather than a
+  /// number invented here: the arc height is
+  /// `0.55 * sqrt(lengthInStaffSpaces)` **clamped to 2.8 staff spaces**, and
+  /// the curve starts `EngravingRules.slurNoteHeadYOffset` (0.5) clear of the
+  /// notehead. So 3.3 staff spaces is the most a curve can reach past the note
+  /// it hangs from, and reserving that is exact at the clamp and generous
+  /// below it.
+  ///
+  /// Added on BOTH sides deliberately. Which side a curve takes is decided by
+  /// the renderer from stem direction and chord geometry, and duplicating that
+  /// decision here would be a second source of truth for it — the same defect
+  /// class as the clef that reported treble while drawing bass. Over-reserving
+  /// by 3.3 staff spaces on the unused side costs vertical whitespace; getting
+  /// it wrong costs the arc.
+  static const double curveReachSpaces = 2.8 + 0.5;
+
+  double _curveAllowance(MusicalElement element) {
+    if (element is Note) {
+      final carries = element.tie != null ||
+          element.slur != null ||
+          element.slurs.isNotEmpty;
+      return carries ? staffSpace * curveReachSpaces : 0.0;
+    }
+    if (element is Chord) {
+      for (final note in element.notes) {
+        if (note.tie != null || note.slur != null || note.slurs.isNotEmpty) {
+          return staffSpace * curveReachSpaces;
+        }
+      }
+    }
+    return 0.0;
   }
 
   /// How far above its own anchor an element draws, in pixels.
@@ -3708,7 +3750,7 @@ class LayoutEngine {
     if (element is Note || element is Chord) {
       // Notehead half-height plus a stem's worth of clearance; ledger lines and
       // articulations live inside this.
-      return staffSpace * 2.2;
+      return staffSpace * 2.2 + _curveAllowance(element);
     }
     if (element is Rest) return staffSpace * 2.2;
     return staffSpace * 2.0;

@@ -501,15 +501,30 @@ void main() {
     final b = await rasterise(withoutTie, metadata,
         staffSpace: staffSpace, width: 320, theme: const MusicScoreTheme());
     expect(a.width, b.width);
-    expect(a.height, b.height);
+
+    // The two canvases are NOT the same height, and that is correct: a note
+    // carrying a tie reserves the curve's reach above it (see
+    // `LayoutEngine.curveReachSpaces`), so the tied score is taller by exactly
+    // the headroom the arc needs — measured here, 48 px at staffSpace 12. That
+    // headroom is added at the TOP, so `a`'s content sits that much lower than
+    // `b`'s.
+    //
+    // This used to assert the heights were equal, which held only while the
+    // layout could not see curves at all — the same blindness that let a long
+    // slur's apex be clipped off the top of the page. Aligning the two rasters
+    // by that offset keeps the measurement this test actually makes (WHERE the
+    // tie's ink begins) and stops it depending on the defect.
+    final dy = a.height - b.height;
+    expect(dy, greaterThanOrEqualTo(0),
+        reason: 'the tied score should never be SHORTER than the untied one');
 
     // Columns where the two renders differ = the tie's own ink.
     var leftmost = -1;
     var changed = 0;
     for (var x = 0; x < a.width; x++) {
       var differs = false;
-      for (var y = 0; y < a.height; y++) {
-        if (a.dark(x, y) != b.dark(x, y)) {
+      for (var y = dy; y < a.height; y++) {
+        if (a.dark(x, y) != b.dark(x, y - dy)) {
           differs = true;
           break;
         }
