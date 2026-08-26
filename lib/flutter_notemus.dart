@@ -64,6 +64,12 @@ export 'src/rendering/staff_renderer.dart';
 // the enum is part of the public surface and has to be exported with it.
 export 'src/rendering/accidental_resolver.dart'
     show AccidentalDisplay, AccidentalResolver;
+
+// Where sung text goes. Exported because it is the one number an embedding
+// needs in order to draw anything of its own under a staff — a karaoke
+// highlight, a chord grid, a second verse from outside the model — and because
+// the placement stopped being a constant it could hard-code.
+export 'src/rendering/lyric_layout.dart' show LyricLayout;
 export 'src/rendering/renderers/base_glyph_renderer.dart';
 // The text-font escape hatch. `MusicTextFont.use` is the ONLY way an embedding
 // app can name the face this package draws non-SMuFL strings with — the

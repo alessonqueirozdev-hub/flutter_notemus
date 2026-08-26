@@ -28,6 +28,7 @@ import 'smufl_positioning_engine.dart';
 import 'staff_coordinate_system.dart';
 import 'staff_position_calculator.dart';
 import 'text_font.dart';
+import 'lyric_layout.dart';
 
 class StaffRenderer {
   // CONSTANTES DE AJUSTE MANUAL
@@ -469,9 +470,15 @@ class StaffRenderer {
 
     final fontSize = coordinates.staffSpace * 0.85;
     final lineHeight = fontSize * 1.3;
-    final staffBottomY =
-        coordinates.staffBaseline.dy + 2 * coordinates.staffSpace;
-    final firstLineY = staffBottomY + coordinates.staffSpace * 1.5;
+    // The same measured lyric line `NoteRenderer` drew the syllables on, so the
+    // hyphens and melisma lines cannot land somewhere else. This was three
+    // copies of one fixed offset; it is one function now, and it measures.
+    final firstLineY = LyricLayout.firstLineY(
+      elements: elements,
+      system: elements.isEmpty ? 0 : elements.first.system,
+      staffBaselineY: coordinates.staffBaseline.dy,
+      staffSpace: coordinates.staffSpace,
+    );
     final color = theme.noteheadColor.withValues(alpha: 0.85);
 
     TextStyle styleFor(bool italic) {
@@ -544,9 +551,15 @@ class StaffRenderer {
 
     final fontSize = coordinates.staffSpace * 0.85;
     final lineHeight = fontSize * 1.3;
-    final staffBottomY =
-        coordinates.staffBaseline.dy + 2 * coordinates.staffSpace;
-    final firstLineY = staffBottomY + coordinates.staffSpace * 1.5;
+    // The same measured lyric line `NoteRenderer` drew the syllables on, so the
+    // hyphens and melisma lines cannot land somewhere else. This was three
+    // copies of one fixed offset; it is one function now, and it measures.
+    final firstLineY = LyricLayout.firstLineY(
+      elements: elements,
+      system: elements.isEmpty ? 0 : elements.first.system,
+      staffBaselineY: coordinates.staffBaseline.dy,
+      staffSpace: coordinates.staffSpace,
+    );
     final color = theme.noteheadColor.withValues(alpha: 0.85);
     final noteHalfWidth =
         ((metadata.getGlyphInfo('noteheadBlack')?.boundingBox?.width ?? 1.18) *
@@ -1060,6 +1073,14 @@ class StaffRenderer {
       // predicate, so this moves no ink.
       final onlyNotehead =
           _notesInAdvancedBeams.contains(element) || _beamOf(element) != null;
+      // The lyric line belongs to the SYSTEM, not to the note: it has to clear
+      // the lowest notehead in the system and sit at one height across it.
+      noteRenderer.lyricFirstLineY = LyricLayout.firstLineY(
+        elements: allElements,
+        system: positioned.system,
+        staffBaselineY: coordinates.staffBaseline.dy,
+        staffSpace: coordinates.staffSpace,
+      );
       noteRenderer.render(
         canvas,
         element,

@@ -26,6 +26,7 @@ import 'primitives/ledger_line_renderer.dart';
 import 'primitives/stem_renderer.dart';
 import 'symbol_and_text_renderer.dart';
 import '../text_font.dart';
+import '../lyric_layout.dart';
 
 class NoteRenderer extends BaseGlyphRenderer {
   final MusicScoreTheme theme;
@@ -300,14 +301,26 @@ class NoteRenderer extends BaseGlyphRenderer {
     _renderSyllables(canvas, syllables, centerX);
   }
 
+  /// Y of the first lyric line, when the caller has measured one.
+  ///
+  /// `StaffRenderer` sets this per SYSTEM before drawing, because the lyric
+  /// line has to clear the lowest note in the system and has to sit at ONE
+  /// height across it — syllables that stepped up and down with their notes
+  /// would be unreadable as a line of text.
+  ///
+  /// Null falls back to the fixed offset below, which is what every caller
+  /// used to get and is why a note below the staff sat on top of its own
+  /// syllable.
+  double? lyricFirstLineY;
+
   void _renderSyllables(Canvas canvas, List<Syllable> syllables, double noteX) {
-    // Bottom staff line: baseline.dy + 2 * staffSpace.
-    final staffBottomY =
-        coordinates.staffBaseline.dy + 2 * coordinates.staffSpace;
     final fontSize = coordinates.staffSpace * 0.85;
     final lineHeight = fontSize * 1.3;
-    // Clearance between the bottom staff line and the first lyric line.
-    final firstLineY = staffBottomY + coordinates.staffSpace * 1.5;
+    final firstLineY = lyricFirstLineY ??
+        LyricLayout.fallbackFirstLineY(
+          staffBaselineY: coordinates.staffBaseline.dy,
+          staffSpace: coordinates.staffSpace,
+        );
 
     for (int verseIndex = 0; verseIndex < syllables.length; verseIndex++) {
       final syllable = syllables[verseIndex];
