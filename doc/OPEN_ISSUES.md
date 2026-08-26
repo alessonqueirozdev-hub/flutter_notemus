@@ -1,139 +1,55 @@
-# Open Issues Backlog
+# Open work
 
-This file mirrors the current GitHub backlog for pending work in `flutter_notemus`.
+**GitHub Issues is the source of truth**, and as of 2026-08-26 it actually is —
+which it was not before. This file used to mirror the backlog issue by issue,
+with a measured "current state" under each one. That mirror drifted: it was
+still describing melisma extension lines, lyric hyphen centering, PDF
+placeholder pages and score hit-testing as open work months after each of them
+shipped.
 
-GitHub issues remain the source of truth:
+A tracker and its mirror will always drift, and the mirror is the copy that
+nobody re-reads. So the measurements moved into the issues themselves, where
+the person deciding whether to pick the work up will actually see them, and
+this file stopped being a second backlog.
+
 https://github.com/alessonqueirozdev-hub/flutter_notemus/issues
 
-> **Reconciled with the code on 2026-08-22** (after the remediation waves that
-> followed `doc/AUDITORIA_FORENSE_2026-08-21.md`). Each "current state" below was
-> re-checked against the source; where a state changed, the line says what
-> changed and where. Where nothing changed, the line stays as blunt as it was.
+## How the tracker is organised
 
-## Playback, audio, and export
+Issues carry a domain label, not just `bug` / `enhancement`:
 
-1. Native audio backend parity for non-Android platforms
-   - Issue: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/1
-   - Current state: **unchanged — one platform of six has a real engine.**
-     Android is the only implementation
-     (`android/src/main/cpp/native_audio_engine.cpp`, ~600 lines, plus the
-     Kotlin plugin). iOS and macOS are 32-line `MethodChannel` shims whose
-     `nativeInitialize`/`nativeIsReady` answer `false` and whose every transport
-     method answers `nil`
-     (`ios/Classes/FlutterNotemusPlugin.swift`,
-     `macos/Classes/FlutterNotemusPlugin.swift`); Windows (64 lines) and Linux
-     (84 lines) are the same shape. Nothing in the 2.7.0 remediation touched
-     any of them.
-   - Note on the Android engine itself: it is oscillator synthesis
-     (sine/triangle/saw/square). A SoundFont can be handed to the API but is
-     never loaded.
+| Label | What it covers |
+|---|---|
+| `engraving` | Glyph placement, spacing, beams, stems, ties — how the notation looks on the page |
+| `interop` | MusicXML, MEI and JSON import/export |
+| `playback` | MIDI mapping, native audio backends, transport |
+| `performance` | Layout and render cost, threading, large scores |
+| `gregorian` | Square notation, neumes, Greciliae |
+| `jianpu` | Numbered notation (简谱), GB/T 46845-2025 |
+| `editor` | Hit-testing, selection, editing, live playhead |
+| `api` | Public surface, naming, deprecations |
+| `breaking-change` | Removes or changes public API; lands in a major release |
+| `packaging` | pub.dev release, assets, archive contents, CI |
 
-2. PDF export
-   - Issue: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/2
-   - Current state: **no longer a placeholder.** The exporter used to draw five
-     empty staff lines behind a `// TODO: Implement actual music rendering`.
-     It now lays the staff out with the same `LayoutEngine` the on-screen widget
-     uses and rasterises the real notation into the page
-     (`lib/src/export/score_rasterizer.dart`, driven from
-     `lib/src/export/pdf_exporter.dart:291-331`).
-   - Remaining limits, stated so this does not become the next overclaim: the
-     page holds a **raster** image, not vector notation, so text is not
-     selectable and zoom is resolution-bound; and rasterisation needs a live
-     Flutter engine (a running app or `flutter_test`), so a caller in a plain
-     Dart VM gets the staff **skipped with an explicit warning**, not silently
-     empty pages (`pdf_exporter.dart:328-336`). Vector PDF output would need the
-     single draw-op back-end described in §23 of the forensic audit.
+## Where the measurements live
 
-3. Web playback shim is still a no-op
-   - Issue: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/15
-   - Current state: **unchanged.** `lib/flutter_notemus_web.dart` (44 lines)
-     returns `false` from the readiness probe and `null` from everything else.
-     Playback calls resolve without producing audio. This is the same stub as
-     issue #1 above, on the sixth platform.
+Every finding this project has acted on was measured before and after, and the
+numbers are kept in three places, none of which is a backlog:
 
-4. Production-ready MIDI and audio workflow
-   - Issue: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/20
-   - Current state: MIDI **generation** advanced in 2.7.0 — per-voice tracks and
-     channels, solo/mute by voice and by staff, ornament expansion, grace notes
-     that steal time, and octave-transposing clefs applied to the sounding pitch
-     (`lib/src/midi/midi_mapper.dart`, `midi_models.dart`). The end-to-end
-     playback/session API is still not consolidated, and it cannot be while five
-     of six platforms are stubs (#1/#15). Region playback (a measure range) has
-     no API yet.
+- **`CHANGELOG.md`** — what changed in each release, with the before → after
+  measurement inline. This is the one a consumer reads.
+- **`doc/AUDITORIA_*.md`** — the forensic audits themselves, in full, including
+  the findings that were **retracted** as wrong.
+- **`doc/AUDITORIA_RECONCILIADA_2026-08-23.md`** — the reconciliation of two
+  independent adversarial audits of 2.7.1 into one master list of 50, with the
+  cross-coverage statistics and the four published headline numbers that do not
+  reproduce.
 
-## Engraving and layout follow-up
+## Standing rule
 
-5. Slur/tie inter-note lyric hyphen centering still needs a second layout pass
-   - Issue: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/14
-   - Current state: hyphen is glued to the syllable; centering between
-     consecutive syllable X positions requires a post-layout pass.
-
-Resolved in 2.6.0 (closed): #3 (SMuFL brace glyph workflow), #4 (stem/flag
-engraving-default parameterization), #5 (robust `repeatBoth` fallback),
-#8 (tuplet ratios in `MeasureValidator` — verified + tested; dead TODO removed),
-#9 (`SpacingResult` `Chord`/`Tuplet` width & shortest-duration).
-
-## Examples, text, and content quality
-
-11. `multi_staff_example` still depends on missing `MultiStaffRenderer` support
-    - Issue: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/7
-    - Current state (2.6.0): largely addressed — public `GrandStaff` (one
-      `StaffGroup`) and `ScoreView` (a whole `Score`) widgets now render
-      multi-staff systems (grand staff, SATB, full score, cross-staff beaming,
-      multi-system wrapping), and the example gallery uses them
-      (`GrandStaffExample`). The legacy local multi-staff demo was retired.
-
-12. Melisma extension lines still need multi-note context
-    - Issue: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/13
-    - Current state: a fixed 1-SS stub is drawn; the full extension to the
-      next note's onset requires a post-layout pass (shared with #14).
-
-Resolved in 2.6.0 (closed): #12 (`Chord` now renders `Note.syllables` via the
-shared `NoteRenderer.renderSyllables`).
-
-## Styling, editing, and interactivity roadmap
-
-15. Expose comprehensive theming and styling controls across engraving primitives
-    - Issue: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/16
-
-16. Add editable score model and notation editing workflows
-    - Issue: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/17
-    - Current state: still open, but the **blocking precondition is now met.**
-      The forensic audit named the blocker precisely: the layout replaced the
-      caller's `Note` objects with clones, so no element had a stable identity
-      from model to screen and there was nothing to select. The layout no longer
-      clones (`Note.beam` is written in place), and
-      `test/invariants/engraving_invariants_test.dart` group L3 pins that down.
-      Cursor, note entry, undo/redo and clipboard remain unimplemented.
-
-17. Implement score hit-testing and interactive selection APIs
-    - Issue: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/18
-    - Current state: **first cut landed.** `ScoreHitTester`
-      (`lib/src/interaction/score_hit_tester.dart`) does point hit-testing with a
-      tolerance and a type ranking, rectangle selection, and selection by
-      measure, system, voice and onset range — the last of these only being
-      expressible because `PositionedElement` now carries `onset` and
-      `measureIndex`. Not yet wired to gestures in the public widget, and there
-      is no visual selection feedback.
-
-18. Support real-time interactive score state and live playback feedback
-    - Issue: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/19
-
-## Alternative notation systems
-
-19. Jianpu (numbered notation) rendering — GB/T 46845-2025 conformance epic
-    - Epic: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/24
-    - Request: https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/21
-    - Current state: **work in progress / experimental.** A `JianpuRenderer` /
-      `JianpuScore` parallel to the SMuFL staff path now exists (reusing the
-      notation-agnostic music model) and basic rendering is shown in the example
-      gallery, but coverage is partial and the API may still change — not yet
-      production-ready. Tracked section-by-section against GB/T 46845-2025 in
-      epic #24 (phased: §6 MVP, §5 structure, §7 auxiliary). The SMuFL staff
-      path stays untouched.
-
-## Update policy
-
-- Every pending feature or bug must have a GitHub issue.
-- Update this file whenever an issue is opened, closed, or renumbered in the roadmap.
-- If an issue is resolved in code, close the GitHub issue and update this file in the same commit.
+Nothing leaves the open list until a pass that **did not write the fix**
+re-measures it. Four times in this project's history a shipped document
+asserted that a delivered fix was still broken, and once the reverse — a
+document asserted a fix that two waves had diagnosed and neither had applied.
+The executable guards in `test/invariants/` exist because of that second case:
+they fail the build rather than the prose.
