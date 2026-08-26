@@ -273,10 +273,12 @@ class DynamicsExample extends StatelessWidget {
         Note(
           pitch: const Pitch(step: 'C', octave: 4),
           duration: const Duration(DurationType.whole),
+          // No `length`: the hairpin spans to the next dynamic or the barline
+          // (Behind Bars). A pixel length cannot know where the music goes and
+          // overshoots the barline the moment the spacing changes.
           dynamicElement: Dynamic(
             type: DynamicType.crescendo,
             isHairpin: true,
-            length: 90.0,
           ),
         ),
       );
@@ -289,7 +291,6 @@ class DynamicsExample extends StatelessWidget {
           dynamicElement: Dynamic(
             type: DynamicType.diminuendo,
             isHairpin: true,
-            length: 90.0,
           ),
         ),
       );

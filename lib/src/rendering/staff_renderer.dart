@@ -1002,6 +1002,58 @@ class StaffRenderer {
     }
   }
 
+
+  /// How far a hairpin with no explicit length should reach, or null.
+  ///
+  /// A hairpin spans to the next dynamic or the barline in the same system
+  /// (Behind Bars), leaving a small gap before it.
+  ///
+  /// This used to live inline in the branch that draws a STANDALONE `Dynamic`,
+  /// which meant a hairpin attached to a note — `Note(dynamicElement: ...)`,
+  /// the form every example in this package uses — never got a musical span at
+  /// all. It fell through to `staffSpace * 6`, a fixed stub with no
+  /// relationship to the music, which is why the crescendo and diminuendo on
+  /// the dynamics page sat bunched at the left of their bars instead of
+  /// reaching across them.
+  double? _hairpinSpan(
+    Dynamic dynamic, {
+    required double fromX,
+    required int index,
+    required int system,
+    required List<PositionedElement> allElements,
+  }) {
+    if (!dynamic.isHairpin || dynamic.length != null) return null;
+
+    double? stopX;
+    var stopIsDynamic = false;
+    for (int j = index + 1; j < allElements.length; j++) {
+      final pe = allElements[j];
+      if (pe.system != system) break;
+      final other = pe.element;
+      // A note carrying its own dynamic stops the hairpin just as a standalone
+      // one does — otherwise a crescendo would run straight through the mark
+      // that is supposed to end it.
+      if (other is Dynamic || (other is Note && other.dynamicElement != null)) {
+        stopX = pe.position.dx;
+        stopIsDynamic = true;
+        break;
+      }
+      if (other is Barline) {
+        stopX = pe.position.dx;
+        break;
+      }
+    }
+    if (stopX == null) return null;
+
+    // The next dynamic letter is drawn centered on its X, so leave room for its
+    // left half plus a margin; a barline only needs a small gap.
+    final gap = stopIsDynamic
+        ? coordinates.staffSpace * 1.4
+        : coordinates.staffSpace * 0.5;
+    final span = stopX - fromX - gap;
+    return span >= coordinates.staffSpace * 2 ? span : null;
+  }
+
   void _renderElement(
     Canvas canvas,
     PositionedElement positioned,
@@ -1086,6 +1138,15 @@ class StaffRenderer {
         element,
         basePosition,
         currentClef!,
+        dynamicLengthOverride: element.dynamicElement == null
+            ? null
+            : _hairpinSpan(
+                element.dynamicElement!,
+                fromX: basePosition.dx,
+                index: index,
+                system: positioned.system,
+                allElements: allElements,
+              ),
         renderOnlyNotehead: onlyNotehead,
         voiceNumber: positioned.voiceNumber,
         accidentalDisplay:
@@ -1136,40 +1197,17 @@ class StaffRenderer {
     } else if (element is RepeatMark) {
       symbolAndTextRenderer.renderRepeatMark(canvas, element, basePosition);
     } else if (element is Dynamic) {
-      // A hairpin with no explicit length spans to the next dynamic or barline
-      // in the same system (Behind Bars), leaving a small gap before it.
-      double? lengthOverride;
-      if (element.isHairpin && element.length == null) {
-        double? stopX;
-        var stopIsDynamic = false;
-        for (int j = index + 1; j < allElements.length; j++) {
-          final pe = allElements[j];
-          if (pe.system != positioned.system) break;
-          if (pe.element is Dynamic) {
-            stopX = pe.position.dx;
-            stopIsDynamic = true;
-            break;
-          }
-          if (pe.element is Barline) {
-            stopX = pe.position.dx;
-            break;
-          }
-        }
-        if (stopX != null) {
-          // The next dynamic letter is drawn centered on its X, so leave room
-          // for its left half plus a margin; a barline only needs a small gap.
-          final gap = stopIsDynamic
-              ? coordinates.staffSpace * 1.4
-              : coordinates.staffSpace * 0.5;
-          final span = stopX - basePosition.dx - gap;
-          if (span >= coordinates.staffSpace * 2) lengthOverride = span;
-        }
-      }
       symbolAndTextRenderer.renderDynamic(
         canvas,
         element,
         basePosition,
-        lengthOverride: lengthOverride,
+        lengthOverride: _hairpinSpan(
+          element,
+          fromX: basePosition.dx,
+          index: index,
+          system: positioned.system,
+          allElements: allElements,
+        ),
       );
     } else if (element is MusicText) {
       symbolAndTextRenderer.renderMusicText(canvas, element, basePosition);

@@ -115,7 +115,9 @@ class NoteRenderer extends BaseGlyphRenderer {
     int? voiceNumber,
     AccidentalDisplay accidentalDisplay = AccidentalDisplay.show,
     int extraOctaveShift = 0,
+    double? dynamicLengthOverride,
   }) {
+    _dynamicLengthOverride = dynamicLengthOverride;
     // [extraOctaveShift] is the displacement of the 8va/8vb bracket span the
     // note falls in, resolved by the caller (`StaffRenderer` walks the element
     // stream with an `OctaveSpanTracker`, the same way it tracks the clef). It
@@ -274,7 +276,15 @@ class NoteRenderer extends BaseGlyphRenderer {
     Offset basePosition,
     int staffPosition,
   ) {
-    symbolAndTextRenderer.renderDynamic(canvas, dynamic, basePosition);
+    symbolAndTextRenderer.renderDynamic(
+      canvas,
+      dynamic,
+      basePosition,
+      // A hairpin attached to a note spans to the next dynamic or barline just
+      // as a standalone one does. It used to get nothing here and fall back to
+      // a fixed `staffSpace * 6` stub.
+      lengthOverride: _dynamicLengthOverride,
+    );
   }
 
   /// Renders lyric syllables below the staff, centered at [centerX].
@@ -312,6 +322,10 @@ class NoteRenderer extends BaseGlyphRenderer {
   /// used to get and is why a note below the staff sat on top of its own
   /// syllable.
   double? lyricFirstLineY;
+
+  /// Musical span for a hairpin attached to the note being drawn, measured by
+  /// `StaffRenderer` (which is the only object that can see what comes next).
+  double? _dynamicLengthOverride;
 
   void _renderSyllables(Canvas canvas, List<Syllable> syllables, double noteX) {
     final fontSize = coordinates.staffSpace * 0.85;
