@@ -36,13 +36,11 @@ class OrnamentRenderer extends BaseGlyphRenderer {
 
       if (ornament.type == OrnamentType.arpeggio) {
         final verticalHalfExtent = _noteheadVerticalHalfExtent();
-        final noteStemUp = _resolveStemUp(note, staffPosition, voiceNumber);
         _renderArpeggio(
           canvas,
           notePos,
           notePos.dy + verticalHalfExtent,
           notePos.dy - verticalHalfExtent,
-          stemUp: noteStemUp,
         );
         continue;
       }
@@ -143,7 +141,6 @@ class OrnamentRenderer extends BaseGlyphRenderer {
           Offset(arpeggioAnchorX, chordPos.dy),
           lowestY + verticalHalfExtent,
           highestY - verticalHalfExtent,
-          stemUp: stemUp,
         );
         continue;
       }
@@ -245,9 +242,8 @@ class OrnamentRenderer extends BaseGlyphRenderer {
     Canvas canvas,
     Offset chordPos,
     double bottomY,
-    double topY, {
-    bool stemUp = true,
-  }) {
+    double topY,
+  ) {
     const glyphName = 'wiggleArpeggiatoUp';
 
     // wiggleArpeggiatoUp and a tile HORIZONTAL no Bravura (~1.3 SS x 0.476 SS).
@@ -260,31 +256,46 @@ class OrnamentRenderer extends BaseGlyphRenderer {
 
     final ornamentColor = theme.ornamentColor ?? theme.noteheadColor;
 
-    final noteheadBox = metadata.getGlyphInfo('noteheadBlack')?.boundingBox;
-    // Use half the notehead width since chordPos.dx is the notehead CENTER X.
-    // This places the arpeggio right edge exactly at the notehead left edge + gap.
-    final noteheadHalfWidth = noteheadBox != null
-        ? (noteheadBox.width * coordinates.staffSpace * 0.5)
-        : coordinates.staffSpace * 0.59;
 
-    // Standard clearance between arpeggio and noteheads (SMuFL/Behind Bars ≈ 0.15 SS).
-    final gap = coordinates.staffSpace * 0.03;
+    // An arpeggio sign goes to the LEFT of the chord. Always.
+    //
+    // The rule here used to be "on the side opposite the stem", cited to Gould
+    // p.137, and that is not what p.137 says. The sign tells the player to roll
+    // the chord, so it is read BEFORE the notes and is written before them —
+    // the stem has nothing to do with it. Measured on the reported page: a
+    // stem-down chord had its arpeggio drawn to the RIGHT, detached from the
+    // music it belongs to, and a stem-up chord had it drawn straight through
+    // the noteheads because the 0.03 staff-space gap left it nowhere to go.
+    //
+    // The glyph is rotated -90 degrees, so its bounding-box HEIGHT becomes the
+    // horizontal extent; half of that is how far the tile's centre must sit
+    // beyond the clearance.
+    // Rotated -90 degrees, so the bounding box HEIGHT is the horizontal
+    // extent. `.abs()` because a box expressed SW-to-NE can report it either
+    // way round, and a sign flip here would push the tile INTO the chord.
+    final rotatedHalfWidth =
+        (bBox.height * coordinates.staffSpace * 0.5).abs();
 
-    // Per engraving convention (Gould "Behind Bars" p.137):
-    // Arpeggios always appear on the side of the noteheads opposite the stem:
-    //   stem-UP  → stem on RIGHT  → arpeggio on LEFT  of noteheads
-    //   stem-DOWN → stem on LEFT  → arpeggio on RIGHT of noteheads
-    final rotatedLeftExtent =
-        (bBox.centerY - bBox.bBoxSwY).abs() * coordinates.staffSpace;
-    final rotatedRightExtent =
-        (bBox.bBoxNeY - bBox.centerY).abs() * coordinates.staffSpace;
+    // Clearance from the chord's left edge. 0.03 staff spaces was not a gap,
+    // it was a rounding error.
+    final gap = coordinates.staffSpace * 0.4;
 
-    final double tileCenterX;
-    if (stemUp) {
-      tileCenterX = chordPos.dx - noteheadHalfWidth - gap - rotatedRightExtent;
-    } else {
-      tileCenterX = chordPos.dx + noteheadHalfWidth + gap + rotatedLeftExtent;
-    }
+    // [chordPos].dx is the chord's LEFT DRAWING EDGE, not a notehead centre.
+    // It used to be a centre — `minCenterX` for a chord — and that value sits
+    // in a different coordinate space from the ink: measured on a C5-E5-G5
+    // half-note chord at `staffSpace = 26`, the chord's ink ran columns
+    // 252-281 (layout x 251.8, width 30.7) while the sign, placed off the
+    // centre, landed at 273-284 — inside the chord. Anchoring to the edge the
+    // noteheads are actually drawn from removes the guesswork.
+    // The -90 degree rotation swaps which axis `centerHorizontally` and
+    // `centerVertically` act on, so the glyph's own WIDTH is left uncentred
+    // along the canvas x. Measured at `staffSpace = 26`: the caller asked for
+    // x = 239.1 and the ink arrived centred on 278.5, a residual of 39.4 px
+    // against a glyph 1.300 staff spaces wide (33.8 px) plus half its 0.476
+    // height (6.2 px). Compensating for the width is what the rotation ate.
+    final rotationResidual = bBox.width * coordinates.staffSpace;
+    final tileCenterX =
+        chordPos.dx - gap - rotatedHalfWidth - rotationResidual;
 
     final arpeggioTopY =
         math.min(topY, bottomY) - (coordinates.staffSpace * 0.18);

@@ -733,7 +733,15 @@ class ChordRenderer extends BaseGlyphRenderer {
         positions.last,
         voiceNumber: voiceNumber,
         leadingNoteCenterX: minCenterX,
-        arpeggioReferenceCenterX: stemUp ? minCenterX : maxCenterX,
+        // The chord's LEFT DRAWING EDGE. An arpeggio sign is written to the
+        // left of the chord whatever the stem does, so this used to hand over
+        // `maxCenterX` for a stem-down chord — matching a rule that placed the
+        // sign on the side opposite the stem, which is not what Behind Bars
+        // p.137 says. Passing a notehead CENTRE was the second half of the
+        // problem: measured on a C5-E5-G5 chord at staffSpace 26, the ink ran
+        // columns 252-281 and the sign landed at 273-284, inside it.
+        arpeggioReferenceCenterX: basePosition.dx +
+            clusterOffsets.reduce((a, b) => a < b ? a : b),
         stemUp: stemUp,
       );
     }
