@@ -663,20 +663,46 @@ class GrandStaffPainter extends CustomPainter {
     final onsets = onsetSet.toList()..sort();
     if (onsets.isEmpty) return;
 
-    // Shared grid: the widest X any staff needs at that instant.
+    // Shared grid, built from the widest STEP any staff needs between
+    // consecutive onsets — not from the widest absolute position at each one.
+    //
+    // Taking the max of absolute X is only correct when every staff has an
+    // anchor at every onset. When it does not, `_xAtOnset` INTERPOLATES, and
+    // interpolation is where the spacing went. Measured on the ensemble page:
+    // four quarters alone space at 61 / 61 / 60 px, and the same four beside a
+    // piano triplet collapsed to 118 / 28 / 35 while the system stayed exactly
+    // as wide (182 px -> 181 px) despite gaining three columns. The triplet's
+    // extra room was being taken out of the beats that followed it.
+    //
+    // The reason is that absolute-max moves an onset right without moving
+    // anything after it: the choir's beat 2 was pulled from 187 to 245 to meet
+    // the piano, while its beat 3 stayed at 248 — so a whole crotchet of music
+    // was left with 3 px to live in.
+    //
+    // Stepping the grid instead asks each staff a question it can actually
+    // answer: "how much room do YOU need between these two instants?" The
+    // answer is the widest of those, accumulated. A staff whose anchors have
+    // not started or have already ended contributes 0, which is right — it
+    // needs no room there. Ordering is still guaranteed, because every step is
+    // non-negative on a staff's own monotonic X.
     final shared = <double>[];
-    for (final onset in onsets) {
-      var maxX = double.negativeInfinity;
+    var first = double.negativeInfinity;
+    for (var s = 0; s < perStaff.length; s++) {
+      if (perStaff[s].isEmpty) continue;
+      final x = _xAtOnset(perStaff[s], onsets.first);
+      if (x > first) first = x;
+    }
+    shared.add(first.isFinite ? first : 0.0);
+
+    for (var k = 1; k < onsets.length; k++) {
+      var widestStep = 0.0;
       for (var s = 0; s < perStaff.length; s++) {
         if (perStaff[s].isEmpty) continue;
-        final x = _xAtOnset(perStaff[s], onset);
-        if (x > maxX) maxX = x;
+        final step = _xAtOnset(perStaff[s], onsets[k]) -
+            _xAtOnset(perStaff[s], onsets[k - 1]);
+        if (step > widestStep) widestStep = step;
       }
-      shared.add(maxX.isFinite ? maxX : 0.0);
-    }
-    // Enforce strict monotonicity (defensive: equal onsets from rounding).
-    for (var k = 1; k < shared.length; k++) {
-      if (shared[k] < shared[k - 1]) shared[k] = shared[k - 1];
+      shared.add(shared[k - 1] + widestStep);
     }
 
     const double leftMargin = 0.0;
