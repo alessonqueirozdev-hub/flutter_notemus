@@ -117,7 +117,7 @@ const String _source = '''
   <part id="P1">
     <measure number="1">
       <attributes>
-        <divisions>4</divisions>
+        <divisions>12</divisions>
         <key><fifths>0</fifths></key>
         <time><beats>4</beats><beat-type>4</beat-type></time>
         <clef><sign>G</sign><line>2</line></clef>
@@ -127,7 +127,7 @@ const String _source = '''
       </direction>
       <note>
         <pitch><step>C</step><octave>5</octave></pitch>
-        <duration>2</duration><voice>1</voice><type>quarter</type>
+        <duration>8</duration><voice>1</voice><type>quarter</type>
         <time-modification><actual-notes>3</actual-notes><normal-notes>2</normal-notes></time-modification>
         <notations>
           <tuplet type="start" number="1"/>
@@ -136,13 +136,13 @@ const String _source = '''
       </note>
       <note>
         <pitch><step>E</step><alter>-1</alter><octave>5</octave></pitch>
-        <duration>2</duration><voice>1</voice><type>quarter</type>
+        <duration>8</duration><voice>1</voice><type>quarter</type>
         <accidental>flat</accidental>
         <time-modification><actual-notes>3</actual-notes><normal-notes>2</normal-notes></time-modification>
       </note>
       <note>
         <pitch><step>G</step><octave>5</octave></pitch>
-        <duration>2</duration><voice>1</voice><type>quarter</type>
+        <duration>8</duration><voice>1</voice><type>quarter</type>
         <time-modification><actual-notes>3</actual-notes><normal-notes>2</normal-notes></time-modification>
         <notations>
           <tuplet type="stop" number="1"/>
@@ -151,7 +151,7 @@ const String _source = '''
       </note>
       <note>
         <pitch><step>C</step><octave>5</octave></pitch>
-        <duration>4</duration><voice>1</voice><type>quarter</type>
+        <duration>12</duration><voice>1</voice><type>quarter</type>
       </note>
     </measure>
   </part>
