@@ -90,6 +90,54 @@ Staff parseNotationStaff(
   };
 }
 
+/// Reports every measure that holds more music than its meter allows.
+///
+/// `Measure.add` has enforced this since the model was written: adding a fifth
+/// quarter to a 4/4 bar throws [MeasureCapacityException]. **None of the three
+/// importers used it.** They build measures by writing straight into
+/// `measure.elements`, which the dartdoc on that field already warns "bypasses
+/// the capacity check in [add]" — so a document declaring five quarters in a
+/// 4/4 bar imported cleanly, rendered as five crammed events, and reported
+/// nothing at all. The rule was implemented, tested, and never consulted on the
+/// path where documents actually arrive.
+///
+/// This warns rather than throws, deliberately. An importer that rejected a
+/// whole file over one bad bar would be useless against real-world MusicXML,
+/// where an over-full bar is usually a fixable mistake in one measure and the
+/// other two hundred are fine.
+///
+/// A bar that is SHORT is not reported: a pickup, a cadenza and a final bar are
+/// all legitimately short, and warning about them would train the reader to
+/// ignore this channel.
+///
+/// Capacity is per VOICE, matching [Measure.add] — two independent voices may
+/// each fill the bar without either overflowing.
+void warnOverfullMeasures(Staff staff, List<String>? warnings) {
+  if (warnings == null) return;
+
+  TimeSignature? inForce;
+  for (var index = 0; index < staff.measures.length; index++) {
+    final measure = staff.measures[index];
+    final declared = measure.timeSignature;
+    if (declared != null) inForce = declared;
+    final meter = declared ?? measure.inheritedTimeSignature ?? inForce;
+    if (meter == null) continue;
+
+    final capacity = meter.measureValue;
+    measure.musicalValueByVoice.forEach((voice, value) {
+      if (value <= capacity + Measure.capacityTolerance) return;
+      final excess = value - capacity;
+      warnings.add(
+        'Measure ${index + 1} holds ${value.toStringAsFixed(4)} whole notes in'
+        ' voice $voice but ${meter.numerator}/${meter.denominator} allows'
+        ' ${capacity.toStringAsFixed(4)} — an excess of'
+        ' ${excess.toStringAsFixed(4)}. The music was imported as written;'
+        ' nothing was moved to the next bar or dropped.',
+      );
+    });
+  }
+}
+
 Staff parseJsonStaff(
   String source, {
   int staffIndex = 0,
@@ -100,8 +148,11 @@ Staff parseJsonStaff(
     throw const FormatException('JSON notation root must be an object.');
   }
 
-  return _JsonImportParser(staffIndex: staffIndex, warnings: warnings)
-      .parse(decoded);
+  final staff =
+      _JsonImportParser(staffIndex: staffIndex, warnings: warnings)
+          .parse(decoded);
+  warnOverfullMeasures(staff, warnings);
+  return staff;
 }
 
 Staff parseMusicXmlStaff(
@@ -110,8 +161,10 @@ Staff parseMusicXmlStaff(
   List<String>? warnings,
 }) {
   final document = XmlDocument.parse(source);
-  return _MusicXmlImportParser(partIndex: partIndex, warnings: warnings)
+  final staff = _MusicXmlImportParser(partIndex: partIndex, warnings: warnings)
       .parse(document);
+  warnOverfullMeasures(staff, warnings);
+  return staff;
 }
 
 /// Imports every part/staff of a MusicXML document into a [Score].
@@ -127,8 +180,10 @@ Staff parseMeiStaff(
   List<String>? warnings,
 }) {
   final document = XmlDocument.parse(source);
-  return _MeiImportParser(staffIndex: staffIndex, warnings: warnings)
+  final staff = _MeiImportParser(staffIndex: staffIndex, warnings: warnings)
       .parse(document);
+  warnOverfullMeasures(staff, warnings);
+  return staff;
 }
 
 /// Imports every staff of an MEI document into a [Score], together with the
@@ -1328,8 +1383,37 @@ class _JsonImportParser {
   }
 
   Note _parseNote(Map<String, dynamic> map, {bool forceGrace = false}) {
-    final pitch =
-        _parsePitch(map['pitch']) ?? const Pitch(step: 'C', octave: 4);
+    // A note with no readable pitch used to become a middle C, in silence.
+    //
+    // That is not a hypothetical. Fed a document written in the wrong shape —
+    // `{"type": "note", "step": "C", "octave": 5}` with the pitch fields at the
+    // TOP level instead of nested under `"pitch"` — every note in the bar came
+    // back as C4 and `warnings` was empty. Four different pitches, one answer,
+    // nothing said. A reader editing the document would change the octave, see
+    // the staff not move, and reasonably conclude the editor was broken.
+    //
+    // It still falls back, because losing one note is better than losing the
+    // document, but it says so and names the shape it expected.
+    final parsedPitch = _parsePitch(map['pitch']);
+    if (parsedPitch == null) {
+      _warn(
+        'A <note> has no readable pitch, so middle C was assumed. Expected'
+        ' either "pitch": {"step": "C", "octave": 5} or the shorthand'
+        ' "pitch": "C5"'
+        '${map.containsKey('step') || map.containsKey('octave') ? ' — this'
+            ' element carries "step"/"octave" at the top level, which is not'
+            ' the shape this parser reads' : ''}.',
+      );
+    }
+    final pitch = parsedPitch ?? const Pitch(step: 'C', octave: 4);
+
+    if (map['duration'] == null) {
+      _warn(
+        'A <note> has no "duration", so a quarter note was assumed. Expected'
+        ' either "duration": {"type": "quarter"} or the shorthand'
+        ' "duration": "quarter".',
+      );
+    }
     final isGrace = forceGrace || (_asBool(map['isGraceNote']) ?? false);
 
     return Note(

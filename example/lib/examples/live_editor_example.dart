@@ -328,11 +328,15 @@ const String _seedJson = '''
     {
       "elements": [
         {"type": "clef", "clefType": "treble"},
-        {"type": "timeSignature", "numerator": 4, "denominator": 4},
-        {"type": "note", "step": "C", "octave": 5, "duration": "quarter"},
-        {"type": "note", "step": "D", "octave": 5, "duration": "quarter"},
-        {"type": "note", "step": "E", "octave": 5, "duration": "quarter"},
-        {"type": "note", "step": "G", "octave": 5, "duration": "quarter"}
+        {"type": "timesignature", "numerator": 4, "denominator": 4},
+        {"type": "note", "pitch": {"step": "C", "octave": 5},
+         "duration": {"type": "quarter"}},
+        {"type": "note", "pitch": {"step": "D", "octave": 5},
+         "duration": {"type": "quarter"}},
+        {"type": "note", "pitch": {"step": "E", "octave": 5},
+         "duration": {"type": "quarter"}},
+        {"type": "note", "pitch": {"step": "G", "octave": 5},
+         "duration": {"type": "quarter"}}
       ]
     }
   ]

@@ -51,6 +51,19 @@ import 'examples/voice_playback_example.dart';
 import 'examples/volta_brackets_example.dart';
 import 'showcase_bootstrap.dart';
 
+/// The release this gallery was built from.
+///
+/// It was written out by hand in three places and said **2.6.0** for two
+/// releases after that — a showcase advertising a version older than the
+/// package it ships with, which is the first thing a visitor reads and the
+/// last thing anyone remembers to update. One constant now.
+///
+/// It is still a constant rather than something read from `pubspec.yaml`,
+/// because the example is a separate package and cannot see the parent's
+/// pubspec at build time without a generator. Bumping it belongs in the
+/// release checklist.
+const String kShowcaseRelease = '2.8.0';
+
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -255,7 +268,7 @@ class _BootstrapLoadingView extends StatelessWidget {
             const CupertinoActivityIndicator(radius: 16),
             const SizedBox(height: 18),
             Text(
-              'Preparing the 2.6.0 showcase...',
+              'Preparing the $kShowcaseRelease showcase...',
               style: theme.textTheme.navTitleTextStyle.copyWith(
                 color: const Color(0xFF111827),
               ),
@@ -474,7 +487,8 @@ class _MainScreenState extends State<MainScreen> {
     _ExampleEntry(
       category: 'Expression',
       title: 'Slurs and Ties',
-      subtitle: 'Head-to-head phrasing and chord ties in the 2.5.1 pass.',
+      subtitle: 'Head-to-head phrasing, chord ties, and arcs that no longer '
+          'run off the top of the page.',
       icon: CupertinoIcons.link,
       accentColor: const Color(0xFF0F4C81),
       builder: () => const SlursTiesExample(),
@@ -917,7 +931,7 @@ class _CatalogHeader extends StatelessWidget {
               borderRadius: BorderRadius.circular(999),
             ),
             child: Text(
-              'Release 2.6.0',
+              'Release $kShowcaseRelease',
               style: textTheme.tabLabelTextStyle.copyWith(
                 color: const Color(0xFFFFFFFF),
                 fontWeight: FontWeight.w700,
@@ -935,7 +949,9 @@ class _CatalogHeader extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            'A curated catalog spanning the fundamentals, expression, multi-staff scores, and alternative notation systems — refreshed for the 2.6.0 release.',
+            'A curated catalog spanning the fundamentals, expression, '
+            'multi-staff scores, interoperability and alternative notation '
+            'systems — refreshed for the $kShowcaseRelease release.',
             style: textTheme.textStyle.copyWith(
               color: const Color(0xF2FFFFFF),
               fontSize: 15,
