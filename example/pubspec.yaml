@@ -13,7 +13,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   flutter_notemus:
     path: ../
-  pdf: ^3.10.4
+  pdf: ^3.13.0
   printing: ^5.11.0
 
 dev_dependencies:
