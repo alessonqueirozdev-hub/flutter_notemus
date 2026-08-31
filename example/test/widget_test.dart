@@ -7,6 +7,7 @@ import 'package:flutter_notemus_example/examples/beaming_showcase.dart';
 import 'package:flutter_notemus_example/examples/chords_example.dart';
 import 'package:flutter_notemus_example/examples/clefs_example.dart';
 import 'package:flutter_notemus_example/examples/diagnostics_example.dart';
+import 'package:flutter_notemus_example/examples/live_editor_example.dart';
 import 'package:flutter_notemus_example/examples/ensemble_score_example.dart';
 import 'package:flutter_notemus_example/examples/long_score_export_example.dart';
 import 'package:flutter_notemus_example/examples/mei_interop_example.dart';
@@ -103,6 +104,7 @@ void main() {
     'MIDI Export': () => const MidiExportExample(),
     'Transposing Parts and Tablature': () => const TransposingAndTabExample(),
     'Diagnostics and Warnings': () => const DiagnosticsExample(),
+    'Live Editor': () => const LiveEditorExample(),
   };
 
   for (final entry in pages.entries) {

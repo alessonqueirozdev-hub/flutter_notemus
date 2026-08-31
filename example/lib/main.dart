@@ -29,6 +29,7 @@ import 'examples/grand_staff_example.dart';
 import 'examples/gregorian_chant_example.dart';
 import 'examples/jianpu_example.dart';
 import 'examples/key_signatures_example.dart';
+import 'examples/live_editor_example.dart';
 import 'examples/long_score_export_example.dart';
 import 'examples/lyrics_text_example.dart';
 import 'examples/mei_interop_example.dart';
@@ -605,6 +606,14 @@ class _MainScreenState extends State<MainScreen> {
       icon: CupertinoIcons.paintbrush,
       accentColor: const Color(0xFF0891B2),
       builder: () => const ThemingExample(),
+    ),
+    _ExampleEntry(
+      category: 'Interoperability',
+      title: 'Live Editor',
+      subtitle: 'Type JSON, MusicXML or MEI and watch the staff re-render.',
+      icon: CupertinoIcons.pencil_outline,
+      accentColor: const Color(0xFF7C3AED),
+      builder: () => const LiveEditorExample(),
     ),
     _ExampleEntry(
       category: 'Interoperability',
