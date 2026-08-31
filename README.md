@@ -73,7 +73,7 @@ Professional music notation rendering for Flutter with SMuFL-compliant engraving
 
 ## MEI v5 Conformance
 
-flutter_notemus ships a **notation-agnostic data model that covers the breadth of MEI v5 concepts** — from CMN through tablature, mensural, neume, harmonic analysis and figured bass — defined in the [MEI v5 Guidelines](https://music-encoding.org/guidelines/v5/content/index.html).
+flutter_notemus ships a **notation-agnostic data model that covers the breadth of MEI v5 concepts** — from CMN through tablature, mensural, neume, harmonic analysis and figured bass — defined in the [MEI v5 Guidelines](https://music-encoding.org/guidelines/v5/content/index.html). Read *model* literally: several of those are constructible in Dart and not yet imported or drawn, and the conformance table below marks which.
 
 **Important — what is actually imported/rendered vs. modeled.** MEI *import* and *rendering* focus on **Common Music Notation (CMN)**, which is well supported. Several advanced MEI modules exist in the data model (you can construct them in Dart) but are **not yet wired to the MEI parser/renderer** — they are marked *Model only* below. The table reflects what is genuinely imported and/or rendered, not just representable. (An adversarial audit found ~58% of catalogued items fully wired; the rest are model-only or partial.)
 
@@ -107,7 +107,7 @@ Legend: ✅ modeled **and** imported/rendered · ◐ partial (see note) · ○ *
 | **Figured Bass** | ○ | `FiguredBass`, `FigureElement` exist; **not parsed/rendered** |
 | **Microtonality** | ✅ | `AccidentalType` (sagittal, koma, quarter-tone) — modeled & rendered |
 | **Solmization** | ✅ | `Pitch.fromSolmization()`, `Pitch.solmizationName` |
-| **Tablature** | ✅ | `Note.tabFret`/`tabString` modeled & rendered; MEI `@tab.fret`/`@tab.string` parsed since 2.7.0 (including inside `<chord>`). The richer MEI tablature *model* stays model-only — see [`doc/MODEL_ONLY.md`](doc/MODEL_ONLY.md) |
+| **Tablature** | ◐ *model only* | `Note.tabFret`/`tabString` are modeled and MEI `@tab.fret`/`@tab.string` are parsed (including inside `<chord>`), but **tablature is not RENDERED as tablature**: the renderer draws an ordinary notehead on a five-line staff with ledger lines, where tab needs one line per string and the fret NUMBER printed on it. This said `rendered` until 2.8.0 and that was an overclaim — tracked as [#45](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/45) |
 | **Mensural Notation** | ○ | `MensuralNote`, `Ligature`, `Mensur` exist; **no MEI import/render** |
 | **Neume Notation** | ◐ | rendered via **GABC/Gregorian**; MEI `<neume>` import not implemented |
 
@@ -213,7 +213,7 @@ For a full conformance audit see [`doc/MEI_V5_AUDIT.md`](doc/MEI_V5_AUDIT.md).
 
 ## Current Status
 
-- Current release: `2.7.0`
+- Current release: `2.8.0`
 - Previous pub.dev baseline: `2.6.0`
 - **2.7.0 is an audit-remediation release, and it bundles three of them.** Three
   internal milestones were tagged in git between 2.6.0 and this release and
@@ -569,7 +569,8 @@ each measured:
 
 ### Clefs
 
-- Treble, bass, alto, tenor, percussion, tablature
+- Treble, bass, alto, tenor, percussion, and the tablature CLEF glyphs
+  (tablature itself is model-only — see [#45](https://github.com/alessonqueirozdev-hub/flutter_notemus/issues/45))
 - Octave-transposing clef variants (8va, 8vb, 15ma, 15mb)
 
 ### Rhythm and layout

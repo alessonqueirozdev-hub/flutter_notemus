@@ -4,6 +4,142 @@ All notable changes to Flutter Notemus are documented in this file.
 
 The format is based on Keep a Changelog and this project follows Semantic Versioning.
 
+## [2.8.0] - 2026-08-27
+
+Thirteen defects, twelve of them found by a reviewer looking at the rendered
+gallery rather than by any test. **1025 tests passed before that review and
+after it**, which is the honest measure of what this suite knew about how the
+music actually looks.
+
+Four of the fixes turned out to be the same failure — a decision written down in
+more than one place, and the copies disagreeing — and four more were reserved
+space not matching painted ink, the vertical twin of a defect already closed
+horizontally in 2.7.0.
+
+### Fixed — engraving
+
+- **An unknown clef name became a treble clef, in silence.** `Clef(type: 'bass')`
+  drew a G clef. The legacy string switch accepted exactly `g`, `f` and `c` and
+  fell through to `default: treble` for everything else. Every legacy call site
+  in this repository passed `treble` or `bass`: the first happened to be right
+  because treble is also the fallback, and **every `bass` drew a treble clef on
+  a bass staff**, with the notes then engraved on the wrong lines.
+  `Clef.clefTypeFromName` now accepts the vocabulary people write — treble,
+  bass, alto, tenor, soprano, mezzoSoprano, baritone, percussion, the octave
+  variants, tab6/tab4 — keeps the MusicXML `g`/`f`/`c` signs, and **throws
+  `ArgumentError`** on anything else. The class also had two fields that could
+  disagree: `clefType` reported treble while every renderer read a private
+  `_clefType` that said bass. One field now.
+
+- **A slur or tie was clipped off the top of the page.** A curve is drawn
+  BETWEEN notes and is not a positioned element, so `contentTopOverflow` never
+  saw it and the canvas was sized as if the arc were not there. Measured at
+  `staffSpace = 12` on a seven-note phrase under one slur: a 219 px canvas with
+  **12 px of ink hard against row 0**. Now 258 px, first ink at row 25, nothing
+  on either boundary row.
+
+- **Sung text was printed through its own notehead.** The lyric line sat a fixed
+  1.5 staff spaces below the bottom staff line and knew nothing about how far
+  the music descended. Measured at `staffSpace = 15` with a C4 in treble clef:
+  the line fell at 127.5 against a notehead bottom edge of 129 — **1.5 px inside
+  the note**. It is measured per system now, clears the lowest notehead, and
+  never rises above the old line, so an ordinary score does not move.
+
+- **A dense passage on one staff squeezed the others.** The shared onset grid
+  took the widest ABSOLUTE X at each instant, which is correct only when every
+  staff has an anchor at every onset. Measured: an SATB choir's four quarters
+  space at 61 / 61 / 60 px alone and collapsed to **118 / 28 / 35** beside a
+  piano triplet, while the system stayed exactly as wide. The grid is built from
+  STEPS now — the widest room any staff needs between two consecutive onsets —
+  giving 119 / 61 / 61.
+
+- **A hairpin attached to a note was 72 pixels long.** The musical span was
+  computed only for a standalone `Dynamic`; `Note(dynamicElement: ...)`, the
+  form every example uses, fell through to a fixed stub. It now spans to the
+  next dynamic or the barline. Measured: with an explicit `length: 90` a hairpin
+  overshot its barline by 33 px; with none it finishes half a staff space short
+  of it, where Behind Bars puts it.
+
+- **Two directions above the staff were drawn on top of each other.** Marks like
+  tempo text are deliberately given no horizontal advance so they never move the
+  notes, and nothing kept them apart. They are interval-packed into rows now,
+  and the page grows to fit the tallest stack. Two things had to be fixed
+  underneath: a tempo mark's reserved width was a CHARACTER COUNT against a
+  renderer using a real TextPainter, and a **single** tempo mark was already
+  clipped — 1 px against row 0 on every score with a metronome mark this package
+  had ever drawn.
+
+- **A tuplet containing a rest lost its stems.** The rest was treated as
+  transparent and the notes either side were marked beamed, so the note renderer
+  suppressed their stems and flags for a beam that was never drawn — two bare
+  noteheads under a dangling bracket. A rest breaks the run now, matching
+  `BeamGrouper` and the Behind Bars p.201 bracket rule, which had believed the
+  opposite.
+
+- **A grace-note slur crossed the stem it was meant to avoid.** There were THREE
+  copies of the stem-direction rule and they disagreed at exactly one value —
+  the middle line, the most common position on the staff. One used
+  `staffPosition < 0` and drew the stem; two used `<= 0` and placed the curve.
+  One rule now, `StaffPositionCalculator.stemUpFor`, with a guard against a
+  second copy appearing.
+
+- **The arpeggio sign was on the wrong side, and inside the chord.** The code
+  placed it opposite the stem, cited to a page that does not say that: an
+  arpeggio is written to the LEFT of the chord, always. The geometry was wrong
+  too — the glyph is rotated -90 degrees, which swaps the axes the centring
+  flags act on, so the caller asked for x = 239.1 and the ink arrived centred on
+  278.5. With a 0.03 staff-space clearance on top of that, the sign was drawn
+  through the noteheads.
+
+### Added
+
+- `KeySignature.alterFor(step)` and `KeySignature.pitch(step, octave)`. There
+  was no way to say "spell this note as the key implies", and `Pitch.alter` is
+  the SOUNDING alteration defaulting to 0.0 — so writing a piece in D major
+  meant remembering `alter: 1.0` on every F and C. This package's own flagship
+  example forgot, and printed a natural in front of nearly every F. The
+  accidental resolver was right the whole time; the score was wrong.
+- `LyricLayout` — where sung text goes, for an embedding that wants to draw
+  something of its own under a staff.
+- `StaffPositionCalculator.stemUpFor(staffPosition)`.
+- `LayoutEngine.aboveStaffLevels`, `aboveStaffLevelHeight`, `curveReachSpaces`.
+- `Clef.clefTypeFromName(name)`.
+
+### Example gallery
+
+Eight new pages covering the half of this package that is not drawing: MusicXML
+import and export with the round trip printed, MEI import including the octave
+clef and transposing part, MIDI export down to a hex dump of the file header,
+transposing instruments and tablature, ensemble scores, long-score wrapping,
+theming, and a diagnostics page that triggers every reporting channel with input
+that actually provokes it — including the four malformed MusicXML cases that are
+still absorbed in silence.
+
+And a **Live Editor**: type JSON, MusicXML or MEI and watch the staff re-render,
+with refusals and warnings shown instead of an empty panel.
+
+A page that fails to build now says why. Flutter's release `ErrorWidget` paints
+a plain grey rectangle, which is a reasonable default for a shipped app and a
+terrible one for a showcase — a reviewer could only report that a page was
+blank.
+
+### Known limitations
+
+Unchanged from 2.7.0: native playback exists only on Android, layout cannot move
+to an isolate as written, no text face ships, and four kinds of malformed
+MusicXML are absorbed in silence.
+
+One newly named: **tablature is not rendered as tablature** (issue #45). The
+model carries `tabFret` and `tabString` honestly; the renderer draws an ordinary
+notehead on a five-line staff with ledger lines. The compatibility table says
+*model only* for it now.
+
+### Behaviour change
+
+`Clef(type: ...)` throws `ArgumentError` on an unrecognised name instead of
+returning a treble clef. Code relying on the old fallback was already producing
+a wrong score, silently; this is the smallest change that stops it.
+
 ## [2.7.0] - 2026-08-26
 
 The first release published to pub.dev since 2.6.0. **Three internal milestones

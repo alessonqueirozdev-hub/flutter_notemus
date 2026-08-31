@@ -4,9 +4,9 @@
 
 | Version | Supported |
 |---|---|
-| 2.7.x | ✅ |
-| 2.6.x | ⚠️ security fixes only |
-| < 2.6 | ❌ |
+| 2.8.x | ✅ |
+| 2.7.x | ⚠️ security fixes only |
+| < 2.7 | ❌ |
 
 ## Reporting a vulnerability
 
@@ -26,7 +26,7 @@ This is a rendering and interchange library. It has no network access, opens no
 sockets, and executes nothing it reads. The realistic surface is **untrusted
 score files**, so that is where the auditing has gone.
 
-Verified by execution, most recently for 2.7.0:
+Verified by execution, most recently for 2.8.0:
 
 | Vector | Result |
 |---|---|
