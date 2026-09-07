@@ -51,21 +51,42 @@ void main() {
     expect(warnings, isEmpty);
   });
 
-  test('pitch fields at the top level are REPORTED, not silently defaulted',
-      () {
+  test('pitch fields at the top level are READ, not defaulted', () {
     final warnings = <String>[];
     final notes = notesOf(
       doc('{"type":"note","step":"C","octave":6,"duration":"quarter"}'),
       warnings,
     );
-    // The fallback still happens; what changed is that it is audible.
+    // Reported was the 2.8.0 behaviour; read is 2.8.1. The octave the document
+    // asked for is the octave that comes back, and nothing is warned about.
     expect(notes.single.pitch.step, 'C');
-    expect(notes.single.pitch.octave, 4);
-    expect(warnings, hasLength(1));
-    expect(warnings.single, contains('no readable pitch'));
-    expect(warnings.single, contains('top level'),
-        reason: 'the warning must name the mistake that was actually made, '
-            'not just report a generic failure');
+    expect(notes.single.pitch.octave, 6);
+    expect(warnings, isEmpty);
+  });
+
+  test('the flat shape carries its accidental too', () {
+    final warnings = <String>[];
+    final notes = notesOf(
+      doc('{"type":"note","step":"F","octave":5,"accidental":"sharp",'
+          '"duration":"quarter"}'),
+      warnings,
+    );
+    expect(notes.single.pitch.step, 'F');
+    expect(notes.single.pitch.octave, 5);
+    expect(notes.single.pitch.alter, 1.0);
+    expect(warnings, isEmpty);
+  });
+
+  test('a nested "pitch" still wins over top-level fields', () {
+    final warnings = <String>[];
+    final notes = notesOf(
+      doc('{"type":"note","step":"C","octave":4,'
+          '"pitch":{"step":"G","octave":5},"duration":"quarter"}'),
+      warnings,
+    );
+    expect(notes.single.pitch.step, 'G');
+    expect(notes.single.pitch.octave, 5);
+    expect(warnings, isEmpty);
   });
 
   test('a missing duration is reported too', () {

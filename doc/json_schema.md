@@ -19,9 +19,33 @@ This document describes the JSON format accepted by `JsonParser` and `SimpleJson
 }
 ```
 
+The bar's opening block may also be written as measure-level keys, beside
+`"elements"`. They are read in score order — clef, key, meter — and are
+equivalent to the corresponding entries in `"elements"`:
+
+```json
+{
+  "clef": "treble",
+  "keySignature": 0,
+  "timeSignature": { "numerator": 4, "denominator": 4 },
+  "elements": []
+}
+```
+
+`"clef"` also accepts the object form (`{"clefType": "treble"}`) and
+`"keySignature"` also accepts `{"count": 0}`. This is sugar on the way in only:
+`JsonMusicExporter` always writes these into `"elements"`, so a round trip
+normalises to one shape.
+
 ## Element Types
 
 ### Note
+
+The pitch may be nested under `"pitch"`, given as the shorthand string
+`"pitch": "C5"`, or written with `"step"`/`"octave"` (and optionally
+`"alter"`/`"accidental"`) directly on the note. A nested `"pitch"` wins where
+both are present. Likewise `"duration"` accepts either the object form or the
+shorthand `"duration": "quarter"`.
 
 ```json
 {

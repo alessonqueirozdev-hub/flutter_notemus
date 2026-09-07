@@ -4,6 +4,50 @@ All notable changes to Flutter Notemus are documented in this file.
 
 The format is based on Keep a Changelog and this project follows Semantic Versioning.
 
+## [2.8.1] - 2026-09-07
+
+One defect, found by reading a paper instead of the code.
+
+The JSON example printed as Quadro 2 of the ANPPOM 2026 paper describing this
+library does not parse into the score the paper says it produces. Two shapes in
+one document were unread: the notes carry `"step"`/`"octave"` at the top level
+rather than nested under `"pitch"`, and the bar carries `"clef"`,
+`"timeSignature"` and `"keySignature"` as measure-level keys rather than as
+entries in `"elements"`. **Measured on the printed document: three quarter
+notes came back as `[C4, C4, C4]` instead of `[C5, E5, G5]`, on a bar with no
+clef, no meter and no key.** 2.8.0 had made the first of those audible; it still
+did not read it.
+
+The paper is published and cannot be corrected. This importer can be, and the
+argument for doing so does not rest on the paper: the same flat shape had
+already shipped once before, in the Live Editor's seed document. A shape
+written twice, independently, by the person who designed the format is not
+carelessness — it is the shape the format invites.
+
+### Fixed — JSON import
+
+- **`"step"`/`"octave"` at the top level of a note are read.** `_parseNote` now
+  falls back from `map['pitch']` to the note map itself, which also picks up a
+  top-level `"alter"`/`"accidental"`. A nested `"pitch"` still wins where both
+  are present. A note carrying no pitch at all still falls back to middle C and
+  still warns — losing one note is better than losing the document — but the
+  warning no longer fires on a document that was merely written the other way.
+- **Measure-level `"clef"`, `"timeSignature"` and `"keySignature"` are read**,
+  emitted into the bar's opening block in score order (clef, key, meter). They
+  had been dropped silently: no clef, no meter, no key, and `warnings` empty.
+  `"clef"` accepts either the object form or a bare name (`"treble"`);
+  `"keySignature"` accepts either `{"count": n}` or a bare integer.
+  These are sugar on the way IN only — `JsonMusicExporter` still writes both
+  into `"elements"`, so a round trip normalises to one shape rather than two.
+
+### Tests
+
+- `test/parsers/anppom_paper_json_example_test.dart` pins the paper's Quadro 2
+  verbatim: five tests over a document nobody can edit any more.
+- `json_silent_pitch_test.dart` was rewritten where it had pinned the old
+  behaviour, and gained cover for the accidental and for nested-wins-over-flat.
+- **1041 tests pass** (1034 before), `dart analyze` clean.
+
 ## [2.8.0] - 2026-08-27
 
 Thirteen defects, twelve of them found by a reviewer looking at the rendered

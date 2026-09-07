@@ -1199,6 +1199,37 @@ class _JsonImportParser {
           );
 
     final List<MusicalElement> leadingElements = <MusicalElement>[];
+
+    // The bar's opening block, written as measure-level keys.
+    //
+    // `{"clef": "treble", "timeSignature": {...}, "keySignature": 0}` beside
+    // `"elements"` is the other shape people write — the ANPPOM paper's JSON
+    // example is exactly it — and all three keys used to be dropped without a
+    // word: the bar rendered with no clef, no meter and no key, and `warnings`
+    // was empty. They are read now, in the order a score puts them. They are
+    // sugar on the way IN only: the exporter still writes them into
+    // `"elements"`, so a round trip normalises to one shape rather than two.
+    final dynamic clefSugar = json['clef'];
+    if (clefSugar != null) {
+      final clefMap = _asMap(clefSugar);
+      leadingElements.add(
+        clefMap != null
+            ? _parseClef(clefMap)
+            : Clef(clefType: _parseClefType(clefSugar) ?? ClefType.treble),
+      );
+    }
+    final dynamic keySugar = json['keySignature'];
+    if (keySugar != null) {
+      final fifths = _asInt(keySugar) ?? _asInt(_asMap(keySugar)?['count']);
+      if (fifths != null) {
+        leadingElements.add(KeySignature(fifths));
+      }
+    }
+    final timeSugar = _parseTimeSignatureMap(_asMap(json['timeSignature']));
+    if (timeSugar != null) {
+      leadingElements.add(timeSugar);
+    }
+
     for (final dynamic elementJson in _asList(json['elements'])) {
       final element = _parseElement(elementJson);
       if (element != null) {
@@ -1385,24 +1416,23 @@ class _JsonImportParser {
   Note _parseNote(Map<String, dynamic> map, {bool forceGrace = false}) {
     // A note with no readable pitch used to become a middle C, in silence.
     //
-    // That is not a hypothetical. Fed a document written in the wrong shape —
-    // `{"type": "note", "step": "C", "octave": 5}` with the pitch fields at the
-    // TOP level instead of nested under `"pitch"` — every note in the bar came
-    // back as C4 and `warnings` was empty. Four different pitches, one answer,
-    // nothing said. A reader editing the document would change the octave, see
-    // the staff not move, and reasonably conclude the editor was broken.
+    // That is not a hypothetical, and it happened twice to the same hand that
+    // designed the format: the Live Editor's seed document and the JSON
+    // example of the published ANPPOM paper both put the pitch fields at the
+    // TOP level — `{"type": "note", "step": "C", "octave": 5}` — instead of
+    // nesting them under `"pitch"`. Every note in the bar came back as C4.
+    // A shape written that way twice, independently, is not carelessness: it
+    // is the shape the format invites.
     //
-    // It still falls back, because losing one note is better than losing the
-    // document, but it says so and names the shape it expected.
-    final parsedPitch = _parsePitch(map['pitch']);
+    // So the flat shape is READ now, not merely reported. A note carrying no
+    // pitch at all still falls back to middle C — losing one note is better
+    // than losing the document — and still says so.
+    final parsedPitch = _parsePitch(map['pitch']) ?? _parsePitch(map);
     if (parsedPitch == null) {
       _warn(
         'A <note> has no readable pitch, so middle C was assumed. Expected'
-        ' either "pitch": {"step": "C", "octave": 5} or the shorthand'
-        ' "pitch": "C5"'
-        '${map.containsKey('step') || map.containsKey('octave') ? ' — this'
-            ' element carries "step"/"octave" at the top level, which is not'
-            ' the shape this parser reads' : ''}.',
+        ' "pitch": {"step": "C", "octave": 5}, the shorthand "pitch": "C5",'
+        ' or "step"/"octave" at the top level.',
       );
     }
     final pitch = parsedPitch ?? const Pitch(step: 'C', octave: 4);
