@@ -3338,7 +3338,10 @@ class LayoutEngine {
 
     final beamGroups = BeamGrouper.groupElementsForBeaming(
       elements,
-      beamingContext.timeSignature ?? _defaultBeamingMeter,
+      // following line was: beamingContext.timeSignature ?? _defaultBeamingMeter, 
+      // reading measure.timeSignature needs to be replaced by timeSignatureOf(measure), 
+      // otherwise bars with no explicit time signature will return null and therefore assume 4/4 time
+      timeSignatureOf(beamingContext) ?? _defaultBeamingMeter,
       autoBeaming: beamingContext.autoBeaming,
       beamingMode: beamingContext.beamingMode,
       manualBeamGroups: beamingContext.manualBeamGroups,
