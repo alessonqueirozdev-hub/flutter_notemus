@@ -1,6 +1,9 @@
 import 'package:xml/xml.dart';
 
+import 'dart:typed_data';
+
 import '../../core/core.dart';
+import 'musicxml_container.dart';
 import 'parser_support.dart';
 
 /// # Round-trip fidelity (Staff -> MusicXML -> Staff)
@@ -21,6 +24,8 @@ import 'parser_support.dart';
 /// - Multi-voice measures via `<backup>` + `<voice>`.
 /// - `<accidental>` cautionary/editorial bracketing.
 /// - `<direction><dynamics>` and `<wedge>` hairpins, `<metronome>` tempo.
+/// - [Measure.number] as `@number` (a non-integer token such as `X1` comes
+///   back as `null`), and [Measure.isImplicit] as `implicit="yes"`.
 ///
 /// ## Exported, but currently NOT read back by the importer
 /// (the markup is correct MusicXML; the loss is on the import side)
@@ -37,8 +42,6 @@ import 'parser_support.dart';
 /// - [Note.dynamicElement] and [Chord.dynamic] are written as a `<direction>`
 ///   *before* the owning `<note>`; on import they come back as a measure-level
 ///   [Dynamic] element, not re-attached to the note/chord.
-/// - [Measure.number] is written to `@number`; the importer renumbers
-///   positionally.
 /// - Dynamics with no MusicXML equivalent ([DynamicType.subito],
 ///   [DynamicType.custom], …) are written as `<other-dynamics>` and are not
 ///   parsed back; the long-form values ([DynamicType.piano], …) normalise to
@@ -95,6 +98,38 @@ class MusicXMLParser {
       warnings: warnings,
     );
   }
+
+  /// Imports every part of a MusicXML FILE, given as bytes: compressed
+  /// `.mxl` (the default save format of MuseScore, Finale, Sibelius and
+  /// Dorico) or plain `.musicxml` / `.xml`. The format is told from the bytes,
+  /// not from a file name.
+  ///
+  /// ```dart
+  /// final score = MusicXMLParser.scoreFromBytes(await file.readAsBytes());
+  /// ```
+  ///
+  /// Throws a [FormatException] for a corrupt or empty `.mxl`; see
+  /// [decodeBytes]. See [scoreFromMusicXML] for what [warnings] collects.
+  static Score scoreFromBytes(Uint8List bytes, {List<String>? warnings}) =>
+      scoreFromMusicXML(decodeBytes(bytes), warnings: warnings);
+
+  /// Imports one part of a MusicXML file given as bytes — `.mxl` or plain.
+  /// The bytes counterpart of [parseMusicXML]; see [scoreFromBytes].
+  static Staff parseMusicXMLBytes(
+    Uint8List bytes, {
+    int partIndex = 0,
+    List<String>? warnings,
+  }) =>
+      parseMusicXML(decodeBytes(bytes),
+          partIndex: partIndex, warnings: warnings);
+
+  /// The MusicXML text inside [bytes]: the score a `.mxl` archive's
+  /// `META-INF/container.xml` points to, or plain MusicXML decoded as UTF-8
+  /// (UTF-16 when it opens with that byte-order mark).
+  ///
+  /// Throws a [FormatException] for a corrupt archive, a container naming a
+  /// file the archive does not hold, or an archive with no score in it.
+  static String decodeBytes(Uint8List bytes) => decodeMusicXmlBytes(bytes);
 
   /// Converts a [Staff] for MusicXML partwise.
   static String staffToMusicXML(Staff staff) {
@@ -409,6 +444,7 @@ void _buildMeasureXml(XmlBuilder builder, Measure measure, int number,
       // bars, repeats, "number 0" anacrusis, …); `number` stays the positional
       // one so first-measure logic (divisions/staff-details) is unaffected.
       builder.attribute('number', (measure.number ?? number).toString());
+      if (measure.isImplicit) builder.attribute('implicit', 'yes');
 
       final systemElements = measure.elements.where(
         (element) =>

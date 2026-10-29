@@ -1197,6 +1197,10 @@ class _JsonImportParser {
                 _parseBeamingMode(json['beamingMode']) ?? BeamingMode.automatic,
             manualBeamGroups: _parseManualBeamGroups(json['manualBeamGroups']),
           );
+    // `JsonMusicExporter` has always written "number"; nothing read it back.
+    measure
+      ..number = _asInt(json['number'])
+      ..isImplicit = _asBool(json['implicit']) ?? false;
 
     final List<MusicalElement> leadingElements = <MusicalElement>[];
 
@@ -2134,6 +2138,11 @@ class _MusicXmlImportParser {
   /// following notes instead of being ignored (F-07).
   Measure _parseMeasure(XmlElement measureElement, {int? staffFilter}) {
     _measureLabel = measureElement.getAttribute('number') ?? '?';
+    // `@number` is a token, not an integer ("X1" is legal); a bar whose
+    // number does not parse is left for the engine to count.
+    final int? number = int.tryParse(_measureLabel);
+    // A pickup, or a bar excluded from the count (MusicXML `@implicit`).
+    final bool isImplicit = measureElement.getAttribute('implicit') == 'yes';
     final Map<int, _VoiceAccumulator> voices = <int, _VoiceAccumulator>{};
     final List<MusicalElement> metadataElements = <MusicalElement>[];
     TimeSignature? currentTimeSignature;
@@ -2353,7 +2362,7 @@ class _MusicXmlImportParser {
       // let `<time-modification>` open groups without a `<tuplet type="stop">`
       // to close them, a triplet ending a bar would have been dropped whole.
       voice(1).finishTuplet();
-      final measure = Measure();
+      final measure = Measure(number: number, isImplicit: isImplicit);
       for (final element in voice(1).elements) {
         _appendElementToMeasure(measure, element);
       }
@@ -2361,7 +2370,9 @@ class _MusicXmlImportParser {
       return measure;
     }
 
-    final measure = MultiVoiceMeasure();
+    final measure = MultiVoiceMeasure()
+      ..number = number
+      ..isImplicit = isImplicit;
 
     final voiceNumbers = voices.keys.toList()..sort();
     for (final number in voiceNumbers) {
@@ -3756,6 +3767,9 @@ class _MeiImportParser {
     XmlElement measureElement, {
     List<MusicalElement> leadingDefaults = const <MusicalElement>[],
   }) {
+    final int? number = int.tryParse(measureElement.getAttribute('n') ?? '');
+    // MEI's pickup flag: the bar's content does not match the meter.
+    final bool isImplicit = measureElement.getAttribute('metcon') == 'false';
     final Map<int, _VoiceAccumulator> voices = <int, _VoiceAccumulator>{};
     final List<MusicalElement> metadataElements = <MusicalElement>[];
     TimeSignature? currentTimeSignature;
@@ -3913,14 +3927,16 @@ class _MeiImportParser {
     }
 
     if (voices.isEmpty || (voices.length == 1 && !voices.containsKey(2))) {
-      final measure = Measure();
+      final measure = Measure(number: number, isImplicit: isImplicit);
       for (final element in voice(1).elements) {
         _appendElementToMeasure(measure, element);
       }
       return measure;
     }
 
-    final measure = MultiVoiceMeasure();
+    final measure = MultiVoiceMeasure()
+      ..number = number
+      ..isImplicit = isImplicit;
 
     final voiceNumbers = voices.keys.toList()..sort();
     for (final number in voiceNumbers) {

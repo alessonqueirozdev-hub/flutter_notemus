@@ -614,7 +614,8 @@ each measured:
 ### Import and interoperability
 
 - JSON parser
-- MusicXML parser (`score-partwise` and `score-timewise`)
+- MusicXML parser (`score-partwise` and `score-timewise`), including
+  compressed `.mxl` files
 - MEI parser
 - Unified normalization to the same internal model
 
@@ -1133,6 +1134,10 @@ final musicXmlStaff = MusicXMLParser.parseMusicXML(musicXmlString);
 final meiStaff = MEIParser.parseMEI(meiString);
 
 final autoDetected = NotationParser.parseStaff(sourceString);
+
+// A MusicXML FILE as bytes: compressed .mxl (MuseScore, Finale, Sibelius and
+// Dorico save this by default) or plain .musicxml/.xml, told apart by content.
+final score = MusicXMLParser.scoreFromBytes(await file.readAsBytes());
 ```
 
 ### MIDI Mapping and Export

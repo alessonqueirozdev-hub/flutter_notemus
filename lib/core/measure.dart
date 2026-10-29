@@ -100,6 +100,18 @@ class Measure {
   /// null = automatic numbering by the layout engine.
   int? number;
 
+  /// Whether this bar is left out of the bar count and lasts only as long as
+  /// its content: a pickup (anacrusis), or the second half of a bar split
+  /// across a repeat or a system. MusicXML `<measure implicit="yes">`, MEI
+  /// `<measure metcon="false">`.
+  ///
+  /// Without it a one-quarter pickup in 4/4 played as a full bar (three beats
+  /// of silence before bar 1) and was numbered 1. With it, MIDI sizes the bar
+  /// from its content rather than its meter, layout does not count it when
+  /// numbering, and the layout check tolerates it being short wherever it
+  /// stands — not only as the first bar of the staff.
+  bool isImplicit;
+
   /// Creates a new [Measure].
   ///
   /// [autoBeaming] defaults to `true` so that eighth notes and smaller are
@@ -120,6 +132,7 @@ class Measure {
     this.manualBeamGroups = const [],
     this.inheritedTimeSignature,
     this.number,
+    this.isImplicit = false,
   });
 
   /// Voice number attributed to elements that do not declare one.

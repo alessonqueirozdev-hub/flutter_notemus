@@ -37,6 +37,22 @@ equivalent to the corresponding entries in `"elements"`:
 `JsonMusicExporter` always writes these into `"elements"`, so a round trip
 normalises to one shape.
 
+Two optional keys describe the bar itself:
+
+```json
+{
+  "number": 0,
+  "implicit": true,
+  "elements": []
+}
+```
+
+`"number"` is the printed bar number; without it the bar is counted from 1.
+`"implicit": true` marks a pickup (anacrusis) or another bar left out of the
+count: it is not numbered, it plays only as long as its content, and it may be
+shorter than the meter. It is the JSON form of MusicXML `implicit="yes"` and
+MEI `metcon="false"`.
+
 ## Element Types
 
 ### Note
