@@ -18,7 +18,7 @@ data-loss bug in both XML importers.
   compressed `.mxl` (a ZIP whose `META-INF/container.xml` names the score)
   from plain MusicXML by its signature, not its file name. Plain bytes are
   decoded as UTF-8, or UTF-16 with a byte-order mark. A corrupt archive, a
-  container pointing at a missing file, a rootfile path climbing out of the
+  container naming no rootfile or a missing file, a rootfile path climbing out of the
   archive, or an archive with no score is a `FormatException`. `.mxl` is the
   default save format of MuseScore, Finale, Sibelius and Dorico, and before
   this every importer took a String. `archive` (already in the
@@ -39,6 +39,15 @@ data-loss bug in both XML importers.
   `Measure.number` (a non-integer token such as `X1` stays `null`). JSON
   import now reads the `"number"` that `JsonMusicExporter` had always
   written.
+
+### Fixed — MIDI
+
+- **A `<forward>` gap delays the note after it.** MIDI skipped `Space`
+  outright, so an imported forward gap advanced no time and the next note
+  entered early by the whole gap. It also never counted toward a bar's
+  length. `Space` now consumes its duration like a rest. A grace note no
+  longer lengthens an implicit bar either: it steals time from its neighbour.
+  Both were reported by review on #51.
 
 ### Fixed — import
 

@@ -17,13 +17,13 @@ import 'package:xml/xml.dart';
 /// `.musicxml` / `.xml` — into the MusicXML text the importers read.
 ///
 /// A ZIP signature selects the `.mxl` path: the score is the `rootfile` named
-/// by `META-INF/container.xml`, or, when an archive has no container, its
-/// first `.xml` / `.musicxml` entry outside `META-INF/`. Plain bytes are
+/// by `META-INF/container.xml`, or, only when an archive has no container at
+/// all, its first `.xml` / `.musicxml` entry outside `META-INF/`. Plain bytes are
 /// decoded as UTF-8, or as UTF-16 when they start with a UTF-16 byte-order
 /// mark; a leading UTF-8 BOM is dropped.
 ///
-/// Throws a [FormatException] for a corrupt archive, a container that names a
-/// file the archive does not hold, or an archive with no score in it.
+/// Throws a [FormatException] for a corrupt archive, a container that names no
+/// rootfile or one the archive does not hold, or an archive with no score.
 String decodeMusicXmlBytes(List<int> bytes) {
   if (isCompressedMusicXml(bytes)) return _extractScore(bytes);
   return _decodeText(bytes);
@@ -68,8 +68,16 @@ String _extractScore(List<int> bytes) {
     }
   }
 
+  // A container that exists but names no score is malformed, not absent:
+  // guessing "the first .xml" there could import a decoy instead.
+  if (container != null && (rootPath == null || rootPath.trim().isEmpty)) {
+    throw const FormatException(
+      'MXL container.xml names no rootfile with a full-path.',
+    );
+  }
+
   ArchiveFile? score;
-  if (rootPath != null && rootPath.trim().isNotEmpty) {
+  if (rootPath != null) {
     score = files[_normalizePath(rootPath)];
     if (score == null) {
       throw FormatException(

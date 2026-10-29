@@ -109,6 +109,23 @@ void main() {
           throwsA(isA<FormatException>()));
     });
 
+    test('a container naming no rootfile is a FormatException', () {
+      // Falling back to "the first .xml" here could pick a decoy over the
+      // score; a container that exists but is malformed is not "no container".
+      for (final container in [
+        '<container><rootfiles/></container>',
+        '<container><rootfiles><rootfile full-path=" "/></rootfiles></container>',
+      ]) {
+        final bytes = _zip({
+          'META-INF/container.xml': container,
+          'decoy.xml': '<score-partwise version="4.0"/>',
+          'score.xml': _tinyScore,
+        });
+        expect(() => MusicXMLParser.decodeBytes(bytes),
+            throwsA(isA<FormatException>()));
+      }
+    });
+
     test('a rootfile climbing out of the archive is refused', () {
       final bytes = _zip({
         'META-INF/container.xml':

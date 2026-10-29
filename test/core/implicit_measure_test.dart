@@ -114,6 +114,39 @@ void main() {
       ]);
       expect(_noteOnTicks(MidiMapper.fromStaff(plain)), [0, 3840, 7680]);
     });
+
+    // MIDI used to skip `Space` outright: it advanced no time while playing
+    // and added none to an implicit bar's length.
+    test('a <forward> gap delays the note after it', () {
+      final staff = MusicXMLParser.parseMusicXML(_pickupXml.replaceFirst(
+          RegExp(r'<note>\s*<pitch><step>D</step>'),
+          '<forward><duration>8</duration></forward>'
+              '<note><pitch><step>D</step>'));
+      // Bar 1's D now enters on beat 3 (a half note of forward at 960/qtr).
+      expect(_noteOnTicks(MidiMapper.fromStaff(staff))[1], 960 + 1920);
+    });
+
+    test('a <forward> gap counts toward an implicit bar', () {
+      final staff = MusicXMLParser.parseMusicXML(_pickupXml.replaceFirst(
+          RegExp(r'<note>\s*<pitch><step>C</step>'),
+          '<forward><duration>4</duration></forward>'
+              '<note><pitch><step>C</step>'));
+      // Pickup = one quarter of forward + one quarter: C at 960, bar 1 at
+      // 1920, bar 2 at 1920 + 3840.
+      expect(_noteOnTicks(MidiMapper.fromStaff(staff)), [960, 1920, 5760]);
+    });
+
+    test('a grace note does not lengthen an implicit bar', () {
+      final staff = _handBuiltPickup();
+      staff.measures.first.elements.insert(
+          2,
+          Note(
+              pitch: const Pitch(step: 'B', octave: 3),
+              duration: const MusicDuration(DurationType.eighth),
+              isGraceNote: true));
+      final ticks = _noteOnTicks(MidiMapper.fromStaff(staff));
+      expect(ticks.sublist(ticks.length - 2), [960, 4800]);
+    });
   });
 
   group('measure numbers', () {
