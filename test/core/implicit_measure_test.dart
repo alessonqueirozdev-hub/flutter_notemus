@@ -224,5 +224,59 @@ void main() {
       final staff = MEIParser.parseMEI(mei);
       expect(staff.measures.map((m) => m.isImplicit), [true, false]);
     });
+
+    // `@metcon="false"` only says the content does not fill the meter. A
+    // mid-piece irregular bar still counts; marking it implicit made the
+    // next auto-numbered bar repeat its number.
+    test('MEI metcon="false" mid-piece is an irregular bar that still counts',
+        () {
+      const mei = '''
+<mei xmlns="http://www.music-encoding.org/ns/mei" meiversion="5.0">
+  <music><body><mdiv><score>
+    <scoreDef meter.count="4" meter.unit="4">
+      <staffGrp><staffDef n="1" lines="5" clef.shape="G" clef.line="2"/></staffGrp>
+    </scoreDef>
+    <section>
+      <measure><staff n="1"><layer n="1">
+        <note pname="c" oct="4" dur="1"/>
+      </layer></staff></measure>
+      <measure metcon="false"><staff n="1"><layer n="1">
+        <note pname="d" oct="4" dur="2"/>
+      </layer></staff></measure>
+      <measure><staff n="1"><layer n="1">
+        <note pname="e" oct="4" dur="1"/>
+      </layer></staff></measure>
+    </section>
+  </score></mdiv></body></music>
+</mei>
+''';
+      final staff = MEIParser.parseMEI(mei);
+      expect(staff.measures.map((m) => m.isImplicit), [false, false, false]);
+      expect(LayoutEngine.displayMeasureNumbers(staff.measures),
+          {0: 1, 1: 2, 2: 3});
+    });
+  });
+
+  group('trailing <forward>', () {
+    // A forward is only materialised as Space when a later note of its voice
+    // needs the gap, so one ENDING an implicit bar left no trace and the next
+    // bar started early by the gap.
+    test('a pickup ending in a forward lasts until the forward ends', () {
+      final staff = MusicXMLParser.parseMusicXML(_pickupXml.replaceFirst(
+          RegExp(r'<type>quarter</type>\s*</note>'),
+          '<type>quarter</type></note>'
+              '<forward><duration>4</duration><voice>1</voice></forward>'));
+      // C (one quarter) + one quarter of forward: bar 1 at 1920.
+      expect(_noteOnTicks(MidiMapper.fromStaff(staff)), [0, 1920, 5760]);
+    });
+
+    test('a forward-only voice does not become a second voice', () {
+      final staff = MusicXMLParser.parseMusicXML(_pickupXml.replaceFirst(
+          RegExp(r'<type>quarter</type>\s*</note>'),
+          '<type>quarter</type></note>'
+              '<backup><duration>4</duration></backup>'
+              '<forward><duration>4</duration><voice>2</voice></forward>'));
+      expect(staff.measures.first, isNot(isA<MultiVoiceMeasure>()));
+    });
   });
 }

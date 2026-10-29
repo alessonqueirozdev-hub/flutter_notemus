@@ -2164,6 +2164,11 @@ class _MusicXmlImportParser {
     int syntheticVoice = 1;
     // Padding is only emitted for gaps opened by an explicit <forward>.
     bool sawForward = false;
+    // Per voice: where its latest `<forward>` left the cursor. A forward is
+    // only turned into Space when a later note of that voice needs the gap, so
+    // one ending the bar would otherwise leave no trace — and an implicit bar,
+    // which lasts as long as its content, would end early by the gap.
+    final Map<int, double> forwardEnds = <int, double>{};
     // Cross-staff routing (multi-staff parts only): a beamed voice whose notes
     // change <staff> mid-beam is kept on its home (beam-start) staff with a
     // crossStaffMove so the beam survives.
@@ -2333,6 +2338,11 @@ class _MusicXmlImportParser {
             cursor += forwardTicks;
             if (cursor > maxCursor) maxCursor = cursor;
             sawForward = true;
+            final int forwardStaff = _asInt(_childText(child, 'staff')) ?? 1;
+            if (staffFilter == null || forwardStaff == staffFilter) {
+              forwardEnds[_asInt(_childText(child, 'voice')) ?? syntheticVoice] =
+                  cursor;
+            }
             // A `<forward>` is padded with invisible Space, so an absurd one
             // does not throw — it inflates the bar. Measured,
             // `<forward><duration>400</duration></forward>` at divisions=4
@@ -2355,6 +2365,20 @@ class _MusicXmlImportParser {
           break;
       }
     }
+
+    // Materialise a gap a trailing `<forward>` left in a voice that has
+    // content. A voice made of nothing but forwards is not created: an empty
+    // spacer voice would turn a one-voice bar into a two-voice one.
+    forwardEnds.forEach((voiceNumber, end) {
+      final accumulator = voices[voiceNumber];
+      if (accumulator == null) return;
+      _padVoiceToOnset(
+        accumulator: accumulator,
+        voiceFilled: voiceFilled,
+        voiceNumber: voiceNumber,
+        onset: end,
+      );
+    });
 
     if (voices.isEmpty || (voices.length == 1 && !voices.containsKey(2))) {
       // The bar's only voice, WHATEVER its number. Reading `voice(1)` here
@@ -3686,7 +3710,11 @@ class _MeiImportParser {
             ),
         ];
         openEnding = ending;
-        staff.add(_parseMeasure(measure, leadingDefaults: lead));
+        staff.add(_parseMeasure(
+          measure,
+          leadingDefaults: lead,
+          isFirst: staff.measures.isEmpty,
+        ));
         first = false;
       }
     }
@@ -3773,10 +3801,16 @@ class _MeiImportParser {
   Measure _parseMeasure(
     XmlElement measureElement, {
     List<MusicalElement> leadingDefaults = const <MusicalElement>[],
+    bool isFirst = false,
   }) {
     final int? number = int.tryParse(measureElement.getAttribute('n') ?? '');
-    // MEI's pickup flag: the bar's content does not match the meter.
-    final bool isImplicit = measureElement.getAttribute('metcon') == 'false';
+    // `@metcon="false"` says only that the content does not fill the meter;
+    // MEI has no "not counted" flag. It means a pickup when it opens the
+    // piece or is numbered 0. Anywhere else the bar is an irregular one that
+    // still counts, and marking it implicit made the next bar repeat its
+    // number.
+    final bool isImplicit = measureElement.getAttribute('metcon') == 'false' &&
+        (isFirst || number == 0);
     final Map<int, _VoiceAccumulator> voices = <int, _VoiceAccumulator>{};
     final List<MusicalElement> metadataElements = <MusicalElement>[];
     TimeSignature? currentTimeSignature;

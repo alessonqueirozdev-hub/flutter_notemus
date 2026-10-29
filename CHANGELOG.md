@@ -28,7 +28,9 @@ data-loss bug in both XML importers.
 
 - **`Measure.isImplicit`** marks a pickup (anacrusis) or another bar left out
   of the count. It is imported from MusicXML `implicit="yes"`, MEI
-  `metcon="false"` and JSON `"implicit": true`, and exported to MusicXML and
+  `metcon="false"` on a pickup (the first bar, or one numbered 0 — elsewhere
+  `metcon` marks an irregular bar that still counts) and JSON
+  `"implicit": true`, and exported to MusicXML and
   JSON. **Measured on a one-quarter pickup in 4/4: bar 1 started at tick 3840,
   after three beats of silence, and now starts at 960**, because MIDI sizes an
   implicit bar from its content instead of its meter. Layout no longer counts
@@ -47,7 +49,9 @@ data-loss bug in both XML importers.
   entered early by the whole gap. It also never counted toward a bar's
   length. `Space` now consumes its duration like a rest. A grace note no
   longer lengthens an implicit bar either: it steals time from its neighbour.
-  Both were reported by review on #51.
+  A `<forward>` that ends an implicit bar now counts toward it too: the
+  importer only turned a forward into `Space` when a later note needed the
+  gap. All three were reported by review on #51.
 
 ### Fixed — import
 
