@@ -3299,14 +3299,14 @@ class LayoutEngine {
     return _leftExtent(currentElement) + head * 0.9;
   }
 
-  /// Meter assumed for a bar that states none, shared across every such bar.
+  /// Meter assumed for a bar under no meter at all — one that comes before any
+  /// [TimeSignature] on the staff. A bar that merely declares none inherits
+  /// through [timeSignatureOf] and never reaches this default.
   ///
-  /// `Measure.timeSignature` only reports a meter the bar CARRIES, so on a
-  /// staff that states 4/4 once and inherits it everywhere else this default is
-  /// what every remaining bar beams against — and it used to be a fresh
-  /// `TimeSignature` per bar (12 799 of them on the 12 800-bar fixture) purely
-  /// to be read twice and dropped. One shared instance is also what lets
-  /// `BeamGrouper` recognise the meter it just computed a beat table for.
+  /// It used to be a fresh `TimeSignature` per bar (12 799 of them on the
+  /// 12 800-bar fixture) purely to be read twice and dropped. One shared
+  /// instance is also what lets `BeamGrouper` recognise the meter it just
+  /// computed a beat table for.
   static final TimeSignature _defaultBeamingMeter =
       TimeSignature(numerator: 4, denominator: 4);
 
@@ -3338,7 +3338,10 @@ class LayoutEngine {
 
     final beamGroups = BeamGrouper.groupElementsForBeaming(
       elements,
-      beamingContext.timeSignature ?? _defaultBeamingMeter,
+      // The meter IN FORCE, not the one the bar carries: reading
+      // `beamingContext.timeSignature` gave every bar after the first null, so
+      // 6/8 beamed 3+3 in bar 1 and 4+2 (as 4/4) from bar 2 on (#47).
+      timeSignatureOf(beamingContext) ?? _defaultBeamingMeter,
       autoBeaming: beamingContext.autoBeaming,
       beamingMode: beamingContext.beamingMode,
       manualBeamGroups: beamingContext.manualBeamGroups,

@@ -4,6 +4,18 @@ All notable changes to Flutter Notemus are documented in this file.
 
 The format is based on Keep a Changelog and this project follows Semantic Versioning.
 
+## [Unreleased]
+
+### Fixed — beaming
+
+- **Bars that inherit their meter beam against it.** Auto-beaming read the
+  time signature a bar *carries*, so every bar after the one declaring the
+  meter beamed as 4/4: two bars of 6/8 eighths came out 3+3, then 4+2; 9/8
+  came out 3+3+3, then 4+4. It now reads the meter in force through
+  `LayoutEngine.timeSignatureOf`, like every other consumer. Reported in #47
+  and fixed in #49 by @ArtSilver; pinned by
+  `test/layout/inherited_meter_beaming_test.dart`.
+
 ## [2.8.1] - 2026-09-07
 
 One defect, found by reading a paper instead of the code.
