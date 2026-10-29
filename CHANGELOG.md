@@ -6,6 +6,50 @@ The format is based on Keep a Changelog and this project follows Semantic Versio
 
 ## [Unreleased]
 
+The first two slices of @zamvar's fork (`codex/note-tap`), ported onto the
+2.8 engine — see Discussion #50. Their MuseScore 4.7.4 reference export
+(CC0-1.0) now ships as a test fixture, and on its first import it surfaced a
+data-loss bug in both XML importers.
+
+### Added — compressed MusicXML
+
+- **`.mxl` files open.** `MusicXMLParser.scoreFromBytes`,
+  `parseMusicXMLBytes` and `decodeBytes` take a file's bytes and tell a
+  compressed `.mxl` (a ZIP whose `META-INF/container.xml` names the score)
+  from plain MusicXML by its signature, not its file name. Plain bytes are
+  decoded as UTF-8, or UTF-16 with a byte-order mark. A corrupt archive, a
+  container pointing at a missing file, a rootfile path climbing out of the
+  archive, or an archive with no score is a `FormatException`. `.mxl` is the
+  default save format of MuseScore, Finale, Sibelius and Dorico, and before
+  this every importer took a String. `archive` (already in the
+  dependency graph) is now a direct dependency.
+
+### Added — pickup bars
+
+- **`Measure.isImplicit`** marks a pickup (anacrusis) or another bar left out
+  of the count. It is imported from MusicXML `implicit="yes"`, MEI
+  `metcon="false"` and JSON `"implicit": true`, and exported to MusicXML and
+  JSON. **Measured on a one-quarter pickup in 4/4: bar 1 started at tick 3840,
+  after three beats of silence, and now starts at 960**, because MIDI sizes an
+  implicit bar from its content instead of its meter. Layout no longer counts
+  it when numbering (pickup = bar 0, first full bar = bar 1, in `MusicScore`
+  and in every `GrandStaff` system), and the layout check tolerates it being
+  short wherever it stands, not only as the first bar.
+- **Bar numbers are read back.** MusicXML `@number` and MEI `@n` now populate
+  `Measure.number` (a non-integer token such as `X1` stays `null`). JSON
+  import now reads the `"number"` that `JsonMusicExporter` had always
+  written.
+
+### Fixed — import
+
+- **A bar whose only voice is not voice 1 kept its notes.** Both XML importers
+  read voice 1 on their single-voice path, so a bar holding only voice 5 (a
+  MuseScore piano's lower staff) or MEI `<layer n="3">` imported empty. On the
+  MuseScore reference, the left hand's whole note in bar 2 was lost with an
+  importer warning. Bars that also carried a clef, key or meter were spared,
+  because those land in voice 1 and sent the bar down the multi-voice path.
+  Pinned by `test/parsers/sole_voice_import_test.dart`.
+
 ### Fixed — beaming
 
 - **Bars that inherit their meter beam against it.** Auto-beaming read the

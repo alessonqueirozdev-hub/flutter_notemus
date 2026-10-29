@@ -2357,13 +2357,20 @@ class _MusicXmlImportParser {
     }
 
     if (voices.isEmpty || (voices.length == 1 && !voices.containsKey(2))) {
+      // The bar's only voice, WHATEVER its number. Reading `voice(1)` here
+      // dropped every note of a bar whose sole voice is not 1 — MuseScore
+      // numbers a piano's lower staff from voice 5, so on its reference
+      // export a left-hand whole note vanished from every bar that opened no
+      // clef/key/meter (those land in voice 1 and sent the bar down the
+      // multi-voice path instead).
+      final only = voices.isEmpty ? voice(1) : voices.values.single;
       // A tuplet still open at the barline has to be closed here too. The
       // multi-voice branch below always did; this one did not, and once M-03
       // let `<time-modification>` open groups without a `<tuplet type="stop">`
       // to close them, a triplet ending a bar would have been dropped whole.
-      voice(1).finishTuplet();
+      only.finishTuplet();
       final measure = Measure(number: number, isImplicit: isImplicit);
-      for (final element in voice(1).elements) {
+      for (final element in only.elements) {
         _appendElementToMeasure(measure, element);
       }
       _validateMeasureValue(measure, maxCursor);
@@ -3927,8 +3934,10 @@ class _MeiImportParser {
     }
 
     if (voices.isEmpty || (voices.length == 1 && !voices.containsKey(2))) {
+      // The bar's only layer, whatever its `@n` (see the MusicXML importer).
+      final only = voices.isEmpty ? voice(1) : voices.values.single;
       final measure = Measure(number: number, isImplicit: isImplicit);
-      for (final element in voice(1).elements) {
+      for (final element in only.elements) {
         _appendElementToMeasure(measure, element);
       }
       return measure;
