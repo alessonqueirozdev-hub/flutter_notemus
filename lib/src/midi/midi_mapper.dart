@@ -83,6 +83,8 @@ class MidiMapper {
       ticksPerQuarter: options.ticksPerQuarter,
       tracks: tracks,
       warnings: <String>[for (final result in results) ...result.warnings],
+      playedMeasures: _publicPlayedMeasures(playedMeasures),
+      noteSpans: [for (final result in results) ...result.noteSpans],
     );
   }
 
@@ -150,9 +152,24 @@ class MidiMapper {
       ticksPerQuarter: options.ticksPerQuarter,
       tracks: tracks,
       warnings: warnings,
+      playedMeasures: _publicPlayedMeasures(results.first.playedMeasures),
+      noteSpans: [for (final result in results) ...result.noteSpans],
     );
   }
 }
+
+List<MidiPlayedMeasure> _publicPlayedMeasures(
+  List<_PlayedMeasureTiming> played,
+) =>
+    List.unmodifiable([
+      for (final p in played)
+        MidiPlayedMeasure(
+          measureIndex: p.measureIndex,
+          repeatPass: p.repeatPass,
+          startTick: p.startTick,
+          endTick: p.endTick,
+        ),
+    ]);
 
 /// Builds every MIDI track that belongs to one staff.
 ///
@@ -173,6 +190,7 @@ List<_TrackBuildResult> _buildStaffTracks({
     return <_TrackBuildResult>[
       _buildTrackFromStaff(
         staff: staff,
+        staffIndex: staffIndex,
         options: options,
         instrument: instrument,
         trackName: trackName,
@@ -193,6 +211,7 @@ List<_TrackBuildResult> _buildStaffTracks({
     results.add(
       _buildTrackFromStaff(
         staff: staff,
+        staffIndex: staffIndex,
         options: options,
         instrument: voiceInstrument,
         trackName: '$trackName - Voice $voiceNumber',
@@ -247,6 +266,7 @@ int _voiceChannel(
 
 _TrackBuildResult _buildTrackFromStaff({
   required Staff staff,
+  int staffIndex = 0,
   required MidiGenerationOptions options,
   required MidiInstrumentAssignment instrument,
   required String trackName,
@@ -268,6 +288,7 @@ _TrackBuildResult _buildTrackFromStaff({
     staffAudible: staffAudible,
     onlyVoice: onlyVoice,
     transposition: staff.transposition,
+    staffIndex: staffIndex,
   );
 
   builder.events.add(
@@ -283,6 +304,7 @@ _TrackBuildResult _buildTrackFromStaff({
     final measure = staff.measures[played.measureIndex];
     builder.processMeasure(
       measure: measure,
+      measureIndex: played.measureIndex,
       measureStartTick: played.startTick,
       measureEndTick: played.endTick,
       repeatPass: played.repeatPass,
@@ -302,6 +324,7 @@ _TrackBuildResult _buildTrackFromStaff({
     metaEvents: _sortedEvents(builder.metaEvents),
     warnings: <String>[...warnings, ...builder.warnings],
     playedMeasures: playedMeasures,
+    noteSpans: builder.noteSpans,
   );
 }
 
@@ -313,7 +336,33 @@ class _TrackEventBuilder {
     this.staffAudible = true,
     this.onlyVoice,
     this.transposition,
+    this.staffIndex = 0,
   });
+
+  /// Index of the staff this track belongs to, for [noteSpans].
+  final int staffIndex;
+
+  /// Written-note spans, recorded once per voice: on the track that owns the
+  /// voice when voices are split into tracks, otherwise on the staff track.
+  final List<MidiNoteSpan> noteSpans = <MidiNoteSpan>[];
+
+  int _measureIndex = 0;
+  int _repeatPass = 1;
+
+  void _recordSpan(Note note, int voiceNumber, int startTick, int ticks) {
+    if (note.isGraceNote || ticks <= 0) return;
+    final only = onlyVoice;
+    if (only != null && voiceNumber != only) return;
+    noteSpans.add(MidiNoteSpan(
+      note: note,
+      staffIndex: staffIndex,
+      voiceNumber: voiceNumber,
+      measureIndex: _measureIndex,
+      repeatPass: _repeatPass,
+      startTick: startTick,
+      endTick: startTick + ticks,
+    ));
+  }
 
   /// Written-to-sounding transposition of the instrument on this staff
   /// (MusicXML `<transpose>`), or null at concert pitch.
@@ -378,10 +427,13 @@ class _TrackEventBuilder {
 
   void processMeasure({
     required Measure measure,
+    int measureIndex = 0,
     required int measureStartTick,
     required int measureEndTick,
     required int repeatPass,
   }) {
+    _measureIndex = measureIndex;
+    _repeatPass = repeatPass;
     if (measure is MultiVoiceMeasure) {
       for (final element in measure.elements) {
         _consumeElement(
@@ -485,21 +537,27 @@ class _TrackEventBuilder {
     }
 
     if (element is Note) {
-      return _emitNote(
+      final consumed = _emitNote(
         note: element,
         startTick: tick,
         voiceNumber: voiceNumber,
         tupletMultiplier: tupletMultiplier,
       );
+      _recordSpan(element, voiceNumber, tick, consumed);
+      return consumed;
     }
 
     if (element is Chord) {
-      return _emitChord(
+      final consumed = _emitChord(
         chord: element,
         startTick: tick,
         voiceNumber: voiceNumber,
         tupletMultiplier: tupletMultiplier,
       );
+      for (final note in element.notes) {
+        _recordSpan(note, voiceNumber, tick, consumed);
+      }
+      return consumed;
     }
 
     if (element is Rest) {
@@ -951,12 +1009,14 @@ class _TrackBuildResult {
   final List<MidiEvent> metaEvents;
   final List<String> warnings;
   final List<_PlayedMeasureTiming> playedMeasures;
+  final List<MidiNoteSpan> noteSpans;
 
   const _TrackBuildResult({
     required this.track,
     required this.metaEvents,
     required this.warnings,
     required this.playedMeasures,
+    this.noteSpans = const <MidiNoteSpan>[],
   });
 }
 

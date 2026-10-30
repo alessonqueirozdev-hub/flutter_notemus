@@ -89,6 +89,22 @@ data-loss bug in both XML importers.
   and fixed in #49 by @ArtSilver; pinned by
   `test/layout/inherited_meter_beaming_test.dart`.
 
+### Added — playback transport
+
+- **`PlaybackPlan`** (`fromStaff`, `fromScore`, `fromSequence`): the
+  transport a player UI needs, read off the same `MidiSequence` that makes the
+  sound, so cursor, highlighting and audio cannot disagree. `positionAt(time)`
+  gives the bar, repeat pass, offset in the bar (in whole notes, the unit of
+  `PositionedElement.onset`) and progress. `notesAt(time)` gives the written
+  notes sounding then. `timeOfMeasure(index, repeatPass:)` gives where to seek.
+  `timeAtTick` / `tickAt` convert through every tempo change. Fourth slice of
+  @zamvar's fork (Discussion #50); the fork re-derived timing on its own.
+- **`MidiSequence.playedMeasures` and `noteSpans`.** The bars in playing order
+  with their ticks, repeats expanded, and one `MidiNoteSpan` per written note
+  per pass. Each span carries the caller's own `Note`, its staff, voice, bar,
+  pass and written ticks. A chord gives one span per note; grace notes take no
+  time and have none; split voice tracks still give one span per note.
+
 ## [2.8.1] - 2026-09-07
 
 One defect, found by reading a paper instead of the code.
