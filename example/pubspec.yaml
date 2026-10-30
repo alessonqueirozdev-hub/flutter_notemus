@@ -14,7 +14,7 @@ dependencies:
   flutter_notemus:
     path: ../
   pdf: ^3.10.4
-  printing: ^5.11.0
+  printing: ^5.15.0
 
 dev_dependencies:
   flutter_test:
