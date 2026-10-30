@@ -50,7 +50,12 @@ class MusicScorePlayheadPainter extends CustomPainter {
       bar,
       offset: p.offsetInMeasure,
       measureLength: p.measureLength,
-      closingX: closingBarlineX(bar, p.measureIndex),
+      // This bar and the next: a bar may be closed by the NEXT bar's
+      // opening barline. Not the whole staff — this runs on every tick.
+      closingX: closingBarlineX(
+        [...bar, ...?_byMeasure[p.measureIndex + 1]],
+        p.measureIndex,
+      ),
     );
     if (x == null) return null;
     final system = bar.first.system;

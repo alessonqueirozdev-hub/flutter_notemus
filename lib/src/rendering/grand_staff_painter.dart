@@ -277,16 +277,19 @@ class GrandStaffPainter extends CustomPainter {
         continue;
       }
       final local = position.measureIndex - range.start;
+      final line = [
+        for (final layout in _systems[system]) ...layout.elements,
+      ];
       final bar = [
-        for (final layout in _systems[system])
-          for (final e in layout.elements)
-            if (e.measureIndex == local) e,
+        for (final e in line)
+          if (e.measureIndex == local) e,
       ];
       final x = playheadX(
         bar,
         offset: position.offsetInMeasure,
         measureLength: position.measureLength,
-        closingX: closingBarlineX(bar, local),
+        // The whole system: a bar may be closed by the NEXT bar's barline.
+        closingX: closingBarlineX(line, local),
       );
       if (x == null) return null;
       final top = contentTopInset +

@@ -69,15 +69,39 @@ double? playheadX(
   return anchors.last.x;
 }
 
-/// The bar's closing barline x among [elements] of bar [measureIndex], or
-/// null when it has none.
+/// Where bar [measureIndex] ends, among [elements] (the whole staff's or
+/// system's, not just the bar's): its closing barline, or null when nothing
+/// on its line follows it.
+///
+/// A bar does not always carry its own closing barline: before a bar that
+/// OPENS with a repeat barline, the layout draws only that one, and it
+/// belongs to the next bar. Filtering on the bar's own index found nothing,
+/// and the cursor sat on the last note for the rest of the bar before
+/// jumping. The next bar's opening barline closes this one; failing that,
+/// the next bar's first element — on the same system only, since a bar
+/// ending a line is not closed by anything on the line below.
 double? closingBarlineX(Iterable<PositionedElement> elements, int measureIndex) {
   double? close;
+  int? system;
   for (final positioned in elements) {
     if (positioned.measureIndex != measureIndex) continue;
+    system ??= positioned.system;
     if (positioned.element is! Barline) continue;
     final dx = positioned.position.dx;
     if (close == null || dx > close) close = dx;
   }
-  return close;
+  if (close != null || system == null) return close;
+
+  double? opening;
+  double? firstOfNext;
+  for (final positioned in elements) {
+    if (positioned.measureIndex != measureIndex + 1) continue;
+    if (positioned.system != system) continue;
+    final dx = positioned.position.dx;
+    if (positioned.element is Barline) {
+      if (opening == null || dx < opening) opening = dx;
+    }
+    if (firstOfNext == null || dx < firstOfNext) firstOfNext = dx;
+  }
+  return opening ?? firstOfNext;
 }

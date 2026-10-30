@@ -72,6 +72,32 @@ void main() {
       expect(x(1.0), 260);
     });
 
+    test("a bar without its own barline is closed by the next one's", () {
+      // Before a bar that opens with a repeat barline the layout draws only
+      // that one, and it belongs to the NEXT bar: the cursor used to sit on
+      // the last note for the rest of the bar, then jump.
+      PositionedElement inBar(MusicalElement e, double x, double onset, int m,
+              {int system = 0}) =>
+          PositionedElement(e, Offset(x, 0),
+              onset: onset, measureIndex: m, system: system);
+      final line = [
+        inBar(_q('C', 5), 40, 0, 0),
+        inBar(_h('D', 5), 100, 0.25, 0),
+        inBar(Barline(type: BarlineType.repeatForward), 300, 1.0, 1),
+        inBar(_q('E', 5), 330, 1.0, 1),
+      ];
+      expect(closingBarlineX(line, 0), 300);
+      final halfway = playheadX(line.where((e) => e.measureIndex == 0),
+          offset: 0.625, measureLength: 1.0, closingX: closingBarlineX(line, 0));
+      expect(halfway, closeTo(200, 1e-9), reason: 'halfway from D to the bar end');
+      // A bar ending a line is not closed by the next line's barline.
+      final wrapped = [
+        inBar(_q('C', 5), 40, 0, 0),
+        inBar(Barline(type: BarlineType.repeatForward), 20, 1.0, 1, system: 1),
+      ];
+      expect(closingBarlineX(wrapped, 0), isNull);
+    });
+
     test('a bar with nothing rhythmic has no cursor', () {
       expect(
           playheadX([_at(Clef(clefType: ClefType.treble), 0, 0)],
