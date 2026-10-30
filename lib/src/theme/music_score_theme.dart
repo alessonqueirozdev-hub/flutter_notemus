@@ -40,6 +40,10 @@ class MusicScoreTheme {
   final Color? caesuraColor;
   final Color? metronomeColor;
 
+  /// The playback cursor (`MusicScore.playbackPosition`). Defaults to the
+  /// notehead colour at 65 % opacity.
+  final Color? playheadColor;
+
   // Styles de text
   final TextStyle? textStyle;
   final TextStyle? dynamicTextStyle;
@@ -126,6 +130,7 @@ class MusicScoreTheme {
     this.clusterColor,
     this.caesuraColor,
     this.metronomeColor,
+    this.playheadColor,
 
     // Styles de text
     this.textStyle,

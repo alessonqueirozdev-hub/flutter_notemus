@@ -119,6 +119,19 @@ data-loss bug in both XML importers.
   clicks drifted off the notes after the change. `MidiPlayedMeasure` gains
   `numerator` / `denominator` for that. Reported by review on #53.
 
+### Added — playback cursor
+
+- **`playbackPosition` on `MusicScore`, `GrandStaff` and `ScoreView`.** It is a
+  `ValueListenable<PlaybackPosition?>`, typically fed from
+  `PlaybackPlan.positionAt` on each clock tick, and draws a cursor across the
+  staff or the whole system. The cursor is its own layer behind its own
+  `RepaintBoundary`, so a tick repaints one line, not the notation. It glides
+  between the bar's rhythmic events on the shared grid, so it reaches each
+  note, on any staff, as that note starts to sound. `PlaybackPosition` gains
+  `measureLength`, and `MusicScoreTheme` gains `playheadColor`.
+  `GrandStaffPainter.playheadAt` gives the placement to a custom host. Fourth
+  slice, part b, of @zamvar's fork (Discussion #50); part of #19.
+
 ### Added — playback transport
 
 - **`PlaybackPlan`** (`fromStaff`, `fromScore`, `fromSequence`): the
