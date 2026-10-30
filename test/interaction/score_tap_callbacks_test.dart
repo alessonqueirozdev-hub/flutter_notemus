@@ -135,6 +135,46 @@ void main() {
       expect(bars.single.measureNumber, 0);
     });
 
+    testWidgets('on a wrapped score, the bar is looked up on the tapped system',
+        (t) async {
+      // Wrapped systems reuse one x range; looking a bar up by x across the
+      // whole staff picked whichever system started latest.
+      final bars = [
+        for (var i = 0; i < 24; i++)
+          Measure()..add(_w(i.isEven ? 'D' : 'F', 5)),
+      ];
+      bars.first.elements.insertAll(0, [
+        Clef(clefType: ClefType.treble),
+        TimeSignature(numerator: 4, denominator: 4),
+      ]);
+      final s = Staff(measures: bars);
+      final taps = <ScoreMeasureTap>[];
+      await t.pumpWidget(_host(MusicScore(
+        staff: s,
+        enableResponsiveLayout: false,
+        preventVerticalOverflow: false,
+        onMeasureTap: taps.add,
+      )));
+      await _settle(t);
+      final canvas = find.byWidgetPredicate(
+          (w) => w is CustomPaint && w.painter is MusicScorePainter);
+      final painter =
+          t.widget<CustomPaint>(canvas).painter! as MusicScorePainter;
+      final elements = painter.positionedElements;
+      expect(elements.map((e) => e.system).toSet().length, greaterThan(1),
+          reason: 'the fixture must wrap');
+
+      // The first bar of the first system, and of the second.
+      for (final system in [0, 1]) {
+        final first = elements
+            .where((e) => e.system == system && e.element is Note)
+            .reduce((a, b) => a.measureIndex <= b.measureIndex ? a : b);
+        await t.tapAt(await screenPointOf(t, s, first.element as Note));
+        expect(taps.last.measureIndex, first.measureIndex,
+            reason: 'system $system');
+      }
+    });
+
     testWidgets('without callbacks there is no tap detector', (t) async {
       await t.pumpWidget(_host(MusicScore(staff: staff())));
       await _settle(t);

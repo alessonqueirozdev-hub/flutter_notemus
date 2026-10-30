@@ -364,7 +364,10 @@ class _MusicScoreState extends State<MusicScore> {
         final point = details.localPosition -
             Offset(0, layout.engine.contentTopOverflow(elements));
         if (onMeasureTap != null) {
-          final index = measureIndexAtX(elements, point.dx);
+          // Only the tapped system: wrapped systems share one x range.
+          final system = systemAtY(elements, point.dy);
+          final index = measureIndexAtX(
+              elements.where((e) => e.system == system), point.dx);
           if (index != null) {
             onMeasureTap(ScoreMeasureTap(
               measureIndex: index,

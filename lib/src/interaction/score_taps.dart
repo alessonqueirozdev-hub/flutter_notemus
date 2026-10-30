@@ -104,6 +104,34 @@ Note? noteForHit(ScoreHit hit, LayoutEngine engine, Offset point) {
   return best;
 }
 
+/// The system (wrapped line) under [y]: the one whose elements' vertical
+/// span contains it, else the one whose span is nearest. Null for no
+/// elements.
+///
+/// Wrapped systems reuse the same horizontal range, so a bar lookup by x alone
+/// across a whole staff picks a bar from whichever system starts latest.
+int? systemAtY(Iterable<PositionedElement> elements, double y) {
+  final top = <int, double>{};
+  final bottom = <int, double>{};
+  for (final positioned in elements) {
+    final system = positioned.system;
+    final dy = positioned.position.dy;
+    if (dy < (top[system] ?? double.infinity)) top[system] = dy;
+    if (dy > (bottom[system] ?? double.negativeInfinity)) bottom[system] = dy;
+  }
+  int? best;
+  var bestDistance = double.infinity;
+  top.forEach((system, t) {
+    final b = bottom[system]!;
+    final distance = y < t ? t - y : (y > b ? y - b : 0.0);
+    if (distance < bestDistance) {
+      best = system;
+      bestDistance = distance;
+    }
+  });
+  return best;
+}
+
 /// Index of the bar whose horizontal span contains [x]: the last bar whose
 /// first element starts at or before [x]. Null before the first bar.
 ///
