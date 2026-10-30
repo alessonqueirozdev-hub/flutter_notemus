@@ -1188,6 +1188,22 @@ mute nor solo was possible.
 
 ### Selection and Hit-Testing
 
+For the common case you do not need the tester at all: `MusicScore`,
+`GrandStaff` and `ScoreView` take tap callbacks and resolve them through it.
+
+```dart
+MusicScore(
+  staff: staff,
+  onNoteTap: (tap) => play(tap.note),          // your own Note; a chord tap
+                                               // reports its nearest note
+  onMeasureTap: (tap) => seekTo(tap.measureIndex),  // tap.measureNumber is
+                                                    // the printed number
+);
+```
+
+`ScoreNoteTap` and `ScoreMeasureTap` also carry the staff index and the local and
+global tap position, for placing a popup next to the note.
+
 `ScoreHitTester` turns a laid-out score into something a user can point at. It
 returns **your own model objects**, not copies — which is why editing and
 highlighting work:

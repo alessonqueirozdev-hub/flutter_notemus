@@ -8,9 +8,13 @@
 // for one line, and draws each group's brace/bracket plus continuous system
 // barlines (and cross-staff beams).
 
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../core/core.dart';
+import '../interaction/score_hit_tester.dart';
+import '../interaction/score_taps.dart';
 import '../layout/onset_grid.dart';
 import '../layout/layout_engine.dart';
 import '../smufl/smufl_metadata_loader.dart';
@@ -245,10 +249,202 @@ class GrandStaffPainter extends CustomPainter {
         groups = groups ?? [staffGroup!],
         staffGap = staffGap ?? staffSpace * 11.0 {
     _bracePad = staffSpace * 2.2;
-    final ranges = _computeSystemRanges();
+    _ranges = _computeSystemRanges();
     _systems = [
-      for (final range in ranges) _layoutSystem(range.start, range.end),
+      for (final range in _ranges) _layoutSystem(range.start, range.end),
     ];
+  }
+
+  /// First and last measure index of each system, parallel to [_systems].
+  late final List<({int start, int end})> _ranges;
+
+  // --- Hit testing ----------------------------------------------------------
+
+  /// One [ScoreHitTester] per staff of a system, built on first use.
+  final Map<int, List<ScoreHitTester>> _testers = {};
+
+  List<ScoreHitTester> _testersFor(int systemIndex) =>
+      _testers.putIfAbsent(systemIndex, () {
+        final lists = alignedSystem(systemIndex);
+        final layouts = _systems[systemIndex];
+        return [
+          for (var i = 0; i < lists.length; i++)
+            ScoreHitTester(
+              elements: lists[i],
+              staffSpace: staffSpace,
+              engine: layouts[i].engine,
+            ),
+        ];
+      });
+
+  /// The system under [point] and [point] in that system's own coordinates
+  /// (the space every staff layout is in before the paint pass translates
+  /// it), or null on an empty painter.
+  ({int system, Offset local})? _locate(Offset point) {
+    if (_systems.isEmpty) return null;
+    final x = point.dx - _bracePad;
+    final y = point.dy - contentTopInset;
+    final system =
+        (y / systemBlockHeight).floor().clamp(0, _systems.length - 1);
+    return (system: system, local: Offset(x, y - system * systemBlockHeight));
+  }
+
+  /// The note under [point] (canvas coordinates, as a `GestureDetector`
+  /// around this painter's `CustomPaint` reports them), resolved through
+  /// [ScoreHitTester] on every staff of the system and taking the nearest.
+  /// [tolerance] is in pixels; it defaults to one staff space.
+  ScoreNoteTap? noteTapAt(
+    Offset point, {
+    Offset? globalPosition,
+    double? tolerance,
+  }) {
+    final located = _locate(point);
+    if (located == null) return null;
+    final testers = _testersFor(located.system);
+    final layouts = _systems[located.system];
+    ({ScoreHit hit, int staff, Offset local})? best;
+    for (var i = 0; i < testers.length; i++) {
+      final local = located.local - Offset(0, i * staffGap);
+      final hit =
+          testers[i].hitTest(local, tolerance: tolerance ?? staffSpace);
+      if (hit == null) continue;
+      if (best == null || hit.distance < best.hit.distance) {
+        best = (hit: hit, staff: i, local: local);
+      }
+    }
+    var note = best == null
+        ? null
+        : noteForHit(best.hit, layouts[best.staff].engine, best.local);
+    var measureIndex = best?.hit.measureIndex;
+    var staffIndex = best?.staff;
+
+    // Every note of a cross-staff beam group is drawn by
+    // [_drawCrossStaffBeams], not by its staff's renderer: its head on the
+    // staff it is printed on and its stem running to the group's beam, which
+    // can sit anywhere between (or past) the staves. The per-staff testers
+    // know none of that — a relocated note lives in its home engine, so the
+    // destination's tester guessed a 3.5-space up-stem. Test those notes
+    // against the geometry the paint pass actually uses.
+    final reach = tolerance ?? staffSpace;
+    var bestDistance = best?.hit.distance ?? double.infinity;
+    final p = located.local;
+    for (final group in _crossStaffBeamGeometry(
+        _systems[located.system], _baseline0)) {
+      final beamY = group.beamY;
+      if (beamY == null) continue;
+      for (final head in group.points) {
+        final box = Rect.fromLTRB(
+          head.x - staffSpace * 0.2,
+          math.min(head.y - staffSpace * 0.7, beamY - staffSpace * 0.25),
+          head.x + staffSpace * 1.4,
+          math.max(head.y + staffSpace * 0.7, beamY + staffSpace * 0.25),
+        );
+        final dx = p.dx < box.left
+            ? box.left - p.dx
+            : (p.dx > box.right ? p.dx - box.right : 0.0);
+        final dy = p.dy < box.top
+            ? box.top - p.dy
+            : (p.dy > box.bottom ? p.dy - box.bottom : 0.0);
+        final distance = math.sqrt(dx * dx + dy * dy);
+        if (distance <= reach && distance < bestDistance) {
+          bestDistance = distance;
+          note = head.note;
+          measureIndex = head.measureIndex;
+          staffIndex = head.staff;
+        }
+      }
+    }
+
+    // An UN-beamed cross-staff note is moved onto its destination staff at
+    // layout time and drawn there by the ordinary renderer, but that staff's
+    // engine has no geometry for it, so its tester always guessed an UP-stem.
+    // The renderer decides the stem as `NoteRenderer` does — the layout's
+    // voice, else the note's, else its position on THIS staff — so a note
+    // above the middle line has a down-stem nobody could tap. Test it the way
+    // it is drawn.
+    final lists = [for (final l in _systems[located.system]) l.elements];
+    final beamed = <Note>{
+      for (final group in _crossStaffBeamGeometry(
+          _systems[located.system], _baseline0))
+        if (group.beamY != null)
+          for (final head in group.points) head.note,
+    };
+    for (var target = 0; target < lists.length; target++) {
+      for (final pe in lists[target]) {
+        final e = pe.element;
+        if (e is! Note || e.crossStaffMove == 0 || beamed.contains(e)) continue;
+        final position = StaffPositionCalculator.calculate(
+          e.pitch,
+          _clefAtX(lists[target], pe.position.dx),
+          extraOctaveShift: _octaveShiftOf(e),
+        );
+        final voice = pe.voiceNumber ?? e.voice;
+        final stemUp = voice != null
+            ? voice.isOdd
+            : StaffPositionCalculator.stemUpFor(position);
+        final headY = _baseline0 + target * staffGap - position * staffSpace / 2;
+        final middle = _baseline0 + target * staffGap;
+        // A stem is 3.5 spaces, and reaches the middle line from a ledger note.
+        final stemEnd = stemUp
+            ? math.min(headY - staffSpace * 3.5, middle)
+            : math.max(headY + staffSpace * 3.5, middle);
+        final box = Rect.fromLTRB(
+          pe.position.dx - staffSpace * 0.2,
+          math.min(headY - staffSpace * 0.7, stemEnd),
+          pe.position.dx + staffSpace * 1.4,
+          math.max(headY + staffSpace * 0.7, stemEnd),
+        );
+        final dx = p.dx < box.left
+            ? box.left - p.dx
+            : (p.dx > box.right ? p.dx - box.right : 0.0);
+        final dy = p.dy < box.top
+            ? box.top - p.dy
+            : (p.dy > box.bottom ? p.dy - box.bottom : 0.0);
+        final distance = math.sqrt(dx * dx + dy * dy);
+        if (distance <= reach && distance < bestDistance) {
+          bestDistance = distance;
+          note = e;
+          measureIndex = pe.measureIndex;
+          staffIndex = target;
+        }
+      }
+    }
+
+    if (note == null || measureIndex == null || staffIndex == null) {
+      return null;
+    }
+    return ScoreNoteTap(
+      note: note,
+      measureIndex: _ranges[located.system].start + measureIndex,
+      staffIndex: staffIndex,
+      localPosition: point,
+      globalPosition: globalPosition ?? point,
+    );
+  }
+
+  /// The bar whose horizontal span contains [point], on the staff whose
+  /// middle line is nearest it. Null left of the first bar of the system.
+  ScoreMeasureTap? measureTapAt(Offset point, {Offset? globalPosition}) {
+    final located = _locate(point);
+    if (located == null) return null;
+    final lists = alignedSystem(located.system);
+    if (lists.isEmpty) return null;
+    final staff = ((located.local.dy - _baseline0) / staffGap)
+        .round()
+        .clamp(0, lists.length - 1);
+    final local = measureIndexAtX(lists[staff], located.local.dx,
+        engine: _systems[located.system][staff].engine);
+    if (local == null) return null;
+    final index = _ranges[located.system].start + local;
+    final staffModel = _allStaves[staff];
+    return ScoreMeasureTap(
+      measureIndex: index,
+      measureNumber: _measureNumbers[staffModel]![index] ??
+          _numberBefore(staffModel, index + 1),
+      staffIndex: staff,
+      localPosition: point,
+      globalPosition: globalPosition ?? point,
+    );
   }
 
   /// Lays out + aligns one system's measures (inclusive [a]..[b]) across staves.
@@ -1063,17 +1259,90 @@ class GrandStaffPainter extends CustomPainter {
       ..strokeWidth = stemW;
     final beamPaint = Paint()..color = theme.stemColor;
 
+    for (final group in _crossStaffBeamGeometry(layouts, baseline0)) {
+      final pts = group.points;
+      for (final p in pts) {
+        // Notehead glyph (noteheadBlack is ~baseline-centred vertically).
+        if (noteheadChar.isNotEmpty) {
+          final tp = TextPainter(
+            text: TextSpan(
+              text: noteheadChar,
+              style: TextStyle(
+                // Never name the font literally: the engine is SMuFL-based,
+                // not Bravura-based, and the descriptor is what makes a
+                // different SMuFL font swappable.
+                fontFamily: metadata.font.fontFamily,
+                package: metadata.font.fontPackage,
+                fontSize: fontSize,
+                color: theme.noteheadColor,
+                height: 1.0,
+              ),
+            ),
+            textDirection: TextDirection.ltr,
+          )..layout();
+          final baselineFromTop =
+              tp.computeDistanceToActualBaseline(TextBaseline.alphabetic);
+          tp.paint(canvas, Offset(p.x, p.y - baselineFromTop));
+        }
+      }
+      final beamY = group.beamY;
+      if (beamY == null) continue;
+
+      // Stems attach at the notehead edge nearest the beam: a note below the
+      // beam stems up (right edge); a note above stems down (left edge).
+      double stemXof(({double x, double y}) p) => p.y > beamY
+          ? p.x + noteheadW - stemW * 0.5
+          : p.x + stemW * 0.5;
+      for (final p in pts) {
+        final sx = stemXof((x: p.x, y: p.y));
+        canvas.drawLine(Offset(sx, p.y), Offset(sx, beamY), stemPaint);
+      }
+      final xs = [for (final p in pts) stemXof((x: p.x, y: p.y))]..sort();
+      canvas.drawRect(
+        Rect.fromLTRB(
+          xs.first - stemW * 0.5,
+          beamY - beamThick / 2,
+          xs.last + stemW * 0.5,
+          beamY + beamThick / 2,
+        ),
+        beamPaint,
+      );
+    }
+  }
+
+  /// Where [_drawCrossStaffBeams] draws each cross-staff beam group of a
+  /// system, in system coordinates: every note's head (x, y) on the staff it
+  /// is printed on, and the beam's y — the midpoint of the group's heads —
+  /// or null for a group of one, which draws no beam. Shared with
+  /// [noteTapAt] so a tap tests the stems that are actually drawn.
+  List<
+      ({
+        List<({Note note, int staff, int measureIndex, double x, double y})>
+            points,
+        double? beamY,
+      })> _crossStaffBeamGeometry(
+    List<_StaffLayout> layouts,
+    double baseline0,
+  ) {
+    final ss = staffSpace;
+    final groups = <({
+      List<({Note note, int staff, int measureIndex, double x, double y})>
+          points,
+      double? beamY,
+    })>[];
     for (var home = 0; home < layouts.length; home++) {
       // Note X positions from the (aligned) positioned elements.
-      final noteX = <Note, double>{};
+      final placed = <Note, PositionedElement>{};
       for (final pe in layouts[home].elements) {
-        if (pe.element is Note) noteX[pe.element as Note] = pe.position.dx;
+        if (pe.element is Note) placed[pe.element as Note] = pe;
       }
       for (final g in _crossStaffGroups(layouts[home])) {
-        final pts = <({double x, double y})>[];
+        final pts =
+            <({Note note, int staff, int measureIndex, double x, double y})>[];
         for (final note in g) {
-          final x = noteX[note];
-          if (x == null) continue;
+          final pe = placed[note];
+          if (pe == null) continue;
+          final x = pe.position.dx;
           final target = (home + note.crossStaffMove)
               .clamp(0, _allStaves.length - 1);
           final pos = StaffPositionCalculator.calculate(
@@ -1086,61 +1355,27 @@ class GrandStaffPainter extends CustomPainter {
             extraOctaveShift: _octaveShiftOf(note),
           );
           final y = baseline0 + target * staffGap - pos * ss * 0.5;
-          pts.add((x: x, y: y));
-
-          // Notehead glyph (noteheadBlack is ~baseline-centred vertically).
-          if (noteheadChar.isNotEmpty) {
-            final tp = TextPainter(
-              text: TextSpan(
-                text: noteheadChar,
-                style: TextStyle(
-                  // Never name the font literally: the engine is SMuFL-based,
-                  // not Bravura-based, and the descriptor is what makes a
-                  // different SMuFL font swappable.
-                  fontFamily: metadata.font.fontFamily,
-                  package: metadata.font.fontPackage,
-                  fontSize: fontSize,
-                  color: theme.noteheadColor,
-                  height: 1.0,
-                ),
-              ),
-              textDirection: TextDirection.ltr,
-            )..layout();
-            final baselineFromTop =
-                tp.computeDistanceToActualBaseline(TextBaseline.alphabetic);
-            tp.paint(canvas, Offset(x, y - baselineFromTop));
+          pts.add((
+            note: note,
+            staff: target,
+            measureIndex: pe.measureIndex,
+            x: x,
+            y: y,
+          ));
+        }
+        double? beamY;
+        if (pts.length >= 2) {
+          var minY = pts.first.y, maxY = pts.first.y;
+          for (final p in pts) {
+            if (p.y < minY) minY = p.y;
+            if (p.y > maxY) maxY = p.y;
           }
+          beamY = (minY + maxY) / 2;
         }
-        if (pts.length < 2) continue;
-
-        var minY = pts.first.y, maxY = pts.first.y;
-        for (final p in pts) {
-          if (p.y < minY) minY = p.y;
-          if (p.y > maxY) maxY = p.y;
-        }
-        final beamY = (minY + maxY) / 2;
-
-        // Stems attach at the notehead edge nearest the beam: a note below the
-        // beam stems up (right edge); a note above stems down (left edge).
-        double stemXof(({double x, double y}) p) => p.y > beamY
-            ? p.x + noteheadW - stemW * 0.5
-            : p.x + stemW * 0.5;
-        for (final p in pts) {
-          final sx = stemXof(p);
-          canvas.drawLine(Offset(sx, p.y), Offset(sx, beamY), stemPaint);
-        }
-        final xs = pts.map(stemXof).toList()..sort();
-        canvas.drawRect(
-          Rect.fromLTRB(
-            xs.first - stemW * 0.5,
-            beamY - beamThick / 2,
-            xs.last + stemW * 0.5,
-            beamY + beamThick / 2,
-          ),
-          beamPaint,
-        );
+        groups.add((points: pts, beamY: beamY));
       }
     }
+    return groups;
   }
 
   @override
