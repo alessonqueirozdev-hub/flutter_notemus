@@ -164,21 +164,25 @@ int? systemAtY(Iterable<PositionedElement> elements, double y) {
   return best;
 }
 
-/// Index of the bar whose horizontal span contains [x]: the last bar whose
-/// first element starts at or before [x], or null before the first bar or,
-/// given [engine], past the right edge of the music (an opaque canvas wider
-/// than the score used to hand every tap in the blank space after it to the
-/// last bar).
+/// Index of the bar whose horizontal span contains [x], or null before the
+/// first bar or, given [engine], past the right edge of the music (an opaque
+/// canvas wider than the score used to hand every tap in the blank space
+/// after it to the last bar).
 ///
-/// [elements] are one staff's (or one system's) positioned elements; a bar
-/// spans from its leftmost element to the leftmost element of the next one,
-/// and the last bar to the painted right edge of its rightmost element.
+/// [elements] are one staff's (or one system's) positioned elements. A bar
+/// ends at its closing barline and the next one starts there. Starting a bar
+/// at its leftmost element instead put a bar holding only a whole-bar rest —
+/// which the layout CENTRES — halfway across, and handed taps between its
+/// barline and the rest to the bar before. A bar with no barline of its own
+/// ends where the next bar's first element starts; the last one, at the
+/// painted right edge.
 int? measureIndexAtX(
   Iterable<PositionedElement> elements,
   double x, {
   LayoutEngine? engine,
 }) {
   final starts = <int, double>{};
+  final closes = <int, double>{};
   var right = double.negativeInfinity;
   for (final positioned in elements) {
     if (engine != null) {
@@ -189,17 +193,24 @@ int? measureIndexAtX(
     final index = positioned.measureIndex;
     if (index < 0) continue;
     final dx = positioned.position.dx;
-    final known = starts[index];
-    if (known == null || dx < known) starts[index] = dx;
-  }
-  if (engine != null && x > right) return null;
-  int? best;
-  var bestStart = double.negativeInfinity;
-  starts.forEach((index, start) {
-    if (start <= x && start > bestStart) {
-      best = index;
-      bestStart = start;
+    final start = starts[index];
+    if (start == null || dx < start) starts[index] = dx;
+    if (positioned.element is Barline) {
+      final close = closes[index];
+      if (close == null || dx > close) closes[index] = dx;
     }
-  });
-  return best;
+  }
+  if (starts.isEmpty) return null;
+  if (engine != null && x > right) return null;
+  final indices = starts.keys.toList()..sort();
+  if (x < starts[indices.first]!) return null;
+  for (var i = 0; i < indices.length; i++) {
+    final index = indices[i];
+    final close = closes[index] ??
+        (i + 1 < indices.length
+            ? starts[indices[i + 1]]!
+            : double.infinity);
+    if (x <= close) return index;
+  }
+  return indices.last;
 }

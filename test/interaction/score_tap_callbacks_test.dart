@@ -166,6 +166,46 @@ void main() {
       expect(bars.single.measureIndex, 0, reason: 'a bar still answers');
     });
 
+    testWidgets('a bar of only a whole rest starts at its barline', (t) async {
+      // The layout centres a whole-bar rest; starting the bar at its first
+      // element handed taps between the barline and the rest to the bar
+      // before.
+      final s = Staff(measures: [
+        Measure()
+          ..add(Clef(clefType: ClefType.treble))
+          ..add(TimeSignature(numerator: 4, denominator: 4))
+          ..elements.addAll([_q('C', 5), _q('D', 5), _q('E', 5), _q('F', 5)]),
+        Measure()..add(Rest(duration: const MusicDuration(DurationType.whole))),
+      ]);
+      final bars = <ScoreMeasureTap>[];
+      await t.pumpWidget(_host(MusicScore(
+        staff: s,
+        enableResponsiveLayout: false,
+        preventVerticalOverflow: false,
+        onMeasureTap: bars.add,
+      )));
+      await _settle(t);
+      final canvas = find.byWidgetPredicate(
+          (w) => w is CustomPaint && w.painter is MusicScorePainter);
+      final painter =
+          t.widget<CustomPaint>(canvas).painter! as MusicScorePainter;
+      final elements = painter.positionedElements;
+      final barline = elements
+          .where((e) => e.element is Barline && e.measureIndex == 0)
+          .reduce((a, b) => a.position.dx >= b.position.dx ? a : b);
+      final rest = elements.firstWhere((e) => e.element is Rest);
+      expect(rest.position.dx, greaterThan(barline.position.dx + 12),
+          reason: 'the fixture needs a gap between barline and rest');
+
+      final y = (await screenPointOf(t, s, s.measures.first.elements
+                  .whereType<Note>()
+                  .first))
+          .dy;
+      final origin = t.getTopLeft(canvas);
+      await t.tapAt(Offset(origin.dx + barline.position.dx + 6, y));
+      expect(bars.single.measureIndex, 1);
+    });
+
     testWidgets('a pickup is bar 0 to onMeasureTap', (t) async {
       final s = staff()..measures.first.isImplicit = true;
       final bars = <ScoreMeasureTap>[];
