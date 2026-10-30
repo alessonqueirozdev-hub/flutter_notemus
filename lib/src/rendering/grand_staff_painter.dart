@@ -377,7 +377,8 @@ class GrandStaffPainter extends CustomPainter {
     final staff = ((located.local.dy - _baseline0) / staffGap)
         .round()
         .clamp(0, lists.length - 1);
-    final local = measureIndexAtX(lists[staff], located.local.dx);
+    final local = measureIndexAtX(lists[staff], located.local.dx,
+        engine: _systems[located.system][staff].engine);
     if (local == null) return null;
     final index = _ranges[located.system].start + local;
     final staffModel = _allStaves[staff];

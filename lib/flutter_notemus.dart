@@ -367,7 +367,8 @@ class _MusicScoreState extends State<MusicScore> {
           // Only the tapped system: wrapped systems share one x range.
           final system = systemAtY(elements, point.dy);
           final index = measureIndexAtX(
-              elements.where((e) => e.system == system), point.dx);
+              elements.where((e) => e.system == system), point.dx,
+              engine: layout.engine);
           if (index != null) {
             onMeasureTap(ScoreMeasureTap(
               measureIndex: index,

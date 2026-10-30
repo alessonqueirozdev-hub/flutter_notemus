@@ -165,19 +165,34 @@ int? systemAtY(Iterable<PositionedElement> elements, double y) {
 }
 
 /// Index of the bar whose horizontal span contains [x]: the last bar whose
-/// first element starts at or before [x]. Null before the first bar.
+/// first element starts at or before [x], or null before the first bar or,
+/// given [engine], past the right edge of the music (an opaque canvas wider
+/// than the score used to hand every tap in the blank space after it to the
+/// last bar).
 ///
 /// [elements] are one staff's (or one system's) positioned elements; a bar
-/// spans from its leftmost element to the leftmost element of the next one.
-int? measureIndexAtX(Iterable<PositionedElement> elements, double x) {
+/// spans from its leftmost element to the leftmost element of the next one,
+/// and the last bar to the painted right edge of its rightmost element.
+int? measureIndexAtX(
+  Iterable<PositionedElement> elements,
+  double x, {
+  LayoutEngine? engine,
+}) {
   final starts = <int, double>{};
+  var right = double.negativeInfinity;
   for (final positioned in elements) {
+    if (engine != null) {
+      final edge = positioned.position.dx +
+          engine.elementPaintedRightExtent(positioned.element);
+      if (edge > right) right = edge;
+    }
     final index = positioned.measureIndex;
     if (index < 0) continue;
     final dx = positioned.position.dx;
     final known = starts[index];
     if (known == null || dx < known) starts[index] = dx;
   }
+  if (engine != null && x > right) return null;
   int? best;
   var bestStart = double.negativeInfinity;
   starts.forEach((index, start) {

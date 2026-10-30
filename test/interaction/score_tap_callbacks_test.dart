@@ -146,6 +146,26 @@ void main() {
       expect(bars.single.measureNumber, 2);
     });
 
+    testWidgets('the blank canvas after the last bar is no bar', (t) async {
+      // The canvas fills the 800 px host; two bars end well before that. A
+      // bar lookup bounded only on the left gave every tap out there to the
+      // last bar.
+      final s = staff();
+      final bars = <ScoreMeasureTap>[];
+      await t.pumpWidget(_host(MusicScore(
+        staff: s,
+        enableResponsiveLayout: false,
+        preventVerticalOverflow: false,
+        onMeasureTap: bars.add,
+      )));
+      await _settle(t);
+      final onNote = await screenPointOf(t, s, notes[0]);
+      await t.tapAt(Offset(795, onNote.dy));
+      expect(bars, isEmpty);
+      await t.tapAt(onNote);
+      expect(bars.single.measureIndex, 0, reason: 'a bar still answers');
+    });
+
     testWidgets('a pickup is bar 0 to onMeasureTap', (t) async {
       final s = staff()..measures.first.isImplicit = true;
       final bars = <ScoreMeasureTap>[];
@@ -380,6 +400,16 @@ void main() {
       expect(tap, isNotNull);
       expect(identical(tap!.note, cross), isTrue);
       expect(tap.staffIndex, 1);
+    });
+
+    testWidgets('GrandStaff: no bar past the end of the music', (t) async {
+      await t.pumpWidget(_host(GrandStaff(group: group(), onMeasureTap: (_) {})));
+      await _settle(t);
+      final painter = painterOf(t);
+      final y = painter.contentTopInset + 5 * 12.0;
+      expect(painter.measureTapAt(Offset(painter.contentWidth + 40, y)),
+          isNull);
+      expect(painter.measureTapAt(Offset(12 * 2.2 + 60, y)), isNotNull);
     });
 
     testWidgets('ScoreView passes the callbacks through', (t) async {
