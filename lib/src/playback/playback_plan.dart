@@ -101,7 +101,14 @@ class PlaybackPlan {
       PlaybackPlan.fromSequence(MidiMapper.fromScore(score, options: options));
 
   /// Plans an already mapped [sequence].
-  factory PlaybackPlan.fromSequence(MidiSequence sequence) {
+  ///
+  /// [fallbackBpm] is the tempo of a sequence that carries no tempo event at
+  /// all — a hand-built one. Pass the same value the player uses (the
+  /// native bridge's `fallbackTempoBpm`), or positions drift from what plays.
+  factory PlaybackPlan.fromSequence(
+    MidiSequence sequence, {
+    int fallbackBpm = 120,
+  }) {
     final tpq = sequence.ticksPerQuarter;
     // Every track's tempo events, one per tick (the last one at a tick wins,
     // as a MIDI player applies them).
@@ -117,7 +124,7 @@ class PlaybackPlan {
       final first = byTick.keys.isEmpty
           ? null
           : byTick.keys.reduce((a, b) => a < b ? a : b);
-      byTick[0] = first == null ? 120 : byTick[first]!;
+      byTick[0] = first == null ? fallbackBpm : byTick[first]!;
     }
     final ticks = byTick.keys.toList()..sort();
     final changes = <({int tick, int bpm, Duration at})>[];

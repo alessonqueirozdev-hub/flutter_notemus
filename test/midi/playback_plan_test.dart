@@ -186,6 +186,23 @@ void main() {
         same(c));
   });
 
+  test('a sequence with no tempo event runs at the given fallback', () {
+    // A hand-built sequence played by the native bridge with
+    // fallbackTempoBpm: 60 runs at 60; a plan that assumed 120 put every
+    // position at half its real time.
+    const sequence = MidiSequence(ticksPerQuarter: 960, tracks: [
+      MidiTrack(name: 'Piano', channel: 0, events: [
+        MidiEvent.noteOn(tick: 0, channel: 0, note: 60, velocity: 90),
+        MidiEvent.noteOff(tick: 960, channel: 0, note: 60),
+      ]),
+    ]);
+    expect(PlaybackPlan.fromSequence(sequence).timeAtTick(960),
+        const Duration(milliseconds: 500));
+    final slow = PlaybackPlan.fromSequence(sequence, fallbackBpm: 60);
+    expect(slow.timeAtTick(960), const Duration(seconds: 1));
+    expect(slow.duration, const Duration(seconds: 1));
+  });
+
   test('positions clamp to the piece, and an empty staff has none', () {
     final plan = PlaybackPlan.fromStaff(Staff(measures: [
       Measure()
