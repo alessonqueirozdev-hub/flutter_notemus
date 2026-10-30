@@ -82,6 +82,41 @@ void main() {
   });
 
   group('MidiNativeSequenceBridge', () {
+    // The backend takes ONE tempo and converts every tick with it, so a
+    // tempo change after tick 0 used to be ignored: this bar played at 60 bpm
+    // throughout, the last two quarters a full second too slow.
+    test('a tempo change reaches native playback', () async {
+      Note q(String step) => Note(
+            pitch: Pitch(step: step, octave: 4),
+            duration: const Duration(DurationType.quarter),
+          );
+      final staff = Staff(measures: [
+        Measure()
+          ..add(TimeSignature(numerator: 4, denominator: 4))
+          ..add(TempoMark(beatUnit: DurationType.quarter, bpm: 60))
+          ..add(q('C'))
+          ..add(q('D'))
+          ..add(TempoMark(beatUnit: DurationType.quarter, bpm: 120))
+          ..add(q('E'))
+          ..add(q('F')),
+      ]);
+      final sequence = MidiMapper.fromStaff(staff);
+      final backend = _FakeNativeBackend();
+      await MidiNativeSequenceBridge(backend)
+          .uploadSequence(sequence, includeMetronome: false);
+
+      expect(backend.tempo, 60);
+      // At 960 ticks per quarter and 60 bpm, a tick is 1/960 s. E and F are
+      // quarters at 120 bpm: half a second each, so 480 ticks, at 1920/2400.
+      expect(
+        backend.scheduledNotes.map((n) => (n.startTick, n.durationTicks)),
+        [(0, 960), (960, 960), (1920, 480), (2400, 480)],
+      );
+      // ...which is exactly where PlaybackPlan puts them.
+      final plan = PlaybackPlan.fromSequence(sequence);
+      expect(plan.timeAtTick(2880).inMilliseconds, 2500);
+    });
+
     test('uploads sequence metadata, notes and metronome', () async {
       final staff = Staff(
         measures: [

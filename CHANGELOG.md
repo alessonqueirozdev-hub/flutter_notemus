@@ -89,6 +89,19 @@ data-loss bug in both XML importers.
   and fixed in #49 by @ArtSilver; pinned by
   `test/layout/inherited_meter_beaming_test.dart`.
 
+### Fixed — native playback tempo
+
+- **A tempo change reaches native playback.** The native backend contract
+  takes one tempo (`setTempo`) and converts every tick with it, so
+  `MidiNativeSequenceBridge` dropped every tempo change after the start: a bar
+  going from 60 to 120 bpm played at 60 throughout, and its last two quarters
+  ran a full second late. The bridge now re-expresses each scheduled tick as
+  the tick, at the opening tempo, of the moment it really sounds, the same
+  time `PlaybackPlan.timeAtTick` gives. It also sends the score's own opening
+  tempo: it used to send the mapper's default 120, which sits at tick 0 before
+  the score's first `TempoMark`. The metronome still clicks on the backend's
+  single-tempo grid. Reported by review on #53.
+
 ### Added — playback transport
 
 - **`PlaybackPlan`** (`fromStaff`, `fromScore`, `fromSequence`): the

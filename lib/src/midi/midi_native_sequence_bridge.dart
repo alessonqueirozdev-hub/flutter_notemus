@@ -1,5 +1,6 @@
 import 'dart:collection';
 
+import '../playback/playback_plan.dart';
 import 'midi_models.dart';
 import 'native_audio_contract.dart';
 
@@ -38,7 +39,14 @@ class MidiNativeSequenceBridge {
     await backend.clearScheduledEvents();
     await backend.setTicksPerQuarter(sequence.ticksPerQuarter);
 
-    final tempo = _extractInitialTempo(sequence) ?? fallbackTempoBpm;
+    // The opening tempo is the LAST tempo event at the earliest tick, as a MIDI
+    // player applies them — PlaybackPlan's reading. Taking the first one sent
+    // the mapper's default 120 even when the score's own mark at tick 0 says
+    // otherwise.
+    final plan = PlaybackPlan.fromSequence(sequence);
+    final tempo = _extractInitialTempo(sequence) == null
+        ? fallbackTempoBpm
+        : plan.tempoChanges.first.bpm;
     await backend.setTempo(tempo);
 
     final timeSignature = _extractInitialTimeSignature(sequence);
@@ -52,11 +60,21 @@ class MidiNativeSequenceBridge {
       includeMetronomeTrack: includeMetronomeTrackNotes,
     );
 
+    // The backend contract takes ONE tempo and converts every scheduled tick
+    // with it, so a tempo change after tick 0 was silently ignored: a score
+    // that slows to half speed half-way through played at its opening tempo
+    // throughout, and drifted from `PlaybackPlan.positionAt`. Each tick is
+    // re-expressed instead as the tick, at the opening tempo, of the moment
+    // it really sounds — the same time `PlaybackPlan.timeAtTick` gives.
+    final warp = _tempoWarp(plan, sequence.ticksPerQuarter, tempo);
+
     for (final note in notes) {
+      final start = warp(note.startTick);
+      final end = warp(note.startTick + note.durationTicks);
       await backend.scheduleNote(
         midiNote: note.midiNote,
-        startTick: note.startTick,
-        durationTicks: note.durationTicks,
+        startTick: start,
+        durationTicks: end > start ? end - start : 1,
         velocity: note.velocity,
         channel: note.channel,
         isTied: note.isTied,
@@ -67,7 +85,9 @@ class MidiNativeSequenceBridge {
 
     if (includeMetronome) {
       await backend.scheduleMetronome(
-        totalTicks: sequence.totalTicks,
+        // The backend lays clicks on its own (single-tempo) beat grid; it
+        // covers the warped length, but cannot follow a tempo change.
+        totalTicks: warp(sequence.totalTicks),
         countInBeats: countInBeats,
       );
     }
@@ -85,6 +105,16 @@ class MidiNativeSequenceBridge {
     );
     await backend.start();
   }
+}
+
+/// Maps a tick of [plan]'s sequence to the tick at [openingBpm] at which it
+/// actually sounds, through every tempo change. The identity when the
+/// sequence never changes tempo.
+int Function(int) _tempoWarp(
+    PlaybackPlan plan, int ticksPerQuarter, int openingBpm) {
+  if (plan.tempoChanges.length < 2) return (tick) => tick;
+  final ticksPerMicro = openingBpm * ticksPerQuarter / 60000000;
+  return (tick) => (plan.timeAtTick(tick).inMicroseconds * ticksPerMicro).round();
 }
 
 List<ScheduledMidiNote> extractScheduledNotes(
