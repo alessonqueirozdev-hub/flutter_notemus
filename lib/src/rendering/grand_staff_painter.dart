@@ -8,6 +8,8 @@
 // for one line, and draws each group's brace/bracket plus continuous system
 // barlines (and cross-staff beams).
 
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../core/core.dart';
@@ -310,14 +312,61 @@ class GrandStaffPainter extends CustomPainter {
         best = (hit: hit, staff: i, local: local);
       }
     }
-    if (best == null) return null;
-    final note =
-        noteForHit(best.hit, layouts[best.staff].engine, best.local);
-    if (note == null) return null;
+    var note = best == null
+        ? null
+        : noteForHit(best.hit, layouts[best.staff].engine, best.local);
+    var measureIndex = best?.hit.measureIndex;
+    var staffIndex = best?.staff;
+
+    // A BEAMED cross-staff note is drawn on its destination staff but keeps
+    // its geometry in its home staff's engine, so the destination's tester
+    // only knows a notehead and guesses an up-stem — and misses the stem
+    // that actually runs toward the beam between the staves. Give it its
+    // own box: the notehead on the destination, plus the stem reaching over
+    // to the home staff, where the beam is.
+    final reach = tolerance ?? staffSpace;
+    var bestDistance = best?.hit.distance ?? double.infinity;
+    final lists = alignedSystem(located.system);
+    for (var target = 0; target < lists.length; target++) {
+      for (final pe in lists[target]) {
+        final e = pe.element;
+        if (e is! Note || e.crossStaffMove == 0) continue;
+        final home = target - e.crossStaffMove;
+        if (home < 0 || home >= lists.length || home == target) continue;
+        final local = located.local - Offset(0, target * staffGap);
+        final homeEdge = _baseline0 +
+            (home - target) * staffGap +
+            (home < target ? 2 : -2) * staffSpace;
+        final headY = pe.position.dy;
+        final box = Rect.fromLTRB(
+          pe.position.dx - staffSpace * 0.2,
+          math.min(headY - staffSpace * 0.7, homeEdge),
+          pe.position.dx + staffSpace * 1.4,
+          math.max(headY + staffSpace * 0.7, homeEdge),
+        );
+        final dx = local.dx < box.left
+            ? box.left - local.dx
+            : (local.dx > box.right ? local.dx - box.right : 0.0);
+        final dy = local.dy < box.top
+            ? box.top - local.dy
+            : (local.dy > box.bottom ? local.dy - box.bottom : 0.0);
+        final distance = math.sqrt(dx * dx + dy * dy);
+        if (distance <= reach && distance < bestDistance) {
+          bestDistance = distance;
+          note = e;
+          measureIndex = pe.measureIndex;
+          staffIndex = target;
+        }
+      }
+    }
+
+    if (note == null || measureIndex == null || staffIndex == null) {
+      return null;
+    }
     return ScoreNoteTap(
       note: note,
-      measureIndex: _ranges[located.system].start + best.hit.measureIndex,
-      staffIndex: best.staff,
+      measureIndex: _ranges[located.system].start + measureIndex,
+      staffIndex: staffIndex,
       localPosition: point,
       globalPosition: globalPosition ?? point,
     );

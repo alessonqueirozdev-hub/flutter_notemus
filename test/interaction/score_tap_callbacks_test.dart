@@ -312,6 +312,76 @@ void main() {
       expect(bars.single.staffIndex, 1);
     });
 
+    test('a beamed cross-staff note is tappable along its stem', () async {
+      // Drawn on the lower staff but measured by the upper staff's engine, the
+      // note got only a guessed up-stem box from the lower staff's tester and
+      // the stem reaching up to the beam between the staves was dead.
+      final metadata = SmuflMetadata();
+      await metadata.load();
+      final cross = Note(
+        pitch: const Pitch(step: 'D', octave: 4),
+        duration: const MusicDuration(DurationType.eighth),
+        crossStaffMove: 1,
+        beam: BeamType.end,
+      );
+      final painter = GrandStaffPainter(
+        staffGroup: StaffGroup(bracket: BracketType.brace, staves: [
+          Staff(measures: [
+            Measure(autoBeaming: false)
+              ..elements.addAll([
+                Clef(clefType: ClefType.treble),
+                TimeSignature(numerator: 4, denominator: 4),
+                Note(
+                  pitch: const Pitch(step: 'C', octave: 5),
+                  duration: const MusicDuration(DurationType.eighth),
+                  beam: BeamType.start,
+                ),
+                cross,
+                _q('E', 5),
+                _q('F', 5),
+                Note(
+                  pitch: const Pitch(step: 'G', octave: 5),
+                  duration: const MusicDuration(DurationType.quarter),
+                ),
+              ]),
+          ]),
+          Staff(measures: [
+            Measure()
+              ..elements.addAll([
+                Clef(clefType: ClefType.bass),
+                TimeSignature(numerator: 4, denominator: 4),
+                _w('C', 3),
+              ]),
+          ]),
+        ]),
+        staffSpace: 12,
+        metadata: metadata,
+        theme: const MusicScoreTheme(),
+        availableWidth: 900,
+      );
+      final pe = painter
+          .alignedSystem(0)[1]
+          .firstWhere((p) => identical(p.element, cross));
+      const sp = 12.0;
+      final gap = painter.staffGap;
+      // Just below the upper staff's bottom line, in the lower staff's local
+      // y (its middle line is at 5 sp; the upper staff sits one gap above).
+      final localY = 5 * sp - gap + 2 * sp + 4;
+      // Measured before the fix: the box ended at local y -32 (a guessed
+      // 3.5-space up-stem), 12 px short of this point; tolerance 0 so the
+      // stem itself has to cover it.
+      final tap = painter.noteTapAt(
+        Offset(
+          pe.position.dx + sp * 2.2 + 3,
+          painter.contentTopInset + gap + localY,
+        ),
+        tolerance: 0,
+      );
+      expect(tap, isNotNull);
+      expect(identical(tap!.note, cross), isTrue);
+      expect(tap.staffIndex, 1);
+    });
+
     testWidgets('ScoreView passes the callbacks through', (t) async {
       final score = Score(staffGroups: [group()]);
       await t.pumpWidget(_host(ScoreView(
