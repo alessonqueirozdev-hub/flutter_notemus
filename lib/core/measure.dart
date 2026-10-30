@@ -102,8 +102,9 @@ class Measure {
 
   /// Whether this bar is left out of the bar count and lasts only as long as
   /// its content: a pickup (anacrusis), or the second half of a bar split
-  /// across a repeat or a system. MusicXML `<measure implicit="yes">`, MEI
-  /// `<measure metcon="false">`.
+  /// across a repeat or a system. MusicXML `<measure implicit="yes">`; MEI
+  /// `<measure metcon="false">` on a pickup. See [isIrregular] for a short
+  /// bar that still counts.
   ///
   /// Without it a one-quarter pickup in 4/4 played as a full bar (three beats
   /// of silence before bar 1) and was numbered 1. With it, MIDI sizes the bar
@@ -111,6 +112,20 @@ class Measure {
   /// numbering, and the layout check tolerates it being short wherever it
   /// stands — not only as the first bar of the staff.
   bool isImplicit;
+
+  /// Whether this bar's content does not fill its meter and the bar still
+  /// COUNTS: it lasts only as long as its content, like [isImplicit], but
+  /// keeps its place in the numbering. MEI `<measure metcon="false">` away
+  /// from a pickup.
+  ///
+  /// Counting and duration are separate facts. With one flag for both, a
+  /// mid-piece half-note bar in 4/4 either stole the next bar's number or
+  /// played two beats of silence.
+  bool isIrregular;
+
+  /// Whether the bar lasts as long as its content rather than its meter:
+  /// [isImplicit] or [isIrregular].
+  bool get lastsAsLongAsContent => isImplicit || isIrregular;
 
   /// Creates a new [Measure].
   ///
@@ -133,6 +148,7 @@ class Measure {
     this.inheritedTimeSignature,
     this.number,
     this.isImplicit = false,
+    this.isIrregular = false,
   });
 
   /// Voice number attributed to elements that do not declare one.

@@ -1200,7 +1200,8 @@ class _JsonImportParser {
     // `JsonMusicExporter` has always written "number"; nothing read it back.
     measure
       ..number = _asInt(json['number'])
-      ..isImplicit = _asBool(json['implicit']) ?? false;
+      ..isImplicit = _asBool(json['implicit']) ?? false
+      ..isIrregular = _asBool(json['irregular']) ?? false;
 
     final List<MusicalElement> leadingElements = <MusicalElement>[];
 
@@ -3805,12 +3806,13 @@ class _MeiImportParser {
   }) {
     final int? number = int.tryParse(measureElement.getAttribute('n') ?? '');
     // `@metcon="false"` says only that the content does not fill the meter;
-    // MEI has no "not counted" flag. It means a pickup when it opens the
-    // piece or is numbered 0. Anywhere else the bar is an irregular one that
-    // still counts, and marking it implicit made the next bar repeat its
-    // number.
-    final bool isImplicit = measureElement.getAttribute('metcon') == 'false' &&
-        (isFirst || number == 0);
+    // MEI has no "not counted" flag. On a pickup (the bar that opens the
+    // piece, or one numbered 0) it means an uncounted bar. Anywhere else it is
+    // an irregular bar that still counts — marking it implicit made the next
+    // bar repeat its number — but it still lasts only as long as its content.
+    final bool shortOfMeter = measureElement.getAttribute('metcon') == 'false';
+    final bool isImplicit = shortOfMeter && (isFirst || number == 0);
+    final bool isIrregular = shortOfMeter && !isImplicit;
     final Map<int, _VoiceAccumulator> voices = <int, _VoiceAccumulator>{};
     final List<MusicalElement> metadataElements = <MusicalElement>[];
     TimeSignature? currentTimeSignature;
@@ -3970,7 +3972,11 @@ class _MeiImportParser {
     if (voices.isEmpty || (voices.length == 1 && !voices.containsKey(2))) {
       // The bar's only layer, whatever its `@n` (see the MusicXML importer).
       final only = voices.isEmpty ? voice(1) : voices.values.single;
-      final measure = Measure(number: number, isImplicit: isImplicit);
+      final measure = Measure(
+        number: number,
+        isImplicit: isImplicit,
+        isIrregular: isIrregular,
+      );
       for (final element in only.elements) {
         _appendElementToMeasure(measure, element);
       }
@@ -3979,7 +3985,8 @@ class _MeiImportParser {
 
     final measure = MultiVoiceMeasure()
       ..number = number
-      ..isImplicit = isImplicit;
+      ..isImplicit = isImplicit
+      ..isIrregular = isIrregular;
 
     final voiceNumbers = voices.keys.toList()..sort();
     for (final number in voiceNumbers) {

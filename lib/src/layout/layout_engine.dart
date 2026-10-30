@@ -1313,7 +1313,7 @@ class LayoutEngine {
         final validation = MeasureValidator.validateWithTimeSignature(
           measure,
           timeSignatureToUse,
-          allowAnacrusis: (isFirst && i == 0) || measure.isImplicit,
+          allowAnacrusis: (isFirst && i == 0) || measure.lastsAsLongAsContent,
         );
         if (validation.isValid) {
           validMeasures++;

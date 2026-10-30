@@ -203,6 +203,15 @@ void main() {
       expect(back.measures.map((m) => m.isImplicit), [true, false, false]);
     });
 
+    test('JSON export writes "irregular" and reads it back', () {
+      final staff = _handBuiltPickup();
+      staff.measures[1].isIrregular = true;
+      final json = JsonMusicExporter.staffToJson(staff);
+      expect(json, contains('"irregular": true'));
+      final back = JsonMusicParser.parseStaff(json);
+      expect(back.measures.map((m) => m.isIrregular), [false, true, false]);
+    });
+
     test('MEI metcon="false" imports as implicit', () {
       const mei = '''
 <mei xmlns="http://www.music-encoding.org/ns/mei" meiversion="5.0">
@@ -252,8 +261,12 @@ void main() {
 ''';
       final staff = MEIParser.parseMEI(mei);
       expect(staff.measures.map((m) => m.isImplicit), [false, false, false]);
+      expect(staff.measures.map((m) => m.isIrregular), [false, true, false]);
       expect(LayoutEngine.displayMeasureNumbers(staff.measures),
           {0: 1, 1: 2, 2: 3});
+      // ...and it still lasts only its half note: bar 3 enters at
+      // 3840 + 1920, not after two beats of silence at 7680.
+      expect(_noteOnTicks(MidiMapper.fromStaff(staff)), [0, 3840, 5760]);
     });
   });
 

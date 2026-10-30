@@ -461,7 +461,8 @@ class MeasureValidator {
   ///
   /// [allowAnacrusis] tolerates voices that are *shorter* than the bar (pickup
   /// bars); voices that overflow are always reported. A bar marked
-  /// [Measure.isImplicit] is tolerated the same way wherever it stands.
+  /// [Measure.isImplicit] or [Measure.isIrregular] is tolerated the same way
+  /// wherever it stands.
   ///
   /// [barNumber] is only used to prefix the messages; when omitted
   /// `Measure.number` is used, and when that is `null` too the messages carry
@@ -475,7 +476,7 @@ class MeasureValidator {
     bool allowAnacrusis = false,
     int? barNumber,
   }) {
-    allowAnacrusis = allowAnacrusis || measure.isImplicit;
+    allowAnacrusis = allowAnacrusis || measure.lastsAsLongAsContent;
     final ts = timeSignature ?? _findTimeSignature(measure);
     final number = barNumber ?? measure.number;
 

@@ -500,7 +500,8 @@ class GrandStaffPainter extends CustomPainter {
         ..manualBeamGroups = orig.manualBeamGroups
         ..inheritedTimeSignature = orig.inheritedTimeSignature ?? inheritedMeter
         ..number = orig.number
-        ..isImplicit = orig.isImplicit;
+        ..isImplicit = orig.isImplicit
+        ..isIrregular = orig.isIrregular;
       copy.elements.addAll(restated);
       copy.elements.addAll(orig.elements);
       for (final voice in orig.sortedVoices) {
@@ -516,6 +517,7 @@ class GrandStaffPainter extends CustomPainter {
       inheritedTimeSignature: orig.inheritedTimeSignature ?? inheritedMeter,
       number: orig.number,
       isImplicit: orig.isImplicit,
+      isIrregular: orig.isIrregular,
     );
     copy.elements.addAll(restated);
     copy.elements.addAll(orig.elements);

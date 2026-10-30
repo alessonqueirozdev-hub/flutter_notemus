@@ -51,7 +51,11 @@ Two optional keys describe the bar itself:
 `"implicit": true` marks a pickup (anacrusis) or another bar left out of the
 count: it is not numbered, it plays only as long as its content, and it may be
 shorter than the meter. It is the JSON form of MusicXML `implicit="yes"` and
-MEI `metcon="false"`.
+of MEI `metcon="false"` on a pickup.
+
+`"irregular": true` marks a bar whose content does not fill its meter but
+which still counts: it keeps its bar number and plays only as long as its
+content. It is the JSON form of MEI `metcon="false"` away from a pickup.
 
 ## Element Types
 

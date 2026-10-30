@@ -28,8 +28,7 @@ data-loss bug in both XML importers.
 
 - **`Measure.isImplicit`** marks a pickup (anacrusis) or another bar left out
   of the count. It is imported from MusicXML `implicit="yes"`, MEI
-  `metcon="false"` on a pickup (the first bar, or one numbered 0 — elsewhere
-  `metcon` marks an irregular bar that still counts) and JSON
+  `metcon="false"` on a pickup (the first bar, or one numbered 0) and JSON
   `"implicit": true`, and exported to MusicXML and
   JSON. **Measured on a one-quarter pickup in 4/4: bar 1 started at tick 3840,
   after three beats of silence, and now starts at 960**, because MIDI sizes an
@@ -37,6 +36,12 @@ data-loss bug in both XML importers.
   it when numbering (pickup = bar 0, first full bar = bar 1, in `MusicScore`
   and in every `GrandStaff` system), and the layout check tolerates it being
   short wherever it stands, not only as the first bar.
+- **`Measure.isIrregular`** marks a short bar that still COUNTS: MEI
+  `metcon="false"` away from a pickup, JSON `"irregular": true`. It keeps its
+  bar number but, like an implicit bar, plays only as long as its content and
+  may be shorter than the meter. Counting and duration are separate facts;
+  with one flag for both, a mid-piece half-note bar in 4/4 either stole the
+  next bar's number or played two beats of silence (review on #51).
 - **Bar numbers are read back.** MusicXML `@number` and MEI `@n` now populate
   `Measure.number` (a non-integer token such as `X1` stays `null`). JSON
   import now reads the `"number"` that `JsonMusicExporter` had always

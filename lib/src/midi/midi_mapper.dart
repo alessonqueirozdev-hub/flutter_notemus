@@ -1213,9 +1213,10 @@ int _measureLengthTicks({
   required TimeSignature? timeSignature,
   required int ticksPerQuarter,
 }) {
-  // A pickup lasts as long as its content. Sized from the meter, a
-  // one-quarter pickup in 4/4 was followed by three beats of silence.
-  if (timeSignature != null && !measure.isImplicit) {
+  // A pickup or an irregular bar lasts as long as its content. Sized from
+  // the meter, a one-quarter pickup in 4/4 was followed by three beats of
+  // silence.
+  if (timeSignature != null && !measure.lastsAsLongAsContent) {
     final beatsInQuarter =
         timeSignature.numerator * (4.0 / timeSignature.denominator);
     final ticks = (beatsInQuarter * ticksPerQuarter).round();
