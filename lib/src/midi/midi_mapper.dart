@@ -142,7 +142,7 @@ class MidiMapper {
     if (options.includeMetronome && results.isNotEmpty) {
       tracks.add(
         _buildMetronomeTrack(
-          playedMeasures: results.first.playedMeasures,
+          playedMeasures: _longestTimeline(results),
           options: options,
         ),
       );
@@ -152,10 +152,27 @@ class MidiMapper {
       ticksPerQuarter: options.ticksPerQuarter,
       tracks: tracks,
       warnings: warnings,
-      playedMeasures: _publicPlayedMeasures(results.first.playedMeasures),
+      playedMeasures: _publicPlayedMeasures(_longestTimeline(results)),
       noteSpans: [for (final result in results) ...result.noteSpans],
     );
   }
+}
+
+/// The bar timeline a score plays by: the longest staff's. Taking the first
+/// staff's published an empty timeline for a score whose first staff has no
+/// bars while a later one plays, so a transport built on it had no position.
+List<_PlayedMeasureTiming> _longestTimeline(List<_TrackBuildResult> results) {
+  var best = const <_PlayedMeasureTiming>[];
+  var bestEnd = -1;
+  for (final result in results) {
+    final played = result.playedMeasures;
+    final end = played.isEmpty ? -1 : played.last.endTick;
+    if (end > bestEnd) {
+      best = played;
+      bestEnd = end;
+    }
+  }
+  return best;
 }
 
 List<MidiPlayedMeasure> _publicPlayedMeasures(

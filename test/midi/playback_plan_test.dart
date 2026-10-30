@@ -165,6 +165,27 @@ void main() {
     expect(plan.positionAt(const Duration(milliseconds: 600))!.measureIndex, 1);
   });
 
+  test('a score whose first staff is empty still has a timeline', () {
+    // The score timeline used to be the FIRST staff's, so an empty first
+    // staff left a sounding score with no position and nothing to seek to.
+    final c = _note('C', DurationType.whole);
+    final score = Score(staffGroups: [
+      StaffGroup(staves: [
+        Staff(),
+        Staff(measures: [
+          Measure()
+            ..add(TimeSignature(numerator: 4, denominator: 4))
+            ..add(c),
+        ]),
+      ]),
+    ]);
+    final plan = PlaybackPlan.fromScore(score);
+    expect(plan.measures, hasLength(1));
+    expect(plan.positionAt(const Duration(milliseconds: 500))!.measureIndex, 0);
+    expect(plan.notesAt(const Duration(milliseconds: 500)).single.note,
+        same(c));
+  });
+
   test('positions clamp to the piece, and an empty staff has none', () {
     final plan = PlaybackPlan.fromStaff(Staff(measures: [
       Measure()
