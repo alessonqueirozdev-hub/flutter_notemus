@@ -109,7 +109,11 @@ class MidiNativeSequenceBridge {
             sequence.tracks.any((t) => t.name.toLowerCase() == 'metronome');
         for (final click in clicksUploaded
             ? const <({int tick, bool accent})>[]
-            : _metronomeClicks(sequence)) {
+            : _metronomeClicks(
+                sequence,
+                fallbackBeatsPerBar:
+                    timeSignature?.numerator ?? fallbackNumerator,
+              )) {
           final start = warp(click.tick);
           final end = warp(click.tick + _clickOptions.metronomeClickDurationTicks);
           await backend.scheduleNote(
@@ -148,15 +152,32 @@ const _clickOptions = MidiGenerationOptions();
 /// One click per beat of every played bar of [sequence] — the beats the
 /// mapper's own metronome track uses (`numerator` clicks across the bar,
 /// accent on the downbeat), in source ticks.
-List<({int tick, bool accent})> _metronomeClicks(MidiSequence sequence) => [
-      for (final bar in sequence.playedMeasures)
-        for (var beat = 0; beat < _beatsOf(bar); beat++)
-          (
-            tick: bar.startTick +
-                (beat * bar.durationTicks / _beatsOf(bar)).round(),
-            accent: beat == 0,
-          ),
+///
+/// A sequence built by hand has no bar timeline; it gets a click on every
+/// quarter up to its last tick, accented every [fallbackBeatsPerBar]. Without
+/// this, a hand-built sequence with a tempo change had no metronome at all.
+List<({int tick, bool accent})> _metronomeClicks(
+  MidiSequence sequence, {
+  int fallbackBeatsPerBar = 4,
+}) {
+  if (sequence.playedMeasures.isEmpty) {
+    final quarter = sequence.ticksPerQuarter;
+    final perBar = fallbackBeatsPerBar <= 0 ? 1 : fallbackBeatsPerBar;
+    return [
+      for (var beat = 0; beat * quarter < sequence.totalTicks; beat++)
+        (tick: beat * quarter, accent: beat % perBar == 0),
     ];
+  }
+  return [
+    for (final bar in sequence.playedMeasures)
+      for (var beat = 0; beat < _beatsOf(bar); beat++)
+        (
+          tick: bar.startTick +
+              (beat * bar.durationTicks / _beatsOf(bar)).round(),
+          accent: beat == 0,
+        ),
+  ];
+}
 
 int _beatsOf(MidiPlayedMeasure bar) {
   final n = bar.numerator ?? 4;

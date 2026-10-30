@@ -146,6 +146,29 @@ void main() {
       expect(clicks.first.midiNote, 76, reason: 'accented downbeat');
     });
 
+    test('a hand-built sequence with a tempo change still clicks', () async {
+      // No bar timeline (playedMeasures is empty): the clicks used to be
+      // generated from it alone, so there were none.
+      const sequence = MidiSequence(
+        ticksPerQuarter: 960,
+        tracks: [
+          MidiTrack(name: 'Conductor', channel: 0, events: [
+            MidiEvent.tempo(tick: 0, bpm: 60),
+            MidiEvent.tempo(tick: 1920, bpm: 120),
+          ]),
+          MidiTrack(name: 'Piano', channel: 0, events: [
+            MidiEvent.noteOn(tick: 0, channel: 0, note: 60, velocity: 90),
+            MidiEvent.noteOff(tick: 3840, channel: 0, note: 60),
+          ]),
+        ],
+      );
+      final backend = _FakeNativeBackend();
+      await MidiNativeSequenceBridge(backend).uploadSequence(sequence);
+      final clicks = backend.scheduledNotes.where((n) => n.channel == 9);
+      expect(clicks.map((c) => c.startTick), [0, 960, 1920, 2400]);
+      expect(clicks.map((c) => c.midiNote), [76, 77, 77, 77]);
+    });
+
     test('uploads sequence metadata, notes and metronome', () async {
       final staff = Staff(
         measures: [
