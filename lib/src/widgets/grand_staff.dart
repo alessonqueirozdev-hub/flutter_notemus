@@ -9,6 +9,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../core/core.dart';
+import '../interaction/score_taps.dart';
 import '../rendering/grand_staff_painter.dart';
 import '../smufl/smufl_metadata_loader.dart';
 import '../theme/music_score_theme.dart';
@@ -25,11 +26,19 @@ class ScoreView extends StatelessWidget {
   final MusicScoreTheme theme;
   final double staffSpace;
 
+  /// See [GrandStaff.onNoteTap].
+  final ValueChanged<ScoreNoteTap>? onNoteTap;
+
+  /// See [GrandStaff.onMeasureTap].
+  final ValueChanged<ScoreMeasureTap>? onMeasureTap;
+
   const ScoreView({
     super.key,
     required this.score,
     this.theme = const MusicScoreTheme(),
     this.staffSpace = 12.0,
+    this.onNoteTap,
+    this.onMeasureTap,
   });
 
   @override
@@ -37,7 +46,13 @@ class ScoreView extends StatelessWidget {
     final groups = score.staffGroups;
     if (groups.isEmpty) return const SizedBox.shrink();
     // All groups on one unified horizontal grid (a true multi-section system).
-    return GrandStaff(groups: groups, theme: theme, staffSpace: staffSpace);
+    return GrandStaff(
+      groups: groups,
+      theme: theme,
+      staffSpace: staffSpace,
+      onNoteTap: onNoteTap,
+      onMeasureTap: onMeasureTap,
+    );
   }
 }
 
@@ -73,6 +88,17 @@ class GrandStaff extends StatefulWidget {
   /// to 11 staff spaces (a comfortable grand-staff gap).
   final double? staffGap;
 
+  /// Called when a note is tapped, with the very [Note] from the caller's
+  /// staff (a tap on a chord reports its nearest note) and the bar and staff
+  /// it is on. Resolved through `ScoreHitTester`, so the stem and flag count
+  /// as the note too.
+  final ValueChanged<ScoreNoteTap>? onNoteTap;
+
+  /// Called when a tap lands inside a bar's horizontal span, with its index
+  /// and printed number and the staff nearest the tap. Fires together with
+  /// [onNoteTap] when the tap is also on a note.
+  final ValueChanged<ScoreMeasureTap>? onMeasureTap;
+
   const GrandStaff({
     super.key,
     this.group,
@@ -80,6 +106,8 @@ class GrandStaff extends StatefulWidget {
     this.theme = const MusicScoreTheme(),
     this.staffSpace = 12.0,
     this.staffGap,
+    this.onNoteTap,
+    this.onMeasureTap,
   }) : assert(group != null || groups != null,
             'Provide either group or groups');
 
@@ -112,6 +140,30 @@ class _GrandStaffState extends State<GrandStaff> {
   }
 
   double get _gap => widget.staffGap ?? widget.staffSpace * 11.0;
+
+  /// Wraps [child] in a tap detector only when a callback wants taps, so a
+  /// plain score stays out of the gesture arena (and keeps scrolling crisp).
+  Widget _tappable(GrandStaffPainter painter, Widget child) {
+    final onNoteTap = widget.onNoteTap;
+    final onMeasureTap = widget.onMeasureTap;
+    if (onNoteTap == null && onMeasureTap == null) return child;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapUp: (details) {
+        if (onMeasureTap != null) {
+          final bar = painter.measureTapAt(details.localPosition,
+              globalPosition: details.globalPosition);
+          if (bar != null) onMeasureTap(bar);
+        }
+        if (onNoteTap != null) {
+          final note = painter.noteTapAt(details.localPosition,
+              globalPosition: details.globalPosition);
+          if (note != null) onNoteTap(note);
+        }
+      },
+      child: child,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -159,9 +211,12 @@ class _GrandStaffState extends State<GrandStaff> {
               child: SizedBox(
                 width: canvasWidth,
                 height: height,
-                child: CustomPaint(
-                  size: Size(canvasWidth, height),
-                  painter: painter,
+                child: _tappable(
+                  painter,
+                  CustomPaint(
+                    size: Size(canvasWidth, height),
+                    painter: painter,
+                  ),
                 ),
               ),
             );

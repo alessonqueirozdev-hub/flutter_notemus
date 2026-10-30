@@ -32,6 +32,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'core/core.dart'; // Musical model types live in core/
+import 'src/interaction/score_hit_tester.dart';
+import 'src/interaction/score_taps.dart';
 import 'src/layout/layout_engine.dart';
 import 'src/parsers/json_parser.dart';
 import 'src/parsers/mei_parser.dart';
@@ -103,6 +105,7 @@ export 'src/rendering/gregorian/gabc_parser.dart' show GabcParser, GabcResult;
 export 'src/layout/collision_detector.dart';
 // Selection / hit-testing over a laid-out score (editor infrastructure).
 export 'src/interaction/score_hit_tester.dart';
+export 'src/interaction/score_taps.dart' show ScoreNoteTap, ScoreMeasureTap;
 export 'src/widgets/grand_staff.dart' show GrandStaff, ScoreView;
 
 // PDF export is a headline feature of 2.7.x, but until 2.7.1 `PdfExporter`,
@@ -187,6 +190,16 @@ class MusicScore extends StatefulWidget {
   /// while larger values prioritize readability over guaranteed fit.
   final double minimumVerticalFitScale;
 
+  /// Called when a note is tapped, with the very [Note] from [staff] (a tap
+  /// on a chord reports its nearest note) and its bar. Resolved through
+  /// [ScoreHitTester], so the stem and flag count as the note too.
+  final ValueChanged<ScoreNoteTap>? onNoteTap;
+
+  /// Called when a tap lands inside a bar's horizontal span, with its index
+  /// and printed number. Fires together with [onNoteTap] when the tap is also
+  /// on a note.
+  final ValueChanged<ScoreMeasureTap>? onMeasureTap;
+
   const MusicScore({
     super.key,
     required this.staff,
@@ -197,6 +210,8 @@ class MusicScore extends StatefulWidget {
     this.minResponsiveScale = 0.72,
     this.preventVerticalOverflow = true,
     this.minimumVerticalFitScale = 0.4,
+    this.onNoteTap,
+    this.onMeasureTap,
   });
 
   factory MusicScore.fromJson({
@@ -330,6 +345,67 @@ class _MusicScoreState extends State<MusicScore> {
   /// 0.01 px in the cache key so sub-pixel layout noise does not invalidate an
   /// otherwise identical layout. The engine itself still receives the exact
   /// values.
+  /// Hit tester for the layout last tapped, rebuilt only when the layout
+  /// (and so every position) changes.
+  _LayoutSnapshot? _testerLayout;
+  ScoreHitTester? _tester;
+
+  /// Wraps [child] (the score's `CustomPaint`) in a tap detector, only when a
+  /// callback wants taps so a plain score stays out of the gesture arena.
+  Widget _tappable(_LayoutSnapshot layout, double staffSpace, Widget child) {
+    final onNoteTap = widget.onNoteTap;
+    final onMeasureTap = widget.onMeasureTap;
+    if (onNoteTap == null && onMeasureTap == null) return child;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapUp: (details) {
+        final elements = layout.result.elements;
+        // The painter draws everything shifted down by the top inset.
+        final point = details.localPosition -
+            Offset(0, layout.engine.contentTopOverflow(elements));
+        if (onMeasureTap != null) {
+          // Only the tapped system: wrapped systems share one x range.
+          final system = systemAtY(elements, point.dy);
+          final index = measureIndexAtX(
+              elements.where((e) => e.system == system), point.dx,
+              engine: layout.engine);
+          if (index != null) {
+            onMeasureTap(ScoreMeasureTap(
+              measureIndex: index,
+              measureNumber: layout.engine.measureNumbers[index] ?? index + 1,
+              staffIndex: 0,
+              localPosition: details.localPosition,
+              globalPosition: details.globalPosition,
+            ));
+          }
+        }
+        if (onNoteTap != null) {
+          if (!identical(_testerLayout, layout)) {
+            _testerLayout = layout;
+            _tester = ScoreHitTester(
+              elements: elements,
+              staffSpace: staffSpace,
+              engine: layout.engine,
+            );
+          }
+          final hit = _tester!.hitTest(point, tolerance: staffSpace);
+          final note =
+              hit == null ? null : noteForHit(hit, layout.engine, point);
+          if (hit != null && note != null) {
+            onNoteTap(ScoreNoteTap(
+              note: note,
+              measureIndex: hit.measureIndex,
+              staffIndex: 0,
+              localPosition: details.localPosition,
+              globalPosition: details.globalPosition,
+            ));
+          }
+        }
+      },
+      child: child,
+    );
+  }
+
   _LayoutSnapshot _resolveLayout({
     required double viewportWidth,
     required double effectiveStaffSpace,
@@ -494,21 +570,25 @@ class _MusicScoreState extends State<MusicScore> {
                   height: centeredCanvasHeight,
                   child: Align(
                     alignment: Alignment.centerLeft,
-                    child: RepaintBoundary(
-                      child: CustomPaint(
-                        size: Size(canvasWidth, totalHeight),
-                        painter: MusicScorePainter(
-                          positionedElements: layout.result.elements,
-                          positionedElementsSignature: layout.result.signature,
-                          metadata: _metadata,
-                          theme: widget.theme,
-                          staffSpace: effectiveStaffSpace,
-                          layoutEngine: layout.engine,
-                          topInset: layout.engine
-                              .contentTopOverflow(layout.result.elements),
-                          viewportSize: viewportSize,
-                          horizontalController: _horizontalController,
-                          verticalController: _verticalController,
+                    child: _tappable(
+                      layout,
+                      effectiveStaffSpace,
+                      RepaintBoundary(
+                        child: CustomPaint(
+                          size: Size(canvasWidth, totalHeight),
+                          painter: MusicScorePainter(
+                            positionedElements: layout.result.elements,
+                            positionedElementsSignature: layout.result.signature,
+                            metadata: _metadata,
+                            theme: widget.theme,
+                            staffSpace: effectiveStaffSpace,
+                            layoutEngine: layout.engine,
+                            topInset: layout.engine
+                                .contentTopOverflow(layout.result.elements),
+                            viewportSize: viewportSize,
+                            horizontalController: _horizontalController,
+                            verticalController: _verticalController,
+                          ),
                         ),
                       ),
                     ),
