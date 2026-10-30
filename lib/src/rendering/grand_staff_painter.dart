@@ -105,6 +105,27 @@ class GrandStaffPainter extends CustomPainter {
   /// All staves across all groups, top to bottom.
   List<Staff> get _allStaves => [for (final g in groups) ...g.staves];
 
+  /// Display number of the bar just before index [a] on [staff]: what a
+  /// system starting at [a] counts on from. A staff shorter than the score has
+  /// no bar there, so the count runs on past its last bar; looking it up
+  /// directly threw while the painter was being built.
+  int _numberBefore(Staff staff, int a) {
+    if (a == 0) return 0;
+    final numbers = _measureNumbers[staff]!;
+    final known = numbers[a - 1];
+    if (known != null) return known;
+    if (numbers.isEmpty) return a;
+    return numbers[numbers.length - 1]! + (a - numbers.length);
+  }
+
+  /// Display number of every bar, per staff, computed once for the whole
+  /// score so each system can continue the count from the bar before it.
+  late final Map<Staff, Map<int, int>> _measureNumbers = Map.identity()
+    ..addAll({
+      for (final staff in _allStaves)
+        staff: LayoutEngine.displayMeasureNumbers(staff.measures),
+    });
+
   /// Aligned, positioned elements for one system, per staff (top to bottom).
   ///
   /// Exposed so the shared-time-grid invariant can be checked end to end: two
@@ -234,7 +255,12 @@ class GrandStaffPainter extends CustomPainter {
   List<_StaffLayout> _layoutSystem(int a, int b) {
     final layouts = [
       for (final staff in _allStaves)
-        _layoutSubStaff(_systemStaff(staff, a, b), measureOffset: a),
+        _layoutSubStaff(
+          _systemStaff(staff, a, b),
+          // The number of the bar before the system, not its index: a pickup
+          // is not counted, so on a staff that opens with one the two differ.
+          measureOffset: _numberBefore(staff, a),
+        ),
     ];
     _alignStaves(layouts);
     // An UNBEAMED cross-staff note is moved onto the staff it was sent to, so
@@ -473,7 +499,9 @@ class GrandStaffPainter extends CustomPainter {
         ..beamingMode = orig.beamingMode
         ..manualBeamGroups = orig.manualBeamGroups
         ..inheritedTimeSignature = orig.inheritedTimeSignature ?? inheritedMeter
-        ..number = orig.number;
+        ..number = orig.number
+        ..isImplicit = orig.isImplicit
+        ..isIrregular = orig.isIrregular;
       copy.elements.addAll(restated);
       copy.elements.addAll(orig.elements);
       for (final voice in orig.sortedVoices) {
@@ -488,6 +516,8 @@ class GrandStaffPainter extends CustomPainter {
       manualBeamGroups: orig.manualBeamGroups,
       inheritedTimeSignature: orig.inheritedTimeSignature ?? inheritedMeter,
       number: orig.number,
+      isImplicit: orig.isImplicit,
+      isIrregular: orig.isIrregular,
     );
     copy.elements.addAll(restated);
     copy.elements.addAll(orig.elements);

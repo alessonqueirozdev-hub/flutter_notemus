@@ -952,13 +952,14 @@ class LayoutEngine {
   // Validation configuration (silent by default).
   final bool verboseValidation;
 
-  /// Number of measures that precede this [staff] in the real score.
+  /// Display number of the bar just before this [staff] in the real score —
+  /// the number of counted bars that precede it.
   ///
   /// A wrapped system is laid out from a SUB-staff, so its measure indices
   /// restart at 0. Rather than stamping the absolute number onto the caller's
   /// `Measure` objects (a surprising mutation of the model, and one that gets
-  /// anacrusis numbering wrong), the offset is passed here and applied only
-  /// when the measure carries no explicit `Measure.number`.
+  /// anacrusis numbering wrong), the offset is passed here and the count
+  /// continues from it (see [displayMeasureNumbers]).
   final int measureNumberOffset;
 
   // Fix: SMuFL: Larguras agora consultadas dinamicamente of the metadata
@@ -1118,18 +1119,20 @@ class LayoutEngine {
       _getGlyphWidth('accidentalFlat', _accidentalFlatWidthFallback);
 
   /// Display number for each measure index, honouring `Measure.number`
-  /// (MEI `<measure @n>`) and falling back to 1-based position.
+  /// (MEI `<measure @n>`) and otherwise counting bars from 1.
   ///
   /// The model has carried `Measure.number` since 2.x but nothing ever drew it;
   /// measure numbers are part of any professional score, so `StaffRenderer`
   /// now reads this map.
-  Map<int, int> get measureNumbers {
-    final result = <int, int>{};
-    for (var i = 0; i < staff.measures.length; i++) {
-      result[i] = staff.measures[i].number ?? (i + 1 + measureNumberOffset);
-    }
-    return result;
-  }
+  Map<int, int> get measureNumbers =>
+      displayMeasureNumbers(staff.measures, offset: measureNumberOffset);
+
+  /// Display numbers for [measures]; see [Measure.displayNumbers].
+  static Map<int, int> displayMeasureNumbers(
+    List<Measure> measures, {
+    int offset = 0,
+  }) =>
+      Measure.displayNumbers(measures, offset: offset);
 
   /// Returns os Advanced Beam Groups Calculados pelo last layout
   List<AdvancedBeamGroup> get advancedBeamGroups =>
@@ -1290,7 +1293,7 @@ class LayoutEngine {
         final validation = MeasureValidator.validateWithTimeSignature(
           measure,
           timeSignatureToUse,
-          allowAnacrusis: isFirst && i == 0,
+          allowAnacrusis: (isFirst && i == 0) || measure.lastsAsLongAsContent,
         );
         if (validation.isValid) {
           validMeasures++;
@@ -3502,10 +3505,8 @@ class LayoutEngine {
     }
     if (right <= availableWidth) return;
 
-    final number = measureIndex < staff.measures.length
-        ? (staff.measures[measureIndex].number ??
-            (measureIndex + 1 + measureNumberOffset))
-        : measureIndex + 1 + measureNumberOffset;
+    final number =
+        measureNumbers[measureIndex] ?? measureIndex + 1 + measureNumberOffset;
     warnings.add(
       'measure $number (index $measureIndex) does not fit: spacing compression '
       'bottomed out at the ${minimumSpacingScale.toStringAsFixed(2)} floor and '

@@ -56,6 +56,8 @@ class JsonMusicExporter {
   static Map<String, dynamic> _measure(Measure measure) {
     final map = <String, dynamic>{
       if (measure.number != null) 'number': measure.number,
+      if (measure.isImplicit) 'implicit': true,
+      if (measure.isIrregular) 'irregular': true,
       if (!measure.autoBeaming) 'autoBeaming': false,
       'elements': [
         for (final element in measure.elements) ...[

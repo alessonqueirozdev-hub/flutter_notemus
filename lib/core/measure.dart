@@ -4,6 +4,7 @@ import 'chord.dart';
 import 'musical_element.dart';
 import 'note.dart';
 import 'rest.dart';
+import 'space.dart';
 import 'time_signature.dart';
 import 'tuplet.dart';
 import 'duration.dart';
@@ -100,6 +101,33 @@ class Measure {
   /// null = automatic numbering by the layout engine.
   int? number;
 
+  /// Whether this bar is left out of the bar count and lasts only as long as
+  /// its content: a pickup (anacrusis), or the second half of a bar split
+  /// across a repeat or a system. MusicXML `<measure implicit="yes">`; MEI
+  /// `<measure metcon="false">` on a pickup. See [isIrregular] for a short
+  /// bar that still counts.
+  ///
+  /// Without it a one-quarter pickup in 4/4 played as a full bar (three beats
+  /// of silence before bar 1) and was numbered 1. With it, MIDI sizes the bar
+  /// from its content rather than its meter, layout does not count it when
+  /// numbering, and the layout check tolerates it being short wherever it
+  /// stands — not only as the first bar of the staff.
+  bool isImplicit;
+
+  /// Whether this bar's content does not fill its meter and the bar still
+  /// COUNTS: it lasts only as long as its content, like [isImplicit], but
+  /// keeps its place in the numbering. MEI `<measure metcon="false">` away
+  /// from a pickup.
+  ///
+  /// Counting and duration are separate facts. With one flag for both, a
+  /// mid-piece half-note bar in 4/4 either stole the next bar's number or
+  /// played two beats of silence.
+  bool isIrregular;
+
+  /// Whether the bar lasts as long as its content rather than its meter:
+  /// [isImplicit] or [isIrregular].
+  bool get lastsAsLongAsContent => isImplicit || isIrregular;
+
   /// Creates a new [Measure].
   ///
   /// [autoBeaming] defaults to `true` so that eighth notes and smaller are
@@ -120,6 +148,8 @@ class Measure {
     this.manualBeamGroups = const [],
     this.inheritedTimeSignature,
     this.number,
+    this.isImplicit = false,
+    this.isIrregular = false,
   });
 
   /// Voice number attributed to elements that do not declare one.
@@ -263,6 +293,33 @@ class Measure {
     return ts.measureValue - currentMusicalValue;
   }
 
+  /// Display numbers for [measures], counting on from [offset] (the number of
+  /// the bar before the first one).
+  ///
+  /// An explicit [Measure.number] wins and the count continues from it. A bar
+  /// marked [Measure.isImplicit] is not counted: it shows the number of the bar
+  /// before it, so a leading pickup is bar 0 and the first full bar is bar 1.
+  /// Counting by position numbered the pickup 1 and every bar after it one too
+  /// high.
+  static Map<int, int> displayNumbers(
+    List<Measure> measures, {
+    int offset = 0,
+  }) {
+    final result = <int, int>{};
+    var running = offset;
+    for (var i = 0; i < measures.length; i++) {
+      final measure = measures[i];
+      final explicit = measure.number;
+      if (explicit != null) {
+        running = explicit;
+      } else if (!measure.isImplicit) {
+        running++;
+      }
+      result[i] = running;
+    }
+    return result;
+  }
+
   /// Calculates the rhythmic value occupied by [element].
   ///
   /// Returns 0.0 for elements that do not occupy musical time (clefs, key
@@ -299,6 +356,10 @@ class Measure {
     if (element is Note) {
       return element.isGraceNote ? 0.0 : element.duration.realValue;
     } else if (element is Rest) {
+      return element.duration.realValue;
+    } else if (element is Space) {
+      // Silent but timed: an imported `<forward>` gap. Counted as 0, notes
+      // after the gap were laid out earlier than MIDI plays them.
       return element.duration.realValue;
     } else if (element is Chord) {
       return element.duration.realValue;

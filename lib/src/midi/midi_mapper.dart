@@ -11,6 +11,7 @@ import '../../core/pitch.dart';
 import '../../core/repeat.dart';
 import '../../core/rest.dart';
 import '../../core/score.dart';
+import '../../core/space.dart';
 import '../../core/staff.dart';
 import '../../core/tempo.dart';
 import '../../core/text.dart';
@@ -502,6 +503,17 @@ class _TrackEventBuilder {
     }
 
     if (element is Rest) {
+      return _durationToTicks(
+        duration: element.duration,
+        tupletMultiplier: tupletMultiplier,
+        isGraceNote: false,
+        options: options,
+      );
+    }
+
+    // Silent, but it occupies time: an imported `<forward>` gap. Skipping it
+    // made the note after the gap enter early, by the whole gap.
+    if (element is Space) {
       return _durationToTicks(
         duration: element.duration,
         tupletMultiplier: tupletMultiplier,
@@ -1201,7 +1213,10 @@ int _measureLengthTicks({
   required TimeSignature? timeSignature,
   required int ticksPerQuarter,
 }) {
-  if (timeSignature != null) {
+  // A pickup or an irregular bar lasts as long as its content. Sized from
+  // the meter, a one-quarter pickup in 4/4 was followed by three beats of
+  // silence.
+  if (timeSignature != null && !measure.lastsAsLongAsContent) {
     final beatsInQuarter =
         timeSignature.numerator * (4.0 / timeSignature.denominator);
     final ticks = (beatsInQuarter * ticksPerQuarter).round();
@@ -1234,10 +1249,17 @@ double _elementsLengthInQuarterNotes(
   double total = 0.0;
   for (final element in elements) {
     if (element is Note) {
+      // A grace note steals time from its neighbour (see `_emitNote`).
+      if (element.isGraceNote) continue;
       total += element.duration.realValue * 4.0 * tupletMultiplier;
       continue;
     }
     if (element is Rest) {
+      total += element.duration.realValue * 4.0 * tupletMultiplier;
+      continue;
+    }
+    // A `<forward>` gap is silent but still part of the bar.
+    if (element is Space) {
       total += element.duration.realValue * 4.0 * tupletMultiplier;
       continue;
     }

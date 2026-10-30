@@ -1197,6 +1197,11 @@ class _JsonImportParser {
                 _parseBeamingMode(json['beamingMode']) ?? BeamingMode.automatic,
             manualBeamGroups: _parseManualBeamGroups(json['manualBeamGroups']),
           );
+    // `JsonMusicExporter` has always written "number"; nothing read it back.
+    measure
+      ..number = _asInt(json['number'])
+      ..isImplicit = _asBool(json['implicit']) ?? false
+      ..isIrregular = _asBool(json['irregular']) ?? false;
 
     final List<MusicalElement> leadingElements = <MusicalElement>[];
 
@@ -2134,6 +2139,11 @@ class _MusicXmlImportParser {
   /// following notes instead of being ignored (F-07).
   Measure _parseMeasure(XmlElement measureElement, {int? staffFilter}) {
     _measureLabel = measureElement.getAttribute('number') ?? '?';
+    // `@number` is a token, not an integer ("X1" is legal); a bar whose
+    // number does not parse is left for the engine to count.
+    final int? number = int.tryParse(_measureLabel);
+    // A pickup, or a bar excluded from the count (MusicXML `@implicit`).
+    final bool isImplicit = measureElement.getAttribute('implicit') == 'yes';
     final Map<int, _VoiceAccumulator> voices = <int, _VoiceAccumulator>{};
     final List<MusicalElement> metadataElements = <MusicalElement>[];
     TimeSignature? currentTimeSignature;
@@ -2155,6 +2165,11 @@ class _MusicXmlImportParser {
     int syntheticVoice = 1;
     // Padding is only emitted for gaps opened by an explicit <forward>.
     bool sawForward = false;
+    // Per voice: where its latest `<forward>` left the cursor. A forward is
+    // only turned into Space when a later note of that voice needs the gap, so
+    // one ending the bar would otherwise leave no trace — and an implicit bar,
+    // which lasts as long as its content, would end early by the gap.
+    final Map<int, double> forwardEnds = <int, double>{};
     // Cross-staff routing (multi-staff parts only): a beamed voice whose notes
     // change <staff> mid-beam is kept on its home (beam-start) staff with a
     // crossStaffMove so the beam survives.
@@ -2324,6 +2339,11 @@ class _MusicXmlImportParser {
             cursor += forwardTicks;
             if (cursor > maxCursor) maxCursor = cursor;
             sawForward = true;
+            final int forwardStaff = _asInt(_childText(child, 'staff')) ?? 1;
+            if (staffFilter == null || forwardStaff == staffFilter) {
+              forwardEnds[_asInt(_childText(child, 'voice')) ?? syntheticVoice] =
+                  cursor;
+            }
             // A `<forward>` is padded with invisible Space, so an absurd one
             // does not throw — it inflates the bar. Measured,
             // `<forward><duration>400</duration></forward>` at divisions=4
@@ -2347,21 +2367,46 @@ class _MusicXmlImportParser {
       }
     }
 
-    if (voices.isEmpty || (voices.length == 1 && !voices.containsKey(2))) {
+    // Materialise a gap a trailing `<forward>` left in a voice that has
+    // content. A voice made of nothing but forwards is not created: an empty
+    // spacer voice would turn a one-voice bar into a two-voice one.
+    forwardEnds.forEach((voiceNumber, end) {
+      final accumulator = voices[voiceNumber];
+      if (accumulator == null) return;
+      _padVoiceToOnset(
+        accumulator: accumulator,
+        voiceFilled: voiceFilled,
+        voiceNumber: voiceNumber,
+        onset: end,
+      );
+    });
+
+    // A plain Measure is voice 1 by definition, so only a bar whose sole
+    // voice IS voice 1 may become one. Testing `!containsKey(2)` instead sent
+    // a bar holding only voice 5 down this path, which then read `voice(1)`
+    // and dropped every note — MuseScore numbers a piano's lower staff from
+    // voice 5, so on its reference export a left-hand whole note vanished
+    // from every bar that opened no clef/key/meter. Reading the lone voice
+    // here instead kept the notes but filed them under voice 1, out of reach
+    // of MIDI's per-voice solo/mute.
+    if (voices.isEmpty || (voices.length == 1 && voices.containsKey(1))) {
+      final only = voice(1);
       // A tuplet still open at the barline has to be closed here too. The
       // multi-voice branch below always did; this one did not, and once M-03
       // let `<time-modification>` open groups without a `<tuplet type="stop">`
       // to close them, a triplet ending a bar would have been dropped whole.
-      voice(1).finishTuplet();
-      final measure = Measure();
-      for (final element in voice(1).elements) {
+      only.finishTuplet();
+      final measure = Measure(number: number, isImplicit: isImplicit);
+      for (final element in only.elements) {
         _appendElementToMeasure(measure, element);
       }
       _validateMeasureValue(measure, maxCursor);
       return measure;
     }
 
-    final measure = MultiVoiceMeasure();
+    final measure = MultiVoiceMeasure()
+      ..number = number
+      ..isImplicit = isImplicit;
 
     final voiceNumbers = voices.keys.toList()..sort();
     for (final number in voiceNumbers) {
@@ -3668,7 +3713,11 @@ class _MeiImportParser {
             ),
         ];
         openEnding = ending;
-        staff.add(_parseMeasure(measure, leadingDefaults: lead));
+        staff.add(_parseMeasure(
+          measure,
+          leadingDefaults: lead,
+          isFirst: staff.measures.isEmpty,
+        ));
         first = false;
       }
     }
@@ -3755,7 +3804,17 @@ class _MeiImportParser {
   Measure _parseMeasure(
     XmlElement measureElement, {
     List<MusicalElement> leadingDefaults = const <MusicalElement>[],
+    bool isFirst = false,
   }) {
+    final int? number = int.tryParse(measureElement.getAttribute('n') ?? '');
+    // `@metcon="false"` says only that the content does not fill the meter;
+    // MEI has no "not counted" flag. On a pickup (the bar that opens the
+    // piece, or one numbered 0) it means an uncounted bar. Anywhere else it is
+    // an irregular bar that still counts — marking it implicit made the next
+    // bar repeat its number — but it still lasts only as long as its content.
+    final bool shortOfMeter = measureElement.getAttribute('metcon') == 'false';
+    final bool isImplicit = shortOfMeter && (isFirst || number == 0);
+    final bool isIrregular = shortOfMeter && !isImplicit;
     final Map<int, _VoiceAccumulator> voices = <int, _VoiceAccumulator>{};
     final List<MusicalElement> metadataElements = <MusicalElement>[];
     TimeSignature? currentTimeSignature;
@@ -3912,15 +3971,25 @@ class _MeiImportParser {
       appendLead(rightBarline);
     }
 
-    if (voices.isEmpty || (voices.length == 1 && !voices.containsKey(2))) {
-      final measure = Measure();
-      for (final element in voice(1).elements) {
+    // Only a bar whose sole layer is 1 becomes a plain (voice-1) Measure;
+    // see the MusicXML importer.
+    if (voices.isEmpty || (voices.length == 1 && voices.containsKey(1))) {
+      final only = voice(1);
+      final measure = Measure(
+        number: number,
+        isImplicit: isImplicit,
+        isIrregular: isIrregular,
+      );
+      for (final element in only.elements) {
         _appendElementToMeasure(measure, element);
       }
       return measure;
     }
 
-    final measure = MultiVoiceMeasure();
+    final measure = MultiVoiceMeasure()
+      ..number = number
+      ..isImplicit = isImplicit
+      ..isIrregular = isIrregular;
 
     final voiceNumbers = voices.keys.toList()..sort();
     for (final number in voiceNumbers) {
