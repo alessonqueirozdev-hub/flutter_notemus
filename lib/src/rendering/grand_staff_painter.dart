@@ -11,6 +11,8 @@
 import 'package:flutter/material.dart';
 
 import '../../core/core.dart';
+import '../interaction/score_hit_tester.dart';
+import '../interaction/score_taps.dart';
 import '../layout/onset_grid.dart';
 import '../layout/layout_engine.dart';
 import '../smufl/smufl_metadata_loader.dart';
@@ -245,10 +247,104 @@ class GrandStaffPainter extends CustomPainter {
         groups = groups ?? [staffGroup!],
         staffGap = staffGap ?? staffSpace * 11.0 {
     _bracePad = staffSpace * 2.2;
-    final ranges = _computeSystemRanges();
+    _ranges = _computeSystemRanges();
     _systems = [
-      for (final range in ranges) _layoutSystem(range.start, range.end),
+      for (final range in _ranges) _layoutSystem(range.start, range.end),
     ];
+  }
+
+  /// First and last measure index of each system, parallel to [_systems].
+  late final List<({int start, int end})> _ranges;
+
+  // --- Hit testing ----------------------------------------------------------
+
+  /// One [ScoreHitTester] per staff of a system, built on first use.
+  final Map<int, List<ScoreHitTester>> _testers = {};
+
+  List<ScoreHitTester> _testersFor(int systemIndex) =>
+      _testers.putIfAbsent(systemIndex, () {
+        final lists = alignedSystem(systemIndex);
+        final layouts = _systems[systemIndex];
+        return [
+          for (var i = 0; i < lists.length; i++)
+            ScoreHitTester(
+              elements: lists[i],
+              staffSpace: staffSpace,
+              engine: layouts[i].engine,
+            ),
+        ];
+      });
+
+  /// The system under [point] and [point] in that system's own coordinates
+  /// (the space every staff layout is in before the paint pass translates
+  /// it), or null on an empty painter.
+  ({int system, Offset local})? _locate(Offset point) {
+    if (_systems.isEmpty) return null;
+    final x = point.dx - _bracePad;
+    final y = point.dy - contentTopInset;
+    final system =
+        (y / systemBlockHeight).floor().clamp(0, _systems.length - 1);
+    return (system: system, local: Offset(x, y - system * systemBlockHeight));
+  }
+
+  /// The note under [point] (canvas coordinates, as a `GestureDetector`
+  /// around this painter's `CustomPaint` reports them), resolved through
+  /// [ScoreHitTester] on every staff of the system and taking the nearest.
+  /// [tolerance] is in pixels; it defaults to one staff space.
+  ScoreNoteTap? noteTapAt(
+    Offset point, {
+    Offset? globalPosition,
+    double? tolerance,
+  }) {
+    final located = _locate(point);
+    if (located == null) return null;
+    final testers = _testersFor(located.system);
+    final layouts = _systems[located.system];
+    ({ScoreHit hit, int staff, Offset local})? best;
+    for (var i = 0; i < testers.length; i++) {
+      final local = located.local - Offset(0, i * staffGap);
+      final hit =
+          testers[i].hitTest(local, tolerance: tolerance ?? staffSpace);
+      if (hit == null) continue;
+      if (best == null || hit.distance < best.hit.distance) {
+        best = (hit: hit, staff: i, local: local);
+      }
+    }
+    if (best == null) return null;
+    final note =
+        noteForHit(best.hit, layouts[best.staff].engine, best.local);
+    if (note == null) return null;
+    return ScoreNoteTap(
+      note: note,
+      measureIndex: _ranges[located.system].start + best.hit.measureIndex,
+      staffIndex: best.staff,
+      localPosition: point,
+      globalPosition: globalPosition ?? point,
+    );
+  }
+
+  /// The bar whose horizontal span contains [point], on the staff whose
+  /// middle line is nearest it. Null left of the first bar of the system.
+  ScoreMeasureTap? measureTapAt(Offset point, {Offset? globalPosition}) {
+    final located = _locate(point);
+    if (located == null) return null;
+    final lists = alignedSystem(located.system);
+    if (lists.isEmpty) return null;
+    final staff = ((located.local.dy - _baseline0) / staffGap)
+        .round()
+        .clamp(0, lists.length - 1);
+    final local = measureIndexAtX(lists[staff], located.local.dx);
+    if (local == null) return null;
+    final index = _ranges[located.system].start + local;
+    final staffModel = _allStaves[staff];
+    return ScoreMeasureTap(
+      measureIndex: index,
+      measureNumber: _measureNumbers[staffModel]![index] ??
+          _numberBefore(staffModel, index + 1),
+      staffIndex: staff,
+      localPosition: point,
+      globalPosition: globalPosition ?? point,
+    );
   }
 
   /// Lays out + aligns one system's measures (inclusive [a]..[b]) across staves.

@@ -6,6 +6,20 @@ The format is based on Keep a Changelog and this project follows Semantic Versio
 
 ## [Unreleased]
 
+### Added — tap callbacks
+
+- **`onNoteTap` and `onMeasureTap` on `MusicScore`, `GrandStaff` and
+  `ScoreView`.** A note tap reports the caller's own `Note` (a chord tap reports
+  the chord note nearest the tap), with its bar, staff and local/global
+  position, as a `ScoreNoteTap`. A bar tap reports the bar's index and
+  printed number (a pickup is 0) as a `ScoreMeasureTap`. Both are resolved
+  through `ScoreHitTester`, so a tap lands on the boxes the 2.8.0 hit-test
+  fixes measured: the stem tip, the whole flag, the full width of a rest.
+  `GrandStaffPainter.noteTapAt` / `measureTapAt` do the same for a custom
+  host. Without a callback, no gesture detector is added. Third slice of
+  @zamvar's fork (Discussion #50), which resolved taps with geometry of its
+  own; this rebuilds them on the shared hit tester.
+
 The first two slices of @zamvar's fork (`codex/note-tap`), ported onto the
 2.8 engine — see Discussion #50. Their MuseScore 4.7.4 reference export
 (CC0-1.0) now ships as a test fixture, and on its first import it surfaced a
