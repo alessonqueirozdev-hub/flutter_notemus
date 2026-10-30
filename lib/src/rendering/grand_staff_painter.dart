@@ -105,6 +105,19 @@ class GrandStaffPainter extends CustomPainter {
   /// All staves across all groups, top to bottom.
   List<Staff> get _allStaves => [for (final g in groups) ...g.staves];
 
+  /// Display number of the bar just before index [a] on [staff]: what a
+  /// system starting at [a] counts on from. A staff shorter than the score has
+  /// no bar there, so the count runs on past its last bar; looking it up
+  /// directly threw while the painter was being built.
+  int _numberBefore(Staff staff, int a) {
+    if (a == 0) return 0;
+    final numbers = _measureNumbers[staff]!;
+    final known = numbers[a - 1];
+    if (known != null) return known;
+    if (numbers.isEmpty) return a;
+    return numbers[numbers.length - 1]! + (a - numbers.length);
+  }
+
   /// Display number of every bar, per staff, computed once for the whole
   /// score so each system can continue the count from the bar before it.
   late final Map<Staff, Map<int, int>> _measureNumbers = Map.identity()
@@ -246,9 +259,7 @@ class GrandStaffPainter extends CustomPainter {
           _systemStaff(staff, a, b),
           // The number of the bar before the system, not its index: a pickup
           // is not counted, so on a staff that opens with one the two differ.
-          measureOffset: a == 0
-              ? 0
-              : _measureNumbers[staff]![a - 1]!,
+          measureOffset: _numberBefore(staff, a),
         ),
     ];
     _alignStaves(layouts);
