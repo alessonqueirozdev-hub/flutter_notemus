@@ -82,6 +82,93 @@ void main() {
   });
 
   group('MidiNativeSequenceBridge', () {
+    // The backend takes ONE tempo and converts every tick with it, so a
+    // tempo change after tick 0 used to be ignored: this bar played at 60 bpm
+    // throughout, the last two quarters a full second too slow.
+    test('a tempo change reaches native playback', () async {
+      Note q(String step) => Note(
+            pitch: Pitch(step: step, octave: 4),
+            duration: const Duration(DurationType.quarter),
+          );
+      final staff = Staff(measures: [
+        Measure()
+          ..add(TimeSignature(numerator: 4, denominator: 4))
+          ..add(TempoMark(beatUnit: DurationType.quarter, bpm: 60))
+          ..add(q('C'))
+          ..add(q('D'))
+          ..add(TempoMark(beatUnit: DurationType.quarter, bpm: 120))
+          ..add(q('E'))
+          ..add(q('F')),
+      ]);
+      final sequence = MidiMapper.fromStaff(staff);
+      final backend = _FakeNativeBackend();
+      await MidiNativeSequenceBridge(backend)
+          .uploadSequence(sequence, includeMetronome: false);
+
+      expect(backend.tempo, 60);
+      // At 960 ticks per quarter and 60 bpm, a tick is 1/960 s. E and F are
+      // quarters at 120 bpm: half a second each, so 480 ticks, at 1920/2400.
+      expect(
+        backend.scheduledNotes.map((n) => (n.startTick, n.durationTicks)),
+        [(0, 960), (960, 960), (1920, 480), (2400, 480)],
+      );
+      // ...which is exactly where PlaybackPlan puts them.
+      final plan = PlaybackPlan.fromSequence(sequence);
+      expect(plan.timeAtTick(2880).inMilliseconds, 2500);
+    });
+
+    test('after a tempo change the metronome follows the beats', () async {
+      // The backend clicks on a grid at the one tempo it was given: after
+      // 60 -> 120 bpm its clicks stayed a second apart while the notes moved
+      // to half-second beats. The bridge now schedules the clicks itself.
+      Note q(String step) => Note(
+            pitch: Pitch(step: step, octave: 4),
+            duration: const Duration(DurationType.quarter),
+          );
+      final staff = Staff(measures: [
+        Measure()
+          ..add(TimeSignature(numerator: 4, denominator: 4))
+          ..add(TempoMark(beatUnit: DurationType.quarter, bpm: 60))
+          ..add(q('C'))
+          ..add(q('D'))
+          ..add(TempoMark(beatUnit: DurationType.quarter, bpm: 120))
+          ..add(q('E'))
+          ..add(q('F')),
+      ]);
+      final backend = _FakeNativeBackend();
+      await MidiNativeSequenceBridge(backend)
+          .uploadSequence(MidiMapper.fromStaff(staff));
+
+      expect(backend.metronomeTotalTicks, isNull,
+          reason: 'the fixed-grid metronome must not run as well');
+      final clicks = backend.scheduledNotes.where((n) => n.channel == 9);
+      expect(clicks.map((c) => c.startTick), [0, 960, 1920, 2400]);
+      expect(clicks.first.midiNote, 76, reason: 'accented downbeat');
+    });
+
+    test('a hand-built sequence with a tempo change still clicks', () async {
+      // No bar timeline (playedMeasures is empty): the clicks used to be
+      // generated from it alone, so there were none.
+      const sequence = MidiSequence(
+        ticksPerQuarter: 960,
+        tracks: [
+          MidiTrack(name: 'Conductor', channel: 0, events: [
+            MidiEvent.tempo(tick: 0, bpm: 60),
+            MidiEvent.tempo(tick: 1920, bpm: 120),
+          ]),
+          MidiTrack(name: 'Piano', channel: 0, events: [
+            MidiEvent.noteOn(tick: 0, channel: 0, note: 60, velocity: 90),
+            MidiEvent.noteOff(tick: 3840, channel: 0, note: 60),
+          ]),
+        ],
+      );
+      final backend = _FakeNativeBackend();
+      await MidiNativeSequenceBridge(backend).uploadSequence(sequence);
+      final clicks = backend.scheduledNotes.where((n) => n.channel == 9);
+      expect(clicks.map((c) => c.startTick), [0, 960, 1920, 2400]);
+      expect(clicks.map((c) => c.midiNote), [76, 77, 77, 77]);
+    });
+
     test('uploads sequence metadata, notes and metronome', () async {
       final staff = Staff(
         measures: [

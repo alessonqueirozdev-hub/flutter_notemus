@@ -1,5 +1,6 @@
 import 'dart:collection';
 
+import '../playback/playback_plan.dart';
 import 'midi_models.dart';
 import 'native_audio_contract.dart';
 
@@ -38,7 +39,14 @@ class MidiNativeSequenceBridge {
     await backend.clearScheduledEvents();
     await backend.setTicksPerQuarter(sequence.ticksPerQuarter);
 
-    final tempo = _extractInitialTempo(sequence) ?? fallbackTempoBpm;
+    // The opening tempo is the LAST tempo event at the earliest tick, as a MIDI
+    // player applies them — PlaybackPlan's reading. Taking the first one sent
+    // the mapper's default 120 even when the score's own mark at tick 0 says
+    // otherwise.
+    final plan = PlaybackPlan.fromSequence(sequence);
+    final tempo = _extractInitialTempo(sequence) == null
+        ? fallbackTempoBpm
+        : plan.tempoChanges.first.bpm;
     await backend.setTempo(tempo);
 
     final timeSignature = _extractInitialTimeSignature(sequence);
@@ -52,11 +60,21 @@ class MidiNativeSequenceBridge {
       includeMetronomeTrack: includeMetronomeTrackNotes,
     );
 
+    // The backend contract takes ONE tempo and converts every scheduled tick
+    // with it, so a tempo change after tick 0 was silently ignored: a score
+    // that slows to half speed half-way through played at its opening tempo
+    // throughout, and drifted from `PlaybackPlan.positionAt`. Each tick is
+    // re-expressed instead as the tick, at the opening tempo, of the moment
+    // it really sounds — the same time `PlaybackPlan.timeAtTick` gives.
+    final warp = _tempoWarp(plan, sequence.ticksPerQuarter, tempo);
+
     for (final note in notes) {
+      final start = warp(note.startTick);
+      final end = warp(note.startTick + note.durationTicks);
       await backend.scheduleNote(
         midiNote: note.midiNote,
-        startTick: note.startTick,
-        durationTicks: note.durationTicks,
+        startTick: start,
+        durationTicks: end > start ? end - start : 1,
         velocity: note.velocity,
         channel: note.channel,
         isTied: note.isTied,
@@ -66,10 +84,51 @@ class MidiNativeSequenceBridge {
     await backend.processTies();
 
     if (includeMetronome) {
-      await backend.scheduleMetronome(
-        totalTicks: sequence.totalTicks,
-        countInBeats: countInBeats,
-      );
+      if (plan.tempoChanges.length < 2) {
+        await backend.scheduleMetronome(
+          totalTicks: sequence.totalTicks,
+          countInBeats: countInBeats,
+        );
+      } else {
+        // The backend lays its clicks on a grid at the ONE tempo it was given,
+        // so after a tempo change they drifted off the (warped) notes: at
+        // 60 -> 120 bpm the notes moved to half-second beats while the clicks
+        // stayed a second apart. Schedule the clicks as notes instead, one per
+        // beat of every played bar, warped like everything else. The count-in
+        // comes before tick 0, at the opening tempo, so the backend still
+        // provides it.
+        if (countInBeats > 0) {
+          await backend.scheduleMetronome(
+            totalTicks: 0,
+            countInBeats: countInBeats,
+          );
+        }
+        // A sequence that already carries its metronome track, uploaded with
+        // includeMetronomeTrackNotes, has its clicks among the notes above.
+        final clicksUploaded = includeMetronomeTrackNotes &&
+            sequence.tracks.any((t) => t.name.toLowerCase() == 'metronome');
+        for (final click in clicksUploaded
+            ? const <({int tick, bool accent})>[]
+            : _metronomeClicks(
+                sequence,
+                fallbackBeatsPerBar:
+                    timeSignature?.numerator ?? fallbackNumerator,
+              )) {
+          final start = warp(click.tick);
+          final end = warp(click.tick + _clickOptions.metronomeClickDurationTicks);
+          await backend.scheduleNote(
+            midiNote: click.accent
+                ? _clickOptions.metronomeAccentNote
+                : _clickOptions.metronomeRegularNote,
+            startTick: start,
+            durationTicks: end > start ? end - start : 1,
+            velocity: click.accent
+                ? _clickOptions.metronomeAccentVelocity
+                : _clickOptions.metronomeRegularVelocity,
+            channel: _clickOptions.metronomeChannel,
+          );
+        }
+      }
     }
   }
 
@@ -85,6 +144,54 @@ class MidiNativeSequenceBridge {
     );
     await backend.start();
   }
+}
+
+/// The click sounds the mapper's metronome uses by default.
+const _clickOptions = MidiGenerationOptions();
+
+/// One click per beat of every played bar of [sequence] — the beats the
+/// mapper's own metronome track uses (`numerator` clicks across the bar,
+/// accent on the downbeat), in source ticks.
+///
+/// A sequence built by hand has no bar timeline; it gets a click on every
+/// quarter up to its last tick, accented every [fallbackBeatsPerBar]. Without
+/// this, a hand-built sequence with a tempo change had no metronome at all.
+List<({int tick, bool accent})> _metronomeClicks(
+  MidiSequence sequence, {
+  int fallbackBeatsPerBar = 4,
+}) {
+  if (sequence.playedMeasures.isEmpty) {
+    final quarter = sequence.ticksPerQuarter;
+    final perBar = fallbackBeatsPerBar <= 0 ? 1 : fallbackBeatsPerBar;
+    return [
+      for (var beat = 0; beat * quarter < sequence.totalTicks; beat++)
+        (tick: beat * quarter, accent: beat % perBar == 0),
+    ];
+  }
+  return [
+    for (final bar in sequence.playedMeasures)
+      for (var beat = 0; beat < _beatsOf(bar); beat++)
+        (
+          tick: bar.startTick +
+              (beat * bar.durationTicks / _beatsOf(bar)).round(),
+          accent: beat == 0,
+        ),
+  ];
+}
+
+int _beatsOf(MidiPlayedMeasure bar) {
+  final n = bar.numerator ?? 4;
+  return n <= 0 ? 1 : n;
+}
+
+/// Maps a tick of [plan]'s sequence to the tick at [openingBpm] at which it
+/// actually sounds, through every tempo change. The identity when the
+/// sequence never changes tempo.
+int Function(int) _tempoWarp(
+    PlaybackPlan plan, int ticksPerQuarter, int openingBpm) {
+  if (plan.tempoChanges.length < 2) return (tick) => tick;
+  final ticksPerMicro = openingBpm * ticksPerQuarter / 60000000;
+  return (tick) => (plan.timeAtTick(tick).inMicroseconds * ticksPerMicro).round();
 }
 
 List<ScheduledMidiNote> extractScheduledNotes(

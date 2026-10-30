@@ -1,4 +1,5 @@
 import '../../core/dynamic.dart';
+import '../../core/note.dart';
 
 enum MidiEventType {
   noteOn,
@@ -127,15 +128,92 @@ class MidiTrack {
   }
 }
 
+/// One bar as it is PLAYED: a bar inside a repeat appears once per pass.
+class MidiPlayedMeasure {
+  /// Zero-based index of the bar in its [Staff].
+  final int measureIndex;
+
+  /// 1 on the first pass, 2 on a repeat's second, and so on.
+  final int repeatPass;
+
+  final int startTick;
+  final int endTick;
+
+  /// The meter in force for the bar (declared or inherited), or null before
+  /// any meter. A metronome clicks [numerator] times across the bar.
+  final int? numerator;
+  final int? denominator;
+
+  const MidiPlayedMeasure({
+    required this.measureIndex,
+    required this.repeatPass,
+    required this.startTick,
+    required this.endTick,
+    this.numerator,
+    this.denominator,
+  });
+
+  int get durationTicks => endTick - startTick;
+}
+
+/// When one written note plays: the link from a MIDI time back to the [Note]
+/// in the caller's own score, which is what a playhead or a "highlight what is
+/// sounding" view needs. One span per note per played pass; a chord gives one
+/// per chord note.
+///
+/// The span is the note's WRITTEN length (staccato does not shorten it). A
+/// muted or un-soloed note still has one, marked `audible: false`. Grace notes
+/// take no time and have no span.
+class MidiNoteSpan {
+  /// The note itself, from the caller's [Staff] (identity preserved).
+  final Note note;
+
+  final int staffIndex;
+
+  /// The note's voice: the one it declares (`Note.voice`, or its chord's),
+  /// else the voice it was played in. A note of a plain [Measure] that
+  /// declares voice 3 reports 3, as `Measure.voiceNumberOf` does.
+  final int voiceNumber;
+
+  final int measureIndex;
+  final int repeatPass;
+  final int startTick;
+  final int endTick;
+
+  /// False when [MidiGenerationOptions] mute the note's staff or voice (or
+  /// solo another one), so the sequence carries no sound for it.
+  final bool audible;
+
+  const MidiNoteSpan({
+    required this.note,
+    required this.staffIndex,
+    required this.voiceNumber,
+    required this.measureIndex,
+    required this.repeatPass,
+    required this.startTick,
+    required this.endTick,
+    this.audible = true,
+  });
+}
+
 class MidiSequence {
   final int ticksPerQuarter;
   final List<MidiTrack> tracks;
   final List<String> warnings;
 
+  /// Bars in the order they play, repeats expanded, with their ticks — the
+  /// timeline of the first staff (every staff of a score shares it).
+  final List<MidiPlayedMeasure> playedMeasures;
+
+  /// Every written note's span, in no particular order. See [MidiNoteSpan].
+  final List<MidiNoteSpan> noteSpans;
+
   const MidiSequence({
     required this.ticksPerQuarter,
     required this.tracks,
     this.warnings = const <String>[],
+    this.playedMeasures = const <MidiPlayedMeasure>[],
+    this.noteSpans = const <MidiNoteSpan>[],
   });
 
   int get totalTicks {

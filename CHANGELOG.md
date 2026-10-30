@@ -103,6 +103,38 @@ data-loss bug in both XML importers.
   and fixed in #49 by @ArtSilver; pinned by
   `test/layout/inherited_meter_beaming_test.dart`.
 
+### Fixed — native playback tempo
+
+- **A tempo change reaches native playback.** The native backend contract
+  takes one tempo (`setTempo`) and converts every tick with it, so
+  `MidiNativeSequenceBridge` dropped every tempo change after the start: a bar
+  going from 60 to 120 bpm played at 60 throughout, and its last two quarters
+  ran a full second late. The bridge now re-expresses each scheduled tick as
+  the tick, at the opening tempo, of the moment it really sounds, the same
+  time `PlaybackPlan.timeAtTick` gives. It also sends the score's own opening
+  tempo: it used to send the mapper's default 120, which sits at tick 0 before
+  the score's first `TempoMark`. When the tempo changes, the bridge also
+  schedules the metronome clicks itself (one per beat of every played bar,
+  warped the same way) instead of the backend's single-tempo grid, whose
+  clicks drifted off the notes after the change. `MidiPlayedMeasure` gains
+  `numerator` / `denominator` for that. Reported by review on #53.
+
+### Added — playback transport
+
+- **`PlaybackPlan`** (`fromStaff`, `fromScore`, `fromSequence`): the
+  transport a player UI needs, read off the same `MidiSequence` that makes the
+  sound, so cursor, highlighting and audio cannot disagree. `positionAt(time)`
+  gives the bar, repeat pass, offset in the bar (in whole notes, the unit of
+  `PositionedElement.onset`) and progress. `notesAt(time)` gives the written
+  notes sounding then. `timeOfMeasure(index, repeatPass:)` gives where to seek.
+  `timeAtTick` / `tickAt` convert through every tempo change. Fourth slice of
+  @zamvar's fork (Discussion #50); the fork re-derived timing on its own.
+- **`MidiSequence.playedMeasures` and `noteSpans`.** The bars in playing order
+  with their ticks, repeats expanded, and one `MidiNoteSpan` per written note
+  per pass. Each span carries the caller's own `Note`, its staff, voice, bar,
+  pass and written ticks. A chord gives one span per note; grace notes take no
+  time and have none; split voice tracks still give one span per note.
+
 ## [2.8.1] - 2026-09-07
 
 One defect, found by reading a paper instead of the code.
