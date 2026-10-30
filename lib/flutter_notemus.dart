@@ -30,11 +30,14 @@ library;
 
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'core/core.dart'; // Musical model types live in core/
 import 'src/interaction/score_hit_tester.dart';
 import 'src/interaction/score_taps.dart';
 import 'src/layout/layout_engine.dart';
+import 'src/playback/playback_plan.dart';
+import 'src/widgets/playhead_layer.dart';
 import 'src/parsers/json_parser.dart';
 import 'src/parsers/mei_parser.dart';
 import 'src/parsers/musicxml_parser.dart';
@@ -106,7 +109,9 @@ export 'src/layout/collision_detector.dart';
 // Selection / hit-testing over a laid-out score (editor infrastructure).
 export 'src/interaction/score_hit_tester.dart';
 export 'src/interaction/score_taps.dart' show ScoreNoteTap, ScoreMeasureTap;
-export 'src/widgets/grand_staff.dart' show GrandStaff, ScoreView;
+export 'src/widgets/grand_staff.dart'
+    show GrandStaff, GrandStaffPlayheadPainter, ScoreView;
+export 'src/widgets/playhead_layer.dart' show MusicScorePlayheadPainter;
 
 // PDF export is a headline feature of 2.7.x, but until 2.7.1 `PdfExporter`,
 // `ScoreRasterizer` and `GrandStaffPainter` were reachable only through
@@ -200,6 +205,13 @@ class MusicScore extends StatefulWidget {
   /// on a note.
   final ValueChanged<ScoreMeasureTap>? onMeasureTap;
 
+  /// Where playback is, for a cursor drawn over the score — typically a
+  /// `ValueNotifier` you set from `PlaybackPlan.positionAt(elapsed)` on each
+  /// clock tick. The cursor is its own layer: a tick repaints one line, not
+  /// the notation. Null (or a null value) draws no cursor. Its colour is
+  /// `MusicScoreTheme.playheadColor`.
+  final ValueListenable<PlaybackPosition?>? playbackPosition;
+
   const MusicScore({
     super.key,
     required this.staff,
@@ -212,6 +224,7 @@ class MusicScore extends StatefulWidget {
     this.minimumVerticalFitScale = 0.4,
     this.onNoteTap,
     this.onMeasureTap,
+    this.playbackPosition,
   });
 
   factory MusicScore.fromJson({
@@ -345,6 +358,41 @@ class _MusicScoreState extends State<MusicScore> {
   /// 0.01 px in the cache key so sub-pixel layout noise does not invalidate an
   /// otherwise identical layout. The engine itself still receives the exact
   /// values.
+  /// Stacks the playback cursor layer over [child] (the score's own
+  /// `RepaintBoundary`), when there is a position to follow.
+  Widget _withPlayhead(
+    _LayoutSnapshot layout,
+    double staffSpace,
+    Size size,
+    Widget child,
+  ) {
+    final position = widget.playbackPosition;
+    if (position == null) return child;
+    return Stack(
+      children: [
+        child,
+        Positioned.fill(
+          child: IgnorePointer(
+            child: RepaintBoundary(
+              child: CustomPaint(
+                size: size,
+                painter: MusicScorePlayheadPainter(
+                  position: position,
+                  elements: layout.result.elements,
+                  staffSpace: staffSpace,
+                  topInset:
+                      layout.engine.contentTopOverflow(layout.result.elements),
+                  color: widget.theme.playheadColor ??
+                      widget.theme.noteheadColor.withValues(alpha: 0.65),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   /// Hit tester for the layout last tapped, rebuilt only when the layout
   /// (and so every position) changes.
   _LayoutSnapshot? _testerLayout;
@@ -573,21 +621,26 @@ class _MusicScoreState extends State<MusicScore> {
                     child: _tappable(
                       layout,
                       effectiveStaffSpace,
-                      RepaintBoundary(
-                        child: CustomPaint(
-                          size: Size(canvasWidth, totalHeight),
-                          painter: MusicScorePainter(
-                            positionedElements: layout.result.elements,
-                            positionedElementsSignature: layout.result.signature,
-                            metadata: _metadata,
-                            theme: widget.theme,
-                            staffSpace: effectiveStaffSpace,
-                            layoutEngine: layout.engine,
-                            topInset: layout.engine
-                                .contentTopOverflow(layout.result.elements),
-                            viewportSize: viewportSize,
-                            horizontalController: _horizontalController,
-                            verticalController: _verticalController,
+                      _withPlayhead(
+                        layout,
+                        effectiveStaffSpace,
+                        Size(canvasWidth, totalHeight),
+                        RepaintBoundary(
+                          child: CustomPaint(
+                            size: Size(canvasWidth, totalHeight),
+                            painter: MusicScorePainter(
+                              positionedElements: layout.result.elements,
+                              positionedElementsSignature: layout.result.signature,
+                              metadata: _metadata,
+                              theme: widget.theme,
+                              staffSpace: effectiveStaffSpace,
+                              layoutEngine: layout.engine,
+                              topInset: layout.engine
+                                  .contentTopOverflow(layout.result.elements),
+                              viewportSize: viewportSize,
+                              horizontalController: _horizontalController,
+                              verticalController: _verticalController,
+                            ),
                           ),
                         ),
                       ),
