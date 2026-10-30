@@ -163,8 +163,10 @@ class MusicXMLParser {
           'part',
           nest: () {
             builder.attribute('id', 'P1');
+            final numbers = _measureNumberTokens(staff.measures);
             for (int index = 0; index < staff.measures.length; index++) {
               _buildMeasureXml(builder, staff.measures[index], index + 1,
+                  numberToken: numbers[index],
                   staffLines: staff.lineCount,
                   transposition: staff.transposition);
             }
@@ -290,8 +292,10 @@ class MusicXMLParser {
         for (final part in parts) {
           builder.element('part', nest: () {
             builder.attribute('id', part.id);
+            final numbers = _measureNumberTokens(part.staff.measures);
             for (var m = 0; m < part.staff.measures.length; m++) {
               _buildMeasureXml(builder, part.staff.measures[m], m + 1,
+                  numberToken: numbers[m],
                   staffLines: part.staff.lineCount,
                   transposition: part.staff.transposition);
             }
@@ -403,6 +407,7 @@ class MusicXMLParser {
             'part',
             nest: () {
               builder.attribute('id', 'P${index + 1}');
+              final numbers = _measureNumberTokens(staffs[index].measures);
               for (
                 int measureIndex = 0;
                 measureIndex < staffs[index].measures.length;
@@ -412,6 +417,7 @@ class MusicXMLParser {
                   builder,
                   staffs[index].measures[measureIndex],
                   measureIndex + 1,
+                  numberToken: numbers[measureIndex],
                   staffLines: staffs[index].lineCount,
                   transposition: staffs[index].transposition,
                 );
@@ -435,15 +441,39 @@ int _durationDivisions(Duration d, [double factor = 1.0]) {
   return v < 1 ? 1 : v;
 }
 
+/// The `@number` each bar is exported with: its explicit [Measure.number], or
+/// the number it is DISPLAYED with ([Measure.displayNumbers]) — not its
+/// position. Writing the position put `number="1"` on an unnumbered pickup,
+/// and since the importer reads `@number` back as an explicit number, the
+/// round-tripped pickup showed as bar 1 and the first full bar as bar 2.
+///
+/// An unnumbered implicit bar after the start shares the previous bar's
+/// display number, so it is written `X1`, `X2`, … as MuseScore does; the
+/// importer reads a non-integer token back as "no number".
+List<String> _measureNumberTokens(List<Measure> measures) {
+  final display = Measure.displayNumbers(measures);
+  var uncounted = 0;
+  return [
+    for (var i = 0; i < measures.length; i++)
+      if (measures[i].number != null)
+        '${measures[i].number}'
+      else if (measures[i].isImplicit && display[i] != 0)
+        'X${++uncounted}'
+      else
+        '${display[i]}',
+  ];
+}
+
 void _buildMeasureXml(XmlBuilder builder, Measure measure, int number,
-    {int staffLines = 5, Transposition? transposition}) {
+    {String? numberToken, int staffLines = 5, Transposition? transposition}) {
   builder.element(
     'measure',
     nest: () {
-      // An explicit Measure.number wins over the positional index (pickup
-      // bars, repeats, "number 0" anacrusis, …); `number` stays the positional
-      // one so first-measure logic (divisions/staff-details) is unaffected.
-      builder.attribute('number', (measure.number ?? number).toString());
+      // `number` stays the positional index so first-measure logic
+      // (divisions/staff-details) is unaffected; what is WRITTEN is the
+      // bar's own number (see [_measureNumberTokens]).
+      builder.attribute(
+          'number', numberToken ?? (measure.number ?? number).toString());
       if (measure.isImplicit) builder.attribute('implicit', 'yes');
 
       final systemElements = measure.elements.where(

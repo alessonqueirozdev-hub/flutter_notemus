@@ -1127,32 +1127,12 @@ class LayoutEngine {
   Map<int, int> get measureNumbers =>
       displayMeasureNumbers(staff.measures, offset: measureNumberOffset);
 
-  /// Display numbers for [measures], counting on from [offset] (the number of
-  /// the bar before the first one).
-  ///
-  /// An explicit [Measure.number] wins and the count continues from it. A bar
-  /// marked [Measure.isImplicit] is not counted: it shows the number of the bar
-  /// before it, so a leading pickup is bar 0 and the first full bar is bar 1.
-  /// Counting by position numbered the pickup 1 and every bar after it one too
-  /// high.
+  /// Display numbers for [measures]; see [Measure.displayNumbers].
   static Map<int, int> displayMeasureNumbers(
     List<Measure> measures, {
     int offset = 0,
-  }) {
-    final result = <int, int>{};
-    var running = offset;
-    for (var i = 0; i < measures.length; i++) {
-      final measure = measures[i];
-      final explicit = measure.number;
-      if (explicit != null) {
-        running = explicit;
-      } else if (!measure.isImplicit) {
-        running++;
-      }
-      result[i] = running;
-    }
-    return result;
-  }
+  }) =>
+      Measure.displayNumbers(measures, offset: offset);
 
   /// Returns os Advanced Beam Groups Calculados pelo last layout
   List<AdvancedBeamGroup> get advancedBeamGroups =>

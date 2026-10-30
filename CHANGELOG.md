@@ -42,6 +42,12 @@ data-loss bug in both XML importers.
   may be shorter than the meter. Counting and duration are separate facts;
   with one flag for both, a mid-piece half-note bar in 4/4 either stole the
   next bar's number or played two beats of silence (review on #51).
+- **MusicXML export writes the displayed bar number, not the position.** An
+  unnumbered pickup was written `number="1"`, read back as an explicit 1, and
+  the first full bar then showed as 2. It is written `0` now, and an
+  unnumbered implicit bar after the start is written `X1`, `X2`, … as MuseScore
+  does. The counting rule lives in `Measure.displayNumbers`
+  (`LayoutEngine.displayMeasureNumbers` delegates to it).
 - **Bar numbers are read back.** MusicXML `@number` and MEI `@n` now populate
   `Measure.number` (a non-integer token such as `X1` stays `null`). JSON
   import now reads the `"number"` that `JsonMusicExporter` had always
@@ -56,7 +62,9 @@ data-loss bug in both XML importers.
   longer lengthens an implicit bar either: it steals time from its neighbour.
   A `<forward>` that ends an implicit bar now counts toward it too: the
   importer only turned a forward into `Space` when a later note needed the
-  gap. All three were reported by review on #51.
+  gap. The layout clock agrees now too: `Measure.musicalValueOf` counted a
+  `Space` as 0, so notes after a forward gap were drawn earlier than MIDI
+  played them. All four were reported by review on #51.
 
 ### Fixed — import
 

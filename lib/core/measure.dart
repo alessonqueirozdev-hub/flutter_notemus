@@ -4,6 +4,7 @@ import 'chord.dart';
 import 'musical_element.dart';
 import 'note.dart';
 import 'rest.dart';
+import 'space.dart';
 import 'time_signature.dart';
 import 'tuplet.dart';
 import 'duration.dart';
@@ -292,6 +293,33 @@ class Measure {
     return ts.measureValue - currentMusicalValue;
   }
 
+  /// Display numbers for [measures], counting on from [offset] (the number of
+  /// the bar before the first one).
+  ///
+  /// An explicit [Measure.number] wins and the count continues from it. A bar
+  /// marked [Measure.isImplicit] is not counted: it shows the number of the bar
+  /// before it, so a leading pickup is bar 0 and the first full bar is bar 1.
+  /// Counting by position numbered the pickup 1 and every bar after it one too
+  /// high.
+  static Map<int, int> displayNumbers(
+    List<Measure> measures, {
+    int offset = 0,
+  }) {
+    final result = <int, int>{};
+    var running = offset;
+    for (var i = 0; i < measures.length; i++) {
+      final measure = measures[i];
+      final explicit = measure.number;
+      if (explicit != null) {
+        running = explicit;
+      } else if (!measure.isImplicit) {
+        running++;
+      }
+      result[i] = running;
+    }
+    return result;
+  }
+
   /// Calculates the rhythmic value occupied by [element].
   ///
   /// Returns 0.0 for elements that do not occupy musical time (clefs, key
@@ -328,6 +356,10 @@ class Measure {
     if (element is Note) {
       return element.isGraceNote ? 0.0 : element.duration.realValue;
     } else if (element is Rest) {
+      return element.duration.realValue;
+    } else if (element is Space) {
+      // Silent but timed: an imported `<forward>` gap. Counted as 0, notes
+      // after the gap were laid out earlier than MIDI plays them.
       return element.duration.realValue;
     } else if (element is Chord) {
       return element.duration.realValue;

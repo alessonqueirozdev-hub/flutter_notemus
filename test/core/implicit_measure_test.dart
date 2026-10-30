@@ -188,6 +188,17 @@ void main() {
   });
 
   group('round trips', () {
+    test('a pickup without a number exports as bar 0, not its position', () {
+      // The exporter used to write the positional number (1) on an implicit
+      // bar; read back as an explicit number, the pickup then showed as 1 and
+      // the first full bar as 2.
+      final xml = MusicXMLParser.staffToMusicXML(_handBuiltPickup());
+      expect(xml, contains('<measure number="0" implicit="yes">'));
+      final back = MusicXMLParser.parseMusicXML(xml);
+      expect(LayoutEngine.displayMeasureNumbers(back.measures),
+          {0: 0, 1: 1, 2: 2});
+    });
+
     test('MusicXML export writes implicit="yes" and reads it back', () {
       final xml = MusicXMLParser.staffToMusicXML(_handBuiltPickup());
       expect(xml, contains('implicit="yes"'));
@@ -267,6 +278,35 @@ void main() {
       // ...and it still lasts only its half note: bar 3 enters at
       // 3840 + 1920, not after two beats of silence at 7680.
       expect(_noteOnTicks(MidiMapper.fromStaff(staff)), [0, 3840, 5760]);
+    });
+  });
+
+  group('Space in the rhythmic clock', () {
+    // MIDI counts a <forward> gap; the layout clock must agree, or notes after
+    // the gap are drawn earlier than they sound.
+    test('Measure.musicalValueOf counts a Space', () {
+      expect(
+          Measure.musicalValueOf(
+              Space(duration: const MusicDuration(DurationType.half))),
+          0.5);
+    });
+
+    test('a note after a forward gap is laid out at its real onset', () async {
+      final metadata = SmuflMetadata();
+      await metadata.load();
+      final staff = MusicXMLParser.parseMusicXML(_pickupXml.replaceFirst(
+          RegExp(r'<note>\s*<pitch><step>D</step>'),
+          '<forward><duration>8</duration></forward>'
+              '<note><pitch><step>D</step>'));
+      final engine = LayoutEngine(staff,
+          availableWidth: 2000, staffSpace: 12, metadata: metadata);
+      final onsets = {
+        for (final p in engine.layout())
+          if (p.element is Note) (p.element as Note).pitch.step: p.onset,
+      };
+      // Bar 1 starts after the one-quarter pickup; its D enters half a bar
+      // later, after the half note of forward.
+      expect(onsets['D']! - onsets['C']!, closeTo(0.25 + 0.5, 1e-9));
     });
   });
 
