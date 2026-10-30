@@ -43,7 +43,8 @@ class MidiNativeSequenceBridge {
     // player applies them — PlaybackPlan's reading. Taking the first one sent
     // the mapper's default 120 even when the score's own mark at tick 0 says
     // otherwise.
-    final plan = PlaybackPlan.fromSequence(sequence);
+    final plan =
+        PlaybackPlan.fromSequence(sequence, fallbackBpm: fallbackTempoBpm);
     final tempo = _extractInitialTempo(sequence) == null
         ? fallbackTempoBpm
         : plan.tempoChanges.first.bpm;
