@@ -355,6 +355,61 @@ class GrandStaffPainter extends CustomPainter {
       }
     }
 
+    // An UN-beamed cross-staff note is moved onto its destination staff at
+    // layout time and drawn there by the ordinary renderer, but that staff's
+    // engine has no geometry for it, so its tester always guessed an UP-stem.
+    // The renderer decides the stem as `NoteRenderer` does — the layout's
+    // voice, else the note's, else its position on THIS staff — so a note
+    // above the middle line has a down-stem nobody could tap. Test it the way
+    // it is drawn.
+    final lists = [for (final l in _systems[located.system]) l.elements];
+    final beamed = <Note>{
+      for (final group in _crossStaffBeamGeometry(
+          _systems[located.system], _baseline0))
+        if (group.beamY != null)
+          for (final head in group.points) head.note,
+    };
+    for (var target = 0; target < lists.length; target++) {
+      for (final pe in lists[target]) {
+        final e = pe.element;
+        if (e is! Note || e.crossStaffMove == 0 || beamed.contains(e)) continue;
+        final position = StaffPositionCalculator.calculate(
+          e.pitch,
+          _clefAtX(lists[target], pe.position.dx),
+          extraOctaveShift: _octaveShiftOf(e),
+        );
+        final voice = pe.voiceNumber ?? e.voice;
+        final stemUp = voice != null
+            ? voice.isOdd
+            : StaffPositionCalculator.stemUpFor(position);
+        final headY = _baseline0 + target * staffGap - position * staffSpace / 2;
+        final middle = _baseline0 + target * staffGap;
+        // A stem is 3.5 spaces, and reaches the middle line from a ledger note.
+        final stemEnd = stemUp
+            ? math.min(headY - staffSpace * 3.5, middle)
+            : math.max(headY + staffSpace * 3.5, middle);
+        final box = Rect.fromLTRB(
+          pe.position.dx - staffSpace * 0.2,
+          math.min(headY - staffSpace * 0.7, stemEnd),
+          pe.position.dx + staffSpace * 1.4,
+          math.max(headY + staffSpace * 0.7, stemEnd),
+        );
+        final dx = p.dx < box.left
+            ? box.left - p.dx
+            : (p.dx > box.right ? p.dx - box.right : 0.0);
+        final dy = p.dy < box.top
+            ? box.top - p.dy
+            : (p.dy > box.bottom ? p.dy - box.bottom : 0.0);
+        final distance = math.sqrt(dx * dx + dy * dy);
+        if (distance <= reach && distance < bestDistance) {
+          bestDistance = distance;
+          note = e;
+          measureIndex = pe.measureIndex;
+          staffIndex = target;
+        }
+      }
+    }
+
     if (note == null || measureIndex == null || staffIndex == null) {
       return null;
     }

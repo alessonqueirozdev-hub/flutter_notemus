@@ -402,6 +402,61 @@ void main() {
       expect(tap.staffIndex, 1);
     });
 
+    test('an unbeamed cross-staff note is tappable along its down-stem',
+        () async {
+      // Moved to the bass staff at layout time and drawn there with the
+      // positional stem rule: D4 sits 7 half-spaces above the bass middle
+      // line, so its stem points DOWN. The bass staff's tester has no geometry
+      // for it and guessed an up-stem, so the drawn stem was dead.
+      final metadata = SmuflMetadata();
+      await metadata.load();
+      final cross = Note(
+        pitch: const Pitch(step: 'D', octave: 4),
+        duration: const MusicDuration(DurationType.quarter),
+        crossStaffMove: 1,
+      );
+      final painter = GrandStaffPainter(
+        staffGroup: StaffGroup(bracket: BracketType.brace, staves: [
+          Staff(measures: [
+            Measure()
+              ..elements.addAll([
+                Clef(clefType: ClefType.treble),
+                TimeSignature(numerator: 4, denominator: 4),
+                _q('C', 5),
+                cross,
+                _q('E', 5),
+                _q('F', 5),
+              ]),
+          ]),
+          Staff(measures: [
+            Measure()
+              ..elements.addAll([
+                Clef(clefType: ClefType.bass),
+                TimeSignature(numerator: 4, denominator: 4),
+                _w('C', 3),
+              ]),
+          ]),
+        ]),
+        staffSpace: 12,
+        metadata: metadata,
+        theme: const MusicScoreTheme(),
+        availableWidth: 900,
+      );
+      const sp = 12.0;
+      final pe = painter
+          .alignedSystem(0)[1]
+          .firstWhere((p) => identical(p.element, cross));
+      // Head at the bass staff's y 18; three spaces down its stem.
+      final y = painter.contentTopInset + painter.staffGap + 18 + 3 * sp;
+      final tap = painter.noteTapAt(
+        Offset(pe.position.dx + sp * 2.2 + 2, y),
+        tolerance: 0,
+      );
+      expect(tap, isNotNull);
+      expect(identical(tap!.note, cross), isTrue);
+      expect(tap.staffIndex, 1);
+    });
+
     testWidgets('GrandStaff: no bar past the end of the music', (t) async {
       await t.pumpWidget(_host(GrandStaff(group: group(), onMeasureTap: (_) {})));
       await _settle(t);
