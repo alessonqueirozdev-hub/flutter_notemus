@@ -82,23 +82,55 @@ class ScoreMeasureTap {
       'staff $staffIndex)';
 }
 
-/// The [Note] a [hit] stands for: the note itself, or, for a chord, the chord
-/// note whose notehead centre is nearest [point] vertically. Null for any
-/// other element (a rest, a clef, a dynamic).
+/// The [Note] a [hit] stands for: the note itself; for a chord, the chord
+/// note whose notehead is nearest [point] vertically; for a tuplet (which the
+/// layout positions as ONE element, keeping its notes' geometry apart), the
+/// inner note whose notehead is nearest [point]. Null for any other element
+/// (a rest, a clef, a dynamic) or a tuplet of rests.
 Note? noteForHit(ScoreHit hit, LayoutEngine engine, Offset point) {
   final element = hit.element;
   if (element is Note) return element;
-  if (element is! Chord || element.notes.isEmpty) return null;
-  final ys = engine.noteYPositions; // a fresh unmodifiable copy per call
-  Note best = element.notes.first;
-  var bestDistance = double.infinity;
-  for (final note in element.notes) {
+  if (element is Chord) return _nearestNote(element.notes, engine, point);
+  if (element is Tuplet) {
+    return _nearestNote(_notesOf(element.elements), engine, point);
+  }
+  return null;
+}
+
+/// Every note inside [elements], descending into chords and nested tuplets.
+List<Note> _notesOf(List<MusicalElement> elements) => [
+      for (final e in elements)
+        if (e is Note)
+          e
+        else if (e is Chord)
+          ...e.notes
+        else if (e is Tuplet)
+          ..._notesOf(e.elements),
+    ];
+
+/// The note of [notes] nearest [point]: by x first, so a tap picks the column
+/// it is on, then by y within that column (a chord). Notes the layout gave no
+/// position fall back to the first one.
+Note? _nearestNote(List<Note> notes, LayoutEngine engine, Offset point) {
+  if (notes.isEmpty) return null;
+  final xs = engine.noteXPositions; // fresh unmodifiable copies per call
+  final ys = engine.noteYPositions;
+  Note best = notes.first;
+  var bestDx = double.infinity;
+  var bestDy = double.infinity;
+  for (final note in notes) {
+    final x = xs[note];
     final y = ys[note];
-    if (y == null) continue;
-    final distance = (y - point.dy).abs();
-    if (distance < bestDistance) {
+    if (x == null || y == null) continue;
+    final dx = (x - point.dx).abs();
+    final dy = (y - point.dy).abs();
+    // Noteheads of one chord share an x; anything within a pixel of the best
+    // column counts as the same column.
+    final sameColumn = (dx - bestDx).abs() < 1.0;
+    if (dx < bestDx - 1.0 || (sameColumn && dy < bestDy)) {
       best = note;
-      bestDistance = distance;
+      bestDx = dx;
+      bestDy = dy;
     }
   }
   return best;

@@ -89,6 +89,32 @@ void main() {
       expect(taps.single.staffIndex, 0);
     });
 
+    testWidgets('a tap inside a tuplet reports the inner note', (t) async {
+      // The layout positions a tuplet as ONE element; the hit came back as the
+      // Tuplet and onNoteTap never fired for its notes.
+      final inner = [for (final s in ['C', 'E', 'G']) _q(s, 5)];
+      final s = Staff(measures: [
+        Measure()
+          ..add(Clef(clefType: ClefType.treble))
+          ..add(TimeSignature(numerator: 2, denominator: 4))
+          ..add(Tuplet.triplet(elements: inner)),
+      ]);
+      final taps = <ScoreNoteTap>[];
+      await t.pumpWidget(_host(MusicScore(
+        staff: s,
+        enableResponsiveLayout: false,
+        preventVerticalOverflow: false,
+        onNoteTap: taps.add,
+      )));
+      await _settle(t);
+      for (final note in inner) {
+        await t.tapAt(await screenPointOf(t, s, note));
+        expect(identical(taps.last.note, note), isTrue,
+            reason: note.pitch.step);
+      }
+      expect(taps, hasLength(3));
+    });
+
     testWidgets('a tap far from any note reports no note', (t) async {
       final taps = <ScoreNoteTap>[];
       await t.pumpWidget(_host(MusicScore(
