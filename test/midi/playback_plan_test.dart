@@ -97,6 +97,46 @@ void main() {
     }
   });
 
+  test('notesAt leaves out what the options silence', () {
+    final top = _note('E', DurationType.whole, octave: 5);
+    final bottom = _note('C', DurationType.whole);
+    final measure = MultiVoiceMeasure()
+      ..add(TimeSignature(numerator: 4, denominator: 4));
+    measure.addVoice(Voice(number: 1, elements: [top]));
+    measure.addVoice(Voice(number: 2, elements: [bottom]));
+    final plan = PlaybackPlan.fromStaff(Staff(measures: [measure]),
+        options: const MidiGenerationOptions(mutedVoices: {2}));
+    const t = Duration(milliseconds: 100);
+    expect(plan.notesAt(t).map((s) => s.note), [same(top)]);
+    expect(plan.notesAt(t, includeSilent: true).map((s) => s.note).toSet(),
+        {top, bottom});
+    expect(
+        plan.notesAt(t, includeSilent: true)
+            .firstWhere((s) => identical(s.note, bottom))
+            .audible,
+        isFalse);
+  });
+
+  test('a note of a plain Measure reports the voice it declares', () {
+    final declared = Note(
+      pitch: const Pitch(step: 'G', octave: 4),
+      duration: const n.Duration(DurationType.half),
+      voice: 3,
+    );
+    final chord = Chord(
+      notes: [_note('C', DurationType.half, octave: 5)],
+      duration: const n.Duration(DurationType.half),
+      voice: 2,
+    );
+    final spans = MidiMapper.fromStaff(Staff(measures: [
+      Measure()
+        ..add(TimeSignature(numerator: 4, denominator: 4))
+        ..add(declared)
+        ..add(chord),
+    ])).noteSpans;
+    expect(spans.map((s) => s.voiceNumber), [3, 2]);
+  });
+
   test('a tuplet plays within its written span', () {
     final triplet = Tuplet.triplet(elements: [
       for (final s in ['C', 'D', 'E']) _note(s, DurationType.eighth),

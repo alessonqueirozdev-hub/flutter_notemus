@@ -349,14 +349,23 @@ class _TrackEventBuilder {
   int _measureIndex = 0;
   int _repeatPass = 1;
 
-  void _recordSpan(Note note, int voiceNumber, int startTick, int ticks) {
+  /// [voiceNumber] is the voice the note was PLAYED in (which track owns
+  /// it); [declaredVoice] the one the model gives it, reported when present.
+  void _recordSpan(
+    Note note,
+    int voiceNumber,
+    int startTick,
+    int ticks, {
+    int? declaredVoice,
+  }) {
     if (note.isGraceNote || ticks <= 0) return;
     final only = onlyVoice;
     if (only != null && voiceNumber != only) return;
     noteSpans.add(MidiNoteSpan(
       note: note,
       staffIndex: staffIndex,
-      voiceNumber: voiceNumber,
+      voiceNumber: declaredVoice ?? voiceNumber,
+      audible: _isVoiceAudible(voiceNumber),
       measureIndex: _measureIndex,
       repeatPass: _repeatPass,
       startTick: startTick,
@@ -543,7 +552,8 @@ class _TrackEventBuilder {
         voiceNumber: voiceNumber,
         tupletMultiplier: tupletMultiplier,
       );
-      _recordSpan(element, voiceNumber, tick, consumed);
+      _recordSpan(element, voiceNumber, tick, consumed,
+          declaredVoice: element.voice);
       return consumed;
     }
 
@@ -555,7 +565,8 @@ class _TrackEventBuilder {
         tupletMultiplier: tupletMultiplier,
       );
       for (final note in element.notes) {
-        _recordSpan(note, voiceNumber, tick, consumed);
+        _recordSpan(note, voiceNumber, tick, consumed,
+            declaredVoice: note.voice ?? element.voice);
       }
       return consumed;
     }

@@ -214,14 +214,20 @@ class PlaybackPlan {
     return lo;
   }
 
-  /// The written notes sounding at [elapsed]: every span with
+  /// The written notes sounding at [elapsed]: every audible span with
   /// `startTick <= tick < endTick`. Ready for "highlight what is playing".
-  List<MidiNoteSpan> notesAt(Duration elapsed) {
+  ///
+  /// A note muted (or not soloed) by the plan's options is silent in the
+  /// sequence and left out; pass [includeSilent] to get it too, e.g. to show
+  /// the cursor passing through a muted part.
+  List<MidiNoteSpan> notesAt(Duration elapsed, {bool includeSilent = false}) {
     final tick = tickAt(elapsed);
     final sounding = <MidiNoteSpan>[];
     for (final span in _spans) {
       if (span.startTick > tick) break; // sorted by start
-      if (span.endTick > tick) sounding.add(span);
+      if (span.endTick > tick && (includeSilent || span.audible)) {
+        sounding.add(span);
+      }
     }
     return sounding;
   }

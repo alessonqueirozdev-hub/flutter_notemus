@@ -154,18 +154,28 @@ class MidiPlayedMeasure {
 /// sounding" view needs. One span per note per played pass; a chord gives one
 /// per chord note.
 ///
-/// The span is the note's WRITTEN length (staccato does not shorten it, a
-/// muted voice still has one). Grace notes take no time and have no span.
+/// The span is the note's WRITTEN length (staccato does not shorten it). A
+/// muted or un-soloed note still has one, marked `audible: false`. Grace notes
+/// take no time and have no span.
 class MidiNoteSpan {
   /// The note itself, from the caller's [Staff] (identity preserved).
   final Note note;
 
   final int staffIndex;
+
+  /// The note's voice: the one it declares (`Note.voice`, or its chord's),
+  /// else the voice it was played in. A note of a plain [Measure] that
+  /// declares voice 3 reports 3, as `Measure.voiceNumberOf` does.
   final int voiceNumber;
+
   final int measureIndex;
   final int repeatPass;
   final int startTick;
   final int endTick;
+
+  /// False when [MidiGenerationOptions] mute the note's staff or voice (or
+  /// solo another one), so the sequence carries no sound for it.
+  final bool audible;
 
   const MidiNoteSpan({
     required this.note,
@@ -175,6 +185,7 @@ class MidiNoteSpan {
     required this.repeatPass,
     required this.startTick,
     required this.endTick,
+    this.audible = true,
   });
 }
 
