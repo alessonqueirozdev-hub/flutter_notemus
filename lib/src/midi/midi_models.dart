@@ -139,11 +139,18 @@ class MidiPlayedMeasure {
   final int startTick;
   final int endTick;
 
+  /// The meter in force for the bar (declared or inherited), or null before
+  /// any meter. A metronome clicks [numerator] times across the bar.
+  final int? numerator;
+  final int? denominator;
+
   const MidiPlayedMeasure({
     required this.measureIndex,
     required this.repeatPass,
     required this.startTick,
     required this.endTick,
+    this.numerator,
+    this.denominator,
   });
 
   int get durationTicks => endTick - startTick;

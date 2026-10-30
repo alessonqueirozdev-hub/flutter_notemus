@@ -84,12 +84,47 @@ class MidiNativeSequenceBridge {
     await backend.processTies();
 
     if (includeMetronome) {
-      await backend.scheduleMetronome(
-        // The backend lays clicks on its own (single-tempo) beat grid; it
-        // covers the warped length, but cannot follow a tempo change.
-        totalTicks: warp(sequence.totalTicks),
-        countInBeats: countInBeats,
-      );
+      if (plan.tempoChanges.length < 2) {
+        await backend.scheduleMetronome(
+          totalTicks: sequence.totalTicks,
+          countInBeats: countInBeats,
+        );
+      } else {
+        // The backend lays its clicks on a grid at the ONE tempo it was given,
+        // so after a tempo change they drifted off the (warped) notes: at
+        // 60 -> 120 bpm the notes moved to half-second beats while the clicks
+        // stayed a second apart. Schedule the clicks as notes instead, one per
+        // beat of every played bar, warped like everything else. The count-in
+        // comes before tick 0, at the opening tempo, so the backend still
+        // provides it.
+        if (countInBeats > 0) {
+          await backend.scheduleMetronome(
+            totalTicks: 0,
+            countInBeats: countInBeats,
+          );
+        }
+        // A sequence that already carries its metronome track, uploaded with
+        // includeMetronomeTrackNotes, has its clicks among the notes above.
+        final clicksUploaded = includeMetronomeTrackNotes &&
+            sequence.tracks.any((t) => t.name.toLowerCase() == 'metronome');
+        for (final click in clicksUploaded
+            ? const <({int tick, bool accent})>[]
+            : _metronomeClicks(sequence)) {
+          final start = warp(click.tick);
+          final end = warp(click.tick + _clickOptions.metronomeClickDurationTicks);
+          await backend.scheduleNote(
+            midiNote: click.accent
+                ? _clickOptions.metronomeAccentNote
+                : _clickOptions.metronomeRegularNote,
+            startTick: start,
+            durationTicks: end > start ? end - start : 1,
+            velocity: click.accent
+                ? _clickOptions.metronomeAccentVelocity
+                : _clickOptions.metronomeRegularVelocity,
+            channel: _clickOptions.metronomeChannel,
+          );
+        }
+      }
     }
   }
 
@@ -105,6 +140,27 @@ class MidiNativeSequenceBridge {
     );
     await backend.start();
   }
+}
+
+/// The click sounds the mapper's metronome uses by default.
+const _clickOptions = MidiGenerationOptions();
+
+/// One click per beat of every played bar of [sequence] — the beats the
+/// mapper's own metronome track uses (`numerator` clicks across the bar,
+/// accent on the downbeat), in source ticks.
+List<({int tick, bool accent})> _metronomeClicks(MidiSequence sequence) => [
+      for (final bar in sequence.playedMeasures)
+        for (var beat = 0; beat < _beatsOf(bar); beat++)
+          (
+            tick: bar.startTick +
+                (beat * bar.durationTicks / _beatsOf(bar)).round(),
+            accent: beat == 0,
+          ),
+    ];
+
+int _beatsOf(MidiPlayedMeasure bar) {
+  final n = bar.numerator ?? 4;
+  return n <= 0 ? 1 : n;
 }
 
 /// Maps a tick of [plan]'s sequence to the tick at [openingBpm] at which it

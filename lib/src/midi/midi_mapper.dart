@@ -185,6 +185,8 @@ List<MidiPlayedMeasure> _publicPlayedMeasures(
           repeatPass: p.repeatPass,
           startTick: p.startTick,
           endTick: p.endTick,
+          numerator: p.timeSignature?.numerator,
+          denominator: p.timeSignature?.denominator,
         ),
     ]);
 

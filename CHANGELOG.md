@@ -99,8 +99,11 @@ data-loss bug in both XML importers.
   the tick, at the opening tempo, of the moment it really sounds, the same
   time `PlaybackPlan.timeAtTick` gives. It also sends the score's own opening
   tempo: it used to send the mapper's default 120, which sits at tick 0 before
-  the score's first `TempoMark`. The metronome still clicks on the backend's
-  single-tempo grid. Reported by review on #53.
+  the score's first `TempoMark`. When the tempo changes, the bridge also
+  schedules the metronome clicks itself (one per beat of every played bar,
+  warped the same way) instead of the backend's single-tempo grid, whose
+  clicks drifted off the notes after the change. `MidiPlayedMeasure` gains
+  `numerator` / `denominator` for that. Reported by review on #53.
 
 ### Added — playback transport
 

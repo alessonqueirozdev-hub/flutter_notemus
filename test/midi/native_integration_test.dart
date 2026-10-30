@@ -117,6 +117,35 @@ void main() {
       expect(plan.timeAtTick(2880).inMilliseconds, 2500);
     });
 
+    test('after a tempo change the metronome follows the beats', () async {
+      // The backend clicks on a grid at the one tempo it was given: after
+      // 60 -> 120 bpm its clicks stayed a second apart while the notes moved
+      // to half-second beats. The bridge now schedules the clicks itself.
+      Note q(String step) => Note(
+            pitch: Pitch(step: step, octave: 4),
+            duration: const Duration(DurationType.quarter),
+          );
+      final staff = Staff(measures: [
+        Measure()
+          ..add(TimeSignature(numerator: 4, denominator: 4))
+          ..add(TempoMark(beatUnit: DurationType.quarter, bpm: 60))
+          ..add(q('C'))
+          ..add(q('D'))
+          ..add(TempoMark(beatUnit: DurationType.quarter, bpm: 120))
+          ..add(q('E'))
+          ..add(q('F')),
+      ]);
+      final backend = _FakeNativeBackend();
+      await MidiNativeSequenceBridge(backend)
+          .uploadSequence(MidiMapper.fromStaff(staff));
+
+      expect(backend.metronomeTotalTicks, isNull,
+          reason: 'the fixed-grid metronome must not run as well');
+      final clicks = backend.scheduledNotes.where((n) => n.channel == 9);
+      expect(clicks.map((c) => c.startTick), [0, 960, 1920, 2400]);
+      expect(clicks.first.midiNote, 76, reason: 'accented downbeat');
+    });
+
     test('uploads sequence metadata, notes and metronome', () async {
       final staff = Staff(
         measures: [
