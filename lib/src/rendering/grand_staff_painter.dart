@@ -318,44 +318,39 @@ class GrandStaffPainter extends CustomPainter {
     var measureIndex = best?.hit.measureIndex;
     var staffIndex = best?.staff;
 
-    // A BEAMED cross-staff note is drawn on its destination staff but keeps
-    // its geometry in its home staff's engine, so the destination's tester
-    // only knows a notehead and guesses an up-stem — and misses the stem
-    // that actually runs toward the beam between the staves. Give it its
-    // own box: the notehead on the destination, plus the stem reaching over
-    // to the home staff, where the beam is.
+    // Every note of a cross-staff beam group is drawn by
+    // [_drawCrossStaffBeams], not by its staff's renderer: its head on the
+    // staff it is printed on and its stem running to the group's beam, which
+    // can sit anywhere between (or past) the staves. The per-staff testers
+    // know none of that — a relocated note lives in its home engine, so the
+    // destination's tester guessed a 3.5-space up-stem. Test those notes
+    // against the geometry the paint pass actually uses.
     final reach = tolerance ?? staffSpace;
     var bestDistance = best?.hit.distance ?? double.infinity;
-    final lists = alignedSystem(located.system);
-    for (var target = 0; target < lists.length; target++) {
-      for (final pe in lists[target]) {
-        final e = pe.element;
-        if (e is! Note || e.crossStaffMove == 0) continue;
-        final home = target - e.crossStaffMove;
-        if (home < 0 || home >= lists.length || home == target) continue;
-        final local = located.local - Offset(0, target * staffGap);
-        final homeEdge = _baseline0 +
-            (home - target) * staffGap +
-            (home < target ? 2 : -2) * staffSpace;
-        final headY = pe.position.dy;
+    final p = located.local;
+    for (final group in _crossStaffBeamGeometry(
+        _systems[located.system], _baseline0)) {
+      final beamY = group.beamY;
+      if (beamY == null) continue;
+      for (final head in group.points) {
         final box = Rect.fromLTRB(
-          pe.position.dx - staffSpace * 0.2,
-          math.min(headY - staffSpace * 0.7, homeEdge),
-          pe.position.dx + staffSpace * 1.4,
-          math.max(headY + staffSpace * 0.7, homeEdge),
+          head.x - staffSpace * 0.2,
+          math.min(head.y - staffSpace * 0.7, beamY - staffSpace * 0.25),
+          head.x + staffSpace * 1.4,
+          math.max(head.y + staffSpace * 0.7, beamY + staffSpace * 0.25),
         );
-        final dx = local.dx < box.left
-            ? box.left - local.dx
-            : (local.dx > box.right ? local.dx - box.right : 0.0);
-        final dy = local.dy < box.top
-            ? box.top - local.dy
-            : (local.dy > box.bottom ? local.dy - box.bottom : 0.0);
+        final dx = p.dx < box.left
+            ? box.left - p.dx
+            : (p.dx > box.right ? p.dx - box.right : 0.0);
+        final dy = p.dy < box.top
+            ? box.top - p.dy
+            : (p.dy > box.bottom ? p.dy - box.bottom : 0.0);
         final distance = math.sqrt(dx * dx + dy * dy);
         if (distance <= reach && distance < bestDistance) {
           bestDistance = distance;
-          note = e;
-          measureIndex = pe.measureIndex;
-          staffIndex = target;
+          note = head.note;
+          measureIndex = head.measureIndex;
+          staffIndex = head.staff;
         }
       }
     }
@@ -1208,17 +1203,90 @@ class GrandStaffPainter extends CustomPainter {
       ..strokeWidth = stemW;
     final beamPaint = Paint()..color = theme.stemColor;
 
+    for (final group in _crossStaffBeamGeometry(layouts, baseline0)) {
+      final pts = group.points;
+      for (final p in pts) {
+        // Notehead glyph (noteheadBlack is ~baseline-centred vertically).
+        if (noteheadChar.isNotEmpty) {
+          final tp = TextPainter(
+            text: TextSpan(
+              text: noteheadChar,
+              style: TextStyle(
+                // Never name the font literally: the engine is SMuFL-based,
+                // not Bravura-based, and the descriptor is what makes a
+                // different SMuFL font swappable.
+                fontFamily: metadata.font.fontFamily,
+                package: metadata.font.fontPackage,
+                fontSize: fontSize,
+                color: theme.noteheadColor,
+                height: 1.0,
+              ),
+            ),
+            textDirection: TextDirection.ltr,
+          )..layout();
+          final baselineFromTop =
+              tp.computeDistanceToActualBaseline(TextBaseline.alphabetic);
+          tp.paint(canvas, Offset(p.x, p.y - baselineFromTop));
+        }
+      }
+      final beamY = group.beamY;
+      if (beamY == null) continue;
+
+      // Stems attach at the notehead edge nearest the beam: a note below the
+      // beam stems up (right edge); a note above stems down (left edge).
+      double stemXof(({double x, double y}) p) => p.y > beamY
+          ? p.x + noteheadW - stemW * 0.5
+          : p.x + stemW * 0.5;
+      for (final p in pts) {
+        final sx = stemXof((x: p.x, y: p.y));
+        canvas.drawLine(Offset(sx, p.y), Offset(sx, beamY), stemPaint);
+      }
+      final xs = [for (final p in pts) stemXof((x: p.x, y: p.y))]..sort();
+      canvas.drawRect(
+        Rect.fromLTRB(
+          xs.first - stemW * 0.5,
+          beamY - beamThick / 2,
+          xs.last + stemW * 0.5,
+          beamY + beamThick / 2,
+        ),
+        beamPaint,
+      );
+    }
+  }
+
+  /// Where [_drawCrossStaffBeams] draws each cross-staff beam group of a
+  /// system, in system coordinates: every note's head (x, y) on the staff it
+  /// is printed on, and the beam's y — the midpoint of the group's heads —
+  /// or null for a group of one, which draws no beam. Shared with
+  /// [noteTapAt] so a tap tests the stems that are actually drawn.
+  List<
+      ({
+        List<({Note note, int staff, int measureIndex, double x, double y})>
+            points,
+        double? beamY,
+      })> _crossStaffBeamGeometry(
+    List<_StaffLayout> layouts,
+    double baseline0,
+  ) {
+    final ss = staffSpace;
+    final groups = <({
+      List<({Note note, int staff, int measureIndex, double x, double y})>
+          points,
+      double? beamY,
+    })>[];
     for (var home = 0; home < layouts.length; home++) {
       // Note X positions from the (aligned) positioned elements.
-      final noteX = <Note, double>{};
+      final placed = <Note, PositionedElement>{};
       for (final pe in layouts[home].elements) {
-        if (pe.element is Note) noteX[pe.element as Note] = pe.position.dx;
+        if (pe.element is Note) placed[pe.element as Note] = pe;
       }
       for (final g in _crossStaffGroups(layouts[home])) {
-        final pts = <({double x, double y})>[];
+        final pts =
+            <({Note note, int staff, int measureIndex, double x, double y})>[];
         for (final note in g) {
-          final x = noteX[note];
-          if (x == null) continue;
+          final pe = placed[note];
+          if (pe == null) continue;
+          final x = pe.position.dx;
           final target = (home + note.crossStaffMove)
               .clamp(0, _allStaves.length - 1);
           final pos = StaffPositionCalculator.calculate(
@@ -1231,61 +1299,27 @@ class GrandStaffPainter extends CustomPainter {
             extraOctaveShift: _octaveShiftOf(note),
           );
           final y = baseline0 + target * staffGap - pos * ss * 0.5;
-          pts.add((x: x, y: y));
-
-          // Notehead glyph (noteheadBlack is ~baseline-centred vertically).
-          if (noteheadChar.isNotEmpty) {
-            final tp = TextPainter(
-              text: TextSpan(
-                text: noteheadChar,
-                style: TextStyle(
-                  // Never name the font literally: the engine is SMuFL-based,
-                  // not Bravura-based, and the descriptor is what makes a
-                  // different SMuFL font swappable.
-                  fontFamily: metadata.font.fontFamily,
-                  package: metadata.font.fontPackage,
-                  fontSize: fontSize,
-                  color: theme.noteheadColor,
-                  height: 1.0,
-                ),
-              ),
-              textDirection: TextDirection.ltr,
-            )..layout();
-            final baselineFromTop =
-                tp.computeDistanceToActualBaseline(TextBaseline.alphabetic);
-            tp.paint(canvas, Offset(x, y - baselineFromTop));
+          pts.add((
+            note: note,
+            staff: target,
+            measureIndex: pe.measureIndex,
+            x: x,
+            y: y,
+          ));
+        }
+        double? beamY;
+        if (pts.length >= 2) {
+          var minY = pts.first.y, maxY = pts.first.y;
+          for (final p in pts) {
+            if (p.y < minY) minY = p.y;
+            if (p.y > maxY) maxY = p.y;
           }
+          beamY = (minY + maxY) / 2;
         }
-        if (pts.length < 2) continue;
-
-        var minY = pts.first.y, maxY = pts.first.y;
-        for (final p in pts) {
-          if (p.y < minY) minY = p.y;
-          if (p.y > maxY) maxY = p.y;
-        }
-        final beamY = (minY + maxY) / 2;
-
-        // Stems attach at the notehead edge nearest the beam: a note below the
-        // beam stems up (right edge); a note above stems down (left edge).
-        double stemXof(({double x, double y}) p) => p.y > beamY
-            ? p.x + noteheadW - stemW * 0.5
-            : p.x + stemW * 0.5;
-        for (final p in pts) {
-          final sx = stemXof(p);
-          canvas.drawLine(Offset(sx, p.y), Offset(sx, beamY), stemPaint);
-        }
-        final xs = pts.map(stemXof).toList()..sort();
-        canvas.drawRect(
-          Rect.fromLTRB(
-            xs.first - stemW * 0.5,
-            beamY - beamThick / 2,
-            xs.last + stemW * 0.5,
-            beamY + beamThick / 2,
-          ),
-          beamPaint,
-        );
+        groups.add((points: pts, beamY: beamY));
       }
     }
+    return groups;
   }
 
   @override

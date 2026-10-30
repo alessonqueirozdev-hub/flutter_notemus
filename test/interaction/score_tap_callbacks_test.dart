@@ -312,12 +312,18 @@ void main() {
       expect(bars.single.staffIndex, 1);
     });
 
-    test('a beamed cross-staff note is tappable along its stem', () async {
+    test('a beamed cross-staff note is tappable up to its beam', () async {
       // Drawn on the lower staff but measured by the upper staff's engine, the
-      // note got only a guessed up-stem box from the lower staff's tester and
-      // the stem reaching up to the beam between the staves was dead.
+      // note got only a guessed up-stem box from the lower staff's tester. Its
+      // stem really runs to the group's beam, drawn at the midpoint of the
+      // heads — here, with a high C6 on top, INSIDE the upper staff.
       final metadata = SmuflMetadata();
       await metadata.load();
+      final high = Note(
+        pitch: const Pitch(step: 'C', octave: 6),
+        duration: const MusicDuration(DurationType.eighth),
+        beam: BeamType.start,
+      );
       final cross = Note(
         pitch: const Pitch(step: 'D', octave: 4),
         duration: const MusicDuration(DurationType.eighth),
@@ -331,18 +337,11 @@ void main() {
               ..elements.addAll([
                 Clef(clefType: ClefType.treble),
                 TimeSignature(numerator: 4, denominator: 4),
-                Note(
-                  pitch: const Pitch(step: 'C', octave: 5),
-                  duration: const MusicDuration(DurationType.eighth),
-                  beam: BeamType.start,
-                ),
+                high,
                 cross,
                 _q('E', 5),
                 _q('F', 5),
-                Note(
-                  pitch: const Pitch(step: 'G', octave: 5),
-                  duration: const MusicDuration(DurationType.quarter),
-                ),
+                _q('G', 5),
               ]),
           ]),
           Staff(measures: [
@@ -359,22 +358,23 @@ void main() {
         theme: const MusicScoreTheme(),
         availableWidth: 900,
       );
+      const sp = 12.0;
+      final gap = painter.staffGap;
+      const baseline = 5 * sp;
+      // Heads in system coordinates: C6 is 8 half-spaces above the treble
+      // middle line; D4 is 7 above the bass middle line, one gap lower.
+      const highY = baseline - 8 * sp / 2;
+      final crossY = baseline + gap - 7 * sp / 2;
+      final beamY = (highY + crossY) / 2;
+      // The upper staff's bottom line: the beam is above it.
+      expect(beamY, lessThan(baseline + 2 * sp));
+
       final pe = painter
           .alignedSystem(0)[1]
           .firstWhere((p) => identical(p.element, cross));
-      const sp = 12.0;
-      final gap = painter.staffGap;
-      // Just below the upper staff's bottom line, in the lower staff's local
-      // y (its middle line is at 5 sp; the upper staff sits one gap above).
-      final localY = 5 * sp - gap + 2 * sp + 4;
-      // Measured before the fix: the box ended at local y -32 (a guessed
-      // 3.5-space up-stem), 12 px short of this point; tolerance 0 so the
-      // stem itself has to cover it.
       final tap = painter.noteTapAt(
-        Offset(
-          pe.position.dx + sp * 2.2 + 3,
-          painter.contentTopInset + gap + localY,
-        ),
+        Offset(pe.position.dx + sp * 2.2 + 3,
+            painter.contentTopInset + beamY),
         tolerance: 0,
       );
       expect(tap, isNotNull);
