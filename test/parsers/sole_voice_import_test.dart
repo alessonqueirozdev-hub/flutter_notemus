@@ -45,6 +45,22 @@ void main() {
       ['D3'],
     ]);
     expect(warnings, isEmpty);
+
+    // The notes keep their voice, too. A plain Measure is voice 1 to MIDI, so
+    // filing bar 2 there put its D3 out of reach of per-voice solo/mute.
+    final bar2 = staff.measures[1];
+    expect(bar2, isA<MultiVoiceMeasure>());
+    expect((bar2 as MultiVoiceMeasure).sortedVoices.map((v) => v.number), [5]);
+    final soloed = MidiMapper.fromStaff(
+      staff,
+      options: const MidiGenerationOptions(soloVoices: {5}),
+    );
+    final pitches = [
+      for (final track in soloed.tracks)
+        for (final e in track.events)
+          if (e.type == MidiEventType.noteOn) e.note,
+    ];
+    expect(pitches, [48, 50]); // C3, D3
   });
 
   test('MEI: a bar whose only layer is n="3" keeps its notes', () {

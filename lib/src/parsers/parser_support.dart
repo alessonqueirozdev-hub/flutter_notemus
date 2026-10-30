@@ -2381,14 +2381,16 @@ class _MusicXmlImportParser {
       );
     });
 
-    if (voices.isEmpty || (voices.length == 1 && !voices.containsKey(2))) {
-      // The bar's only voice, WHATEVER its number. Reading `voice(1)` here
-      // dropped every note of a bar whose sole voice is not 1 — MuseScore
-      // numbers a piano's lower staff from voice 5, so on its reference
-      // export a left-hand whole note vanished from every bar that opened no
-      // clef/key/meter (those land in voice 1 and sent the bar down the
-      // multi-voice path instead).
-      final only = voices.isEmpty ? voice(1) : voices.values.single;
+    // A plain Measure is voice 1 by definition, so only a bar whose sole
+    // voice IS voice 1 may become one. Testing `!containsKey(2)` instead sent
+    // a bar holding only voice 5 down this path, which then read `voice(1)`
+    // and dropped every note — MuseScore numbers a piano's lower staff from
+    // voice 5, so on its reference export a left-hand whole note vanished
+    // from every bar that opened no clef/key/meter. Reading the lone voice
+    // here instead kept the notes but filed them under voice 1, out of reach
+    // of MIDI's per-voice solo/mute.
+    if (voices.isEmpty || (voices.length == 1 && voices.containsKey(1))) {
+      final only = voice(1);
       // A tuplet still open at the barline has to be closed here too. The
       // multi-voice branch below always did; this one did not, and once M-03
       // let `<time-modification>` open groups without a `<tuplet type="stop">`
@@ -3969,9 +3971,10 @@ class _MeiImportParser {
       appendLead(rightBarline);
     }
 
-    if (voices.isEmpty || (voices.length == 1 && !voices.containsKey(2))) {
-      // The bar's only layer, whatever its `@n` (see the MusicXML importer).
-      final only = voices.isEmpty ? voice(1) : voices.values.single;
+    // Only a bar whose sole layer is 1 becomes a plain (voice-1) Measure;
+    // see the MusicXML importer.
+    if (voices.isEmpty || (voices.length == 1 && voices.containsKey(1))) {
+      final only = voice(1);
       final measure = Measure(
         number: number,
         isImplicit: isImplicit,

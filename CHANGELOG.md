@@ -66,7 +66,10 @@ data-loss bug in both XML importers.
   MuseScore reference, the left hand's whole note in bar 2 was lost with an
   importer warning. Bars that also carried a clef, key or meter were spared,
   because those land in voice 1 and sent the bar down the multi-voice path.
-  Pinned by `test/parsers/sole_voice_import_test.dart`.
+  Such a bar is now a `MultiVoiceMeasure` that keeps the voice's own number,
+  because a plain `Measure` is voice 1 to MIDI and per-voice solo/mute could
+  not reach it (review on #51). Pinned by
+  `test/parsers/sole_voice_import_test.dart`.
 
 ### Fixed — beaming
 
