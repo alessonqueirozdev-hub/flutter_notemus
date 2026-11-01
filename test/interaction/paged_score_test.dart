@@ -179,6 +179,32 @@ void main() {
       expect(build().shouldRepaint(before), isTrue);
     });
 
+    test('the signature sees beam hints and edits inside chords and tuplets',
+        () {
+      final note = _w('E', 5);
+      final inner = _w('G', 5);
+      final triplet = Tuplet.triplet(elements: [inner]);
+      final groups = [
+        StaffGroup(staves: [
+          Staff(measures: [Measure()..elements.addAll([note, triplet])]),
+        ]),
+      ];
+      var last = staffGroupsSignature(groups);
+      int changed() {
+        final now = staffGroupsSignature(groups);
+        final differs = now != last;
+        last = now;
+        return differs ? 1 : 0;
+      }
+
+      note.beam = BeamType.start;
+      expect(changed(), 1, reason: 'Note.beam set in place');
+      inner.beam = BeamType.start;
+      expect(changed(), 1, reason: 'a beam hint inside a tuplet');
+      triplet.elements[0] = _w('A', 5);
+      expect(changed(), 1, reason: 'a note replaced inside a tuplet');
+    });
+
     test('a replacement group over the same staves changes the signature', () {
       final original = _piano(4);
       final groups = [original];

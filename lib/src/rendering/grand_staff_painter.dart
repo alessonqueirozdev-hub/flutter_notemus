@@ -1540,9 +1540,29 @@ class GrandStaffPainter extends CustomPainter {
 /// The structure of [groups], by identity: their staves, the bars, and every
 /// element in them (voices included). `Note` and `Pitch` are immutable, so
 /// an edit replaces an object and changes this; adding or removing one
-/// changes the counts. A [Measure]'s own settings are mutable fields, so they
-/// are hashed by value: beaming, numbering, implicit/irregular, and the meter
-/// it inherits.
+/// changes the counts. The model's mutable fields are hashed by value: a
+/// [Measure]'s beaming, numbering, implicit/irregular flags and inherited
+/// meter, and [Note.beam] — including on the notes inside chords and
+/// tuplets, whose lists are walked too.
+int _signElement(int hash, MusicalElement element) {
+  hash = Object.hash(hash, identityHashCode(element));
+  if (element is Note) return Object.hash(hash, element.beam);
+  if (element is Chord) {
+    hash = Object.hash(hash, element.notes.length);
+    for (final note in element.notes) {
+      hash = _signElement(hash, note);
+    }
+    return hash;
+  }
+  if (element is Tuplet) {
+    hash = Object.hash(hash, element.elements.length);
+    for (final inner in element.elements) {
+      hash = _signElement(hash, inner);
+    }
+  }
+  return hash;
+}
+
 int staffGroupsSignature(List<StaffGroup> groups) {
   var hash = groups.length;
   for (final group in groups) {
@@ -1574,7 +1594,7 @@ int staffGroupsSignature(List<StaffGroup> groups) {
           identityHashCode(measure.inheritedTimeSignature),
         );
         for (final element in measure.allElements) {
-          hash = Object.hash(hash, identityHashCode(element));
+          hash = _signElement(hash, element);
         }
       }
     }
