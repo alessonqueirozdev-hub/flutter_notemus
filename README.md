@@ -213,7 +213,7 @@ For a full conformance audit see [`doc/MEI_V5_AUDIT.md`](doc/MEI_V5_AUDIT.md).
 
 ## Current Status
 
-- Current release: `2.8.0`
+- Current release: `2.9.0`
 - Previous pub.dev baseline: `2.6.0`
 - **2.7.0 is an audit-remediation release, and it bundles three of them.** Three
   internal milestones were tagged in git between 2.6.0 and this release and
@@ -635,7 +635,7 @@ Add dependency to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  flutter_notemus: ^2.6.0
+  flutter_notemus: ^2.9.0
 ```
 
 Install packages:
