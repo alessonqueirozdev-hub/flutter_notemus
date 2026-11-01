@@ -1518,8 +1518,38 @@ class GrandStaffPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant GrandStaffPainter oldDelegate) {
+    // The CONTENT, not just the list: an element replaced inside a bar keeps
+    // the same `groups` list and often the same geometry, and comparing the
+    // list alone left the old raster on screen. A new theme repaints too.
     return !identical(oldDelegate.groups, groups) ||
+        oldDelegate.contentSignature != contentSignature ||
         oldDelegate.staffSpace != staffSpace ||
-        oldDelegate.availableWidth != availableWidth;
+        oldDelegate.staffGap != staffGap ||
+        oldDelegate.availableWidth != availableWidth ||
+        oldDelegate.theme != theme;
   }
+
+  /// [staffGroupsSignature] of [groups] when this painter was built.
+  late final int contentSignature = staffGroupsSignature(groups);
+}
+
+/// The structure of [groups], by identity: their staves, the bars, and every
+/// element in them (voices included). `Note` and `Pitch` are immutable, so
+/// an edit replaces an object and changes this; adding or removing one
+/// changes the counts.
+int staffGroupsSignature(List<StaffGroup> groups) {
+  var hash = groups.length;
+  for (final group in groups) {
+    for (final staff in group.staves) {
+      hash = Object.hash(
+          hash, identityHashCode(staff), staff.lineCount, staff.measures.length);
+      for (final measure in staff.measures) {
+        hash = Object.hash(hash, identityHashCode(measure));
+        for (final element in measure.allElements) {
+          hash = Object.hash(hash, identityHashCode(element));
+        }
+      }
+    }
+  }
+  return hash;
 }

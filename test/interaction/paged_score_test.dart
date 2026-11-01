@@ -120,6 +120,31 @@ void main() {
       }
     });
 
+    test('shouldRepaint sees an element replaced in place, and the theme', () {
+      // The groups list and the geometry stay the same; comparing only those
+      // kept the old raster on screen.
+      final group = _piano(4);
+      final groups = [group]; // one list, as a Score holds it
+      GrandStaffPainter build({MusicScoreTheme theme = const MusicScoreTheme()}) =>
+          GrandStaffPainter(
+            groups: groups,
+            staffSpace: 7,
+            metadata: metadata,
+            theme: theme,
+            availableWidth: 515,
+          );
+      final before = build();
+      expect(build().shouldRepaint(before), isFalse);
+      final bar = group.staves.first.measures[1];
+      bar.elements[bar.elements.length - 1] = _w('A', 5);
+      expect(build().shouldRepaint(before), isTrue);
+      final after = build();
+      expect(
+          build(theme: const MusicScoreTheme(noteheadColor: Color(0xFFFF0000)))
+              .shouldRepaint(after),
+          isTrue);
+    });
+
     test('pageOfSystem and systemOfMeasure find where a bar is printed', () {
       final p = painter(80);
       final pages = p.pages(maxHeight: 762);
@@ -212,6 +237,52 @@ void main() {
         playbackPosition: position,
       )));
       await _settle(t);
+      expect(controller.currentPage, controller.pageCount - 1);
+      controller.dispose();
+    });
+
+    testWidgets('a replacement controller learns the page count', (t) async {
+      final first = PagedScoreController();
+      final second = PagedScoreController();
+      final score = Score(staffGroups: [_piano(80)]);
+      await t.pumpWidget(_host(PagedScoreView(score: score, controller: first)));
+      await _settle(t);
+      final pages = first.pageCount;
+      expect(pages, greaterThan(1));
+
+      await t.pumpWidget(_host(PagedScoreView(score: score, controller: second)));
+      await t.pumpAndSettle();
+      expect(second.pageCount, pages);
+      second.nextPage();
+      await t.pumpAndSettle();
+      expect(second.currentPage, 1);
+      first.dispose();
+      second.dispose();
+    });
+
+    testWidgets('a replacement notifier holding a position is followed',
+        (t) async {
+      // A listener hears the next change only; a paused player never sends
+      // one.
+      final controller = PagedScoreController();
+      final score = Score(staffGroups: [_piano(80)]);
+      final idle = ValueNotifier<PlaybackPosition?>(null);
+      await t.pumpWidget(_host(PagedScoreView(
+        score: score,
+        controller: controller,
+        playbackPosition: idle,
+      )));
+      await _settle(t);
+      expect(controller.currentPage, 0);
+
+      final paused = ValueNotifier<PlaybackPosition?>(PlaybackPlan.fromScore(score)
+          .positionAt(const Duration(seconds: 158)));
+      await t.pumpWidget(_host(PagedScoreView(
+        score: score,
+        controller: controller,
+        playbackPosition: paused,
+      )));
+      await t.pumpAndSettle();
       expect(controller.currentPage, controller.pageCount - 1);
       controller.dispose();
     });

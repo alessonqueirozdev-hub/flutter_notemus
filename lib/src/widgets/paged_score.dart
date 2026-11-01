@@ -195,10 +195,28 @@ class _PagedScoreViewState extends State<PagedScoreView> {
     if (!identical(old.controller, widget.controller)) {
       if (_ownsController) _controller.dispose();
       _adoptController();
+      // A new controller starts at 0 pages, and an unchanged layout would
+      // never tell it otherwise: its navigation stayed a no-op.
+      final count = _pages.length;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _controller._setPageCount(count);
+        _controller._setPage(
+            _controller.pageController.hasClients
+                ? (_controller.pageController.page ?? 0).round()
+                : 0);
+        _followCursor();
+      });
     }
     if (!identical(old.playbackPosition, widget.playbackPosition)) {
       old.playbackPosition?.removeListener(_followCursor);
       widget.playbackPosition?.addListener(_followCursor);
+      // A listener hears the next change, not the current value: a notifier
+      // arriving with a position already set (playback paused) was never
+      // followed.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _followCursor();
+      });
     }
   }
 
@@ -221,7 +239,10 @@ class _PagedScoreViewState extends State<PagedScoreView> {
   /// change.
   void _ensureLayout() {
     final key = Object.hash(
-      _scoreFingerprint(widget.score),
+      // Content, not just the instance: an edit made in place was never laid
+      // out again when keyed on the Score alone.
+      identityHashCode(widget.score),
+      staffGroupsSignature(widget.score.staffGroups),
       widget.pageSize,
       widget.pageMargin,
       widget.staffSpace,
@@ -251,27 +272,6 @@ class _PagedScoreViewState extends State<PagedScoreView> {
       // it; without this the view stayed on page 0 until the next tick.
       _followCursor();
     });
-  }
-
-  /// The score's structure, by identity: its staves, their bars, and every
-  /// element in them (voices included). `Note` and `Pitch` are immutable, so
-  /// an edit replaces an object and changes this. Keyed on the `Score`
-  /// instance alone, an edit made in place was never laid out again.
-  static int _scoreFingerprint(Score score) {
-    var hash = identityHashCode(score);
-    for (final group in score.staffGroups) {
-      for (final staff in group.staves) {
-        hash = Object.hash(hash, identityHashCode(staff), staff.lineCount,
-            staff.measures.length);
-        for (final measure in staff.measures) {
-          hash = Object.hash(hash, identityHashCode(measure));
-          for (final element in measure.allElements) {
-            hash = Object.hash(hash, identityHashCode(element));
-          }
-        }
-      }
-    }
-    return hash;
   }
 
   /// Turns to the page holding the playback cursor's bar.
