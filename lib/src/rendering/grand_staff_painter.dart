@@ -1593,8 +1593,20 @@ int staffGroupsSignature(List<StaffGroup> groups) {
           measure.isIrregular,
           identityHashCode(measure.inheritedTimeSignature),
         );
-        for (final element in measure.allElements) {
+        for (final element in measure.elements) {
           hash = _signElement(hash, element);
+        }
+        // Voice by voice, not `allElements`: that flattens the voices away,
+        // and moving a note to another voice (which flips its stem) kept the
+        // same flat order.
+        if (measure is MultiVoiceMeasure) {
+          for (final voice in measure.sortedVoices) {
+            hash = Object.hash(hash, identityHashCode(voice), voice.number,
+                voice.elements.length);
+            for (final element in voice.elements) {
+              hash = _signElement(hash, element);
+            }
+          }
         }
       }
     }

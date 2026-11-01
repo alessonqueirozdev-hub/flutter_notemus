@@ -205,6 +205,25 @@ void main() {
       expect(changed(), 1, reason: 'a note replaced inside a tuplet');
     });
 
+    test('the signature sees a note moved to another voice', () {
+      // allElements flattens voices: moving the note kept the same order.
+      final a = _w('E', 5);
+      final b = _w('C', 4);
+      final v1 = Voice(number: 1, elements: [a, b]);
+      final v2 = Voice(number: 2, elements: []);
+      final measure = MultiVoiceMeasure()
+        ..addVoice(v1)
+        ..addVoice(v2);
+      final groups = [
+        StaffGroup(staves: [Staff(measures: [measure])]),
+      ];
+      final before = staffGroupsSignature(groups);
+      v1.elements.remove(b);
+      v2.elements.add(b);
+      expect(measure.allElements, [a, b], reason: 'same flat order');
+      expect(staffGroupsSignature(groups), isNot(before));
+    });
+
     test('a replacement group over the same staves changes the signature', () {
       final original = _piano(4);
       final groups = [original];
