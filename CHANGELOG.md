@@ -6,6 +6,74 @@ The format is based on Keep a Changelog and this project follows Semantic Versio
 
 ## [Unreleased]
 
+## [2.9.0] - 2026-11-01
+
+A score you can play along with. This release brings @zamvar's fork
+(`codex/note-tap`) upstream in five slices: pickup bars, `.mxl` import, tap
+callbacks, a playback transport with an on-screen cursor, and a paged view.
+Each was rebuilt on the 2.8 engine instead of being copied, so taps go through
+`ScoreHitTester`, timing comes from the same `MidiSequence` that makes the
+sound, and pages are bands of the one `GrandStaffPainter` that the screen and
+PDF export share. Discussion #50 tracks the port, and every slice credits
+@zamvar as co-author.
+
+Review of those slices found defects that had nothing to do with the new
+features. **A one-beat pickup in 4/4 played three beats of silence.** A tempo
+change never reached native playback. A `<forward>` gap moved the next note
+early. A bar holding only voice 5 imported empty. Every system of a grand staff
+ended on a final barline. Each one now has a regression test that fails
+without its fix. @ArtSilver's #49 fixes beaming in bars that inherit their
+meter (#47).
+
+Minor rather than patch, because it adds public API and changes no existing
+behaviour except the defects listed under *Fixed*. Three goldens change: they
+now show staff lines stopping at the closing barline, and a single barline
+between systems.
+
+### Added — paged view
+
+- **`PagedScoreView` and `PagedScoreController`.** A `Score` shown as paper
+  pages, one at a time, swiped left and right. Pages are A4 portrait by
+  default (`pageSize`, `pageMargin`), and the first opens with the title,
+  subtitle and composer. Pinch or `zoomBy` zooms a page (1x to 4x, kept per
+  page). Taps and the playback cursor work as on `GrandStaff`, and with
+  `followPlayback` the page turns to keep the cursor in view. Each page is a
+  clipped band of the one `GrandStaffPainter` that the screen and the PDF
+  exporter share. `GrandStaffPainter.pages(maxHeight:)` cuts the systems into
+  pages, and `systemOfMeasure` / `pageOfSystem` locate a bar. Fifth and last
+  slice of @zamvar's fork (Discussion #50).
+- **`GrandStaffPainter` paints only the systems its clip can show.** A page
+  of `PagedScoreView` no longer repaints the whole score.
+
+### Added — playback cursor
+
+- **`playbackPosition` on `MusicScore`, `GrandStaff` and `ScoreView`.** It is a
+  `ValueListenable<PlaybackPosition?>`, typically fed from
+  `PlaybackPlan.positionAt` on each clock tick, and draws a cursor across the
+  staff or the whole system. The cursor is its own layer behind its own
+  `RepaintBoundary`, so a tick repaints one line, not the notation. It glides
+  between the bar's rhythmic events on the shared grid, so it reaches each
+  note, on any staff, as that note starts to sound. `PlaybackPosition` gains
+  `measureLength`, and `MusicScoreTheme` gains `playheadColor`.
+  `GrandStaffPainter.playheadAt` gives the placement to a custom host. Fourth
+  slice, part b, of @zamvar's fork (Discussion #50); part of #19.
+
+### Added — playback transport
+
+- **`PlaybackPlan`** (`fromStaff`, `fromScore`, `fromSequence`): the
+  transport a player UI needs, read off the same `MidiSequence` that makes the
+  sound, so cursor, highlighting and audio cannot disagree. `positionAt(time)`
+  gives the bar, repeat pass, offset in the bar (in whole notes, the unit of
+  `PositionedElement.onset`) and progress. `notesAt(time)` gives the written
+  notes sounding then. `timeOfMeasure(index, repeatPass:)` gives where to seek.
+  `timeAtTick` / `tickAt` convert through every tempo change. Fourth slice of
+  @zamvar's fork (Discussion #50); the fork re-derived timing on its own.
+- **`MidiSequence.playedMeasures` and `noteSpans`.** The bars in playing order
+  with their ticks, repeats expanded, and one `MidiNoteSpan` per written note
+  per pass. Each span carries the caller's own `Note`, its staff, voice, bar,
+  pass and written ticks. A chord gives one span per note; grace notes take no
+  time and have none; split voice tracks still give one span per note.
+
 ### Added — tap callbacks
 
 - **`onNoteTap` and `onMeasureTap` on `MusicScore`, `GrandStaff` and
@@ -67,6 +135,37 @@ data-loss bug in both XML importers.
   import now reads the `"number"` that `JsonMusicExporter` had always
   written.
 
+### Fixed — wrapped systems
+
+- **Only the last system ends with the final barline.** `GrandStaffPainter`
+  lays out each system as its own sub-staff, and the layout closed every
+  sub-staff as if the piece ended there, so every line of a grand staff ended
+  thin-thick. `LayoutEngine` gains `continuesAfter`.
+- **Staff lines stop at a system's closing barline.** Lines ran 0.8 spaces
+  past a single barline at the end of a wrapped system; only a final barline's
+  width had hidden it. Three goldens (`grand_staff_multisystem`,
+  `m04e_multi_system`, `s02_ode_to_joy`) change by exactly those line ends
+  and barlines.
+- **Pages are cut between systems, not on the system block boundary.** Cut on
+  the block, a page showed the next system's high notes along its bottom edge,
+  and the next page lost them off its top.
+
+### Fixed — native playback tempo
+
+- **A tempo change reaches native playback.** The native backend contract
+  takes one tempo (`setTempo`) and converts every tick with it, so
+  `MidiNativeSequenceBridge` dropped every tempo change after the start: a bar
+  going from 60 to 120 bpm played at 60 throughout, and its last two quarters
+  ran a full second late. The bridge now re-expresses each scheduled tick as
+  the tick, at the opening tempo, of the moment it really sounds, the same
+  time `PlaybackPlan.timeAtTick` gives. It also sends the score's own opening
+  tempo: it used to send the mapper's default 120, which sits at tick 0 before
+  the score's first `TempoMark`. When the tempo changes, the bridge also
+  schedules the metronome clicks itself (one per beat of every played bar,
+  warped the same way) instead of the backend's single-tempo grid, whose
+  clicks drifted off the notes after the change. `MidiPlayedMeasure` gains
+  `numerator` / `denominator` for that. Reported by review on #53.
+
 ### Fixed — MIDI
 
 - **A `<forward>` gap delays the note after it.** MIDI skipped `Space`
@@ -103,80 +202,16 @@ data-loss bug in both XML importers.
   and fixed in #49 by @ArtSilver; pinned by
   `test/layout/inherited_meter_beaming_test.dart`.
 
-### Fixed — native playback tempo
+### Tests
 
-- **A tempo change reaches native playback.** The native backend contract
-  takes one tempo (`setTempo`) and converts every tick with it, so
-  `MidiNativeSequenceBridge` dropped every tempo change after the start: a bar
-  going from 60 to 120 bpm played at 60 throughout, and its last two quarters
-  ran a full second late. The bridge now re-expresses each scheduled tick as
-  the tick, at the opening tempo, of the moment it really sounds, the same
-  time `PlaybackPlan.timeAtTick` gives. It also sends the score's own opening
-  tempo: it used to send the mapper's default 120, which sits at tick 0 before
-  the score's first `TempoMark`. When the tempo changes, the bridge also
-  schedules the metronome clicks itself (one per beat of every played bar,
-  warped the same way) instead of the backend's single-tempo grid, whose
-  clicks drifted off the notes after the change. `MidiPlayedMeasure` gains
-  `numerator` / `denominator` for that. Reported by review on #53.
-
-### Added — paged view
-
-- **`PagedScoreView` and `PagedScoreController`.** A `Score` shown as paper
-  pages, one at a time, swiped left and right. Pages are A4 portrait by
-  default (`pageSize`, `pageMargin`), and the first opens with the title,
-  subtitle and composer. Pinch or `zoomBy` zooms a page (1x to 4x, kept per
-  page). Taps and the playback cursor work as on `GrandStaff`, and with
-  `followPlayback` the page turns to keep the cursor in view. Each page is a
-  clipped band of the one `GrandStaffPainter` that the screen and the PDF
-  exporter share. `GrandStaffPainter.pages(maxHeight:)` cuts the systems into
-  pages, and `systemOfMeasure` / `pageOfSystem` locate a bar. Fifth and last
-  slice of @zamvar's fork (Discussion #50).
-- **`GrandStaffPainter` paints only the systems its clip can show.** A page
-  of `PagedScoreView` no longer repaints the whole score.
-
-### Fixed — wrapped systems
-
-- **Only the last system ends with the final barline.** `GrandStaffPainter`
-  lays out each system as its own sub-staff, and the layout closed every
-  sub-staff as if the piece ended there, so every line of a grand staff ended
-  thin-thick. `LayoutEngine` gains `continuesAfter`.
-- **Staff lines stop at a system's closing barline.** Lines ran 0.8 spaces
-  past a single barline at the end of a wrapped system; only a final barline's
-  width had hidden it. Three goldens (`grand_staff_multisystem`,
-  `m04e_multi_system`, `s02_ode_to_joy`) change by exactly those line ends
-  and barlines.
-- **Pages are cut between systems, not on the system block boundary.** Cut on
-  the block, a page showed the next system's high notes along its bottom edge,
-  and the next page lost them off its top.
-
-### Added — playback cursor
-
-- **`playbackPosition` on `MusicScore`, `GrandStaff` and `ScoreView`.** It is a
-  `ValueListenable<PlaybackPosition?>`, typically fed from
-  `PlaybackPlan.positionAt` on each clock tick, and draws a cursor across the
-  staff or the whole system. The cursor is its own layer behind its own
-  `RepaintBoundary`, so a tick repaints one line, not the notation. It glides
-  between the bar's rhythmic events on the shared grid, so it reaches each
-  note, on any staff, as that note starts to sound. `PlaybackPosition` gains
-  `measureLength`, and `MusicScoreTheme` gains `playheadColor`.
-  `GrandStaffPainter.playheadAt` gives the placement to a custom host. Fourth
-  slice, part b, of @zamvar's fork (Discussion #50); part of #19.
-
-### Added — playback transport
-
-- **`PlaybackPlan`** (`fromStaff`, `fromScore`, `fromSequence`): the
-  transport a player UI needs, read off the same `MidiSequence` that makes the
-  sound, so cursor, highlighting and audio cannot disagree. `positionAt(time)`
-  gives the bar, repeat pass, offset in the bar (in whole notes, the unit of
-  `PositionedElement.onset`) and progress. `notesAt(time)` gives the written
-  notes sounding then. `timeOfMeasure(index, repeatPass:)` gives where to seek.
-  `timeAtTick` / `tickAt` convert through every tempo change. Fourth slice of
-  @zamvar's fork (Discussion #50); the fork re-derived timing on its own.
-- **`MidiSequence.playedMeasures` and `noteSpans`.** The bars in playing order
-  with their ticks, repeats expanded, and one `MidiNoteSpan` per written note
-  per pass. Each span carries the caller's own `Note`, its staff, voice, bar,
-  pass and written ticks. A chord gives one span per note; grace notes take no
-  time and have none; split voice tracks still give one span per note.
+- **1140 tests pass** (1041 at 2.8.1), and `dart analyze lib test` is clean.
+  New suites include `test/interaction/paged_score_test.dart`,
+  `playhead_test.dart`, `score_tap_callbacks_test.dart`,
+  `test/midi/playback_plan_test.dart`,
+  `test/parsers/musicxml_mxl_import_test.dart`,
+  `sole_voice_import_test.dart` and
+  `test/layout/inherited_meter_beaming_test.dart`. The MuseScore 4.7.4 reference export from
+  the fork (CC0-1.0) ships as a fixture.
 
 ## [2.8.1] - 2026-09-07
 
