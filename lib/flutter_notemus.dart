@@ -125,7 +125,8 @@ export 'src/export/export.dart';
 // The painter that draws a multi-staff system. `ScoreRasterizer.rasterize`
 // returns pages painted by it and `GrandStaff` builds one, so consumers writing
 // their own `CustomPaint` need the type to be public.
-export 'src/rendering/grand_staff_painter.dart' show GrandStaffPainter;
+export 'src/rendering/grand_staff_painter.dart'
+    show GrandStaffPainter, staffGroupsSignature;
 
 /// The main Flutter widget for rendering music notation.
 ///

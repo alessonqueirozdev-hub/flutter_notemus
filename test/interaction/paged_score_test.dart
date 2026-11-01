@@ -145,6 +145,21 @@ void main() {
           isTrue);
     });
 
+    test("the signature sees a bar's own settings changed in place", () {
+      final groups = [_piano(4)];
+      final before = staffGroupsSignature(groups);
+      groups.first.staves.first.measures[1].autoBeaming = false;
+      expect(staffGroupsSignature(groups), isNot(before));
+      final noBeams = staffGroupsSignature(groups);
+      groups.first.staves.first.measures[1].manualBeamGroups = [
+        [0, 1],
+      ];
+      expect(staffGroupsSignature(groups), isNot(noBeams));
+      final grouped = staffGroupsSignature(groups);
+      groups.first.staves.first.measures[0].isImplicit = true;
+      expect(staffGroupsSignature(groups), isNot(grouped));
+    });
+
     test('pageOfSystem and systemOfMeasure find where a bar is printed', () {
       final p = painter(80);
       final pages = p.pages(maxHeight: 762);
@@ -282,6 +297,27 @@ void main() {
         controller: controller,
         playbackPosition: paused,
       )));
+      await t.pumpAndSettle();
+      expect(controller.currentPage, controller.pageCount - 1);
+      controller.dispose();
+    });
+
+    testWidgets('turning followPlayback on goes to the paused cursor',
+        (t) async {
+      final controller = PagedScoreController();
+      final score = Score(staffGroups: [_piano(80)]);
+      final paused = ValueNotifier<PlaybackPosition?>(PlaybackPlan.fromScore(score)
+          .positionAt(const Duration(seconds: 158)));
+      Widget view(bool follow) => _host(PagedScoreView(
+            score: score,
+            controller: controller,
+            playbackPosition: paused,
+            followPlayback: follow,
+          ));
+      await t.pumpWidget(view(false));
+      await _settle(t);
+      expect(controller.currentPage, 0);
+      await t.pumpWidget(view(true));
       await t.pumpAndSettle();
       expect(controller.currentPage, controller.pageCount - 1);
       controller.dispose();

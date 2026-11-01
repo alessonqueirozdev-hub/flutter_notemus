@@ -208,6 +208,13 @@ class _PagedScoreViewState extends State<PagedScoreView> {
         _followCursor();
       });
     }
+    if (!old.followPlayback && widget.followPlayback) {
+      // Turned on with playback paused on another page: go there now, not
+      // at the next tick that may never come.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _followCursor();
+      });
+    }
     if (!identical(old.playbackPosition, widget.playbackPosition)) {
       old.playbackPosition?.removeListener(_followCursor);
       widget.playbackPosition?.addListener(_followCursor);

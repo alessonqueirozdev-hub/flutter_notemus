@@ -1536,7 +1536,9 @@ class GrandStaffPainter extends CustomPainter {
 /// The structure of [groups], by identity: their staves, the bars, and every
 /// element in them (voices included). `Note` and `Pitch` are immutable, so
 /// an edit replaces an object and changes this; adding or removing one
-/// changes the counts.
+/// changes the counts. A [Measure]'s own settings are mutable fields, so they
+/// are hashed by value: beaming, numbering, implicit/irregular, and the meter
+/// it inherits.
 int staffGroupsSignature(List<StaffGroup> groups) {
   var hash = groups.length;
   for (final group in groups) {
@@ -1544,7 +1546,17 @@ int staffGroupsSignature(List<StaffGroup> groups) {
       hash = Object.hash(
           hash, identityHashCode(staff), staff.lineCount, staff.measures.length);
       for (final measure in staff.measures) {
-        hash = Object.hash(hash, identityHashCode(measure));
+        hash = Object.hash(
+          hash,
+          identityHashCode(measure),
+          measure.autoBeaming,
+          measure.beamingMode,
+          Object.hashAll(measure.manualBeamGroups.map(Object.hashAll)),
+          measure.number,
+          measure.isImplicit,
+          measure.isIrregular,
+          identityHashCode(measure.inheritedTimeSignature),
+        );
         for (final element in measure.allElements) {
           hash = Object.hash(hash, identityHashCode(element));
         }
