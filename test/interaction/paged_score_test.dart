@@ -436,6 +436,25 @@ void main() {
       controller.dispose();
     });
 
+    testWidgets('an unbounded parent gets one page, not a layout failure',
+        (t) async {
+      // A Column child without Expanded leaves the height unbounded; the
+      // PageView got that constraint and its horizontal viewport threw.
+      await t.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: Column(children: [
+              PagedScoreView(score: Score(staffGroups: [_piano(8)])),
+            ]),
+          ),
+        ),
+      ));
+      await _settle(t);
+      expect(t.takeException(), isNull);
+      final view = t.getSize(find.byType(PagedScoreView));
+      expect(view.height, closeTo(842 + 24, 0.5));
+    });
+
     testWidgets('the page turns to follow the playback cursor', (t) async {
       final controller = PagedScoreController();
       final position = ValueNotifier<PlaybackPosition?>(null);

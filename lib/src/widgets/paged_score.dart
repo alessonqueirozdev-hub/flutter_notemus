@@ -313,45 +313,52 @@ class _PagedScoreViewState extends State<PagedScoreView> {
         _ensureLayout();
         return LayoutBuilder(builder: (context, constraints) {
           final page = widget.pageSize;
+          // Unbounded (a Column child without Expanded, a scroll view): one
+          // page and its gutter. The PageView is held to this size below; it
+          // used to get the unbounded constraint itself and fail layout.
           final width = constraints.hasBoundedWidth
               ? constraints.maxWidth
-              : page.width;
+              : page.width + 24;
           final height = constraints.hasBoundedHeight
               ? constraints.maxHeight
-              : page.height;
+              : page.height + 24;
           final scale = math.max(
             0.01,
             math.min((width - 24) / page.width, (height - 24) / page.height),
           );
-          return AnimatedBuilder(
-            animation: _controller,
-            builder: (context, _) => PageView.builder(
-              controller: _controller.pageController,
-              itemCount: _pages.length,
-              // Zoomed in, a drag pans the page instead of turning it.
-              physics: _controller.currentScale > 1.01
-                  ? const NeverScrollableScrollPhysics()
-                  : const PageScrollPhysics(),
-              onPageChanged: _controller._setPage,
-              itemBuilder: (context, index) => Center(
-                child: SizedBox(
-                  width: page.width * scale,
-                  height: page.height * scale,
-                  child: InteractiveViewer(
-                    transformationController:
-                        _controller.transformationFor(index),
-                    minScale: 1.0,
-                    maxScale: 4.0,
-                    panEnabled: _controller.currentScale > 1.01,
-                    clipBehavior: Clip.hardEdge,
-                    child: FittedBox(
-                      fit: BoxFit.contain,
-                      child: _PageSheet(
-                        key: ValueKey(index),
-                        view: widget,
-                        painter: _painter!,
-                        page: _pages[index],
-                        headerHeight: index == 0 ? _headerHeight : 0.0,
+          return SizedBox(
+            width: width,
+            height: height,
+            child: AnimatedBuilder(
+              animation: _controller,
+              builder: (context, _) => PageView.builder(
+                controller: _controller.pageController,
+                itemCount: _pages.length,
+                // Zoomed in, a drag pans the page instead of turning it.
+                physics: _controller.currentScale > 1.01
+                    ? const NeverScrollableScrollPhysics()
+                    : const PageScrollPhysics(),
+                onPageChanged: _controller._setPage,
+                itemBuilder: (context, index) => Center(
+                  child: SizedBox(
+                    width: page.width * scale,
+                    height: page.height * scale,
+                    child: InteractiveViewer(
+                      transformationController:
+                          _controller.transformationFor(index),
+                      minScale: 1.0,
+                      maxScale: 4.0,
+                      panEnabled: _controller.currentScale > 1.01,
+                      clipBehavior: Clip.hardEdge,
+                      child: FittedBox(
+                        fit: BoxFit.contain,
+                        child: _PageSheet(
+                          key: ValueKey(index),
+                          view: widget,
+                          painter: _painter!,
+                          page: _pages[index],
+                          headerHeight: index == 0 ? _headerHeight : 0.0,
+                        ),
                       ),
                     ),
                   ),
