@@ -112,6 +112,8 @@ export 'src/interaction/score_taps.dart' show ScoreNoteTap, ScoreMeasureTap;
 export 'src/widgets/grand_staff.dart'
     show GrandStaff, GrandStaffPlayheadPainter, ScoreView;
 export 'src/widgets/playhead_layer.dart' show MusicScorePlayheadPainter;
+export 'src/widgets/paged_score.dart'
+    show PagedScoreController, PagedScoreView, pageOfSystem;
 
 // PDF export is a headline feature of 2.7.x, but until 2.7.1 `PdfExporter`,
 // `ScoreRasterizer` and `GrandStaffPainter` were reachable only through

@@ -962,6 +962,13 @@ class LayoutEngine {
   /// continues from it (see [displayMeasureNumbers]).
   final int measureNumberOffset;
 
+  /// Whether the music carries on after this [staff]'s last bar — true for a
+  /// wrapped system that `GrandStaffPainter` lays out on its own. The last bar
+  /// then closes with an ordinary barline, not the final one: every system of
+  /// a grand staff used to end with a final (thin-thick) barline, as if the
+  /// piece ended on every line.
+  final bool continuesAfter;
+
   // Fix: SMuFL: Larguras agora consultadas dinamicamente of the metadata
   // Valores de fallback mantidos for compatibilidade
   static const double _gClefWidthFallback = 2.684;
@@ -1027,6 +1034,7 @@ class LayoutEngine {
     this.metadata,
     this.verboseValidation = false, // Silencioso por padrão
     this.measureNumberOffset = 0,
+    this.continuesAfter = false,
     spacing.SpacingPreferences? spacingPreferences,
   }) {
     // Initialise spacing engine
@@ -1430,7 +1438,7 @@ class LayoutEngine {
       // 1. Next measure not começar with a
       // 2. Current measure not terminar with a
       if (!nextMeasureStartsWithBarline && !currentMeasureEndsWithBarline) {
-        if (isLast) {
+        if (isLast && !continuesAfter) {
           // Double barline Final
           cursor.advance(measureEndPadding * staffSpace);
           cursor.addDoubleBarline(positionedElements, onset: onsetCursor);

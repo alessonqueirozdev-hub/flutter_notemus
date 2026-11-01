@@ -108,6 +108,11 @@ class GrandStaffPainter extends CustomPainter {
   /// Left padding reserved for the brace/bracket (and group name).
   late final double _bracePad;
 
+  /// Bars in the longest staff: the score's length.
+  int get _measureCount => _allStaves
+      .map((s) => s.measures.length)
+      .fold<int>(0, (a, b) => a > b ? a : b);
+
   /// All staves across all groups, top to bottom.
   List<Staff> get _allStaves => [for (final g in groups) ...g.staves];
 
@@ -259,6 +264,76 @@ class GrandStaffPainter extends CustomPainter {
 
   /// First and last measure index of each system, parallel to [_systems].
   late final List<({int start, int end})> _ranges;
+
+  // --- Pagination -----------------------------------------------------------
+
+  /// Splits the systems into pages no taller than [maxHeight], cut between
+  /// systems, so a page holds whole systems only.
+  ///
+  /// Each page is a band of this painter's canvas: [top] and [height] in its
+  /// coordinates. Bands are cut halfway between one system's bottom staff
+  /// line and the next system's top line, not at the system BLOCK boundary:
+  /// a block starts three spaces above its top line, so notes on ledger
+  /// lines above the staff reach into the block before. Cut on the block
+  /// boundary, a page showed the next system's high notes along its bottom
+  /// edge and the next page lost them off its top. The first band also holds
+  /// the headroom above the first system plus [firstPageReserve] (room for a
+  /// title); the last runs to the bottom of the canvas. A system taller than
+  /// a page gets a page of its own rather than being split.
+  List<({int firstSystem, int systemCount, double top, double height})> pages({
+    required double maxHeight,
+    double firstPageReserve = 0.0,
+  }) {
+    final n = _systems.length;
+    if (n == 0) return const [];
+    final block = systemBlockHeight;
+    final staffSpan = (_allStaves.length - 1) * staffGap;
+    // Canvas y between system i - 1 and system i; 0 and totalHeight at the
+    // ends.
+    double cut(int i) {
+      if (i <= 0) return 0.0;
+      if (i >= n) return totalHeight;
+      final previousBottom = contentTopInset +
+          (i - 1) * block +
+          staffSpan +
+          _baseline0 +
+          staffSpace * 2;
+      final nextTop =
+          contentTopInset + i * block + _baseline0 - staffSpace * 2;
+      return (previousBottom + nextTop) / 2;
+    }
+
+    final result =
+        <({int firstSystem, int systemCount, double top, double height})>[];
+    var first = 0;
+    while (first < n) {
+      final reserve = first == 0 ? firstPageReserve : 0.0;
+      var count = 1;
+      while (first + count < n &&
+          cut(first + count + 1) - cut(first) + reserve <= maxHeight) {
+        count++;
+      }
+      result.add((
+        firstSystem: first,
+        systemCount: count,
+        top: cut(first),
+        height: cut(first + count) - cut(first),
+      ));
+      first += count;
+    }
+    return result;
+  }
+
+  /// Index of the system holding bar [measureIndex], or null when no system
+  /// does.
+  int? systemOfMeasure(int measureIndex) {
+    for (var i = 0; i < _ranges.length; i++) {
+      if (measureIndex >= _ranges[i].start && measureIndex <= _ranges[i].end) {
+        return i;
+      }
+    }
+    return null;
+  }
 
   // --- Playhead -------------------------------------------------------------
 
@@ -504,6 +579,8 @@ class GrandStaffPainter extends CustomPainter {
           // The number of the bar before the system, not its index: a pickup
           // is not counted, so on a staff that opens with one the two differ.
           measureOffset: _numberBefore(staff, a),
+          // Only the last system ends the piece.
+          continuesAfter: b < _measureCount - 1,
         ),
     ];
     _alignStaves(layouts);
@@ -644,7 +721,11 @@ class GrandStaffPainter extends CustomPainter {
     return found ?? Clef(clefType: ClefType.treble);
   }
 
-  _StaffLayout _layoutSubStaff(Staff staff, {int measureOffset = 0}) {
+  _StaffLayout _layoutSubStaff(
+    Staff staff, {
+    int measureOffset = 0,
+    bool continuesAfter = false,
+  }) {
     final engine = LayoutEngine(
       staff,
       // Very wide so a system never wraps internally — breaks are decided here.
@@ -654,6 +735,7 @@ class GrandStaffPainter extends CustomPainter {
       // Indices restart at 0 inside a system's sub-staff; this restores the
       // absolute bar number without touching the caller's Measure objects.
       measureNumberOffset: measureOffset,
+      continuesAfter: continuesAfter,
     );
     final result = engine.layoutWithSignature();
     return _StaffLayout(result.elements, engine);
@@ -811,9 +893,7 @@ class GrandStaffPainter extends CustomPainter {
   /// Greedy system breaks shared by all staves: pack measures (by their widest
   /// per-staff width) into lines no wider than the usable width.
   List<({int start, int end})> _computeSystemRanges() {
-    final nMeasures = _allStaves
-        .map((s) => s.measures.length)
-        .fold<int>(0, (a, b) => a > b ? a : b);
+    final nMeasures = _measureCount;
     if (nMeasures == 0) return [(start: 0, end: 0)];
 
     final widths = List<double>.filled(nMeasures, 0);
@@ -1042,9 +1122,19 @@ class GrandStaffPainter extends CustomPainter {
     canvas.translate(_bracePad, contentTopInset);
 
     final baseline0 = _baseline0;
+    // Only the systems the clip can show. A page of `PagedScoreView` is a
+    // clipped band of this one painter, and painting every system for every
+    // page made a 40-page score paint 40 times over. A system's ink can reach
+    // past its block (ledger lines, lyrics), so one block either side stays.
+    final clip = canvas.getLocalClipBounds();
     for (var sysIdx = 0; sysIdx < _systems.length; sysIdx++) {
       final layouts = _systems[sysIdx];
       if (layouts.isEmpty) continue;
+      final blockTop = sysIdx * systemBlockHeight;
+      if (blockTop + 2 * systemBlockHeight < clip.top ||
+          blockTop - systemBlockHeight > clip.bottom) {
+        continue;
+      }
       canvas.save();
       canvas.translate(0, sysIdx * systemBlockHeight);
       _paintSystem(canvas, size, layouts, baseline0);

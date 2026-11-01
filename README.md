@@ -1227,6 +1227,25 @@ onMeasureTap: (tap) => player.seek(plan.timeOfMeasure(tap.measureIndex)!),
 The cursor glides between the bar's notes, so it reaches each one as it starts
 to sound. Its colour is `MusicScoreTheme.playheadColor`.
 
+### Paged view
+
+`PagedScoreView` shows a `Score` as paper pages, swiped one at a time: the
+systems `GrandStaff` lays out, cut between systems so a page holds whole
+systems, with the title, subtitle and composer at the head of the first page.
+
+```dart
+final pages = PagedScoreController();
+PagedScoreView(
+  score: score,
+  controller: pages,            // pages.nextPage(), pages.zoomBy(1.25), ...
+  playbackPosition: position,   // the page turns to follow the cursor
+  onNoteTap: (tap) => play(tap.note),
+);
+```
+
+The page is A4 portrait by default (`pageSize`, `pageMargin`); pinch or
+`zoomBy` to zoom a page. Every page paints only its own systems.
+
 `ScoreHitTester` turns a laid-out score into something a user can point at. It
 returns **your own model objects**, not copies — which is why editing and
 highlighting work:

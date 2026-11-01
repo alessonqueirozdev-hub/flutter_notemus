@@ -119,6 +119,36 @@ data-loss bug in both XML importers.
   clicks drifted off the notes after the change. `MidiPlayedMeasure` gains
   `numerator` / `denominator` for that. Reported by review on #53.
 
+### Added — paged view
+
+- **`PagedScoreView` and `PagedScoreController`.** A `Score` shown as paper
+  pages, one at a time, swiped left and right. Pages are A4 portrait by
+  default (`pageSize`, `pageMargin`), and the first opens with the title,
+  subtitle and composer. Pinch or `zoomBy` zooms a page (1x to 4x, kept per
+  page). Taps and the playback cursor work as on `GrandStaff`, and with
+  `followPlayback` the page turns to keep the cursor in view. Each page is a
+  clipped band of the one `GrandStaffPainter` that the screen and the PDF
+  exporter share. `GrandStaffPainter.pages(maxHeight:)` cuts the systems into
+  pages, and `systemOfMeasure` / `pageOfSystem` locate a bar. Fifth and last
+  slice of @zamvar's fork (Discussion #50).
+- **`GrandStaffPainter` paints only the systems its clip can show.** A page
+  of `PagedScoreView` no longer repaints the whole score.
+
+### Fixed — wrapped systems
+
+- **Only the last system ends with the final barline.** `GrandStaffPainter`
+  lays out each system as its own sub-staff, and the layout closed every
+  sub-staff as if the piece ended there, so every line of a grand staff ended
+  thin-thick. `LayoutEngine` gains `continuesAfter`.
+- **Staff lines stop at a system's closing barline.** Lines ran 0.8 spaces
+  past a single barline at the end of a wrapped system; only a final barline's
+  width had hidden it. Three goldens (`grand_staff_multisystem`,
+  `m04e_multi_system`, `s02_ode_to_joy`) change by exactly those line ends
+  and barlines.
+- **Pages are cut between systems, not on the system block boundary.** Cut on
+  the block, a page showed the next system's high notes along its bottom edge,
+  and the next page lost them off its top.
+
 ### Added — playback cursor
 
 - **`playbackPosition` on `MusicScore`, `GrandStaff` and `ScoreView`.** It is a

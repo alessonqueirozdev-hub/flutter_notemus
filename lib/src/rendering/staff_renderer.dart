@@ -993,7 +993,14 @@ class StaffRenderer {
                   thickBarlineThickness,
                 )
           : contentEndX;
-      final endX = math.max(contentEndX, barlineEndX);
+      // A system that ENDS on its barline stops there. Padding the content
+      // edge by 0.8 spaces was only hidden by a final barline's width: a
+      // wrapped system ending on a single barline had its lines run past it.
+      final endsOnBarline =
+          barlineX != null && barlineX >= bounds.endX - 0.5;
+      final endX = endsOnBarline
+          ? barlineEndX
+          : math.max(contentEndX, barlineEndX);
 
       // Desenhar as 5 staff lines for this system
       // ✅ CORREÇÃO: Use coordinates.getStaffLineY() diretamente, that already tem
