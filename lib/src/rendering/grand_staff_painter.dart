@@ -16,6 +16,8 @@ import '../../core/core.dart';
 import '../interaction/score_hit_tester.dart';
 import '../interaction/score_taps.dart';
 import '../layout/onset_grid.dart';
+import '../playback/playback_plan.dart';
+import '../playback/playhead.dart';
 import '../layout/layout_engine.dart';
 import '../smufl/smufl_metadata_loader.dart';
 import '../theme/music_score_theme.dart';
@@ -257,6 +259,52 @@ class GrandStaffPainter extends CustomPainter {
 
   /// First and last measure index of each system, parallel to [_systems].
   late final List<({int start, int end})> _ranges;
+
+  // --- Playhead -------------------------------------------------------------
+
+  /// Where a playback cursor for [position] stands, in canvas coordinates: its
+  /// x, and the top and bottom of the system it spans (every staff, a space
+  /// past the outer lines). Null when the position names no laid-out bar.
+  ///
+  /// The x glides between the bar's rhythmic events on the shared grid, so
+  /// it reaches each note — on any staff — as that note starts to sound.
+  ({double x, double top, double bottom})? playheadAt(
+      PlaybackPosition position) {
+    for (var system = 0; system < _ranges.length; system++) {
+      final range = _ranges[system];
+      if (position.measureIndex < range.start ||
+          position.measureIndex > range.end) {
+        continue;
+      }
+      final local = position.measureIndex - range.start;
+      final line = [
+        for (final layout in _systems[system]) ...layout.elements,
+      ];
+      final bar = [
+        for (final e in line)
+          if (e.measureIndex == local) e,
+      ];
+      final x = playheadX(
+        bar,
+        offset: position.offsetInMeasure,
+        measureLength: position.measureLength,
+        // The whole system: a bar may be closed by the NEXT bar's barline.
+        closingX: closingBarlineX(line, local),
+      );
+      if (x == null) return null;
+      final top = contentTopInset +
+          system * systemBlockHeight +
+          _baseline0 -
+          staffSpace * 3;
+      final bottom = contentTopInset +
+          system * systemBlockHeight +
+          (_systems[system].length - 1) * staffGap +
+          _baseline0 +
+          staffSpace * 3;
+      return (x: _bracePad + x, top: top, bottom: bottom);
+    }
+    return null;
+  }
 
   // --- Hit testing ----------------------------------------------------------
 

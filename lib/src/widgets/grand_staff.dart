@@ -6,10 +6,12 @@
 
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/core.dart';
 import '../interaction/score_taps.dart';
+import '../playback/playback_plan.dart';
 import '../rendering/grand_staff_painter.dart';
 import '../smufl/smufl_metadata_loader.dart';
 import '../theme/music_score_theme.dart';
@@ -32,6 +34,9 @@ class ScoreView extends StatelessWidget {
   /// See [GrandStaff.onMeasureTap].
   final ValueChanged<ScoreMeasureTap>? onMeasureTap;
 
+  /// See [GrandStaff.playbackPosition].
+  final ValueListenable<PlaybackPosition?>? playbackPosition;
+
   const ScoreView({
     super.key,
     required this.score,
@@ -39,6 +44,7 @@ class ScoreView extends StatelessWidget {
     this.staffSpace = 12.0,
     this.onNoteTap,
     this.onMeasureTap,
+    this.playbackPosition,
   });
 
   @override
@@ -52,6 +58,7 @@ class ScoreView extends StatelessWidget {
       staffSpace: staffSpace,
       onNoteTap: onNoteTap,
       onMeasureTap: onMeasureTap,
+      playbackPosition: playbackPosition,
     );
   }
 }
@@ -99,6 +106,12 @@ class GrandStaff extends StatefulWidget {
   /// [onNoteTap] when the tap is also on a note.
   final ValueChanged<ScoreMeasureTap>? onMeasureTap;
 
+  /// Where playback is, for a cursor drawn across every staff of the system
+  /// — typically a `ValueNotifier` set from `PlaybackPlan.positionAt` on each
+  /// clock tick. Its own layer: a tick repaints one line, not the notation.
+  /// Coloured by `MusicScoreTheme.playheadColor`.
+  final ValueListenable<PlaybackPosition?>? playbackPosition;
+
   const GrandStaff({
     super.key,
     this.group,
@@ -108,6 +121,7 @@ class GrandStaff extends StatefulWidget {
     this.staffGap,
     this.onNoteTap,
     this.onMeasureTap,
+    this.playbackPosition,
   }) : assert(group != null || groups != null,
             'Provide either group or groups');
 
@@ -140,6 +154,33 @@ class _GrandStaffState extends State<GrandStaff> {
   }
 
   double get _gap => widget.staffGap ?? widget.staffSpace * 11.0;
+
+  /// Stacks the playback cursor layer over [child] when there is a position
+  /// to follow.
+  Widget _withPlayhead(GrandStaffPainter painter, Size size, Widget child) {
+    final position = widget.playbackPosition;
+    if (position == null) return child;
+    return Stack(
+      children: [
+        RepaintBoundary(child: child),
+        Positioned.fill(
+          child: IgnorePointer(
+            child: RepaintBoundary(
+              child: CustomPaint(
+                size: size,
+                painter: GrandStaffPlayheadPainter(
+                  position: position,
+                  layout: painter,
+                  color: widget.theme.playheadColor ??
+                      widget.theme.noteheadColor.withValues(alpha: 0.65),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
   /// Wraps [child] in a tap detector only when a callback wants taps, so a
   /// plain score stays out of the gesture arena (and keeps scrolling crisp).
@@ -213,9 +254,13 @@ class _GrandStaffState extends State<GrandStaff> {
                 height: height,
                 child: _tappable(
                   painter,
-                  CustomPaint(
-                    size: Size(canvasWidth, height),
-                    painter: painter,
+                  _withPlayhead(
+                    painter,
+                    Size(canvasWidth, height),
+                    CustomPaint(
+                      size: Size(canvasWidth, height),
+                      painter: painter,
+                    ),
                   ),
                 ),
               ),
@@ -225,4 +270,41 @@ class _GrandStaffState extends State<GrandStaff> {
       },
     );
   }
+}
+
+/// The cursor layer of [GrandStaff]: one line across the system, placed by
+/// [GrandStaffPainter.playheadAt], repainted on its own when [position]
+/// changes.
+class GrandStaffPlayheadPainter extends CustomPainter {
+  GrandStaffPlayheadPainter({
+    required this.position,
+    required this.layout,
+    required this.color,
+  }) : super(repaint: position);
+
+  final ValueListenable<PlaybackPosition?> position;
+  final GrandStaffPainter layout;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final p = position.value;
+    if (p == null) return;
+    final at = layout.playheadAt(p);
+    if (at == null) return;
+    final width = layout.staffSpace * 0.25;
+    canvas.drawLine(
+      Offset(at.x, at.top),
+      Offset(at.x, at.bottom),
+      Paint()
+        ..color = color
+        ..strokeWidth = width < 1.0 ? 1.0 : width,
+    );
+  }
+
+  @override
+  bool shouldRepaint(GrandStaffPlayheadPainter old) =>
+      !identical(old.position, position) ||
+      !identical(old.layout, layout) ||
+      old.color != color;
 }

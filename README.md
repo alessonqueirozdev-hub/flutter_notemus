@@ -1204,6 +1204,29 @@ MusicScore(
 `ScoreNoteTap` and `ScoreMeasureTap` also carry the staff index and the local and
 global tap position, for placing a popup next to the note.
 
+### Playback cursor
+
+`PlaybackPlan` turns elapsed time into a position in the score, read from the
+same `MidiSequence` that makes the sound. Hand the widget a `ValueNotifier` and
+update it on each clock tick; only the cursor layer repaints.
+
+```dart
+final plan = PlaybackPlan.fromStaff(staff);
+final position = ValueNotifier<PlaybackPosition?>(null);
+
+MusicScore(staff: staff, playbackPosition: position);   // or GrandStaff / ScoreView
+
+// on each tick of your player:
+position.value = plan.positionAt(stopwatch.elapsed);
+// what is sounding now, for highlighting:
+final sounding = plan.notesAt(stopwatch.elapsed).map((s) => s.note);
+// seek from a bar tap:
+onMeasureTap: (tap) => player.seek(plan.timeOfMeasure(tap.measureIndex)!),
+```
+
+The cursor glides between the bar's notes, so it reaches each one as it starts
+to sound. Its colour is `MusicScoreTheme.playheadColor`.
+
 `ScoreHitTester` turns a laid-out score into something a user can point at. It
 returns **your own model objects**, not copies — which is why editing and
 highlighting work:

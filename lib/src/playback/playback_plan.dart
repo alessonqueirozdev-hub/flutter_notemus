@@ -35,6 +35,10 @@ class PlaybackPosition {
   /// `PositionedElement.onset`, so a playhead can find its x in the layout.
   final double offsetInMeasure;
 
+  /// Length of the bar as it plays, in whole notes (a pickup's is its
+  /// content, not its meter). A playhead spreads [offsetInMeasure] over it.
+  final double measureLength;
+
   /// Fraction of the whole piece played, 0.0 to 1.0.
   final double progress;
 
@@ -45,6 +49,7 @@ class PlaybackPosition {
     required this.measureIndex,
     required this.repeatPass,
     required this.offsetInMeasure,
+    this.measureLength = 1.0,
     required this.progress,
   });
 
@@ -202,6 +207,7 @@ class PlaybackPlan {
       measureIndex: bar.measureIndex,
       repeatPass: bar.repeatPass,
       offsetInMeasure: (clamped - bar.startTick) / (_tpq * 4),
+      measureLength: bar.durationTicks / (_tpq * 4),
       progress: totalTicks == 0 ? 0.0 : tick / totalTicks,
     );
   }
