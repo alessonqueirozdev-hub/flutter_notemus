@@ -86,6 +86,9 @@ import 'package:flutter_test/flutter_test.dart';
 //      the truth and there is nothing for the engine to have decided;
 //   5. a read of a value the ENGINE ITSELF put there on a throw-away object it
 //      owns (never on the caller's model).
+//   6. a CACHE KEY that hashes the author's hint as one of the layout's
+//      inputs, so editing the hint invalidates a cached layout. It reads the
+//      hint to notice a change, never to decide a beam.
 const List<_Allowed> _allowList = <_Allowed>[
   // --- 1. the model declaring the field -----------------------------------
   _Allowed(
@@ -222,6 +225,17 @@ const List<_Allowed> _allowList = <_Allowed>[
         '"are these two scores the same music?", and the authors beam hint is '
         'part of the music. Hashing the engines own decision instead would '
         'make the hash depend on the layout width.',
+  ),
+
+  // --- 6. cache keys ------------------------------------------------------
+  _Allowed(
+    'lib/src/rendering/grand_staff_painter.dart',
+    r'element\.beam\);$',
+    1,
+    'staffGroupsSignature hashes the authors hint so that setting Note.beam '
+        'in place invalidates PagedScoreViews cached painter and repaints. It '
+        'is an INPUT to the cache key, read to detect a change; the beam the '
+        'layout draws still comes from LayoutEngine.beamOf.',
   ),
 ];
 

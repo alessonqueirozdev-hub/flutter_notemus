@@ -112,6 +112,8 @@ export 'src/interaction/score_taps.dart' show ScoreNoteTap, ScoreMeasureTap;
 export 'src/widgets/grand_staff.dart'
     show GrandStaff, GrandStaffPlayheadPainter, ScoreView;
 export 'src/widgets/playhead_layer.dart' show MusicScorePlayheadPainter;
+export 'src/widgets/paged_score.dart'
+    show PagedScoreController, PagedScoreView, pageOfSystem;
 
 // PDF export is a headline feature of 2.7.x, but until 2.7.1 `PdfExporter`,
 // `ScoreRasterizer` and `GrandStaffPainter` were reachable only through
@@ -123,7 +125,8 @@ export 'src/export/export.dart';
 // The painter that draws a multi-staff system. `ScoreRasterizer.rasterize`
 // returns pages painted by it and `GrandStaff` builds one, so consumers writing
 // their own `CustomPaint` need the type to be public.
-export 'src/rendering/grand_staff_painter.dart' show GrandStaffPainter;
+export 'src/rendering/grand_staff_painter.dart'
+    show GrandStaffPainter, staffGroupsSignature;
 
 /// The main Flutter widget for rendering music notation.
 ///

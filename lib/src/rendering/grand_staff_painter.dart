@@ -108,6 +108,11 @@ class GrandStaffPainter extends CustomPainter {
   /// Left padding reserved for the brace/bracket (and group name).
   late final double _bracePad;
 
+  /// Bars in the longest staff: the score's length.
+  int get _measureCount => _allStaves
+      .map((s) => s.measures.length)
+      .fold<int>(0, (a, b) => a > b ? a : b);
+
   /// All staves across all groups, top to bottom.
   List<Staff> get _allStaves => [for (final g in groups) ...g.staves];
 
@@ -251,6 +256,10 @@ class GrandStaffPainter extends CustomPainter {
         groups = groups ?? [staffGroup!],
         staffGap = staffGap ?? staffSpace * 11.0 {
     _bracePad = staffSpace * 2.2;
+    // Now, not on first read: a lazy signature first read by shouldRepaint
+    // AFTER an edit would hash the edited score for the OLD painter too, and
+    // the two would compare equal.
+    contentSignature = staffGroupsSignature(this.groups);
     _ranges = _computeSystemRanges();
     _systems = [
       for (final range in _ranges) _layoutSystem(range.start, range.end),
@@ -259,6 +268,76 @@ class GrandStaffPainter extends CustomPainter {
 
   /// First and last measure index of each system, parallel to [_systems].
   late final List<({int start, int end})> _ranges;
+
+  // --- Pagination -----------------------------------------------------------
+
+  /// Splits the systems into pages no taller than [maxHeight], cut between
+  /// systems, so a page holds whole systems only.
+  ///
+  /// Each page is a band of this painter's canvas: [top] and [height] in its
+  /// coordinates. Bands are cut halfway between one system's bottom staff
+  /// line and the next system's top line, not at the system BLOCK boundary:
+  /// a block starts three spaces above its top line, so notes on ledger
+  /// lines above the staff reach into the block before. Cut on the block
+  /// boundary, a page showed the next system's high notes along its bottom
+  /// edge and the next page lost them off its top. The first band also holds
+  /// the headroom above the first system plus [firstPageReserve] (room for a
+  /// title); the last runs to the bottom of the canvas. A system taller than
+  /// a page gets a page of its own rather than being split.
+  List<({int firstSystem, int systemCount, double top, double height})> pages({
+    required double maxHeight,
+    double firstPageReserve = 0.0,
+  }) {
+    final n = _systems.length;
+    if (n == 0) return const [];
+    final block = systemBlockHeight;
+    final staffSpan = (_allStaves.length - 1) * staffGap;
+    // Canvas y between system i - 1 and system i; 0 and totalHeight at the
+    // ends.
+    double cut(int i) {
+      if (i <= 0) return 0.0;
+      if (i >= n) return totalHeight;
+      final previousBottom = contentTopInset +
+          (i - 1) * block +
+          staffSpan +
+          _baseline0 +
+          staffSpace * 2;
+      final nextTop =
+          contentTopInset + i * block + _baseline0 - staffSpace * 2;
+      return (previousBottom + nextTop) / 2;
+    }
+
+    final result =
+        <({int firstSystem, int systemCount, double top, double height})>[];
+    var first = 0;
+    while (first < n) {
+      final reserve = first == 0 ? firstPageReserve : 0.0;
+      var count = 1;
+      while (first + count < n &&
+          cut(first + count + 1) - cut(first) + reserve <= maxHeight) {
+        count++;
+      }
+      result.add((
+        firstSystem: first,
+        systemCount: count,
+        top: cut(first),
+        height: cut(first + count) - cut(first),
+      ));
+      first += count;
+    }
+    return result;
+  }
+
+  /// Index of the system holding bar [measureIndex], or null when no system
+  /// does.
+  int? systemOfMeasure(int measureIndex) {
+    for (var i = 0; i < _ranges.length; i++) {
+      if (measureIndex >= _ranges[i].start && measureIndex <= _ranges[i].end) {
+        return i;
+      }
+    }
+    return null;
+  }
 
   // --- Playhead -------------------------------------------------------------
 
@@ -504,6 +583,8 @@ class GrandStaffPainter extends CustomPainter {
           // The number of the bar before the system, not its index: a pickup
           // is not counted, so on a staff that opens with one the two differ.
           measureOffset: _numberBefore(staff, a),
+          // Only the last system ends the piece.
+          continuesAfter: b < _measureCount - 1,
         ),
     ];
     _alignStaves(layouts);
@@ -644,7 +725,11 @@ class GrandStaffPainter extends CustomPainter {
     return found ?? Clef(clefType: ClefType.treble);
   }
 
-  _StaffLayout _layoutSubStaff(Staff staff, {int measureOffset = 0}) {
+  _StaffLayout _layoutSubStaff(
+    Staff staff, {
+    int measureOffset = 0,
+    bool continuesAfter = false,
+  }) {
     final engine = LayoutEngine(
       staff,
       // Very wide so a system never wraps internally — breaks are decided here.
@@ -654,6 +739,7 @@ class GrandStaffPainter extends CustomPainter {
       // Indices restart at 0 inside a system's sub-staff; this restores the
       // absolute bar number without touching the caller's Measure objects.
       measureNumberOffset: measureOffset,
+      continuesAfter: continuesAfter,
     );
     final result = engine.layoutWithSignature();
     return _StaffLayout(result.elements, engine);
@@ -811,9 +897,7 @@ class GrandStaffPainter extends CustomPainter {
   /// Greedy system breaks shared by all staves: pack measures (by their widest
   /// per-staff width) into lines no wider than the usable width.
   List<({int start, int end})> _computeSystemRanges() {
-    final nMeasures = _allStaves
-        .map((s) => s.measures.length)
-        .fold<int>(0, (a, b) => a > b ? a : b);
+    final nMeasures = _measureCount;
     if (nMeasures == 0) return [(start: 0, end: 0)];
 
     final widths = List<double>.filled(nMeasures, 0);
@@ -1042,9 +1126,19 @@ class GrandStaffPainter extends CustomPainter {
     canvas.translate(_bracePad, contentTopInset);
 
     final baseline0 = _baseline0;
+    // Only the systems the clip can show. A page of `PagedScoreView` is a
+    // clipped band of this one painter, and painting every system for every
+    // page made a 40-page score paint 40 times over. A system's ink can reach
+    // past its block (ledger lines, lyrics), so one block either side stays.
+    final clip = canvas.getLocalClipBounds();
     for (var sysIdx = 0; sysIdx < _systems.length; sysIdx++) {
       final layouts = _systems[sysIdx];
       if (layouts.isEmpty) continue;
+      final blockTop = sysIdx * systemBlockHeight;
+      if (blockTop + 2 * systemBlockHeight < clip.top ||
+          blockTop - systemBlockHeight > clip.bottom) {
+        continue;
+      }
       canvas.save();
       canvas.translate(0, sysIdx * systemBlockHeight);
       _paintSystem(canvas, size, layouts, baseline0);
@@ -1428,8 +1522,135 @@ class GrandStaffPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant GrandStaffPainter oldDelegate) {
+    // The CONTENT, not just the list: an element replaced inside a bar keeps
+    // the same `groups` list and often the same geometry, and comparing the
+    // list alone left the old raster on screen. A new theme repaints too.
     return !identical(oldDelegate.groups, groups) ||
+        oldDelegate.contentSignature != contentSignature ||
         oldDelegate.staffSpace != staffSpace ||
-        oldDelegate.availableWidth != availableWidth;
+        oldDelegate.staffGap != staffGap ||
+        oldDelegate.availableWidth != availableWidth ||
+        oldDelegate.theme != theme;
   }
+
+  /// [staffGroupsSignature] of [groups] when this painter was built.
+  late final int contentSignature;
+}
+
+/// The structure of [groups], by identity: their staves, the bars, and every
+/// element in them (voices included). `Note` and `Pitch` are immutable, so
+/// an edit replaces an object and changes this; adding or removing one
+/// changes the counts. The model's mutable inputs are hashed by value: a
+/// [Measure]'s beaming, numbering, implicit/irregular flags and inherited
+/// meter; [Note.beam]; and the contents of every element's list fields
+/// (articulations, ornaments, slurs, lyrics, …), walking into chords and
+/// tuplets. See [_signElement].
+/// A list field's contents: its length and the identity of each item. The
+/// model's elements keep their lists in `final` fields, but the lists
+/// themselves are mutable (an articulation added to a note in place), so the
+/// field's identity alone misses the edit.
+int _signList(int hash, List<Object?>? list) {
+  if (list == null) return Object.hash(hash, null);
+  hash = Object.hash(hash, list.length);
+  for (final item in list) {
+    hash = Object.hash(hash, identityHashCode(item));
+  }
+  return hash;
+}
+
+/// One element: its identity and every mutable input it carries — the
+/// writable [Note.beam] hint and the contents of each list field — walking
+/// into the elements chords and tuplets hold.
+int _signElement(int hash, MusicalElement element) {
+  hash = Object.hash(hash, identityHashCode(element));
+  if (element is Note) {
+    hash = Object.hash(hash, element.beam);
+    hash = _signList(hash, element.articulations);
+    hash = _signList(hash, element.slurs);
+    hash = _signList(hash, element.ornaments);
+    hash = _signList(hash, element.techniques);
+    return _signList(hash, element.syllables);
+  }
+  if (element is Chord) {
+    hash = _signList(hash, element.articulations);
+    hash = _signList(hash, element.ornaments);
+    hash = Object.hash(hash, element.notes.length);
+    for (final note in element.notes) {
+      hash = _signElement(hash, note);
+    }
+    return hash;
+  }
+  if (element is Tuplet) {
+    hash = _signList(hash, element.notes);
+    hash = Object.hash(hash, element.elements.length);
+    for (final inner in element.elements) {
+      hash = _signElement(hash, inner);
+    }
+    return hash;
+  }
+  if (element is Rest) return _signList(hash, element.ornaments);
+  if (element is TimeSignature) return _signList(hash, element.additiveGroups);
+  if (element is Verse) return _signList(hash, element.syllables);
+  if (element is FiguredBass) return _signList(hash, element.figures);
+  if (element is TabGrp) return _signList(hash, element.notes);
+  if (element is Neume) return _signList(hash, element.components);
+  if (element is Ligature) return _signList(hash, element.notes);
+  if (element is Beam) return _signList(hash, element.notes);
+  return hash;
+}
+
+int staffGroupsSignature(List<StaffGroup> groups) {
+  var hash = groups.length;
+  for (final group in groups) {
+    // The group itself: a replacement group over the same staves can change
+    // the bracket or the name.
+    hash = Object.hash(
+      hash,
+      identityHashCode(group),
+      group.bracket,
+      group.name,
+      group.abbreviation,
+      group.connectBarlines,
+      group.customSpacing,
+      group.staves.length,
+    );
+    for (final staff in group.staves) {
+      hash = Object.hash(
+          hash, identityHashCode(staff), staff.lineCount, staff.measures.length);
+      for (final measure in staff.measures) {
+        hash = Object.hash(
+          hash,
+          identityHashCode(measure),
+          measure.autoBeaming,
+          measure.beamingMode,
+          Object.hashAll(measure.manualBeamGroups.map(Object.hashAll)),
+          measure.number,
+          measure.isImplicit,
+          measure.isIrregular,
+        );
+        // By content, like a bar's own meter: an additive meter's groups are
+        // a mutable list the beaming reads.
+        final inherited = measure.inheritedTimeSignature;
+        hash = inherited == null
+            ? Object.hash(hash, null)
+            : _signElement(hash, inherited);
+        for (final element in measure.elements) {
+          hash = _signElement(hash, element);
+        }
+        // Voice by voice, not `allElements`: that flattens the voices away,
+        // and moving a note to another voice (which flips its stem) kept the
+        // same flat order.
+        if (measure is MultiVoiceMeasure) {
+          for (final voice in measure.sortedVoices) {
+            hash = Object.hash(hash, identityHashCode(voice), voice.number,
+                voice.elements.length);
+            for (final element in voice.elements) {
+              hash = _signElement(hash, element);
+            }
+          }
+        }
+      }
+    }
+  }
+  return hash;
 }
