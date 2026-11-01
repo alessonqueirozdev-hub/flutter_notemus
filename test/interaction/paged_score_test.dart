@@ -160,6 +160,34 @@ void main() {
       expect(staffGroupsSignature(groups), isNot(grouped));
     });
 
+    test("a painter's signature is taken when it is built, not when read",
+        () {
+      // Lazily, the OLD painter's signature was first computed by
+      // shouldRepaint after the edit, over the edited score, and matched the
+      // new one: the old raster stayed.
+      final groups = [_piano(4)];
+      GrandStaffPainter build() => GrandStaffPainter(
+            groups: groups,
+            staffSpace: 7,
+            metadata: metadata,
+            theme: const MusicScoreTheme(),
+            availableWidth: 515,
+          );
+      final before = build(); // its signature never read before the edit
+      final bar = groups.first.staves.first.measures[1];
+      bar.elements[bar.elements.length - 1] = _w('A', 5);
+      expect(build().shouldRepaint(before), isTrue);
+    });
+
+    test('a replacement group over the same staves changes the signature', () {
+      final original = _piano(4);
+      final groups = [original];
+      final before = staffGroupsSignature(groups);
+      groups[0] = StaffGroup(
+          staves: original.staves, bracket: BracketType.bracket);
+      expect(staffGroupsSignature(groups), isNot(before));
+    });
+
     test('pageOfSystem and systemOfMeasure find where a bar is printed', () {
       final p = painter(80);
       final pages = p.pages(maxHeight: 762);

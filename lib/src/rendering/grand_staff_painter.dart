@@ -256,6 +256,10 @@ class GrandStaffPainter extends CustomPainter {
         groups = groups ?? [staffGroup!],
         staffGap = staffGap ?? staffSpace * 11.0 {
     _bracePad = staffSpace * 2.2;
+    // Now, not on first read: a lazy signature first read by shouldRepaint
+    // AFTER an edit would hash the edited score for the OLD painter too, and
+    // the two would compare equal.
+    contentSignature = staffGroupsSignature(this.groups);
     _ranges = _computeSystemRanges();
     _systems = [
       for (final range in _ranges) _layoutSystem(range.start, range.end),
@@ -1530,7 +1534,7 @@ class GrandStaffPainter extends CustomPainter {
   }
 
   /// [staffGroupsSignature] of [groups] when this painter was built.
-  late final int contentSignature = staffGroupsSignature(groups);
+  late final int contentSignature;
 }
 
 /// The structure of [groups], by identity: their staves, the bars, and every
@@ -1542,6 +1546,18 @@ class GrandStaffPainter extends CustomPainter {
 int staffGroupsSignature(List<StaffGroup> groups) {
   var hash = groups.length;
   for (final group in groups) {
+    // The group itself: a replacement group over the same staves can change
+    // the bracket or the name.
+    hash = Object.hash(
+      hash,
+      identityHashCode(group),
+      group.bracket,
+      group.name,
+      group.abbreviation,
+      group.connectBarlines,
+      group.customSpacing,
+      group.staves.length,
+    );
     for (final staff in group.staves) {
       hash = Object.hash(
           hash, identityHashCode(staff), staff.lineCount, staff.measures.length);
