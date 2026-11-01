@@ -1627,8 +1627,13 @@ int staffGroupsSignature(List<StaffGroup> groups) {
           measure.number,
           measure.isImplicit,
           measure.isIrregular,
-          identityHashCode(measure.inheritedTimeSignature),
         );
+        // By content, like a bar's own meter: an additive meter's groups are
+        // a mutable list the beaming reads.
+        final inherited = measure.inheritedTimeSignature;
+        hash = inherited == null
+            ? Object.hash(hash, null)
+            : _signElement(hash, inherited);
         for (final element in measure.elements) {
           hash = _signElement(hash, element);
         }

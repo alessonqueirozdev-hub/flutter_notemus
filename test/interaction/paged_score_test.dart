@@ -264,6 +264,30 @@ void main() {
       expect(changed(), isTrue, reason: 'Chord.notes');
     });
 
+    test('the signature sees an inherited additive meter regrouped', () {
+      // Hashed by identity, the inherited meter missed its groups changing.
+      final groups3 = <AdditiveMeterGroup>[
+        const AdditiveMeterGroup(3),
+        const AdditiveMeterGroup(2),
+        const AdditiveMeterGroup(2),
+      ];
+      final meter = TimeSignature(
+          numerator: 7, denominator: 8, additiveGroups: groups3);
+      final measure = Measure(inheritedTimeSignature: meter);
+      final staffGroups = [
+        StaffGroup(staves: [Staff(measures: [measure])]),
+      ];
+      final before = staffGroupsSignature(staffGroups);
+      groups3
+        ..clear()
+        ..addAll(const [
+          AdditiveMeterGroup(2),
+          AdditiveMeterGroup(2),
+          AdditiveMeterGroup(3),
+        ]);
+      expect(staffGroupsSignature(staffGroups), isNot(before));
+    });
+
     test('a replacement group over the same staves changes the signature', () {
       final original = _piano(4);
       final groups = [original];
