@@ -221,7 +221,7 @@ class _PagedScoreViewState extends State<PagedScoreView> {
   /// change.
   void _ensureLayout() {
     final key = Object.hash(
-      identityHashCode(widget.score),
+      _scoreFingerprint(widget.score),
       widget.pageSize,
       widget.pageMargin,
       widget.staffSpace,
@@ -245,8 +245,33 @@ class _PagedScoreViewState extends State<PagedScoreView> {
     );
     final count = _pages.length;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _controller._setPageCount(count);
+      if (!mounted) return;
+      _controller._setPageCount(count);
+      // A position set before the pages existed found no painter to place
+      // it; without this the view stayed on page 0 until the next tick.
+      _followCursor();
     });
+  }
+
+  /// The score's structure, by identity: its staves, their bars, and every
+  /// element in them (voices included). `Note` and `Pitch` are immutable, so
+  /// an edit replaces an object and changes this. Keyed on the `Score`
+  /// instance alone, an edit made in place was never laid out again.
+  static int _scoreFingerprint(Score score) {
+    var hash = identityHashCode(score);
+    for (final group in score.staffGroups) {
+      for (final staff in group.staves) {
+        hash = Object.hash(hash, identityHashCode(staff), staff.lineCount,
+            staff.measures.length);
+        for (final measure in staff.measures) {
+          hash = Object.hash(hash, identityHashCode(measure));
+          for (final element in measure.allElements) {
+            hash = Object.hash(hash, identityHashCode(element));
+          }
+        }
+      }
+    }
+    return hash;
   }
 
   /// Turns to the page holding the playback cursor's bar.

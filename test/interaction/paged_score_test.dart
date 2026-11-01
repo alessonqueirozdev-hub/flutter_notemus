@@ -178,6 +178,44 @@ void main() {
       controller.dispose();
     });
 
+    testWidgets('a score edited in place is laid out again', (t) async {
+      // Keyed on the Score instance alone, the old pages survived the edit.
+      final controller = PagedScoreController();
+      final group = _piano(80);
+      final score = Score(staffGroups: [group]);
+      Widget view() => _host(PagedScoreView(score: score, controller: controller));
+      await t.pumpWidget(view());
+      await _settle(t);
+      final before = controller.pageCount;
+      expect(before, greaterThan(1));
+
+      for (final staff in group.staves) {
+        staff.measures.removeRange(4, staff.measures.length);
+      }
+      await t.pumpWidget(view());
+      await t.pumpAndSettle();
+      expect(controller.pageCount, 1);
+      controller.dispose();
+    });
+
+    testWidgets('a position set before the pages exist is still followed',
+        (t) async {
+      // The listener fired while there was no painter; nothing retried it.
+      final controller = PagedScoreController();
+      final score = Score(staffGroups: [_piano(80)]);
+      final position = ValueNotifier<PlaybackPosition?>(
+          PlaybackPlan.fromScore(score)
+              .positionAt(const Duration(seconds: 158)));
+      await t.pumpWidget(_host(PagedScoreView(
+        score: score,
+        controller: controller,
+        playbackPosition: position,
+      )));
+      await _settle(t);
+      expect(controller.currentPage, controller.pageCount - 1);
+      controller.dispose();
+    });
+
     testWidgets('the page turns to follow the playback cursor', (t) async {
       final controller = PagedScoreController();
       final position = ValueNotifier<PlaybackPosition?>(null);
