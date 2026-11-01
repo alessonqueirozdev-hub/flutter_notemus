@@ -479,6 +479,22 @@ void main() {
       expect(view.height, closeTo(842 + 24, 0.5));
     });
 
+    testWidgets('an emptied score reports no pages', (t) async {
+      final controller = PagedScoreController();
+      final group = _piano(80);
+      final score = Score(staffGroups: [group]);
+      Widget view() => _host(PagedScoreView(score: score, controller: controller));
+      await t.pumpWidget(view());
+      await _settle(t);
+      expect(controller.pageCount, greaterThan(1));
+
+      group.staves.clear();
+      await t.pumpWidget(view());
+      await t.pumpAndSettle();
+      expect(controller.pageCount, 0);
+      controller.dispose();
+    });
+
     testWidgets('the page turns to follow the playback cursor', (t) async {
       final controller = PagedScoreController();
       final position = ValueNotifier<PlaybackPosition?>(null);

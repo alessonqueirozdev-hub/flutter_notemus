@@ -308,6 +308,15 @@ class _PagedScoreViewState extends State<PagedScoreView> {
               child: Text('Failed to load metadata: ${snapshot.error}'));
         }
         if (widget.score.staffGroups.every((g) => g.staves.isEmpty)) {
+          // No pages now: drop the old layout and tell the controller, which
+          // otherwise kept reporting the pages of the score before it was
+          // emptied.
+          _painter = null;
+          _painterKey = null;
+          _pages = const [];
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) _controller._setPageCount(0);
+          });
           return const SizedBox.shrink();
         }
         _ensureLayout();
