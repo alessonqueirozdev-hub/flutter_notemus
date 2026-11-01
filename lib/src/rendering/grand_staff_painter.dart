@@ -1540,14 +1540,40 @@ class GrandStaffPainter extends CustomPainter {
 /// The structure of [groups], by identity: their staves, the bars, and every
 /// element in them (voices included). `Note` and `Pitch` are immutable, so
 /// an edit replaces an object and changes this; adding or removing one
-/// changes the counts. The model's mutable fields are hashed by value: a
+/// changes the counts. The model's mutable inputs are hashed by value: a
 /// [Measure]'s beaming, numbering, implicit/irregular flags and inherited
-/// meter, and [Note.beam] — including on the notes inside chords and
-/// tuplets, whose lists are walked too.
+/// meter; [Note.beam]; and the contents of every element's list fields
+/// (articulations, ornaments, slurs, lyrics, …), walking into chords and
+/// tuplets. See [_signElement].
+/// A list field's contents: its length and the identity of each item. The
+/// model's elements keep their lists in `final` fields, but the lists
+/// themselves are mutable (an articulation added to a note in place), so the
+/// field's identity alone misses the edit.
+int _signList(int hash, List<Object?>? list) {
+  if (list == null) return Object.hash(hash, null);
+  hash = Object.hash(hash, list.length);
+  for (final item in list) {
+    hash = Object.hash(hash, identityHashCode(item));
+  }
+  return hash;
+}
+
+/// One element: its identity and every mutable input it carries — the
+/// writable [Note.beam] hint and the contents of each list field — walking
+/// into the elements chords and tuplets hold.
 int _signElement(int hash, MusicalElement element) {
   hash = Object.hash(hash, identityHashCode(element));
-  if (element is Note) return Object.hash(hash, element.beam);
+  if (element is Note) {
+    hash = Object.hash(hash, element.beam);
+    hash = _signList(hash, element.articulations);
+    hash = _signList(hash, element.slurs);
+    hash = _signList(hash, element.ornaments);
+    hash = _signList(hash, element.techniques);
+    return _signList(hash, element.syllables);
+  }
   if (element is Chord) {
+    hash = _signList(hash, element.articulations);
+    hash = _signList(hash, element.ornaments);
     hash = Object.hash(hash, element.notes.length);
     for (final note in element.notes) {
       hash = _signElement(hash, note);
@@ -1555,11 +1581,21 @@ int _signElement(int hash, MusicalElement element) {
     return hash;
   }
   if (element is Tuplet) {
+    hash = _signList(hash, element.notes);
     hash = Object.hash(hash, element.elements.length);
     for (final inner in element.elements) {
       hash = _signElement(hash, inner);
     }
+    return hash;
   }
+  if (element is Rest) return _signList(hash, element.ornaments);
+  if (element is TimeSignature) return _signList(hash, element.additiveGroups);
+  if (element is Verse) return _signList(hash, element.syllables);
+  if (element is FiguredBass) return _signList(hash, element.figures);
+  if (element is TabGrp) return _signList(hash, element.notes);
+  if (element is Neume) return _signList(hash, element.components);
+  if (element is Ligature) return _signList(hash, element.notes);
+  if (element is Beam) return _signList(hash, element.notes);
   return hash;
 }
 

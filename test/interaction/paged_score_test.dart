@@ -224,6 +224,46 @@ void main() {
       expect(staffGroupsSignature(groups), isNot(before));
     });
 
+    test('the signature sees list fields edited in place', () {
+      // The fields are final, the lists in them are not: an articulation
+      // added to a note in place kept every identity the signature hashed.
+      final note = Note(
+        pitch: const Pitch(step: 'E', octave: 5),
+        duration: const MusicDuration(DurationType.half),
+        articulations: <ArticulationType>[],
+      );
+      final chord = Chord(
+        notes: [_w('C', 5), _w('E', 5)],
+        duration: const MusicDuration(DurationType.half),
+        ornaments: <Ornament>[],
+      );
+      final rest = Rest(
+        duration: const MusicDuration(DurationType.half),
+        ornaments: <Ornament>[],
+      );
+      final groups = [
+        StaffGroup(staves: [
+          Staff(measures: [Measure()..elements.addAll([note, chord, rest])]),
+        ]),
+      ];
+      var last = staffGroupsSignature(groups);
+      bool changed() {
+        final now = staffGroupsSignature(groups);
+        final differs = now != last;
+        last = now;
+        return differs;
+      }
+
+      note.articulations.add(ArticulationType.staccato);
+      expect(changed(), isTrue, reason: 'Note.articulations');
+      chord.ornaments.add(Ornament(type: OrnamentType.trill));
+      expect(changed(), isTrue, reason: 'Chord.ornaments');
+      rest.ornaments.add(Ornament(type: OrnamentType.trill));
+      expect(changed(), isTrue, reason: 'Rest.ornaments');
+      chord.notes.add(_w('G', 5));
+      expect(changed(), isTrue, reason: 'Chord.notes');
+    });
+
     test('a replacement group over the same staves changes the signature', () {
       final original = _piano(4);
       final groups = [original];
