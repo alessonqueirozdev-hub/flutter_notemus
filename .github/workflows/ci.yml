@@ -122,18 +122,19 @@ jobs:
           (cd ios/flutter_notemus && swift package dump-package > /dev/null)
 
       - name: Create a consumer app
+        id: consumer
         run: |
           flutter create --platforms=macos,ios "$RUNNER_TEMP/consumer"
           cd "$RUNNER_TEMP/consumer"
           flutter pub add flutter_notemus --path "$GITHUB_WORKSPACE"
 
       - name: Build for macOS
-        if: always()
+        if: ${{ !cancelled() && steps.consumer.outcome == 'success' }}
         working-directory: ${{ runner.temp }}/consumer
         run: flutter build macos --debug
 
       - name: Build for the iOS simulator
-        if: always()
+        if: ${{ !cancelled() && steps.consumer.outcome == 'success' }}
         working-directory: ${{ runner.temp }}/consumer
         run: flutter build ios --simulator --debug --no-codesign
 
