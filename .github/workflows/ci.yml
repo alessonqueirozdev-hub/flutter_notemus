@@ -95,6 +95,49 @@ jobs:
           retention-days: 14
 
   # ---------------------------------------------------------------------------
+  # `flutter test` never opens ios/ or macos/, so nothing above can see a broken
+  # Package.swift. Issue #58: a byte-order mark in front of the
+  # `swift-tools-version` line made every macOS app depending on this package
+  # stop building, while all six jobs stayed green. Hence a real consumer: a new
+  # app, this package as a path dependency, SwiftPM on, and an actual build.
+  # ---------------------------------------------------------------------------
+  swiftpm:
+    name: SwiftPM consumer build
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Enable Swift Package Manager
+        run: flutter config --enable-swift-package-manager
+
+      - name: Parse the manifests
+        run: |
+          (cd macos/flutter_notemus && swift package dump-package > /dev/null)
+          (cd ios/flutter_notemus && swift package dump-package > /dev/null)
+
+      - name: Create a consumer app
+        run: |
+          flutter create --platforms=macos,ios "$RUNNER_TEMP/consumer"
+          cd "$RUNNER_TEMP/consumer"
+          flutter pub add flutter_notemus --path "$GITHUB_WORKSPACE"
+
+      - name: Build for macOS
+        if: always()
+        working-directory: ${{ runner.temp }}/consumer
+        run: flutter build macos --debug
+
+      - name: Build for the iOS simulator
+        if: always()
+        working-directory: ${{ runner.temp }}/consumer
+        run: flutter build ios --simulator --debug --no-codesign
+
+  # ---------------------------------------------------------------------------
   # The example app is a separate pub workspace. Note it is resolved and analyzed
   # in its own job: running `flutter analyze` inside example/ rewrites the root's
   # package resolution, which makes `package:pdf` unresolvable for any step that
