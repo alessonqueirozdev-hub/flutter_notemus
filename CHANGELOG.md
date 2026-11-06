@@ -6,9 +6,17 @@ The format is based on Keep a Changelog and this project follows Semantic Versio
 
 ## [Unreleased]
 
+## [2.9.1] - 2026-11-06
+
+One defect, reported by a user and caught by no test: **an app depending
+on this package could not be built with Swift Package Manager**, on macOS or
+iOS. A CI job now builds such an app for both, so this cannot ship again
+unnoticed. Every version since 2.2.0, which added the SwiftPM manifests, has
+the defect, so anyone building for Apple platforms with SwiftPM should upgrade.
+
 ### Fixed — Swift Package Manager
 
-- **The package builds under Swift Package Manager again.** Both
+- **The package builds under Swift Package Manager.** Both
   `Package.swift` files opened with a UTF-8 byte-order mark, so SwiftPM did not
   read the `swift-tools-version` line and assumed 3.1, which current Xcode
   rejects. **Adding this package to a new macOS app stopped that app building**
