@@ -1,0 +1,2 @@
+# SwiftPM and Xcode read these on macOS, including from a package published on Windows.
+*.swift text eol=lf

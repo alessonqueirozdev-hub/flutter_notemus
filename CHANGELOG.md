@@ -6,6 +6,21 @@ The format is based on Keep a Changelog and this project follows Semantic Versio
 
 ## [Unreleased]
 
+### Fixed — Swift Package Manager
+
+- **The package builds under Swift Package Manager again.** Both
+  `Package.swift` files opened with a UTF-8 byte-order mark, so SwiftPM did not
+  read the `swift-tools-version` line and assumed 3.1, which current Xcode
+  rejects. **Adding this package to a new macOS app stopped that app building**
+  (#58, reported by @axiopisty), and iOS shared the same manifest defect. The mark
+  is gone from both manifests and both plugin sources, and `.gitattributes` keeps
+  Swift files on LF.
+- **CI now builds a real consumer.** The `SwiftPM consumer build` job creates a
+  new app, adds this package and builds it for macOS and the iOS simulator. Its
+  first run, before the fix, reproduced the reported error.
+  `test/invariants/swift_package_manifest_test.dart` pins the bytes on every
+  platform.
+
 ## [2.9.0] - 2026-11-01
 
 A score you can play along with. This release brings @zamvar's fork
