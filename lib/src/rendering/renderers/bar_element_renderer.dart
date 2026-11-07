@@ -201,32 +201,32 @@ class BarElementRenderer {
       return;
     }
 
-    if (ts.numerator == 4 &&
-        ts.denominator == 4 &&
-        metadata.hasGlyph('timeSigCommon')) {
-      _drawGlyph(
-        canvas,
-        glyphName: 'timeSigCommon',
-        position: Offset(basePosition.dx, coordinates.staffBaseline.dy),
-        size: glyphSize,
-        color: theme.timeSignatureColor,
-        centerVertically: true,
-      );
-      return;
-    }
-    if (ts.numerator == 2 &&
-        ts.denominator == 2 &&
-        metadata.hasGlyph('timeSigCutCommon')) {
-      _drawGlyph(
-        canvas,
-        glyphName: 'timeSigCutCommon',
-        position: Offset(basePosition.dx, coordinates.staffBaseline.dy),
-        size: glyphSize,
-        color: theme.timeSignatureColor,
-        centerVertically: true,
-      );
-      return;
-    }
+    // if (ts.numerator == 4 &&
+    //     ts.denominator == 4 &&
+    //     metadata.hasGlyph('timeSigCommon')) {
+    //   _drawGlyph(
+    //     canvas,
+    //     glyphName: 'timeSigCommon',
+    //     position: Offset(basePosition.dx, coordinates.staffBaseline.dy),
+    //     size: glyphSize,
+    //     color: theme.timeSignatureColor,
+    //     centerVertically: true,
+    //   );
+    //   return;
+    // }
+    // if (ts.numerator == 2 &&
+    //     ts.denominator == 2 &&
+    //     metadata.hasGlyph('timeSigCutCommon')) {
+    //   _drawGlyph(
+    //     canvas,
+    //     glyphName: 'timeSigCutCommon',
+    //     position: Offset(basePosition.dx, coordinates.staffBaseline.dy),
+    //     size: glyphSize,
+    //     color: theme.timeSignatureColor,
+    //     centerVertically: true,
+    //   );
+    //   return;
+    // }
 
     // Multi-digit meters (12/8, 16, 10/4, …): SMuFL only defines single-digit
     // timeSig0..9, so decompose each number into digits, lay them out as a
