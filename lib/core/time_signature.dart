@@ -27,6 +27,12 @@ class TimeSignature extends MusicalElement {
   final int numerator;
   final int denominator;
 
+  /// Use the common time signature symbol if it makes sense to do so based on
+  /// the specified [numerator] and [denominator].
+  ///
+  /// Defaults to [true] if not specified.
+  final bool useCommonSymbol;
+
   /// Indicates tempo livre (senza misura). When `true`, a fórmula is displayed
   /// as "X" or omitida. Correspwhere to the ausência de `<meterSig>` no MEI v5.
   final bool isFreeTime;
@@ -39,6 +45,7 @@ class TimeSignature extends MusicalElement {
   TimeSignature({
     required this.numerator,
     required this.denominator,
+    this.useCommonSymbol = true,
     this.isFreeTime = false,
     this.additiveGroups,
   });
