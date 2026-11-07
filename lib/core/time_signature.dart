@@ -27,11 +27,18 @@ class TimeSignature extends MusicalElement {
   final int numerator;
   final int denominator;
 
-  /// Use the common time signature symbol if it makes sense to do so based on
-  /// the specified [numerator] and [denominator].
+  /// Indicates if the common time signature glyphs should be displayed
+  /// when allowed based on the values of the specified [numerator] and
+  /// [denominator].
   ///
-  /// Defaults to [true] if not specified.
-  final bool useCommonSymbol;
+  /// If [true] then glyph `timeSigCommon` will be used for 4/4 time
+  /// and glyph `timeSigCutCommon` will be used for 2/2 time. [true] is
+  /// the default value because it preserves backward compatibility with
+  /// how the time signature was rendered before exposing this property.
+  ///
+  /// If [false] then 4/4 and 2/2 fractional time signatures glyphs will
+  /// be displayed instead.
+  final bool displayCommonTimeSignatureGlyphs;
 
   /// Indicates tempo livre (senza misura). When `true`, a fórmula is displayed
   /// as "X" or omitida. Correspwhere to the ausência de `<meterSig>` no MEI v5.
@@ -45,7 +52,7 @@ class TimeSignature extends MusicalElement {
   TimeSignature({
     required this.numerator,
     required this.denominator,
-    this.useCommonSymbol = true,
+    this.displayCommonTimeSignatureGlyphs = true,
     this.isFreeTime = false,
     this.additiveGroups,
   });
