@@ -12,7 +12,7 @@
 // by point, by region, by structural unit (measure / system / voice) and by
 // time (for playing just a selection).
 
-import 'package:flutter/material.dart' show Offset, Rect;
+import 'package:flutter/widgets.dart' show Offset, Rect;
 
 import '../../core/core.dart';
 import '../layout/layout_engine.dart';

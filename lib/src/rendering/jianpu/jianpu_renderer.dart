@@ -7,7 +7,7 @@
 // a `1=<key>  n/d` header. Walks the notation-agnostic music model directly
 // and does not touch the SMuFL staff rendering path.
 
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_notemus/core/core.dart';
 
 import '../text_font.dart';

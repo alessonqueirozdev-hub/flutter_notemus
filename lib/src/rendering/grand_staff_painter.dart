@@ -10,7 +10,7 @@
 
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 
 import '../../core/core.dart';
 import '../interaction/score_hit_tester.dart';

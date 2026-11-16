@@ -1,6 +1,6 @@
 // lib/src/rendering/renderers/glyph_renderer.dart
 
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import '../../smufl/smufl_metadata_loader.dart';
 
 /// Central renderer for SMuFL glyphs and text.

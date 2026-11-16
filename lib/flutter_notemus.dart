@@ -31,6 +31,9 @@ library;
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
+// material_ui replaces this from Flutter 3.47, but the package supports
+// Flutter >=3.0.0, so it stays on the framework's own library for now.
+// ignore: deprecated_member_use
 import 'package:flutter/material.dart';
 import 'core/core.dart'; // Musical model types live in core/
 import 'src/interaction/score_hit_tester.dart';

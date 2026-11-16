@@ -3,7 +3,7 @@
 // Status is tracked in `doc/MODEL_ONLY.md` (deletion candidate).
 // lib/src/layout/bounding_box_adapter.dart
 
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 
 import '../../core/core.dart'; // 🆕 Tipos do core
 import 'bounding_box.dart';

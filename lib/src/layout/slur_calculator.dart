@@ -1,7 +1,7 @@
 // lib/src/layout/slur_calculator.dart
 
 import 'dart:math' as math;
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'bounding_box.dart';
 import 'skyline_calculator.dart';
 import '../engraving/engraving_rules.dart';

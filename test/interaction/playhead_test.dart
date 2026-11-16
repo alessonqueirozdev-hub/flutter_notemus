@@ -5,6 +5,7 @@
 // reaches each note as that note starts to sound. Here it is driven by
 // PlaybackPlan, the transport that also produces the sound.
 
+// ignore: deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';

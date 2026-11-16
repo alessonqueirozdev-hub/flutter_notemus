@@ -6,7 +6,7 @@
 // ✅ Corrige possible bug de sinal invertido no calculation de position
 // ✅ 100% conformidade with system unificado de posicionamento
 
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import '../../../core/core.dart'; // 🆕 Tipos do core
 import '../../layout/collision_detector.dart'; // CORREÇÃO: Import collision detector
 import '../../layout/layout_engine.dart';

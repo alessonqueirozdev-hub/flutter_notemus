@@ -3,6 +3,9 @@
 // lib/src/theme/adaptive_theme.dart
 
 import 'dart:math';
+// material_ui replaces this from Flutter 3.47, but the package supports
+// Flutter >=3.0.0, so it stays on the framework's own library for now.
+// ignore: deprecated_member_use
 import 'package:flutter/material.dart';
 import 'music_score_theme.dart';
 

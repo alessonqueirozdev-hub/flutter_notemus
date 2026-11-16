@@ -1,5 +1,6 @@
 // example/lib/examples/pdf_export_example.dart
 
+// ignore: deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/core/core.dart';
 // ignore: implementation_imports

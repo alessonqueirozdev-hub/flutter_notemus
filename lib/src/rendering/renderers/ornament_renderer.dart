@@ -2,7 +2,7 @@
 
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import '../../../core/core.dart'; // 🆕 Tipos do core
 import '../grace_note_geometry.dart';
 import '../../theme/music_score_theme.dart';

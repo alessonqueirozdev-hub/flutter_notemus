@@ -2,6 +2,9 @@
 // Status is tracked in `doc/MODEL_ONLY.md`.
 // lib/src/animation/animation_config.dart
 
+// material_ui replaces this from Flutter 3.47, but the package supports
+// Flutter >=3.0.0, so it stays on the framework's own library for now.
+// ignore: deprecated_member_use
 import 'package:flutter/material.dart';
 
 /// Configurestion for music score animations

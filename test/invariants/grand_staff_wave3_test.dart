@@ -11,6 +11,7 @@
 //  * M-28 — an over-wide system must be reachable: the widget has to scroll.
 //  * F2  — a grace note must not drag the shared onset anchor to the left.
 
+// ignore: deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';

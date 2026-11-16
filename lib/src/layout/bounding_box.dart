@@ -1,7 +1,7 @@
 // lib/src/layout/bounding_box.dart
 
 import 'dart:math' as math;
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 
 /// Point 2D for posicionamento
 class PointF2D {

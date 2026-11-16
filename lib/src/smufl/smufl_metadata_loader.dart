@@ -1,7 +1,7 @@
 // lib/src/smufl/smufl_metadata_loader.dart
 
 import 'dart:convert';
-import 'package:flutter/material.dart' show Offset;
+import 'package:flutter/widgets.dart' show Offset;
 import 'package:flutter/services.dart' show rootBundle;
 import 'smufl_coordinates.dart';
 
