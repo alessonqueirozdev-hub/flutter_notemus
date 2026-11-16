@@ -10,6 +10,7 @@ library;
 // Generate:  flutter test --update-goldens test/golden/chant_golden_test.dart
 // Check:     flutter test test/golden/chant_golden_test.dart
 
+// ignore: deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 // Hide the music Duration so const Duration(milliseconds:) is the time Duration.

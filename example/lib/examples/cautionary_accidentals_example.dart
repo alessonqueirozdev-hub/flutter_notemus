@@ -12,6 +12,7 @@
 // editorial accidental is NEVER suppressed — that is the whole point of
 // writing one.
 
+// ignore: deprecated_member_use
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 

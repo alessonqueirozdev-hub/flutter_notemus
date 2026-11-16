@@ -1,7 +1,7 @@
 // lib/src/smufl/smufl_coordinates.dart
 
 import 'dart:math' as math;
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import '../../core/core.dart'; // 🆕 Tipos do core
 import 'smufl_metadata_loader.dart';
 

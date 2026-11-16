@@ -4,7 +4,7 @@
 // `MusicScore` it needs no SMuFL/Bravura font: Jianpu is typographic, so this
 // widget is synchronous and self-contained.
 
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_notemus/core/core.dart';
 
 import 'jianpu_renderer.dart';

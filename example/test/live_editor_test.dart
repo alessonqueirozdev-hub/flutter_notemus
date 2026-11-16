@@ -6,6 +6,7 @@
 // This checks the thing that matters: each format arrives with a rendered
 // staff and no error panel.
 
+// ignore: deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 // `hide Duration`: the package exports the rhythmic duration type under the

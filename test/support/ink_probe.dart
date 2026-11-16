@@ -17,7 +17,7 @@
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 
 /// A theme whose staff lines and barlines draw nothing, so the only ink in the

@@ -3,7 +3,7 @@
 // Sibling of `MusicScore`/`JianpuScore`. Renders precomposed neume glyphs from
 // the Greciliae chant font, so it loads the Greciliae glyph map before painting.
 
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_notemus/core/core.dart';
 
 import 'gabc_parser.dart';

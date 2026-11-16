@@ -1,4 +1,7 @@
 // lib/src/theme/music_score_theme.dart
+// material_ui replaces this from Flutter 3.47, but the package supports
+// Flutter >=3.0.0, so it stays on the framework's own library for now.
+// ignore: deprecated_member_use
 import 'package:flutter/material.dart';
 
 import '../rendering/text_font.dart';

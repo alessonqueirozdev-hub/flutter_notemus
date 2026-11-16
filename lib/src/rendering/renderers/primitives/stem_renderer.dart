@@ -1,6 +1,6 @@
 // lib/src/rendering/renderers/primitives/stem_renderer.dart
 
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import '../../../theme/music_score_theme.dart';
 import '../../smufl_positioning_engine.dart';
 import '../base_glyph_renderer.dart';

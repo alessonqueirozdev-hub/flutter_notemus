@@ -1,6 +1,6 @@
 // lib/src/rendering/renderers/bar_element_renderer.dart
 
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 
 import '../../../core/core.dart'; // 🆕 Tipos do core
 import '../../layout/collision_detector.dart'; // CORREÇÃO: Import collision detector

@@ -1,4 +1,6 @@
+// ignore: deprecated_member_use
 import 'package:flutter/cupertino.dart';
+// ignore: deprecated_member_use
 import 'package:flutter/material.dart' show SelectableText;
 import 'package:flutter_notemus/flutter_notemus.dart';
 

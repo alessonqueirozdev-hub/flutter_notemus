@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart' show Offset;
+import 'package:flutter/widgets.dart' show Offset;
 import '../smufl/smufl_metadata_loader.dart';
 
 /// Class responsible for calculating precise positions using SMuFL metadata

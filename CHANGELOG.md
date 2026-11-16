@@ -6,6 +6,18 @@ The format is based on Keep a Changelog and this project follows Semantic Versio
 
 ## [Unreleased]
 
+### Changed — Flutter 3.47
+
+- **Most of the library no longer imports `package:flutter/material.dart`.**
+  Flutter 3.47 deprecates it in favour of the `material_ui` package, and CI
+  treats infos as fatal, so every run went red with 121
+  `deprecated_member_use` infos. 38 library files only needed
+  `package:flutter/widgets.dart` and now import that. The 9 that use Material
+  (`Colors`, `Theme`, `CircularProgressIndicator`, the PDF preview's
+  `Scaffold`) keep the import with a targeted `ignore`, because the package
+  supports Flutter `>=3.0.0` and `material_ui` exists only from 3.47. Tests
+  and the example app take the same targeted `ignore`. Nothing public changes.
+
 ## [2.9.1] - 2026-11-06
 
 One defect, reported by a user and caught by no test: **an app depending

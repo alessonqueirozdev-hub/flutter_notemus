@@ -1,6 +1,7 @@
 // example/lib/examples/json_ode_example.dart
 // Ode to Joy Rendersda from JSON simplificado
 
+// ignore: deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 

@@ -5,6 +5,7 @@
 // ScoreHitTester, so a tap resolves against the same boxes the 2.8 hit-test
 // fixes measured and returns the caller's own Note.
 
+// ignore: deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_notemus/flutter_notemus.dart' hide Duration;

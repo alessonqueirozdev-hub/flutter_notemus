@@ -9,6 +9,7 @@
 // timing of the other voices: a silenced voice still consumes its musical
 // time, only its note events are dropped.
 
+// ignore: deprecated_member_use
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 

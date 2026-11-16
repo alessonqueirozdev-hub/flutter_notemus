@@ -9,6 +9,7 @@
 // against two halves — beat 3 of the right hand and beat 3 of the left hand
 // have to line up exactly.
 
+// ignore: deprecated_member_use
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 

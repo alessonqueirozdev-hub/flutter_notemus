@@ -10,6 +10,7 @@
 // The grouping is derived by `BeamGrouper` from the time signature alone;
 // none of the notes below carry an explicit `BeamType`.
 
+// ignore: deprecated_member_use
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 

@@ -15,7 +15,7 @@
 // notes after a change stay on their real line instead of being drawn (and
 // heard) transposed against the opening clef.
 
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_notemus/core/core.dart';
 
 import '../text_font.dart';

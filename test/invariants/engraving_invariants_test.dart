@@ -13,6 +13,7 @@ import 'dart:math' as math;
 
 // Hide the music `Duration` so `const Duration(milliseconds: …)` inside the
 // Flutter framework still resolves, and alias the framework import.
+// ignore: deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
