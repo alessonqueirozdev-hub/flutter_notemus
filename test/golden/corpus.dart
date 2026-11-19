@@ -481,6 +481,50 @@ Staff _freeTime() {
   ]);
 }
 
+Staff _commonTimeSignatureGlyphs() {
+  return _staff([
+    _measure([
+      Clef(clefType: ClefType.treble),
+      TimeSignature(numerator: 4, denominator: 4),
+      _n('C', 5),
+      _n('D', 5),
+      _n('E', 5),
+      _n('F', 5),
+    ]),
+    _measure([
+      TimeSignature(numerator: 2, denominator: 2),
+      _n('G', 4, dur: DurationType.half),
+      _n('A', 4, dur: DurationType.half),
+    ]),
+  ]);
+}
+
+Staff _fractionalTimeSignatureGlyphs() {
+  return _staff([
+    _measure([
+      Clef(clefType: ClefType.treble),
+      TimeSignature(
+        numerator: 4,
+        denominator: 4,
+        displayCommonTimeSignatureGlyphs: false,
+      ),
+      _n('C', 5),
+      _n('D', 5),
+      _n('E', 5),
+      _n('F', 5),
+    ]),
+    _measure([
+      TimeSignature(
+        numerator: 2,
+        denominator: 2,
+        displayCommonTimeSignatureGlyphs: false,
+      ),
+      _n('G', 4, dur: DurationType.half),
+      _n('A', 4, dur: DurationType.half),
+    ]),
+  ]);
+}
+
 Staff _chordArticulations() {
   Chord chord(List<Note> notes, List<ArticulationType> artic) =>
       Chord(notes: notes, duration: const Duration(DurationType.half),
@@ -1028,6 +1072,20 @@ final List<CorpusCase> corpus = [
     tier: 'intermediate',
     exercises: 'free-time signature draws nothing instead of 0/4',
     build: _freeTime,
+  ),
+  CorpusCase(
+    id: 'm04g_common_time_glyphs',
+    title: 'Common time glyphs (C and cut C)',
+    tier: 'simple',
+    exercises: 'default 4/4 common and 2/2 cut-common glyph rendering',
+    build: _commonTimeSignatureGlyphs,
+  ),
+  CorpusCase(
+    id: 'm04f_fractional_time_glyphs',
+    title: 'Fractional time glyphs (4/4 and 2/2)',
+    tier: 'simple',
+    exercises: 'displayCommonTimeSignatureGlyphs false renders numeric fractions',
+    build: _fractionalTimeSignatureGlyphs,
   ),
   CorpusCase(
     id: 'm04h_chord_articulations',
