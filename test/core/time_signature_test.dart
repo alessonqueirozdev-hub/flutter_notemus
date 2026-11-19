@@ -303,6 +303,7 @@ void main() {
       // C symbol represents 4/4
       expect(commonTime.numerator, equals(4));
       expect(commonTime.denominator, equals(4));
+      expect(commonTime.displayCommonTimeSignatureGlyphs, isTrue);
     });
 
     test('Cut time (¢) is 2/2', () {
@@ -311,6 +312,41 @@ void main() {
       // Cut time symbol represents 2/2
       expect(cutTime.numerator, equals(2));
       expect(cutTime.denominator, equals(2));
+      expect(cutTime.displayCommonTimeSignatureGlyphs, isTrue);
+    });
+
+    test('Common glyph display can be disabled for 4/4', () {
+      final fractional = TimeSignature(
+        numerator: 4,
+        denominator: 4,
+        displayCommonTimeSignatureGlyphs: false,
+      );
+
+      expect(fractional.numerator, equals(4));
+      expect(fractional.denominator, equals(4));
+      expect(fractional.displayCommonTimeSignatureGlyphs, isFalse);
+    });
+
+    test('Common glyph display can be disabled for 2/2', () {
+      final fractional = TimeSignature(
+        numerator: 2,
+        denominator: 2,
+        displayCommonTimeSignatureGlyphs: false,
+      );
+
+      expect(fractional.numerator, equals(2));
+      expect(fractional.denominator, equals(2));
+      expect(fractional.displayCommonTimeSignatureGlyphs, isFalse);
+    });
+
+    test('Common glyph display can be enabled explicitly', () {
+      final common = TimeSignature(
+        numerator: 4,
+        denominator: 4,
+        displayCommonTimeSignatureGlyphs: true,
+      );
+
+      expect(common.displayCommonTimeSignatureGlyphs, isTrue);
     });
   });
 
