@@ -162,7 +162,12 @@ class PositionedElement {
       return Object.hash('Key', element.count, element.previousCount);
     }
     if (element is TimeSignature) {
-      return Object.hash('Time', element.numerator, element.denominator);
+      return Object.hash(
+        'Time',
+        element.numerator,
+        element.denominator,
+        element.displayCommonTimeSignatureGlyphs,
+      );
     }
     if (element is Barline) {
       return Object.hash('Barline', element.type);
