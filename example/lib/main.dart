@@ -1,6 +1,8 @@
 import 'dart:ui' show PointerDeviceKind;
 
+// ignore: deprecated_member_use
 import 'package:flutter/cupertino.dart';
+// ignore: deprecated_member_use
 import 'package:flutter/material.dart'
     show
         Theme,
@@ -156,8 +158,10 @@ class MusicNotationApp extends StatelessWidget {
       title: 'Flutter Notemus Showcase',
       scrollBehavior: _AppScrollBehavior(),
       localizationsDelegates: [
+        // ignore: deprecated_member_use
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
+        // ignore: deprecated_member_use
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: [

@@ -4,6 +4,7 @@
 // and [ScoreView] widgets, brace/bracket connectors, system-spanning barlines,
 // and cross-staff beaming (Note.crossStaffMove).
 
+// ignore: deprecated_member_use
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 

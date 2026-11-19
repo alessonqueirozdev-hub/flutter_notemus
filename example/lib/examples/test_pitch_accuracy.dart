@@ -1,6 +1,7 @@
 // example/lib/examples/test_pitch_accuracy.dart
 // NOTE PITCH ACCURACY TEST
 
+// ignore: deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 

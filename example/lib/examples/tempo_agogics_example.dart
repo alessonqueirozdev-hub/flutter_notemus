@@ -1,5 +1,6 @@
 // example/lib/examples/tempo_agogics_example.dart
 
+// ignore: deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 

@@ -3,6 +3,7 @@
 // Showcases Gregorian square-notation rendering with the Greciliae font:
 // GABC import (ChantScore.fromGabc), divisiones, episema/mora, and a custos.
 
+// ignore: deprecated_member_use
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 

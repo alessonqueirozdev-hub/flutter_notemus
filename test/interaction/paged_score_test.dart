@@ -4,6 +4,7 @@
 // system boundaries. Ported from @zamvar's fork (`codex/note-tap`); here each
 // page is a clipped band of the one shared GrandStaffPainter.
 
+// ignore: deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_notemus/flutter_notemus.dart' hide Duration;

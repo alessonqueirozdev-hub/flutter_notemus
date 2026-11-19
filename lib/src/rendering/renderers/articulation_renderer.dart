@@ -1,6 +1,6 @@
 // lib/src/rendering/renderers/articulation_renderer.dart
 
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import '../../../core/core.dart'; // 🆕 Tipos do core
 import '../../theme/music_score_theme.dart';
 import 'base_glyph_renderer.dart';

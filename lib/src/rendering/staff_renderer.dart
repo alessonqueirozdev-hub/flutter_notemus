@@ -3,7 +3,7 @@
 // Refactoring pass: Using tipos of the core/
 
 import 'dart:math' as math;
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import '../../core/core.dart'; // 🆕 Tipos do core
 import '../layout/layout_engine.dart';
 import 'accidental_resolver.dart';

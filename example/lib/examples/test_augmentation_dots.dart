@@ -1,6 +1,7 @@
 // example/lib/examples/test_augmentation_dots.dart
 // AUGMENTATION DOT POSITIONING TEST
 
+// ignore: deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 

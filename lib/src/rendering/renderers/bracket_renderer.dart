@@ -1,6 +1,6 @@
 // lib/src/rendering/renderers/bracket_renderer.dart
 
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import '../../../core/staff_group.dart';
 import '../../smufl/smufl_metadata_loader.dart';
 import '../staff_coordinate_system.dart';

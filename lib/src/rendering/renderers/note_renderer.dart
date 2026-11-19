@@ -8,7 +8,7 @@
 //  * no duplicated staff-position code and no ad-hoc, inconsistent use of
 //    centerVertically / centerHorizontally.
 
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import '../../../core/core.dart';
 import '../../smufl/smufl_metadata_loader.dart';
 import '../../theme/music_score_theme.dart';

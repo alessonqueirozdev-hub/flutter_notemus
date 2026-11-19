@@ -1,6 +1,7 @@
 // example/lib/examples/professional_json_example.dart
 // Ode to Joy - Complete Professional JSON
 
+// ignore: deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 

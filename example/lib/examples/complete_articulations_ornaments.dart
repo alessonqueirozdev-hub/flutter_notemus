@@ -1,6 +1,7 @@
 // example/lib/examples/complete_articulations_ornaments.dart
 // Complete demonstration of articulations and ornaments
 
+// ignore: deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 

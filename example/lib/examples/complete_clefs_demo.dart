@@ -1,6 +1,7 @@
 // example/lib/examples/complete_clefs_demo.dart
 // Full demo of all supported keys
 
+// ignore: deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 

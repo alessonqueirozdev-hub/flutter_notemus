@@ -1,6 +1,6 @@
 // lib/src/rendering/renderers/symbols/dynamic_renderer.dart
 
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import '../../../../core/core.dart';
 import '../../../theme/music_score_theme.dart';
 import '../base_glyph_renderer.dart';

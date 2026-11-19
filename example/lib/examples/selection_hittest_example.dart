@@ -9,6 +9,7 @@
 // editor) edited. Every hit also carries the four selection axes the engine
 // exposes today — system, measure index, voice number and musical onset.
 
+// ignore: deprecated_member_use
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 

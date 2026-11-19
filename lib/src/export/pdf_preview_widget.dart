@@ -1,6 +1,9 @@
 // lib/src/export/pdf_preview_widget.dart
 
 import 'dart:typed_data';
+// material_ui replaces this from Flutter 3.47, but the package supports
+// Flutter >=3.0.0, so it stays on the framework's own library for now.
+// ignore: deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:printing/printing.dart';
 import 'package:pdf/pdf.dart';

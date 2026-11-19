@@ -1,6 +1,6 @@
 // lib/src/rendering/performance_optimizer.dart
 
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import '../layout/layout_engine.dart';
 import '../smufl/smufl_metadata_loader.dart';
 import '../utils/lru_cache.dart';

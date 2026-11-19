@@ -6,7 +6,7 @@
 // metrics — which is what removes the inconsistent use of
 // centerVertically/centerHorizontally that used to misalign glyphs.
 
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import '../performance_optimizer.dart';
 import '../../layout/collision_detector.dart';
 import '../../smufl/smufl_metadata_loader.dart';

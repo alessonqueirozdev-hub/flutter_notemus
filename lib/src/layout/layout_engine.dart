@@ -3,7 +3,7 @@
 // Suporte a Hierarchical BoundingBox added
 // Refactoring pass: Using tipos of the core/
 
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_notemus/core/core.dart';
 import 'package:flutter_notemus/src/beaming/beam_analyzer.dart';
 import 'package:flutter_notemus/src/beaming/beam_group.dart';
