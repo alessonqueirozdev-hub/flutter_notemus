@@ -201,7 +201,7 @@ class BarElementRenderer {
       return;
     }
 
-    if(ts.displayCommonTimeSignatureGlyphs) {
+    if (ts.displayCommonTimeSignatureGlyphs) {
       if (ts.numerator == 4 &&
           ts.denominator == 4 &&
           metadata.hasGlyph('timeSigCommon')) {
