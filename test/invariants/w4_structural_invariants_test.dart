@@ -528,228 +528,224 @@ void main() {
   });
 
   // ------------------------------------------------------------ elementWidth --
-  test(
-    'elementWidth covers the ink every element type actually paints',
-    () async {
-      // The class of defect that produced M-16, M-17, M-28 and M-33: the layout
-      // reserved a width the renderer then exceeded, and nothing compared the
-      // two. `elementWidth` is also what `ScoreHitTester` and `ScoreRasterizer`
-      // build their boxes from, so a shortfall is a selection bug and a clipped
-      // export as well as a collision.
+  test('elementWidth covers the ink every element type actually paints', () async {
+    // The class of defect that produced M-16, M-17, M-28 and M-33: the layout
+    // reserved a width the renderer then exceeded, and nothing compared the
+    // two. `elementWidth` is also what `ScoreHitTester` and `ScoreRasterizer`
+    // build their boxes from, so a shortfall is a selection bug and a clipped
+    // export as well as a collision.
+    //
+    // Method: each element is laid out ALONE in its own bar, with the staff
+    // lines and barlines painted transparent (they are the only ink that covers
+    // every column), so the ink near the element is the element's own. The
+    // reserved band is `[x - elementLeftExtent, x - elementLeftExtent +
+    // elementWidth]`; the test asserts no ink outside it.
+    const staffSpace = 48.0;
+    const tolerance = 2.0; // anti-aliased edges, both sides
+
+    final cases = <String, MusicalElement>{
+      'clef treble': Clef(clefType: ClefType.treble),
+      'clef bass': Clef(clefType: ClefType.bass),
+      'clef alto': Clef(clefType: ClefType.alto),
+      'key 3 sharps': KeySignature(3),
+      'key 5 flats': KeySignature(-5),
+      'time 4/4': TimeSignature(numerator: 4, denominator: 4),
+      'time 12/8': TimeSignature(numerator: 12, denominator: 8),
+      'note half': _n('B', 4, d: DurationType.half),
+      'note quarter': _n('B', 4),
+      // B4 is on the middle line, so its stem points DOWN and its flag curls
+      // back inside the notehead's own advance. The stem-up cases below are
+      // the ones that expose the flag.
+      'note sixteenth': _n('B', 4, d: DurationType.sixteenth),
+      'note sharp': _n('B', 4, alter: 1.0),
+      'note double flat': _n('B', 4, alter: -2.0),
+      'note dotted': _n('B', 4, dots: 1),
+      'note double dotted': _n('B', 4, dots: 2),
+      // These four used to carry large per-case budgets. All of them are now
+      // CLOSED, and the budgets are kept at 3 px — anti-aliasing — rather than
+      // deleted, so a regression fails here immediately instead of silently
+      // re-opening.
       //
-      // Method: each element is laid out ALONE in its own bar, with the staff
-      // lines and barlines painted transparent (they are the only ink that covers
-      // every column), so the ink near the element is the element's own. The
-      // reserved band is `[x - elementLeftExtent, x - elementLeftExtent +
-      // elementWidth]`; the test asserts no ink outside it.
-      const staffSpace = 48.0;
-      const tolerance = 2.0; // anti-aliased edges, both sides
+      //  * Notehead advance. `_getElementWidthSimple` reserved
+      //    `noteheadBlackWidth` for EVERY duration. Bravura's `noteheadBlack`
+      //    advance is 1.18 staff spaces, `noteheadWhole` 1.688 and
+      //    `noteDoubleWhole` wider still. Measured at staffSpace 48 BEFORE: a
+      //    whole note painted 81 px into a 56.6 px reservation (24.5 px over)
+      //    and a breve 125 px (68.5 px over). It now reads
+      //    `metadata.getGlyphAdvanceWidth(duration.type.glyphName)`.
+      //  * Flags. A stem-up eighth painted 101 px into the same 56.6 px (44.5
+      //    px over, 0.93 staff spaces). That was never an advance defect — a
+      //    flag hangs over the following gap on purpose (Gould) — it was this
+      //    test asking the wrong question. The right edge below is now
+      //    `elementPaintedRightExtent`, which is what the hit-test box and the
+      //    raster's content width are built from, and which does count the flag.
+      'note whole': _n('B', 4, d: DurationType.whole),
+      'note breve': _n('B', 4, d: DurationType.breve),
+      'note eighth stem up': _n('C', 4, d: DurationType.eighth),
+      'note thirty-second stem up': _n('C', 4, d: DurationType.thirtySecond),
+      'rest whole': Rest(duration: const Duration(DurationType.whole)),
+      'rest quarter': Rest(duration: const Duration(DurationType.quarter)),
+      'rest 64th': Rest(duration: const Duration(DurationType.sixtyFourth)),
+      'chord thirds': Chord(
+        notes: [_n('C', 5), _n('E', 5), _n('G', 5)],
+        duration: const Duration(DurationType.quarter),
+      ),
+      'chord flats': Chord(
+        notes: [
+          _n('C', 5, alter: -1),
+          _n('E', 5, alter: -1),
+          _n('G', 5, alter: -1),
+        ],
+        duration: const Duration(DurationType.quarter),
+      ),
+    };
 
-      final cases = <String, MusicalElement>{
-        'clef treble': Clef(clefType: ClefType.treble),
-        'clef bass': Clef(clefType: ClefType.bass),
-        'clef alto': Clef(clefType: ClefType.alto),
-        'key 3 sharps': KeySignature(3),
-        'key 5 flats': KeySignature(-5),
-        'time 4/4': TimeSignature(numerator: 4, denominator: 4),
-        'time 12/8': TimeSignature(numerator: 12, denominator: 8),
-        'note half': _n('B', 4, d: DurationType.half),
-        'note quarter': _n('B', 4),
-        // B4 is on the middle line, so its stem points DOWN and its flag curls
-        // back inside the notehead's own advance. The stem-up cases below are
-        // the ones that expose the flag.
-        'note sixteenth': _n('B', 4, d: DurationType.sixteenth),
-        'note sharp': _n('B', 4, alter: 1.0),
-        'note double flat': _n('B', 4, alter: -2.0),
-        'note dotted': _n('B', 4, dots: 1),
-        'note double dotted': _n('B', 4, dots: 2),
-        // These four used to carry large per-case budgets. All of them are now
-        // CLOSED, and the budgets are kept at 3 px — anti-aliasing — rather than
-        // deleted, so a regression fails here immediately instead of silently
-        // re-opening.
-        //
-        //  * Notehead advance. `_getElementWidthSimple` reserved
-        //    `noteheadBlackWidth` for EVERY duration. Bravura's `noteheadBlack`
-        //    advance is 1.18 staff spaces, `noteheadWhole` 1.688 and
-        //    `noteDoubleWhole` wider still. Measured at staffSpace 48 BEFORE: a
-        //    whole note painted 81 px into a 56.6 px reservation (24.5 px over)
-        //    and a breve 125 px (68.5 px over). It now reads
-        //    `metadata.getGlyphAdvanceWidth(duration.type.glyphName)`.
-        //  * Flags. A stem-up eighth painted 101 px into the same 56.6 px (44.5
-        //    px over, 0.93 staff spaces). That was never an advance defect — a
-        //    flag hangs over the following gap on purpose (Gould) — it was this
-        //    test asking the wrong question. The right edge below is now
-        //    `elementPaintedRightExtent`, which is what the hit-test box and the
-        //    raster's content width are built from, and which does count the flag.
-        'note whole': _n('B', 4, d: DurationType.whole),
-        'note breve': _n('B', 4, d: DurationType.breve),
-        'note eighth stem up': _n('C', 4, d: DurationType.eighth),
-        'note thirty-second stem up': _n('C', 4, d: DurationType.thirtySecond),
-        'rest whole': Rest(duration: const Duration(DurationType.whole)),
-        'rest quarter': Rest(duration: const Duration(DurationType.quarter)),
-        'rest 64th': Rest(duration: const Duration(DurationType.sixtyFourth)),
-        'chord thirds': Chord(
-          notes: [_n('C', 5), _n('E', 5), _n('G', 5)],
-          duration: const Duration(DurationType.quarter),
-        ),
-        'chord flats': Chord(
-          notes: [
-            _n('C', 5, alter: -1),
-            _n('E', 5, alter: -1),
-            _n('G', 5, alter: -1),
-          ],
-          duration: const Duration(DurationType.quarter),
-        ),
-      };
+    // Per-case budget in pixels for ink outside the reserved band. Anything not
+    // listed gets [tolerance].
+    const budgets = <String, double>{
+      // See the notes on the four cases above. Measured: 24.5 / 68.5 / 44.5 /
+      // 44.5 px at staffSpace 48.
+      'note whole': 3.0,
+      'note breve': 3.0,
+      'note eighth stem up': 3.0,
+      'note thirty-second stem up': 3.0,
+      // Rests were the third case. They are drawn CENTRED on their origin
+      // (`RestRenderer` passes `GlyphDrawOptions.restDefault`) while every other
+      // element is drawn from its origin rightwards, and the layout reserved
+      // `[x, x + advance]`. The painted WIDTH always matched to within a pixel
+      // (52.0 against 51.9 for a quarter rest) — the BAND was offset by half a
+      // glyph, which under compression is a collision with the preceding note,
+      // and which made the left edge of every rest unclickable. `_leftExtent`
+      // now returns half the advance for a Rest, so the reservation is centred
+      // like the ink. Budgets went 29.0 / 28.0 / 43.0 -> 3.0.
+    };
 
-      // Per-case budget in pixels for ink outside the reserved band. Anything not
-      // listed gets [tolerance].
-      const budgets = <String, double>{
-        // See the notes on the four cases above. Measured: 24.5 / 68.5 / 44.5 /
-        // 44.5 px at staffSpace 48.
-        'note whole': 3.0,
-        'note breve': 3.0,
-        'note eighth stem up': 3.0,
-        'note thirty-second stem up': 3.0,
-        // Rests were the third case. They are drawn CENTRED on their origin
-        // (`RestRenderer` passes `GlyphDrawOptions.restDefault`) while every other
-        // element is drawn from its origin rightwards, and the layout reserved
-        // `[x, x + advance]`. The painted WIDTH always matched to within a pixel
-        // (52.0 against 51.9 for a quarter rest) — the BAND was offset by half a
-        // glyph, which under compression is a collision with the preceding note,
-        // and which made the left edge of every rest unclickable. `_leftExtent`
-        // now returns half the advance for a Rest, so the reservation is centred
-        // like the ink. Budgets went 29.0 / 28.0 / 43.0 -> 3.0.
-      };
+    // Per-case budget in pixels for painted WIDTH beyond the reserved advance.
+    // This is the tight half of the test: every element type is held to two
+    // pixels except the four open defects documented above, and the rests —
+    // whose painted width matches their reservation to within a pixel (54.0 vs
+    // 54.3, 52.0 vs 51.8, 81.0 vs 81.4) and which fail only the BAND half.
+    const widthBudgets = <String, double>{
+      'note whole': 3.0,
+      'note breve': 3.0,
+      'note eighth stem up': 3.0,
+      'note thirty-second stem up': 3.0,
+    };
 
-      // Per-case budget in pixels for painted WIDTH beyond the reserved advance.
-      // This is the tight half of the test: every element type is held to two
-      // pixels except the four open defects documented above, and the rests —
-      // whose painted width matches their reservation to within a pixel (54.0 vs
-      // 54.3, 52.0 vs 51.8, 81.0 vs 81.4) and which fail only the BAND half.
-      const widthBudgets = <String, double>{
-        'note whole': 3.0,
-        'note breve': 3.0,
-        'note eighth stem up': 3.0,
-        'note thirty-second stem up': 3.0,
-      };
+    final report = <String>[];
+    final failures = <String>[];
 
-      final report = <String>[];
-      final failures = <String>[];
+    for (final entry in cases.entries) {
+      final element = entry.value;
+      final staff = Staff(
+        measures: [
+          _bar([
+            Clef(clefType: ClefType.treble),
+            TimeSignature(numerator: 4, denominator: 4),
+          ]),
+          _bar([element]),
+        ],
+      );
+      final engine = engineFor(staff, width: 3000, staffSpace: staffSpace);
+      final placed = engine.layout();
+      final positioned = placed.firstWhere(
+        (p) => identical(p.element, element),
+      );
 
-      for (final entry in cases.entries) {
-        final element = entry.value;
-        final staff = Staff(
-          measures: [
-            _bar([
-              Clef(clefType: ClefType.treble),
-              TimeSignature(numerator: 4, denominator: 4),
-            ]),
-            _bar([element]),
-          ],
-        );
-        final engine = engineFor(staff, width: 3000, staffSpace: staffSpace);
-        final placed = engine.layout();
-        final positioned = placed.firstWhere(
-          (p) => identical(p.element, element),
-        );
+      // The right edge is the PAINTED extent, not the advance.
+      //
+      // These are deliberately different numbers. `elementWidth` is what the
+      // cursor advances by, and a flag hangs over the following gap instead of
+      // widening it (Gould) — so measuring ink against the advance asks a flag
+      // to be something it is not supposed to be, which is why this test used
+      // to carry a 47 px budget for two of its cases. What the ink actually has
+      // to fit inside is `elementPaintedRightExtent`, which is the number the
+      // hit-test box and the raster's content width are built from.
+      final left = positioned.position.dx - engine.elementLeftExtent(element);
+      final right =
+          positioned.position.dx + engine.elementPaintedRightExtent(element);
+      expect(
+        right,
+        greaterThan(left),
+        reason: '${entry.key} reserved no width at all',
+      );
 
-        // The right edge is the PAINTED extent, not the advance.
-        //
-        // These are deliberately different numbers. `elementWidth` is what the
-        // cursor advances by, and a flag hangs over the following gap instead of
-        // widening it (Gould) — so measuring ink against the advance asks a flag
-        // to be something it is not supposed to be, which is why this test used
-        // to carry a 47 px budget for two of its cases. What the ink actually has
-        // to fit inside is `elementPaintedRightExtent`, which is the number the
-        // hit-test box and the raster's content width are built from.
-        final left = positioned.position.dx - engine.elementLeftExtent(element);
-        final right =
-            positioned.position.dx + engine.elementPaintedRightExtent(element);
-        expect(
-          right,
-          greaterThan(left),
-          reason: '${entry.key} reserved no width at all',
-        );
+      final ink = await rasterise(
+        staff,
+        metadata,
+        staffSpace: staffSpace,
+        width: 3000,
+      );
+      final columns = ink.inkColumns();
 
-        final ink = await rasterise(
-          staff,
-          metadata,
-          staffSpace: staffSpace,
-          width: 3000,
-        );
-        final columns = ink.inkColumns();
-
-        // Only look near the element: its neighbours are a bar away.
-        final from = math.max(0, (left - staffSpace * 1.5).round());
-        final to = math.min(ink.width - 1, (right + staffSpace * 1.5).round());
-        var overflowLeft = 0.0;
-        var overflowRight = 0.0;
-        var inkFrom = double.infinity;
-        var inkTo = double.negativeInfinity;
-        var sawInk = false;
-        for (var x = from; x <= to; x++) {
-          if (!columns[x]) continue;
-          sawInk = true;
-          inkFrom = math.min(inkFrom, x.toDouble());
-          inkTo = math.max(inkTo, x + 1.0);
-          if (x < left) overflowLeft = math.max(overflowLeft, left - x);
-          if (x + 1 > right) {
-            overflowRight = math.max(overflowRight, x + 1 - right);
-          }
-        }
-        expect(
-          sawInk,
-          isTrue,
-          reason: '${entry.key} painted nothing — the measurement is vacuous',
-        );
-
-        // Two separate claims, because they fail for different reasons.
-        //
-        // (1) WIDTH. `elementWidth` is the advance the layout charges; the ink
-        //     must fit inside it. This is tight for everything, including the
-        //     rests, whose painted width matches their reservation to a pixel.
-        // (2) BAND. The ink must also sit where the reservation put it. Rests
-        //     fail this one alone, and only by an offset — see the budgets.
-        final paintedWidth = inkTo - inkFrom;
-        final reservedWidth = right - left;
-        final widthBudget = widthBudgets[entry.key] ?? tolerance;
-        final budget = budgets[entry.key] ?? tolerance;
-        final worst = math.max(overflowLeft, overflowRight);
-        report.add(
-          '${entry.key.padRight(18)} reserved '
-          '${reservedWidth.toStringAsFixed(1)} painted '
-          '${paintedWidth.toStringAsFixed(1)} '
-          'overflow L=${overflowLeft.toStringAsFixed(1)} '
-          'R=${overflowRight.toStringAsFixed(1)} '
-          'budgets width=$widthBudget band=$budget',
-        );
-        if (paintedWidth - reservedWidth > widthBudget) {
-          failures.add(
-            '${entry.key}: painted '
-            '${paintedWidth.toStringAsFixed(1)} px into a reservation of '
-            '${reservedWidth.toStringAsFixed(1)} px '
-            '(width budget $widthBudget)',
-          );
-        }
-        if (worst > budget) {
-          failures.add(
-            '${entry.key}: painted ${worst.toStringAsFixed(1)} px '
-            'outside its reserved band (band budget $budget)',
-          );
+      // Only look near the element: its neighbours are a bar away.
+      final from = math.max(0, (left - staffSpace * 1.5).round());
+      final to = math.min(ink.width - 1, (right + staffSpace * 1.5).round());
+      var overflowLeft = 0.0;
+      var overflowRight = 0.0;
+      var inkFrom = double.infinity;
+      var inkTo = double.negativeInfinity;
+      var sawInk = false;
+      for (var x = from; x <= to; x++) {
+        if (!columns[x]) continue;
+        sawInk = true;
+        inkFrom = math.min(inkFrom, x.toDouble());
+        inkTo = math.max(inkTo, x + 1.0);
+        if (x < left) overflowLeft = math.max(overflowLeft, left - x);
+        if (x + 1 > right) {
+          overflowRight = math.max(overflowRight, x + 1 - right);
         }
       }
-
       expect(
-        failures,
-        isEmpty,
-        reason:
-            'elementWidth/elementLeftExtent must bound what is drawn — '
-            'hit-testing, collision detection and the raster export all build '
-            'their boxes from them.\n${failures.join('\n')}\n'
-            '${report.join('\n')}',
+        sawInk,
+        isTrue,
+        reason: '${entry.key} painted nothing — the measurement is vacuous',
       );
-    },
-    timeout: const Timeout.factor(60),
-  );
+
+      // Two separate claims, because they fail for different reasons.
+      //
+      // (1) WIDTH. `elementWidth` is the advance the layout charges; the ink
+      //     must fit inside it. This is tight for everything, including the
+      //     rests, whose painted width matches their reservation to a pixel.
+      // (2) BAND. The ink must also sit where the reservation put it. Rests
+      //     fail this one alone, and only by an offset — see the budgets.
+      final paintedWidth = inkTo - inkFrom;
+      final reservedWidth = right - left;
+      final widthBudget = widthBudgets[entry.key] ?? tolerance;
+      final budget = budgets[entry.key] ?? tolerance;
+      final worst = math.max(overflowLeft, overflowRight);
+      report.add(
+        '${entry.key.padRight(18)} reserved '
+        '${reservedWidth.toStringAsFixed(1)} painted '
+        '${paintedWidth.toStringAsFixed(1)} '
+        'overflow L=${overflowLeft.toStringAsFixed(1)} '
+        'R=${overflowRight.toStringAsFixed(1)} '
+        'budgets width=$widthBudget band=$budget',
+      );
+      if (paintedWidth - reservedWidth > widthBudget) {
+        failures.add(
+          '${entry.key}: painted '
+          '${paintedWidth.toStringAsFixed(1)} px into a reservation of '
+          '${reservedWidth.toStringAsFixed(1)} px '
+          '(width budget $widthBudget)',
+        );
+      }
+      if (worst > budget) {
+        failures.add(
+          '${entry.key}: painted ${worst.toStringAsFixed(1)} px '
+          'outside its reserved band (band budget $budget)',
+        );
+      }
+    }
+
+    expect(
+      failures,
+      isEmpty,
+      reason:
+          'elementWidth/elementLeftExtent must bound what is drawn — '
+          'hit-testing, collision detection and the raster export all build '
+          'their boxes from them.\n${failures.join('\n')}\n'
+          '${report.join('\n')}',
+    );
+  }, timeout: const Timeout.factor(60));
 }

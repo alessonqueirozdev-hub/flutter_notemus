@@ -76,11 +76,11 @@ void main() {
         final engine = engineOf(staff)..layout();
 
         // ADR-005: laying the score out leaves the model alone.
-        expect(
-          notes.map((n) => n.beam).toList(),
-          [null, null, null],
-          reason: 'the engine must not stamp its decision onto the model',
-        );
+        expect(notes.map((n) => n.beam).toList(), [
+          null,
+          null,
+          null,
+        ], reason: 'the engine must not stamp its decision onto the model');
         // ...and publishes the decision as a value instead.
         //
         // NOTE the oracle composed here. `LayoutEngine.beamOf` consults `beams`

@@ -57,11 +57,11 @@ void main() {
 
   test('the three pitches are the ones the paper prints', () {
     final notes = bar.elements.whereType<Note>().toList();
-    expect(
-      notes.map((n) => '${n.pitch.step}${n.pitch.octave}'),
-      <String>['C5', 'E5', 'G5'],
-      reason: 'before 2.8.1 every one of these came back as C4',
-    );
+    expect(notes.map((n) => '${n.pitch.step}${n.pitch.octave}'), <String>[
+      'C5',
+      'E5',
+      'G5',
+    ], reason: 'before 2.8.1 every one of these came back as C4');
     expect(notes.every((n) => n.duration.type == DurationType.quarter), isTrue);
   });
 

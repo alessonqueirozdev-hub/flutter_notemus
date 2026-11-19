@@ -173,105 +173,100 @@ void main() {
   });
 
   // ------------------------------------------------------------------ N-08 --
-  test(
-    'N-08 — beam levels inside a tuplet are decided per note',
-    () async {
-      // `beamCount` used to be `_resolveBeamCount(notes.first.duration.type)`
-      // applied to the whole span, so an eighth followed by two sixteenths drew
-      // ONE beam and the sixteenths' secondary beam simply vanished — while the
-      // same figure outside a tuplet, which goes through `BeamAnalyzer`, got it
-      // right.
-      //
-      // Asserted on INK, because the defect was in the drawing: the layout never
-      // had an opinion about how many beams to paint.
-      const staffSpace = 36.0;
-      final eighth = _n('C', 4, d: DurationType.eighth);
-      final first = _n('C', 4, d: DurationType.sixteenth);
-      final second = _n('C', 4, d: DurationType.sixteenth);
-      final tuplet = Tuplet(
-        actualNotes: 3,
-        normalNotes: 2,
-        elements: [eighth, first, second],
-      );
-      final staff = Staff(
-        measures: [
-          _bar([
-            Clef(clefType: ClefType.treble),
-            TimeSignature(numerator: 4, denominator: 4),
-            tuplet,
-          ]),
-        ],
-      );
-      final engine = engineFor(staff, width: 900, staffSpace: staffSpace);
-      engine.layout();
+  test('N-08 — beam levels inside a tuplet are decided per note', () async {
+    // `beamCount` used to be `_resolveBeamCount(notes.first.duration.type)`
+    // applied to the whole span, so an eighth followed by two sixteenths drew
+    // ONE beam and the sixteenths' secondary beam simply vanished — while the
+    // same figure outside a tuplet, which goes through `BeamAnalyzer`, got it
+    // right.
+    //
+    // Asserted on INK, because the defect was in the drawing: the layout never
+    // had an opinion about how many beams to paint.
+    const staffSpace = 36.0;
+    final eighth = _n('C', 4, d: DurationType.eighth);
+    final first = _n('C', 4, d: DurationType.sixteenth);
+    final second = _n('C', 4, d: DurationType.sixteenth);
+    final tuplet = Tuplet(
+      actualNotes: 3,
+      normalNotes: 2,
+      elements: [eighth, first, second],
+    );
+    final staff = Staff(
+      measures: [
+        _bar([
+          Clef(clefType: ClefType.treble),
+          TimeSignature(numerator: 4, denominator: 4),
+          tuplet,
+        ]),
+      ],
+    );
+    final engine = engineFor(staff, width: 900, staffSpace: staffSpace);
+    engine.layout();
 
-      final xs = <Note, double>{
-        for (final note in [eighth, first, second])
-          note: engine.noteXPositions[note]!,
-      };
-      final noteY = engine.noteYPositions[eighth]!;
-      // C4 sits below the middle line, so the stems point UP and the beams are
-      // drawn above the noteheads; sample the stems' side of each gap.
-      final stemOffset =
-          metadata.getGlyphWidth('noteheadBlack') * staffSpace / 2;
+    final xs = <Note, double>{
+      for (final note in [eighth, first, second])
+        note: engine.noteXPositions[note]!,
+    };
+    final noteY = engine.noteYPositions[eighth]!;
+    // C4 sits below the middle line, so the stems point UP and the beams are
+    // drawn above the noteheads; sample the stems' side of each gap.
+    final stemOffset = metadata.getGlyphWidth('noteheadBlack') * staffSpace / 2;
 
-      final ink = await rasterise(
-        staff,
-        metadata,
-        staffSpace: staffSpace,
-        width: 900,
-      );
+    final ink = await rasterise(
+      staff,
+      metadata,
+      staffSpace: staffSpace,
+      width: 900,
+    );
 
-      /// Horizontal beam bands crossing the column [x], above the noteheads.
-      int bandsAt(double x) {
-        final ceiling = (noteY - staffSpace * 0.8).round();
-        return ink
-            .runsInColumn(x.round())
-            .where((run) => run.end < ceiling)
-            .length;
-      }
+    /// Horizontal beam bands crossing the column [x], above the noteheads.
+    int bandsAt(double x) {
+      final ceiling = (noteY - staffSpace * 0.8).round();
+      return ink
+          .runsInColumn(x.round())
+          .where((run) => run.end < ceiling)
+          .length;
+    }
 
-      // Between the eighth and the first sixteenth: the primary beam, and
-      // nothing else.
-      //
-      // It used to be the primary beam AND the tuplet bracket — two bands. The
-      // bracket is gone from this figure as of the W6 bracket wave, and its
-      // absence is the point rather than a casualty: every note here is joined
-      // by a beam, and Behind Bars p.201 has such a group print its numeral
-      // alone. Until W6 the renderer gated on the deprecated `Tuplet.showBracket`
-      // (default `true`) and never asked the rule, so a bracket was drawn over
-      // every tuplet ever engraved by this package. Measured at staffSpace 36,
-      // this column went from 2 bands to 1; the invariant this test exists for —
-      // the sixteenths carrying a SECOND beam the eighth does not — is asserted
-      // on the DELTA below and is untouched by that.
-      final betweenEighthAndSixteenth = bandsAt(
-        (xs[eighth]! + xs[first]!) / 2 + stemOffset,
-      );
-      // Between the two sixteenths: one band more — the secondary beam. Measured
-      // at staffSpace 36: primary beam 135-152, secondary beam 162-179 (a beam is
-      // 0.5 staff spaces = 18 px, the gap 0.25 = 9 px).
-      final betweenSixteenths = bandsAt(
-        (xs[first]! + xs[second]!) / 2 + stemOffset,
-      );
+    // Between the eighth and the first sixteenth: the primary beam, and
+    // nothing else.
+    //
+    // It used to be the primary beam AND the tuplet bracket — two bands. The
+    // bracket is gone from this figure as of the W6 bracket wave, and its
+    // absence is the point rather than a casualty: every note here is joined
+    // by a beam, and Behind Bars p.201 has such a group print its numeral
+    // alone. Until W6 the renderer gated on the deprecated `Tuplet.showBracket`
+    // (default `true`) and never asked the rule, so a bracket was drawn over
+    // every tuplet ever engraved by this package. Measured at staffSpace 36,
+    // this column went from 2 bands to 1; the invariant this test exists for —
+    // the sixteenths carrying a SECOND beam the eighth does not — is asserted
+    // on the DELTA below and is untouched by that.
+    final betweenEighthAndSixteenth = bandsAt(
+      (xs[eighth]! + xs[first]!) / 2 + stemOffset,
+    );
+    // Between the two sixteenths: one band more — the secondary beam. Measured
+    // at staffSpace 36: primary beam 135-152, secondary beam 162-179 (a beam is
+    // 0.5 staff spaces = 18 px, the gap 0.25 = 9 px).
+    final betweenSixteenths = bandsAt(
+      (xs[first]! + xs[second]!) / 2 + stemOffset,
+    );
 
-      expect(
-        betweenEighthAndSixteenth,
-        1,
-        reason:
-            'expected ONE beam over the eighth and no bracket, got '
-            '$betweenEighthAndSixteenth bands',
-      );
-      expect(
-        betweenSixteenths,
-        betweenEighthAndSixteenth + 1,
-        reason:
-            'the two sixteenths must carry a SECOND beam that the eighth '
-            'does not; measured $betweenSixteenths bands against '
-            '$betweenEighthAndSixteenth',
-      );
-    },
-    timeout: const Timeout.factor(30),
-  );
+    expect(
+      betweenEighthAndSixteenth,
+      1,
+      reason:
+          'expected ONE beam over the eighth and no bracket, got '
+          '$betweenEighthAndSixteenth bands',
+    );
+    expect(
+      betweenSixteenths,
+      betweenEighthAndSixteenth + 1,
+      reason:
+          'the two sixteenths must carry a SECOND beam that the eighth '
+          'does not; measured $betweenSixteenths bands against '
+          '$betweenEighthAndSixteenth',
+    );
+  }, timeout: const Timeout.factor(30));
 
   // ------------------------------------------------------------------ N-16 --
   group('N-16 — text is drawn through the package font chain', () {
@@ -344,120 +339,108 @@ void main() {
       ],
     );
 
-    test(
-      'the lyric path honours MusicTextFont.use end to end',
-      () async {
-        if (!probeTextFontAvailable) {
-          markTestSkipped(
-            'no system text face to register as '
-            '$_probeTextFamily; the injection cannot be observed',
-          );
-          return;
-        }
+    test('the lyric path honours MusicTextFont.use end to end', () async {
+      if (!probeTextFontAvailable) {
+        markTestSkipped(
+          'no system text face to register as '
+          '$_probeTextFamily; the injection cannot be observed',
+        );
+        return;
+      }
+      expect(
+        await changesWhenInjected(lyrics),
+        isTrue,
+        reason:
+            'the lyrics rasterised BYTE-IDENTICALLY with and without an '
+            'injected text face, so that painter never consults '
+            'kMusicTextFontFallback',
+      );
+    }, timeout: const Timeout.factor(30));
+
+    test('measure numbers honour MusicTextFont.use end to end', () async {
+      if (!probeTextFontAvailable) {
+        markTestSkipped(
+          'no system text face to register as '
+          '$_probeTextFamily; the injection cannot be observed',
+        );
+        return;
+      }
+      // Measure numbers are drawn for the first bar of each SYSTEM and only
+      // from bar 2 on, so the score has to wrap before there is any text at
+      // all — at 900 px this fixture is one system and the test would be
+      // vacuous.
+      expect(
+        await changesWhenInjected(manyBars, width: 200),
+        isTrue,
+        reason:
+            'the measure numbers rasterised BYTE-IDENTICALLY with and '
+            'without an injected text face',
+      );
+    }, timeout: const Timeout.factor(30));
+
+    test('the tempo, expression and word-dynamic text is really painted', () async {
+      // Closing the vacuity trap for the three kinds that `SymbolAndTextRenderer`
+      // owns: changing the STRING must change the picture. (It does — measured
+      // true for all three.)
+      //
+      // This comment used to end "...what does NOT reach them is
+      // `MusicTextFont.use`, because each of those styles arrives at
+      // `withMusicTextFallback` with `fontFamilyFallback: smuflTextFontFallback`
+      // already set ... the runtime override is not honoured on this route,
+      // which is reported separately". That was finding M-30, and it was fixed
+      // in 2.7.2: those ten sites no longer pre-supply the chain, so the
+      // injection DOES reach tempo marks, expression text, word dynamics and
+      // repeat instructions. Measured at `staffSpace = 12` in a 900 px
+      // viewport: 14 942 px of ink / 2 `.notdef` boxes without an injected
+      // face, 6 886 px / 0 with one. Pinned by
+      // `test/invariants/w5_leftovers_test.dart`.
+      Staff tempo(String text) => Staff(
+        measures: [
+          _bar([
+            Clef(clefType: ClefType.treble),
+            TimeSignature(numerator: 4, denominator: 4),
+            TempoMark(text: text, bpm: 132, beatUnit: DurationType.quarter),
+            _n('C', 5, d: DurationType.whole),
+          ]),
+        ],
+      );
+      Staff expression(String text) => Staff(
+        measures: [
+          _bar([
+            Clef(clefType: ClefType.treble),
+            TimeSignature(numerator: 4, denominator: 4),
+            MusicText(text: text, type: TextType.expression),
+            _n('C', 5, d: DurationType.whole),
+          ]),
+        ],
+      );
+      Staff wordDynamic(String text) => Staff(
+        measures: [
+          _bar([
+            Clef(clefType: ClefType.treble),
+            TimeSignature(numerator: 4, denominator: 4),
+            Dynamic(type: DynamicType.crescendo, customText: text),
+            _n('C', 5, d: DurationType.whole),
+          ]),
+        ],
+      );
+
+      for (final entry in <String, Staff Function(String)>{
+        'tempo mark': tempo,
+        'expression text': expression,
+        'word dynamic': wordDynamic,
+      }.entries) {
+        final short = await renderPng(entry.value('a'));
+        final long = await renderPng(entry.value('ZZZZZZZZZZZZZZZ'));
         expect(
-          await changesWhenInjected(lyrics),
-          isTrue,
+          identicalBytes(short, long),
+          isFalse,
           reason:
-              'the lyrics rasterised BYTE-IDENTICALLY with and without an '
-              'injected text face, so that painter never consults '
-              'kMusicTextFontFallback',
+              '${entry.key} rendered identically for two different '
+              'strings, so it is not being painted at all',
         );
-      },
-      timeout: const Timeout.factor(30),
-    );
-
-    test(
-      'measure numbers honour MusicTextFont.use end to end',
-      () async {
-        if (!probeTextFontAvailable) {
-          markTestSkipped(
-            'no system text face to register as '
-            '$_probeTextFamily; the injection cannot be observed',
-          );
-          return;
-        }
-        // Measure numbers are drawn for the first bar of each SYSTEM and only
-        // from bar 2 on, so the score has to wrap before there is any text at
-        // all — at 900 px this fixture is one system and the test would be
-        // vacuous.
-        expect(
-          await changesWhenInjected(manyBars, width: 200),
-          isTrue,
-          reason:
-              'the measure numbers rasterised BYTE-IDENTICALLY with and '
-              'without an injected text face',
-        );
-      },
-      timeout: const Timeout.factor(30),
-    );
-
-    test(
-      'the tempo, expression and word-dynamic text is really painted',
-      () async {
-        // Closing the vacuity trap for the three kinds that `SymbolAndTextRenderer`
-        // owns: changing the STRING must change the picture. (It does — measured
-        // true for all three.)
-        //
-        // This comment used to end "...what does NOT reach them is
-        // `MusicTextFont.use`, because each of those styles arrives at
-        // `withMusicTextFallback` with `fontFamilyFallback: smuflTextFontFallback`
-        // already set ... the runtime override is not honoured on this route,
-        // which is reported separately". That was finding M-30, and it was fixed
-        // in 2.7.2: those ten sites no longer pre-supply the chain, so the
-        // injection DOES reach tempo marks, expression text, word dynamics and
-        // repeat instructions. Measured at `staffSpace = 12` in a 900 px
-        // viewport: 14 942 px of ink / 2 `.notdef` boxes without an injected
-        // face, 6 886 px / 0 with one. Pinned by
-        // `test/invariants/w5_leftovers_test.dart`.
-        Staff tempo(String text) => Staff(
-          measures: [
-            _bar([
-              Clef(clefType: ClefType.treble),
-              TimeSignature(numerator: 4, denominator: 4),
-              TempoMark(text: text, bpm: 132, beatUnit: DurationType.quarter),
-              _n('C', 5, d: DurationType.whole),
-            ]),
-          ],
-        );
-        Staff expression(String text) => Staff(
-          measures: [
-            _bar([
-              Clef(clefType: ClefType.treble),
-              TimeSignature(numerator: 4, denominator: 4),
-              MusicText(text: text, type: TextType.expression),
-              _n('C', 5, d: DurationType.whole),
-            ]),
-          ],
-        );
-        Staff wordDynamic(String text) => Staff(
-          measures: [
-            _bar([
-              Clef(clefType: ClefType.treble),
-              TimeSignature(numerator: 4, denominator: 4),
-              Dynamic(type: DynamicType.crescendo, customText: text),
-              _n('C', 5, d: DurationType.whole),
-            ]),
-          ],
-        );
-
-        for (final entry in <String, Staff Function(String)>{
-          'tempo mark': tempo,
-          'expression text': expression,
-          'word dynamic': wordDynamic,
-        }.entries) {
-          final short = await renderPng(entry.value('a'));
-          final long = await renderPng(entry.value('ZZZZZZZZZZZZZZZ'));
-          expect(
-            identicalBytes(short, long),
-            isFalse,
-            reason:
-                '${entry.key} rendered identically for two different '
-                'strings, so it is not being painted at all',
-          );
-        }
-      },
-      timeout: const Timeout.factor(30),
-    );
+      }
+    }, timeout: const Timeout.factor(30));
 
     test('withMusicTextFallback installs the chain and the injection', () {
       // The unit half. Note the exact contract, which is what decides which
@@ -682,100 +665,96 @@ void main() {
   );
 
   // ------------------------------------------------------------------ N-18 --
-  test(
-    'N-18 — a two-staff group is exported to PDF as a grand staff',
-    () async {
-      // Before: `_addMusicPages` rasterised each staff of a group separately
-      // through the single-staff path, so a piano part came out as two
-      // independent one-line staves — no brace, no system barlines, hands not
-      // aligned. And the grand-staff branch that replaced it had to paginate:
-      // measured on a 40-bar two-staff score, the group wraps into 14 systems
-      // (963.78 x 3552 logical px) and the un-paginated version fitted 39.8% of
-      // the music onto one A4 page.
-      Staff hand(String step, int octave, ClefType clef) => Staff(
-        measures: [
-          for (var i = 0; i < 40; i++)
-            _bar([
-              if (i == 0) Clef(clefType: clef),
-              if (i == 0) TimeSignature(numerator: 4, denominator: 4),
-              for (var k = 0; k < 4; k++) _n(step, octave),
-            ]),
-        ],
-      );
+  test('N-18 — a two-staff group is exported to PDF as a grand staff', () async {
+    // Before: `_addMusicPages` rasterised each staff of a group separately
+    // through the single-staff path, so a piano part came out as two
+    // independent one-line staves — no brace, no system barlines, hands not
+    // aligned. And the grand-staff branch that replaced it had to paginate:
+    // measured on a 40-bar two-staff score, the group wraps into 14 systems
+    // (963.78 x 3552 logical px) and the un-paginated version fitted 39.8% of
+    // the music onto one A4 page.
+    Staff hand(String step, int octave, ClefType clef) => Staff(
+      measures: [
+        for (var i = 0; i < 40; i++)
+          _bar([
+            if (i == 0) Clef(clefType: clef),
+            if (i == 0) TimeSignature(numerator: 4, denominator: 4),
+            for (var k = 0; k < 4; k++) _n(step, octave),
+          ]),
+      ],
+    );
 
-      final group = StaffGroup(
-        staves: [hand('C', 5, ClefType.treble), hand('C', 3, ClefType.bass)],
-        bracket: BracketType.brace,
-        name: 'Piano',
-      );
-      final score = Score(title: 'N-18', staffGroups: [group]);
+    final group = StaffGroup(
+      staves: [hand('C', 5, ClefType.treble), hand('C', 3, ClefType.bass)],
+      bracket: BracketType.brace,
+      name: 'Piano',
+    );
+    final score = Score(title: 'N-18', staffGroups: [group]);
 
-      final exporter = PdfExporter(score: score, metadata: metadata);
-      final bytes = await exporter.export();
+    final exporter = PdfExporter(score: score, metadata: metadata);
+    final bytes = await exporter.export();
 
+    expect(
+      exporter.warnings,
+      isEmpty,
+      reason: 'a non-empty warning list means the PDF holds metadata only',
+    );
+    expect(String.fromCharCodes(bytes.take(5)), '%PDF-');
+    // Measured on the two-staff case in the re-audit: 14 522 bytes for a short
+    // score. Forty bars of two staves cannot fit in a tenth of that.
+    expect(bytes.length, greaterThan(10000));
+
+    // The group went through the GRAND-STAFF path, not the single-staff one:
+    // the rasteriser's group pagination has to produce the same number of
+    // pages the exporter embedded, and more than one of them.
+    final pages = await ScoreRasterizer.renderGroupPages(
+      group: group,
+      metadata: metadata,
+      width: 1000,
+      staffSpace: 12,
+      systemsPerPage: 4,
+    );
+    expect(
+      pages.length,
+      greaterThan(1),
+      reason:
+          'the fixture must wrap into several systems, or pagination is '
+          'not exercised',
+    );
+
+    // And it really is ONE braced system rather than two independent staves:
+    // a group's system band has to hold both staves plus the gap between them.
+    // Measured at staffSpace 12: 252 logical px per band, against
+    // `ScoreRasterizer.systemHeightInStaffSpaces` (10 staff spaces = 120 px)
+    // for a single staff.
+    final groupLayout = ScoreRasterizer.layoutGroup(
+      group: group,
+      metadata: metadata,
+      width: 1000,
+      staffSpace: 12,
+    );
+    const singleStaffBand = ScoreRasterizer.systemHeightInStaffSpaces * 12.0;
+    expect(
+      groupLayout.systemBandHeight,
+      greaterThan(singleStaffBand * 1.8),
+      reason:
+          'a system band of ${groupLayout.systemBandHeight} px cannot '
+          'hold two staves — the group was rasterised staff by staff',
+    );
+    expect(groupLayout.painter.systemCount, greaterThan(1));
+    // Every system of the group carries BOTH staves, aligned on one time grid.
+    for (var system = 0; system < groupLayout.painter.systemCount; system++) {
+      final aligned = groupLayout.painter.alignedSystem(system);
       expect(
-        exporter.warnings,
-        isEmpty,
-        reason: 'a non-empty warning list means the PDF holds metadata only',
+        aligned,
+        hasLength(2),
+        reason: 'system $system was not engraved as a grand staff',
       );
-      expect(String.fromCharCodes(bytes.take(5)), '%PDF-');
-      // Measured on the two-staff case in the re-audit: 14 522 bytes for a short
-      // score. Forty bars of two staves cannot fit in a tenth of that.
-      expect(bytes.length, greaterThan(10000));
-
-      // The group went through the GRAND-STAFF path, not the single-staff one:
-      // the rasteriser's group pagination has to produce the same number of
-      // pages the exporter embedded, and more than one of them.
-      final pages = await ScoreRasterizer.renderGroupPages(
-        group: group,
-        metadata: metadata,
-        width: 1000,
-        staffSpace: 12,
-        systemsPerPage: 4,
-      );
-      expect(
-        pages.length,
-        greaterThan(1),
-        reason:
-            'the fixture must wrap into several systems, or pagination is '
-            'not exercised',
-      );
-
-      // And it really is ONE braced system rather than two independent staves:
-      // a group's system band has to hold both staves plus the gap between them.
-      // Measured at staffSpace 12: 252 logical px per band, against
-      // `ScoreRasterizer.systemHeightInStaffSpaces` (10 staff spaces = 120 px)
-      // for a single staff.
-      final groupLayout = ScoreRasterizer.layoutGroup(
-        group: group,
-        metadata: metadata,
-        width: 1000,
-        staffSpace: 12,
-      );
-      const singleStaffBand = ScoreRasterizer.systemHeightInStaffSpaces * 12.0;
-      expect(
-        groupLayout.systemBandHeight,
-        greaterThan(singleStaffBand * 1.8),
-        reason:
-            'a system band of ${groupLayout.systemBandHeight} px cannot '
-            'hold two staves — the group was rasterised staff by staff',
-      );
-      expect(groupLayout.painter.systemCount, greaterThan(1));
-      // Every system of the group carries BOTH staves, aligned on one time grid.
-      for (var system = 0; system < groupLayout.painter.systemCount; system++) {
-        final aligned = groupLayout.painter.alignedSystem(system);
-        expect(
-          aligned,
-          hasLength(2),
-          reason: 'system $system was not engraved as a grand staff',
-        );
-        for (final sub in aligned) {
-          expect(sub.whereType<PositionedElement>(), isNotEmpty);
-        }
+      for (final sub in aligned) {
+        expect(sub.whereType<PositionedElement>(), isNotEmpty);
       }
-    },
-    timeout: const Timeout.factor(60),
-  );
+    }
+  }, timeout: const Timeout.factor(60));
 
   // ------------------------------------------------------------------ N-20 --
   group('N-20 — every positioned element carries its own staff baseline', () {

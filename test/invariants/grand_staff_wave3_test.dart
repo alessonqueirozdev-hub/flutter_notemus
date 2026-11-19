@@ -123,11 +123,9 @@ void main() {
       // fix: 'treble@30' on systems 3..9 — a twelfth of silent error on every
       // note of those bars.
       for (var system = 3; system < painter.systemCount; system++) {
-        expect(
-          clefsOf(painter, system, 0),
-          ['bass@30'],
-          reason: 'system $system restated the wrong clef',
-        );
+        expect(clefsOf(painter, system, 0), [
+          'bass@30',
+        ], reason: 'system $system restated the wrong clef');
       }
     });
   });

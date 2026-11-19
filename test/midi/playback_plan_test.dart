@@ -115,11 +115,10 @@ void main() {
         staff,
         options: MidiGenerationOptions(separateTracksPerVoice: split),
       ).noteSpans;
-      expect(
-        spans.map((s) => s.voiceNumber).toList()..sort(),
-        [1, 2],
-        reason: 'separateTracksPerVoice: $split',
-      );
+      expect(spans.map((s) => s.voiceNumber).toList()..sort(), [
+        1,
+        2,
+      ], reason: 'separateTracksPerVoice: $split');
     }
   });
 

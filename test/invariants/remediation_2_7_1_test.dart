@@ -333,122 +333,116 @@ void main() {
       }
     });
 
-    test(
-      'the cost per bar does not grow with the number of bars',
-      () {
-        // How this is measured, and why it is measured this way
-        // -----------------------------------------------------
-        // * WARM-UP. The first `LayoutEngine` call in a process pays JIT and
-        //   metadata-cache costs: measured 163.3 ms cold against a warm median of
-        //   33.8 ms for the same input — a 4.83x penalty that lands entirely on
-        //   whichever size is measured first. Uncorrected it makes the small size
-        //   look slow and any curve look sub-linear, which is precisely how a
-        //   ratio test can be fooled into passing.
-        // * REPEATS, and the MINIMUM as the estimator. Wall clock on a shared
-        //   machine is one-sided noise: a run can only be slowed down. Measured
-        //   over three executions of this exact benchmark while the machine was
-        //   also compiling, the MEDIAN of five runs put `t(3200)/t(400)` at 5.9,
-        //   12.3 and 16.1, while the MINIMUM put it at 4.3, 8.1 and 9.1. The
-        //   median is reported for context; the minimum is what is asserted.
-        //
-        // The bounds
-        // ----------
-        // For an 8x increase in input: linear costs 8x, quadratic 64x. The
-        // defect this test exists to catch cost 4.4x and 5.2x per DOUBLING at
-        // the top of the range (1600 -> 3200 -> 6400 above), which is 34x over
-        // 8x once its cold first sample is corrected. So:
-        //
-        //   min-based    < 16.0   (measured 4.3 / 8.1 / 9.1; defect ~34)
-        //   median-based < 24.0   (measured 5.9 / 12.3 / 16.1; defect ~34)
-        //
-        // The assertion replaced in wave 4 (M-42c) was
-        //     expect(large / math.max(small, 1e-6), lessThan(10.0));
-        // over 800 vs 3200 bars — a 4x increase. Ten for a 4x increase is 3.16
-        // per doubling, and the defective engine measured 4.4 and 5.2 per
-        // doubling only at the TOP of the range; over 800 -> 3200 its cold-start
-        // artefact hid it entirely. The old assertion could not fail for the
-        // regression it was written for.
-        for (var i = 0; i < 5; i++) {
-          engineFor(big(400), width: 1000).layout(); // warm up
-        }
+    test('the cost per bar does not grow with the number of bars', () {
+      // How this is measured, and why it is measured this way
+      // -----------------------------------------------------
+      // * WARM-UP. The first `LayoutEngine` call in a process pays JIT and
+      //   metadata-cache costs: measured 163.3 ms cold against a warm median of
+      //   33.8 ms for the same input — a 4.83x penalty that lands entirely on
+      //   whichever size is measured first. Uncorrected it makes the small size
+      //   look slow and any curve look sub-linear, which is precisely how a
+      //   ratio test can be fooled into passing.
+      // * REPEATS, and the MINIMUM as the estimator. Wall clock on a shared
+      //   machine is one-sided noise: a run can only be slowed down. Measured
+      //   over three executions of this exact benchmark while the machine was
+      //   also compiling, the MEDIAN of five runs put `t(3200)/t(400)` at 5.9,
+      //   12.3 and 16.1, while the MINIMUM put it at 4.3, 8.1 and 9.1. The
+      //   median is reported for context; the minimum is what is asserted.
+      //
+      // The bounds
+      // ----------
+      // For an 8x increase in input: linear costs 8x, quadratic 64x. The
+      // defect this test exists to catch cost 4.4x and 5.2x per DOUBLING at
+      // the top of the range (1600 -> 3200 -> 6400 above), which is 34x over
+      // 8x once its cold first sample is corrected. So:
+      //
+      //   min-based    < 16.0   (measured 4.3 / 8.1 / 9.1; defect ~34)
+      //   median-based < 24.0   (measured 5.9 / 12.3 / 16.1; defect ~34)
+      //
+      // The assertion replaced in wave 4 (M-42c) was
+      //     expect(large / math.max(small, 1e-6), lessThan(10.0));
+      // over 800 vs 3200 bars — a 4x increase. Ten for a 4x increase is 3.16
+      // per doubling, and the defective engine measured 4.4 and 5.2 per
+      // doubling only at the TOP of the range; over 800 -> 3200 its cold-start
+      // artefact hid it entirely. The old assertion could not fail for the
+      // regression it was written for.
+      for (var i = 0; i < 5; i++) {
+        engineFor(big(400), width: 1000).layout(); // warm up
+      }
 
-        double sampleOf(int bars) {
-          final staff = big(bars);
-          final sw = Stopwatch()..start();
-          engineFor(staff, width: 1000).layout();
-          return sw.elapsedMicroseconds / 1000.0;
-        }
+      double sampleOf(int bars) {
+        final staff = big(bars);
+        final sw = Stopwatch()..start();
+        engineFor(staff, width: 1000).layout();
+        return sw.elapsedMicroseconds / 1000.0;
+      }
 
-        final samples = <int, List<double>>{
-          for (final s in sizes) s: <double>[],
-        };
-        for (var round = 0; round < 7; round++) {
-          for (final bars in sizes) {
-            samples[bars]!.add(sampleOf(bars));
-          }
-        }
-        final fastest = <int, double>{};
-        final median = <int, double>{};
+      final samples = <int, List<double>>{for (final s in sizes) s: <double>[]};
+      for (var round = 0; round < 7; round++) {
         for (final bars in sizes) {
-          final runs = samples[bars]!..sort();
-          fastest[bars] = runs.first;
-          median[bars] = runs[runs.length ~/ 2];
+          samples[bars]!.add(sampleOf(bars));
         }
+      }
+      final fastest = <int, double>{};
+      final median = <int, double>{};
+      for (final bars in sizes) {
+        final runs = samples[bars]!..sort();
+        fastest[bars] = runs.first;
+        median[bars] = runs[runs.length ~/ 2];
+      }
 
-        // The ratio is taken across the LARGEST adjacent pair, not from the
-        // smallest size to the largest.
-        //
-        // It used to be `t(3200) / t(400)`, and the 400-bar point is 20-40 ms of
-        // work — small enough that one young-generation GC moves it further than
-        // the code does. On a loaded machine that denominator collapses and the
-        // ratio explodes, so the test failed for load rather than for a
-        // regression: observed doing exactly that while the engine was untouched.
-        //
-        // `t(3200) / t(1600)` is both more robust (both points are large enough
-        // to amortise fixed cost) and MORE sensitive to the defect this exists to
-        // catch: a doubling costs 2x if linear and 4x if quadratic. The original
-        // defect measured 4.4x and 5.2x per doubling at the top of the range.
-        //
-        // Where the ceiling sits, and why it MOVED
-        // ----------------------------------------
-        // It was 3.0 — "squarely between" 2 and 4 — and it went red on a GitHub
-        // macOS runner at **3.31** on a tree whose engine had not been touched,
-        // while Ubuntu and Windows passed. The minimum of five rounds is a good
-        // estimator on an idle machine and a poor one on a runner that is
-        // contended for the whole job: noise is one-sided, so every sample was
-        // inflated and the floor never got a clean slice.
-        //
-        // The bar this test enforces is "not quadratic", not "under three". So
-        // the ceiling is 3.8, which is:
-        //
-        //     above  the worst honest measurement observed (3.31 on macOS CI)
-        //     below  the defect this test exists to catch (4.4 at its cheapest)
-        //
-        // and the sample count went 5 -> 7 to give the minimum more chances at an
-        // unloaded slice. Loosening a threshold because it failed is usually how
-        // a suite rots; the defence here is that 3.8 still fails for the actual
-        // regression, with 0.6 of margin, and the numbers on both sides of the
-        // gap are written down rather than implied.
-        final minGrowth = fastest[3200]! / math.max(fastest[1600]!, 1e-6);
-        final medianGrowth = median[3200]! / math.max(median[1600]!, 1e-6);
-        final report =
-            'fastest=$fastest median=$median '
-            'doubling 1600->3200: min=${minGrowth.toStringAsFixed(2)} '
-            'median=${medianGrowth.toStringAsFixed(2)}';
+      // The ratio is taken across the LARGEST adjacent pair, not from the
+      // smallest size to the largest.
+      //
+      // It used to be `t(3200) / t(400)`, and the 400-bar point is 20-40 ms of
+      // work — small enough that one young-generation GC moves it further than
+      // the code does. On a loaded machine that denominator collapses and the
+      // ratio explodes, so the test failed for load rather than for a
+      // regression: observed doing exactly that while the engine was untouched.
+      //
+      // `t(3200) / t(1600)` is both more robust (both points are large enough
+      // to amortise fixed cost) and MORE sensitive to the defect this exists to
+      // catch: a doubling costs 2x if linear and 4x if quadratic. The original
+      // defect measured 4.4x and 5.2x per doubling at the top of the range.
+      //
+      // Where the ceiling sits, and why it MOVED
+      // ----------------------------------------
+      // It was 3.0 — "squarely between" 2 and 4 — and it went red on a GitHub
+      // macOS runner at **3.31** on a tree whose engine had not been touched,
+      // while Ubuntu and Windows passed. The minimum of five rounds is a good
+      // estimator on an idle machine and a poor one on a runner that is
+      // contended for the whole job: noise is one-sided, so every sample was
+      // inflated and the floor never got a clean slice.
+      //
+      // The bar this test enforces is "not quadratic", not "under three". So
+      // the ceiling is 3.8, which is:
+      //
+      //     above  the worst honest measurement observed (3.31 on macOS CI)
+      //     below  the defect this test exists to catch (4.4 at its cheapest)
+      //
+      // and the sample count went 5 -> 7 to give the minimum more chances at an
+      // unloaded slice. Loosening a threshold because it failed is usually how
+      // a suite rots; the defence here is that 3.8 still fails for the actual
+      // regression, with 0.6 of margin, and the numbers on both sides of the
+      // gap are written down rather than implied.
+      final minGrowth = fastest[3200]! / math.max(fastest[1600]!, 1e-6);
+      final medianGrowth = median[3200]! / math.max(median[1600]!, 1e-6);
+      final report =
+          'fastest=$fastest median=$median '
+          'doubling 1600->3200: min=${minGrowth.toStringAsFixed(2)} '
+          'median=${medianGrowth.toStringAsFixed(2)}';
 
-        expect(
-          minGrowth,
-          lessThan(3.8),
-          reason:
-              'doubling the input must not approach quadratic cost; linear '
-              'is 2x, quadratic is 4x, and the O(systems x elements) defect '
-              'measured 4.4-5.2x per doubling. Worst honest CI reading so far: '
-              '3.31 on a macOS runner. $report',
-        );
-        expect(medianGrowth, lessThan(5.0), reason: report);
-      },
-      timeout: const Timeout.factor(30),
-    );
+      expect(
+        minGrowth,
+        lessThan(3.8),
+        reason:
+            'doubling the input must not approach quadratic cost; linear '
+            'is 2x, quadratic is 4x, and the O(systems x elements) defect '
+            'measured 4.4-5.2x per doubling. Worst honest CI reading so far: '
+            '3.31 on a macOS runner. $report',
+      );
+      expect(medianGrowth, lessThan(5.0), reason: report);
+    }, timeout: const Timeout.factor(30));
   });
 
   // ------------------------------------------------------------ N-05 / F-27 --
@@ -807,16 +801,16 @@ void main() {
       return sizes;
     }
 
-    expect(
-      groupsOf(DurationType.eighth, 8),
-      [4, 4],
-      reason: 'Behind Bars allows quavers across the half bar',
-    );
-    expect(
-      groupsOf(DurationType.sixteenth, 16),
-      [4, 4, 4, 4],
-      reason: 'semiquavers are grouped by the crotchet; this used to be 8-8',
-    );
+    expect(groupsOf(DurationType.eighth, 8), [
+      4,
+      4,
+    ], reason: 'Behind Bars allows quavers across the half bar');
+    expect(groupsOf(DurationType.sixteenth, 16), [
+      4,
+      4,
+      4,
+      4,
+    ], reason: 'semiquavers are grouped by the crotchet; this used to be 8-8');
   });
 
   // ------------------------------------------------------------------ N-22 --

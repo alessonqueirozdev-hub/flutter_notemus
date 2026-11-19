@@ -41,11 +41,11 @@ The suite is around 1100 tests and takes a few minutes. It must be green
 before and after your change.
 
 **Formatting is checked in CI.** Run `dart format lib test example` before you
-push. The `Format` job fails on any difference and prints the diff it wants. The
-formatter's style follows each package's language version, not your SDK, so the
-result should match CI on any machine. Run `flutter pub get` first, at the root
-and in `example/`: without a resolved package config the formatter falls back
-to the newest style and rewrites files that are already correct.
+push, after `flutter pub get` at the root and in `example/`. Without a resolved
+package config, the formatter falls back to the newest style and rewrites files
+that are already correct. The `Format` job runs on the latest stable Flutter
+and fails on any difference. An older SDK can still disagree in a few places,
+so when the job fails, apply the diff it prints rather than your local output.
 
 > **Gotcha:** running `flutter analyze` inside `example/` rewrites the root's
 > package resolution and makes `package:pdf` unresolvable. If `dart analyze`

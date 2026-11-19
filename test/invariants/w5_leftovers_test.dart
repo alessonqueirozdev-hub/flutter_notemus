@@ -389,81 +389,73 @@ void main() {
     );
 
     for (final octave in [6, 3]) {
-      test(
-        '5:4 on C$octave-G$octave clears both canvas edges',
-        () async {
-          final ink = _Ink.of(
-            await ScoreRasterizer.renderStaffToImage(
-              staff: tupletAt(octave),
-              metadata: metadata,
-              width: 900,
-              staffSpace: 12,
-              pixelRatio: 1.0,
-            ),
-          );
-          final image = await ink;
-          expect(
-            image.rowInk(0),
-            0,
-            reason:
-                'row 0 carries ${image.rowInk(0)} px of ink, so the top of '
-                'the music is cut off (the audit measured 74 px here for '
-                'octave 6)',
-          );
-          expect(
-            image.rowInk(image.height - 1),
-            0,
-            reason:
-                'row ${image.height - 1} carries '
-                '${image.rowInk(image.height - 1)} px of ink, so the bottom of '
-                'the music is cut off',
-          );
-        },
-        timeout: const Timeout.factor(30),
-      );
-    }
-
-    test(
-      'the single-image path agrees with the paginated one',
-      () async {
-        // The two entry points must reserve the same headroom, or a score looks
-        // one way on screen and another in the PDF.
-        final staff = tupletAt(6);
-        final single = await _Ink.of(
+      test('5:4 on C$octave-G$octave clears both canvas edges', () async {
+        final ink = _Ink.of(
           await ScoreRasterizer.renderStaffToImage(
-            staff: staff,
+            staff: tupletAt(octave),
             metadata: metadata,
             width: 900,
             staffSpace: 12,
             pixelRatio: 1.0,
           ),
         );
-        final png = await ScoreRasterizer.renderStaffToPng(
+        final image = await ink;
+        expect(
+          image.rowInk(0),
+          0,
+          reason:
+              'row 0 carries ${image.rowInk(0)} px of ink, so the top of '
+              'the music is cut off (the audit measured 74 px here for '
+              'octave 6)',
+        );
+        expect(
+          image.rowInk(image.height - 1),
+          0,
+          reason:
+              'row ${image.height - 1} carries '
+              '${image.rowInk(image.height - 1)} px of ink, so the bottom of '
+              'the music is cut off',
+        );
+      }, timeout: const Timeout.factor(30));
+    }
+
+    test('the single-image path agrees with the paginated one', () async {
+      // The two entry points must reserve the same headroom, or a score looks
+      // one way on screen and another in the PDF.
+      final staff = tupletAt(6);
+      final single = await _Ink.of(
+        await ScoreRasterizer.renderStaffToImage(
           staff: staff,
           metadata: metadata,
           width: 900,
           staffSpace: 12,
           pixelRatio: 1.0,
-        );
-        final codec = await ui.instantiateImageCodec(png!);
-        final paginated = await _Ink.of((await codec.getNextFrame()).image);
+        ),
+      );
+      final png = await ScoreRasterizer.renderStaffToPng(
+        staff: staff,
+        metadata: metadata,
+        width: 900,
+        staffSpace: 12,
+        pixelRatio: 1.0,
+      );
+      final codec = await ui.instantiateImageCodec(png!);
+      final paginated = await _Ink.of((await codec.getNextFrame()).image);
 
-        expect(single.rowInk(0), 0);
-        expect(paginated.rowInk(0), 0);
-        // Both paths must hold the SAME music: the ink totals agree even though
-        // the single-image canvas is taller (it also carries the layout's top and
-        // bottom page margins).
-        expect(
-          single.totalInk,
-          paginated.totalInk,
-          reason:
-              'the two rasterisation paths drew different amounts of ink '
-              '(${single.totalInk} vs ${paginated.totalInk}), so one of them '
-              'is still clipping',
-        );
-      },
-      timeout: const Timeout.factor(30),
-    );
+      expect(single.rowInk(0), 0);
+      expect(paginated.rowInk(0), 0);
+      // Both paths must hold the SAME music: the ink totals agree even though
+      // the single-image canvas is taller (it also carries the layout's top and
+      // bottom page margins).
+      expect(
+        single.totalInk,
+        paginated.totalInk,
+        reason:
+            'the two rasterisation paths drew different amounts of ink '
+            '(${single.totalInk} vs ${paginated.totalInk}), so one of them '
+            'is still clipping',
+      );
+    }, timeout: const Timeout.factor(30));
   });
 
   // ------------------------------------------------------------ M-08/M-31 --
@@ -565,77 +557,73 @@ void main() {
       );
     });
 
-    test(
-      'the rasterised ink gap inside each group stays above minGap',
-      () async {
-        // The floor exists for LEGIBILITY, so the acceptance is measured in ink,
-        // not in slot arithmetic. `SpacingPreferences.normal.minGap` is
-        // 0.25 staff spaces.
-        final eighths = triplet(DurationType.eighth, 'C');
-        final sixteenths = triplet(DurationType.sixteenth, 'C');
-        final staff = Staff(
-          measures: [
-            _bar([
-              Clef(clefType: ClefType.treble),
-              TimeSignature(numerator: 4, denominator: 4),
-              eighths,
-              sixteenths,
-            ]),
-          ],
-        );
+    test('the rasterised ink gap inside each group stays above minGap', () async {
+      // The floor exists for LEGIBILITY, so the acceptance is measured in ink,
+      // not in slot arithmetic. `SpacingPreferences.normal.minGap` is
+      // 0.25 staff spaces.
+      final eighths = triplet(DurationType.eighth, 'C');
+      final sixteenths = triplet(DurationType.sixteenth, 'C');
+      final staff = Staff(
+        measures: [
+          _bar([
+            Clef(clefType: ClefType.treble),
+            TimeSignature(numerator: 4, denominator: 4),
+            eighths,
+            sixteenths,
+          ]),
+        ],
+      );
 
-        final engine = LayoutEngine(
-          staff,
-          availableWidth: 900,
-          staffSpace: 12,
+      final engine = LayoutEngine(
+        staff,
+        availableWidth: 900,
+        staffSpace: 12,
+        metadata: metadata,
+      );
+      engine.layout();
+      final noteY = engine.noteYPositions[eighths.elements.first as Note]!;
+
+      final ink = await _Ink.of(
+        await ScoreRasterizer.renderStaffToImage(
+          staff: staff,
           metadata: metadata,
-        );
-        engine.layout();
-        final noteY = engine.noteYPositions[eighths.elements.first as Note]!;
-
-        final ink = await _Ink.of(
-          await ScoreRasterizer.renderStaffToImage(
-            staff: staff,
-            metadata: metadata,
-            width: 900,
-            staffSpace: 12,
-            pixelRatio: 1.0,
-            theme: const MusicScoreTheme(
-              staffLineColor: Color(0x00000000),
-              barlineColor: Color(0x00000000),
-            ),
+          width: 900,
+          staffSpace: 12,
+          pixelRatio: 1.0,
+          theme: const MusicScoreTheme(
+            staffLineColor: Color(0x00000000),
+            barlineColor: Color(0x00000000),
           ),
+        ),
+      );
+
+      // All six noteheads sit on one row (every note is a C5), so the last six
+      // runs of that row are the noteheads and the gaps between them are the
+      // white the reader has to see.
+      final runs = ink.runsInRow(noteY.round());
+      expect(runs.length, greaterThanOrEqualTo(6));
+      final heads = runs.sublist(runs.length - 6);
+
+      // Within the eighth group (heads 0-2) and within the sixteenth group
+      // (heads 3-5). Measured: 19 px = 1.583 SS inside the eighths, 9 px =
+      // 0.750 SS and 10 px = 0.833 SS inside the sixteenths.
+      for (final pair in [
+        [0, 1],
+        [1, 2],
+        [3, 4],
+        [4, 5],
+      ]) {
+        final gap = heads[pair[1]].start - heads[pair[0]].end - 1;
+        expect(
+          gap / 12.0,
+          greaterThanOrEqualTo(0.25),
+          reason:
+              'noteheads ${pair[0]}->${pair[1]} are only $gap px apart '
+              '(${(gap / 12.0).toStringAsFixed(3)} SS), under the package\'s '
+              'own SpacingPreferences.normal.minGap of 0.25 SS',
         );
-
-        // All six noteheads sit on one row (every note is a C5), so the last six
-        // runs of that row are the noteheads and the gaps between them are the
-        // white the reader has to see.
-        final runs = ink.runsInRow(noteY.round());
-        expect(runs.length, greaterThanOrEqualTo(6));
-        final heads = runs.sublist(runs.length - 6);
-
-        // Within the eighth group (heads 0-2) and within the sixteenth group
-        // (heads 3-5). Measured: 19 px = 1.583 SS inside the eighths, 9 px =
-        // 0.750 SS and 10 px = 0.833 SS inside the sixteenths.
-        for (final pair in [
-          [0, 1],
-          [1, 2],
-          [3, 4],
-          [4, 5],
-        ]) {
-          final gap = heads[pair[1]].start - heads[pair[0]].end - 1;
-          expect(
-            gap / 12.0,
-            greaterThanOrEqualTo(0.25),
-            reason:
-                'noteheads ${pair[0]}->${pair[1]} are only $gap px apart '
-                '(${(gap / 12.0).toStringAsFixed(3)} SS), under the package\'s '
-                'own SpacingPreferences.normal.minGap of 0.25 SS',
-          );
-        }
-      },
-      timeout: const Timeout.factor(30),
-    );
+      }
+    }, timeout: const Timeout.factor(30));
   });
 
   // ------------------------------------------------------------------ M-46 --
