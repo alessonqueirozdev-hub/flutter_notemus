@@ -82,7 +82,9 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         debugShowCheckedModeBanner: false,
-        theme: textFontAvailable ? ThemeData(fontFamily: kTextFontFamily) : null,
+        theme: textFontAvailable
+            ? ThemeData(fontFamily: kTextFontFamily)
+            : null,
         home: Scaffold(
           backgroundColor: Colors.white,
           body: Center(
@@ -94,15 +96,11 @@ void main() {
                 color: Colors.white,
                 child: ChantScore(
                   elements: elements,
-                  clef: const ChantClef(
-                    type: ChantClefType.doClef,
-                    line: 1,
-                  ),
+                  clef: const ChantClef(type: ChantClefType.doClef, line: 1),
                   theme: GregorianTheme(
                     lyricSize: 15,
                     color: const Color(0xFF101010),
-                    lyricTextFamily:
-                        serifFontAvailable ? kSerifFamily : null,
+                    lyricTextFamily: serifFontAvailable ? kSerifFamily : null,
                   ),
                 ),
               ),
@@ -123,21 +121,39 @@ void main() {
   testWidgets('golden chant_liquescence', (tester) async {
     // Liquescent (deminutus) neumes: epiphonus (liquescent pes), cephalicus
     // (liquescent clivis), and a liquescent torculus, beside their full forms.
-    NeumeComponent liq(String step, int octave) => NeumeComponent(
-        pitchName: step, octave: octave, isLiquescent: true);
+    NeumeComponent liq(String step, int octave) =>
+        NeumeComponent(pitchName: step, octave: octave, isLiquescent: true);
     final elements = <MusicalElement>[
-      Neume(type: NeumeType.pes, components: [nc('F', 4), nc('G', 4)],
-          syllable: 'pes'),
-      Neume(type: NeumeType.pes, components: [nc('F', 4), liq('G', 4)],
-          syllable: 'e-pi'),
-      Neume(type: NeumeType.clivis, components: [nc('A', 4), nc('G', 4)],
-          syllable: 'cli'),
-      Neume(type: NeumeType.clivis, components: [nc('A', 4), liq('G', 4)],
-          syllable: 'ce-pha'),
-      Neume(type: NeumeType.torculus,
-          components: [nc('F', 4), nc('A', 4), nc('G', 4)], syllable: 'tor'),
-      Neume(type: NeumeType.torculus,
-          components: [nc('F', 4), nc('A', 4), liq('G', 4)], syllable: 'liq'),
+      Neume(
+        type: NeumeType.pes,
+        components: [nc('F', 4), nc('G', 4)],
+        syllable: 'pes',
+      ),
+      Neume(
+        type: NeumeType.pes,
+        components: [nc('F', 4), liq('G', 4)],
+        syllable: 'e-pi',
+      ),
+      Neume(
+        type: NeumeType.clivis,
+        components: [nc('A', 4), nc('G', 4)],
+        syllable: 'cli',
+      ),
+      Neume(
+        type: NeumeType.clivis,
+        components: [nc('A', 4), liq('G', 4)],
+        syllable: 'ce-pha',
+      ),
+      Neume(
+        type: NeumeType.torculus,
+        components: [nc('F', 4), nc('A', 4), nc('G', 4)],
+        syllable: 'tor',
+      ),
+      Neume(
+        type: NeumeType.torculus,
+        components: [nc('F', 4), nc('A', 4), liq('G', 4)],
+        syllable: 'liq',
+      ),
       NeumeDivision(type: NeumeDivisionType.finalis),
     ];
 
@@ -147,7 +163,9 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         debugShowCheckedModeBanner: false,
-        theme: textFontAvailable ? ThemeData(fontFamily: kTextFontFamily) : null,
+        theme: textFontAvailable
+            ? ThemeData(fontFamily: kTextFontFamily)
+            : null,
         home: Scaffold(
           backgroundColor: Colors.white,
           body: Center(
@@ -159,8 +177,7 @@ void main() {
                 color: Colors.white,
                 child: ChantScore(
                   elements: elements,
-                  clef: const ChantClef(
-                      type: ChantClefType.doClef, line: 1),
+                  clef: const ChantClef(type: ChantClefType.doClef, line: 1),
                   theme: GregorianTheme(
                     lyricSize: 14,
                     color: const Color(0xFF101010),
@@ -187,25 +204,23 @@ void main() {
     // single precomposed glyphs.
     final elements = <MusicalElement>[
       // salicus: three rising notes, oriscus in the middle (F-G-A)
-      Neume(type: NeumeType.salicus, components: [
-        nc('F', 4),
-        nc('G', 4, NcForm.oriscus),
-        nc('A', 4),
-      ], syllable: 'sa'),
+      Neume(
+        type: NeumeType.salicus,
+        components: [nc('F', 4), nc('G', 4, NcForm.oriscus), nc('A', 4)],
+        syllable: 'sa',
+      ),
       // torculus resupinus: up-down-up (F-A-G-B)
-      Neume(type: NeumeType.torculusResupinus, components: [
-        nc('F', 4),
-        nc('A', 4),
-        nc('G', 4),
-        nc('B', 4),
-      ], syllable: 'tor-res'),
+      Neume(
+        type: NeumeType.torculusResupinus,
+        components: [nc('F', 4), nc('A', 4), nc('G', 4), nc('B', 4)],
+        syllable: 'tor-res',
+      ),
       // porrectus flexus: down-up-down (A-F-G-E)
-      Neume(type: NeumeType.porrectusFlexus, components: [
-        nc('A', 4),
-        nc('F', 4),
-        nc('G', 4),
-        nc('E', 4),
-      ], syllable: 'por-fl'),
+      Neume(
+        type: NeumeType.porrectusFlexus,
+        components: [nc('A', 4), nc('F', 4), nc('G', 4), nc('E', 4)],
+        syllable: 'por-fl',
+      ),
       NeumeDivision(type: NeumeDivisionType.finalis),
     ];
 
@@ -215,7 +230,9 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         debugShowCheckedModeBanner: false,
-        theme: textFontAvailable ? ThemeData(fontFamily: kTextFontFamily) : null,
+        theme: textFontAvailable
+            ? ThemeData(fontFamily: kTextFontFamily)
+            : null,
         home: Scaffold(
           backgroundColor: Colors.white,
           body: Center(
@@ -227,8 +244,7 @@ void main() {
                 color: Colors.white,
                 child: ChantScore(
                   elements: elements,
-                  clef: const ChantClef(
-                      type: ChantClefType.doClef, line: 1),
+                  clef: const ChantClef(type: ChantClefType.doClef, line: 1),
                   theme: GregorianTheme(
                     lyricSize: 14,
                     color: const Color(0xFF101010),
@@ -254,19 +270,25 @@ void main() {
     // Repeated-pitch neumes: bivirga, distropha, tristropha (assembled from
     // side-by-side virga/stropha glyphs).
     final elements = <MusicalElement>[
-      Neume(type: NeumeType.bivirga, components: [
-        nc('G', 4, NcForm.virga),
-        nc('G', 4, NcForm.virga),
-      ], syllable: 'bi'),
-      Neume(type: NeumeType.custom, components: [
-        nc('G', 4, NcForm.stropha),
-        nc('G', 4, NcForm.stropha),
-      ], syllable: 'di'),
-      Neume(type: NeumeType.custom, components: [
-        nc('G', 4, NcForm.stropha),
-        nc('G', 4, NcForm.stropha),
-        nc('G', 4, NcForm.stropha),
-      ], syllable: 'tri'),
+      Neume(
+        type: NeumeType.bivirga,
+        components: [nc('G', 4, NcForm.virga), nc('G', 4, NcForm.virga)],
+        syllable: 'bi',
+      ),
+      Neume(
+        type: NeumeType.custom,
+        components: [nc('G', 4, NcForm.stropha), nc('G', 4, NcForm.stropha)],
+        syllable: 'di',
+      ),
+      Neume(
+        type: NeumeType.custom,
+        components: [
+          nc('G', 4, NcForm.stropha),
+          nc('G', 4, NcForm.stropha),
+          nc('G', 4, NcForm.stropha),
+        ],
+        syllable: 'tri',
+      ),
       NeumeDivision(type: NeumeDivisionType.finalis),
     ];
 
@@ -276,7 +298,9 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         debugShowCheckedModeBanner: false,
-        theme: textFontAvailable ? ThemeData(fontFamily: kTextFontFamily) : null,
+        theme: textFontAvailable
+            ? ThemeData(fontFamily: kTextFontFamily)
+            : null,
         home: Scaffold(
           backgroundColor: Colors.white,
           body: Center(
@@ -288,8 +312,7 @@ void main() {
                 color: Colors.white,
                 child: ChantScore(
                   elements: elements,
-                  clef: const ChantClef(
-                      type: ChantClefType.doClef, line: 1),
+                  clef: const ChantClef(type: ChantClefType.doClef, line: 1),
                   theme: GregorianTheme(
                     lyricSize: 14,
                     color: const Color(0xFF101010),
@@ -318,28 +341,29 @@ void main() {
         NeumeComponent(pitchName: s, octave: o, isLiquescent: true);
     final elements = <MusicalElement>[
       // ordinary climacus C4-B3-A3 (assembles: virga + diamonds)
-      Neume(type: NeumeType.climacus, components: [
-        nc('C', 4, NcForm.virga),
-        nc('B', 3),
-        nc('A', 3),
-      ], syllable: 'cli'),
+      Neume(
+        type: NeumeType.climacus,
+        components: [nc('C', 4, NcForm.virga), nc('B', 3), nc('A', 3)],
+        syllable: 'cli',
+      ),
       // liquescent climacus -> Ancus
-      Neume(type: NeumeType.climacus, components: [
-        nc('C', 4, NcForm.virga),
-        nc('B', 3),
-        liq('A', 3),
-      ], syllable: 'an'),
+      Neume(
+        type: NeumeType.climacus,
+        components: [nc('C', 4, NcForm.virga), nc('B', 3), liq('A', 3)],
+        syllable: 'an',
+      ),
       // quilisma pes (low quilisma rising)
-      Neume(type: NeumeType.pes, components: [
-        nc('A', 3, NcForm.quilisma),
-        nc('B', 3),
-      ], syllable: 'qui'),
+      Neume(
+        type: NeumeType.pes,
+        components: [nc('A', 3, NcForm.quilisma), nc('B', 3)],
+        syllable: 'qui',
+      ),
       // quilisma in a 3-note rising group (assembles, wavy glyph shows)
-      Neume(type: NeumeType.scandicus, components: [
-        nc('G', 3),
-        nc('A', 3, NcForm.quilisma),
-        nc('B', 3),
-      ], syllable: 'sca'),
+      Neume(
+        type: NeumeType.scandicus,
+        components: [nc('G', 3), nc('A', 3, NcForm.quilisma), nc('B', 3)],
+        syllable: 'sca',
+      ),
       NeumeDivision(type: NeumeDivisionType.finalis),
     ];
 
@@ -349,7 +373,9 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         debugShowCheckedModeBanner: false,
-        theme: textFontAvailable ? ThemeData(fontFamily: kTextFontFamily) : null,
+        theme: textFontAvailable
+            ? ThemeData(fontFamily: kTextFontFamily)
+            : null,
         home: Scaffold(
           backgroundColor: Colors.white,
           body: Center(
@@ -361,8 +387,7 @@ void main() {
                 color: Colors.white,
                 child: ChantScore(
                   elements: elements,
-                  clef: const ChantClef(
-                      type: ChantClefType.doClef, line: 2),
+                  clef: const ChantClef(type: ChantClefType.doClef, line: 2),
                   theme: GregorianTheme(
                     lyricSize: 14,
                     color: const Color(0xFF101010),
@@ -414,7 +439,9 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         debugShowCheckedModeBanner: false,
-        theme: textFontAvailable ? ThemeData(fontFamily: kTextFontFamily) : null,
+        theme: textFontAvailable
+            ? ThemeData(fontFamily: kTextFontFamily)
+            : null,
         home: Scaffold(
           backgroundColor: Colors.white,
           body: Center(
@@ -426,8 +453,7 @@ void main() {
                 color: Colors.white,
                 child: ChantScore(
                   elements: elements,
-                  clef: const ChantClef(
-                      type: ChantClefType.doClef, line: 2),
+                  clef: const ChantClef(type: ChantClefType.doClef, line: 2),
                   theme: GregorianTheme(
                     lyricSize: 14,
                     color: const Color(0xFF101010),
@@ -463,7 +489,9 @@ name: Clef flat test;
     await tester.pumpWidget(
       MaterialApp(
         debugShowCheckedModeBanner: false,
-        theme: textFontAvailable ? ThemeData(fontFamily: kTextFontFamily) : null,
+        theme: textFontAvailable
+            ? ThemeData(fontFamily: kTextFontFamily)
+            : null,
         home: Scaffold(
           backgroundColor: Colors.white,
           body: Center(
@@ -510,7 +538,9 @@ name: Accidental test;
     await tester.pumpWidget(
       MaterialApp(
         debugShowCheckedModeBanner: false,
-        theme: textFontAvailable ? ThemeData(fontFamily: kTextFontFamily) : null,
+        theme: textFontAvailable
+            ? ThemeData(fontFamily: kTextFontFamily)
+            : null,
         home: Scaffold(
           backgroundColor: Colors.white,
           body: Center(
@@ -557,7 +587,9 @@ mi(g)se(f)ri(gh)cór(g)di(f)ae(f) (::)
     await tester.pumpWidget(
       MaterialApp(
         debugShowCheckedModeBanner: false,
-        theme: textFontAvailable ? ThemeData(fontFamily: kTextFontFamily) : null,
+        theme: textFontAvailable
+            ? ThemeData(fontFamily: kTextFontFamily)
+            : null,
         home: Scaffold(
           backgroundColor: Colors.white,
           body: Center(
@@ -571,8 +603,7 @@ mi(g)se(f)ri(gh)cór(g)di(f)ae(f) (::)
                   gabc,
                   theme: GregorianTheme(
                     lyricSize: 14,
-                    lyricTextFamily:
-                        serifFontAvailable ? kSerifFamily : null,
+                    lyricTextFamily: serifFontAvailable ? kSerifFamily : null,
                   ),
                 ),
               ),

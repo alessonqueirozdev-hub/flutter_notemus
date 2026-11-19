@@ -7,10 +7,12 @@ import 'package:flutter_notemus_example/examples/complete_music_piece.dart';
 
 void main() {
   testWidgets('debug complete piece layout', (tester) async {
-    await tester.pumpWidget(const MaterialApp(home: CompleteMusicPieceExample()));
+    await tester
+        .pumpWidget(const MaterialApp(home: CompleteMusicPieceExample()));
     await tester.pump(const core.Duration(milliseconds: 100));
 
-    final musicScore = tester.widget(find.byType(MusicScore).first) as MusicScore;
+    final musicScore =
+        tester.widget(find.byType(MusicScore).first) as MusicScore;
     final metadata = SmuflMetadata();
     await metadata.load();
     final engine = LayoutEngine(
@@ -28,7 +30,8 @@ void main() {
         debugPrint('SYSTEM $currentSystem');
       }
       final name = element.element.runtimeType.toString().padRight(18);
-      debugPrint('  $name x=${element.position.dx.toStringAsFixed(1)} y=${element.position.dy.toStringAsFixed(1)}');
+      debugPrint(
+          '  $name x=${element.position.dx.toStringAsFixed(1)} y=${element.position.dy.toStringAsFixed(1)}');
     }
   });
 }

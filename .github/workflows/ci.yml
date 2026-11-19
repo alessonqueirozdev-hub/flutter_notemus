@@ -95,6 +95,44 @@ jobs:
           retention-days: 14
 
   # ---------------------------------------------------------------------------
+  # The tree was never formatted consistently, so `dart format` on one file
+  # rewrote dozens of unrelated lines and contributors could not tell their
+  # change from the noise (asked in #62). Formatting now has to hold.
+  #
+  # The style follows each package's language version, but formatter versions
+  # still differ in places: Dart 3.11 and this job's stable disagreed on 8 test
+  # files. This job is the reference. When it fails, the diff it prints is the
+  # exact change to make. Only .dart files are compared, because `pub get` on
+  # the runner rewrites example/pubspec.lock.
+  # ---------------------------------------------------------------------------
+  format:
+    name: Format
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      # The formatter takes each package's language version from its resolved
+      # package config. Without one it falls back to the newest style, which
+      # reformatted 120 files that are correct for their packages (root
+      # `sdk: ^3.8.1`, example `>=3.1.0`). Measured locally: with the example's
+      # package config removed, `dart format` rewrote 45 of its 52 files.
+      - name: Resolve dependencies
+        run: |
+          (cd example && flutter pub get)
+          flutter pub get
+
+      - name: dart format
+        run: |
+          dart format lib test example
+          git diff --exit-code -- '*.dart'
+
+  # ---------------------------------------------------------------------------
   # `flutter test` never opens ios/ or macos/, so nothing above can see a broken
   # Package.swift. Issue #58: a byte-order mark in front of the
   # `swift-tools-version` line made every macOS app depending on this package

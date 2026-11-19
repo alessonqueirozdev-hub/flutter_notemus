@@ -177,10 +177,12 @@ Staff _triads() {
       var target = rootIdx + step;
       o = oct + (target ~/ 7);
       idx = target % 7;
-      notes.add(Note(
-        pitch: Pitch(step: order[idx], octave: o),
-        duration: const Duration(DurationType.half),
-      ));
+      notes.add(
+        Note(
+          pitch: Pitch(step: order[idx], octave: o),
+          duration: const Duration(DurationType.half),
+        ),
+      );
     }
     return Chord(notes: notes, duration: const Duration(DurationType.half));
   }
@@ -192,10 +194,7 @@ Staff _triads() {
       triad('C', 4, const []),
       triad('G', 4, const []),
     ]),
-    _measure([
-      triad('A', 4, const []),
-      triad('F', 4, const []),
-    ]),
+    _measure([triad('A', 4, const []), triad('F', 4, const [])]),
   ]);
 }
 
@@ -211,11 +210,23 @@ Staff _accidentals() {
     ]),
     // A chord whose members need accidentals on adjacent staff positions.
     _measure([
-      Chord(notes: [
-        Note(pitch: const Pitch(step: 'E', octave: 4, alter: -1.0), duration: const Duration(DurationType.whole)),
-        Note(pitch: const Pitch(step: 'G', octave: 4, alter: 1.0), duration: const Duration(DurationType.whole)),
-        Note(pitch: const Pitch(step: 'B', octave: 4, alter: -1.0), duration: const Duration(DurationType.whole)),
-      ], duration: const Duration(DurationType.whole)),
+      Chord(
+        notes: [
+          Note(
+            pitch: const Pitch(step: 'E', octave: 4, alter: -1.0),
+            duration: const Duration(DurationType.whole),
+          ),
+          Note(
+            pitch: const Pitch(step: 'G', octave: 4, alter: 1.0),
+            duration: const Duration(DurationType.whole),
+          ),
+          Note(
+            pitch: const Pitch(step: 'B', octave: 4, alter: -1.0),
+            duration: const Duration(DurationType.whole),
+          ),
+        ],
+        duration: const Duration(DurationType.whole),
+      ),
     ]),
   ]);
 }
@@ -298,22 +309,25 @@ Staff _articulations() {
 
 Staff _chordTies() {
   Chord tiedChord(TieType tie) => Chord(
-        notes: [
-          Note(
-              pitch: const Pitch(step: 'E', octave: 4),
-              duration: const Duration(DurationType.half),
-              tie: tie),
-          Note(
-              pitch: const Pitch(step: 'G', octave: 4),
-              duration: const Duration(DurationType.half),
-              tie: tie),
-          Note(
-              pitch: const Pitch(step: 'C', octave: 5),
-              duration: const Duration(DurationType.half),
-              tie: tie),
-        ],
+    notes: [
+      Note(
+        pitch: const Pitch(step: 'E', octave: 4),
         duration: const Duration(DurationType.half),
-      );
+        tie: tie,
+      ),
+      Note(
+        pitch: const Pitch(step: 'G', octave: 4),
+        duration: const Duration(DurationType.half),
+        tie: tie,
+      ),
+      Note(
+        pitch: const Pitch(step: 'C', octave: 5),
+        duration: const Duration(DurationType.half),
+        tie: tie,
+      ),
+    ],
+    duration: const Duration(DurationType.half),
+  );
   return _staff([
     _measure([
       Clef(clefType: ClefType.treble),
@@ -526,9 +540,11 @@ Staff _fractionalTimeSignatureGlyphs() {
 }
 
 Staff _chordArticulations() {
-  Chord chord(List<Note> notes, List<ArticulationType> artic) =>
-      Chord(notes: notes, duration: const Duration(DurationType.half),
-          articulations: artic);
+  Chord chord(List<Note> notes, List<ArticulationType> artic) => Chord(
+    notes: notes,
+    duration: const Duration(DurationType.half),
+    articulations: artic,
+  );
   return _staff([
     _measure([
       Clef(clefType: ClefType.treble),
@@ -563,12 +579,11 @@ Staff _lyrics() {
     String text,
     SyllableType type, {
     DurationType dur = DurationType.quarter,
-  }) =>
-      Note(
-        pitch: Pitch(step: step, octave: oct),
-        duration: Duration(dur),
-        syllables: [Syllable(text: text, type: type)],
-      );
+  }) => Note(
+    pitch: Pitch(step: step, octave: oct),
+    duration: Duration(dur),
+    syllables: [Syllable(text: text, type: type)],
+  );
   return _staff([
     _measure([
       Clef(clefType: ClefType.treble),
@@ -587,13 +602,17 @@ Staff _lyrics() {
 }
 
 Staff _melisma() {
-  Note lyr(String s, int o, String text, SyllableType type,
-          {DurationType dur = DurationType.quarter}) =>
-      Note(
-        pitch: Pitch(step: s, octave: o),
-        duration: Duration(dur),
-        syllables: [Syllable(text: text, type: type)],
-      );
+  Note lyr(
+    String s,
+    int o,
+    String text,
+    SyllableType type, {
+    DurationType dur = DurationType.quarter,
+  }) => Note(
+    pitch: Pitch(step: s, octave: o),
+    duration: Duration(dur),
+    syllables: [Syllable(text: text, type: type)],
+  );
   return _staff([
     _measure([
       Clef(clefType: ClefType.treble),
@@ -614,29 +633,42 @@ Staff _dynamicsSpectrum() {
   // One dynamic before each note (co-positioned with the following note),
   // covering full-word spellings, abbreviations, special accents, and a
   // word-based dynamic rendered as text.
-  Note q(String s, int o) =>
-      Note(pitch: Pitch(step: s, octave: o), duration: const Duration(DurationType.quarter));
+  Note q(String s, int o) => Note(
+    pitch: Pitch(step: s, octave: o),
+    duration: const Duration(DurationType.quarter),
+  );
   Dynamic d(DynamicType t, {bool hairpin = false}) =>
       Dynamic(type: t, isHairpin: hairpin);
   return _staff([
     _measure([
       Clef(clefType: ClefType.treble),
       TimeSignature(numerator: 4, denominator: 4),
-      d(DynamicType.pianissimo), q('C', 5),
-      d(DynamicType.piano), q('D', 5),
-      d(DynamicType.mezzoPiano), q('E', 5),
-      d(DynamicType.mezzoForte), q('F', 5),
+      d(DynamicType.pianissimo),
+      q('C', 5),
+      d(DynamicType.piano),
+      q('D', 5),
+      d(DynamicType.mezzoPiano),
+      q('E', 5),
+      d(DynamicType.mezzoForte),
+      q('F', 5),
     ]),
     _measure([
-      d(DynamicType.forte), q('E', 5),
-      d(DynamicType.fortissimo), q('D', 5),
-      d(DynamicType.fortePiano), q('C', 5),
-      d(DynamicType.sforzando), q('D', 5),
+      d(DynamicType.forte),
+      q('E', 5),
+      d(DynamicType.fortissimo),
+      q('D', 5),
+      d(DynamicType.fortePiano),
+      q('C', 5),
+      d(DynamicType.sforzando),
+      q('D', 5),
     ]),
     _measure([
-      d(DynamicType.niente), q('E', 5),
-      d(DynamicType.rinforzando), q('F', 5),
-      d(DynamicType.fff), q('G', 5),
+      d(DynamicType.niente),
+      q('E', 5),
+      d(DynamicType.rinforzando),
+      q('F', 5),
+      d(DynamicType.fff),
+      q('G', 5),
       q('A', 5),
     ]),
   ]);
@@ -644,27 +676,35 @@ Staff _dynamicsSpectrum() {
 
 Staff _twoVoice() {
   final m = MultiVoiceMeasure();
-  m.addVoice(Voice.voice1(elements: [
-    Clef(clefType: ClefType.treble),
-    TimeSignature(numerator: 4, denominator: 4),
-    _n('E', 5),
-    _n('F', 5),
-    _n('G', 5),
-    _n('A', 5),
-  ]));
-  m.addVoice(Voice.voice2(elements: [
-    _n('C', 4, dur: DurationType.half),
-    _n('B', 3, dur: DurationType.half),
-  ]));
+  m.addVoice(
+    Voice.voice1(
+      elements: [
+        Clef(clefType: ClefType.treble),
+        TimeSignature(numerator: 4, denominator: 4),
+        _n('E', 5),
+        _n('F', 5),
+        _n('G', 5),
+        _n('A', 5),
+      ],
+    ),
+  );
+  m.addVoice(
+    Voice.voice2(
+      elements: [
+        _n('C', 4, dur: DurationType.half),
+        _n('B', 3, dur: DurationType.half),
+      ],
+    ),
+  );
   return _staff([m]);
 }
 
 Staff _nestedSlurs() {
   Note nn(String s, int o, {List<SlurEvent> slurs = const []}) => Note(
-        pitch: Pitch(step: s, octave: o),
-        duration: const Duration(DurationType.quarter),
-        slurs: slurs,
-      );
+    pitch: Pitch(step: s, octave: o),
+    duration: const Duration(DurationType.quarter),
+    slurs: slurs,
+  );
   return _staff([
     _measure([
       Clef(clefType: ClefType.treble),
@@ -681,20 +721,28 @@ Staff _nestedSlurs() {
 Staff _twoVoiceSeconds() {
   // Two voices a second apart at each onset — noteheads must not overlap.
   final m = MultiVoiceMeasure();
-  m.addVoice(Voice.voice1(elements: [
-    Clef(clefType: ClefType.treble),
-    TimeSignature(numerator: 4, denominator: 4),
-    _n('D', 5),
-    _n('E', 5),
-    _n('C', 5), // unison with voice 2's C5
-    _n('B', 4),
-  ]));
-  m.addVoice(Voice.voice2(elements: [
-    _n('C', 5),
-    _n('D', 5),
-    _n('C', 5), // unison
-    _n('A', 4),
-  ]));
+  m.addVoice(
+    Voice.voice1(
+      elements: [
+        Clef(clefType: ClefType.treble),
+        TimeSignature(numerator: 4, denominator: 4),
+        _n('D', 5),
+        _n('E', 5),
+        _n('C', 5), // unison with voice 2's C5
+        _n('B', 4),
+      ],
+    ),
+  );
+  m.addVoice(
+    Voice.voice2(
+      elements: [
+        _n('C', 5),
+        _n('D', 5),
+        _n('C', 5), // unison
+        _n('A', 4),
+      ],
+    ),
+  );
   return _staff([m]);
 }
 
@@ -706,12 +754,7 @@ Staff _anacrusis() {
       TimeSignature(numerator: 4, denominator: 4),
       _n('G', 4), // anacrusis (under capacity)
     ]),
-    _measure([
-      _n('C', 5),
-      _n('C', 5),
-      _n('C', 5),
-      _n('D', 5),
-    ]),
+    _measure([_n('C', 5), _n('C', 5), _n('C', 5), _n('D', 5)]),
   ]);
 }
 
@@ -749,7 +792,13 @@ Staff _mixedPhrase() {
       _n('D', 5, dur: DurationType.eighth, artic: [ArticulationType.staccato]),
     ]),
     _measure([
-      _n('B', 4, alter: -1.0, dur: DurationType.quarter, artic: [ArticulationType.accent]),
+      _n(
+        'B',
+        4,
+        alter: -1.0,
+        dur: DurationType.quarter,
+        artic: [ArticulationType.accent],
+      ),
       _n('A', 4, dur: DurationType.quarter),
       _n('G', 4, dur: DurationType.half, tie: TieType.start),
     ]),
@@ -767,16 +816,21 @@ Staff _chromaticChords() {
   Chord halfChord(List<Note> notes) =>
       Chord(notes: notes, duration: const Duration(DurationType.half));
   Note h(String s, int o, double a) => Note(
-        pitch: Pitch(step: s, octave: o, alter: a),
-        duration: const Duration(DurationType.half),
-      );
+    pitch: Pitch(step: s, octave: o, alter: a),
+    duration: const Duration(DurationType.half),
+  );
   return _staff([
     _measure([
       Clef(clefType: ClefType.treble),
       TimeSignature(numerator: 4, denominator: 4),
       _n('C', 5, dur: DurationType.quarter),
       _r(DurationType.quarter),
-      halfChord([h('D', 4, 1.0), h('F', 4, 1.0), h('A', 4, -1.0), h('C', 5, 1.0)]),
+      halfChord([
+        h('D', 4, 1.0),
+        h('F', 4, 1.0),
+        h('A', 4, -1.0),
+        h('C', 5, 1.0),
+      ]),
     ]),
     _measure([
       _n('C', 5, dur: DurationType.quarter),
@@ -849,8 +903,7 @@ Staff _multiSystem() {
     }
     for (var b = 0; b < 4; b++) {
       final s = steps[(m + b) % steps.length];
-      els.add(_n(s, 4, dur: DurationType.quarter,
-          alter: s == 'F' ? 1.0 : 0.0));
+      els.add(_n(s, 4, dur: DurationType.quarter, alter: s == 'F' ? 1.0 : 0.0));
     }
     measures.add(_measure(els));
   }
@@ -1055,7 +1108,8 @@ final List<CorpusCase> corpus = [
     id: 'm04k_heavy_barlines',
     title: 'Heavy barlines (reverse-final, heavy-heavy)',
     tier: 'intermediate',
-    exercises: 'heavyLight -> barlineReverseFinal, heavyHeavy -> barlineHeavyHeavy',
+    exercises:
+        'heavyLight -> barlineReverseFinal, heavyHeavy -> barlineHeavyHeavy',
     build: _heavyBarlines,
   ),
   CorpusCase(
@@ -1084,7 +1138,8 @@ final List<CorpusCase> corpus = [
     id: 'm04f_fractional_time_glyphs',
     title: 'Fractional time glyphs (4/4 and 2/2)',
     tier: 'simple',
-    exercises: 'displayCommonTimeSignatureGlyphs false renders numeric fractions',
+    exercises:
+        'displayCommonTimeSignatureGlyphs false renders numeric fractions',
     build: _fractionalTimeSignatureGlyphs,
   ),
   CorpusCase(

@@ -16,15 +16,17 @@ import 'package:flutter_notemus/flutter_notemus.dart';
 // use — not against a copy of the number.
 import 'package:flutter_notemus/src/layout/onset_grid.dart';
 
-Note _n(String step, int octave,
-        {DurationType d = DurationType.quarter,
-        double alter = 0.0,
-        int? voice}) =>
-    Note(
-      pitch: Pitch(step: step, octave: octave, alter: alter),
-      duration: Duration(d),
-      voice: voice,
-    );
+Note _n(
+  String step,
+  int octave, {
+  DurationType d = DurationType.quarter,
+  double alter = 0.0,
+  int? voice,
+}) => Note(
+  pitch: Pitch(step: step, octave: octave, alter: alter),
+  duration: Duration(d),
+  voice: voice,
+);
 
 Measure _bar(List<MusicalElement> elements) {
   final m = Measure();
@@ -42,12 +44,15 @@ void main() {
   });
 
   LayoutEngine engineFor(Staff staff, {double width = 900, double ss = 12}) =>
-      LayoutEngine(staff,
-          availableWidth: width, staffSpace: ss, metadata: metadata);
+      LayoutEngine(
+        staff,
+        availableWidth: width,
+        staffSpace: ss,
+        metadata: metadata,
+      );
 
   // ------------------------------------------------------------------ N-11 --
-  group('N-11 — a measure opens clef, key, meter, whatever the source order',
-      () {
+  group('N-11 — a measure opens clef, key, meter, whatever the source order', () {
     test('a MusicXML import draws the clef FIRST', () {
       // <attributes> has a FIXED child order of divisions, key, time, …, clef,
       // so a faithful parse hands the engine key, time, clef. Measured before:
@@ -63,10 +68,14 @@ void main() {
 </measure></part></score-partwise>''';
       final placed = engineFor(MusicXMLParser.parseMusicXML(xml)).layout();
       final clefX = placed.firstWhere((p) => p.element is Clef).position.dx;
-      final keyX =
-          placed.firstWhere((p) => p.element is KeySignature).position.dx;
-      final timeX =
-          placed.firstWhere((p) => p.element is TimeSignature).position.dx;
+      final keyX = placed
+          .firstWhere((p) => p.element is KeySignature)
+          .position
+          .dx;
+      final timeX = placed
+          .firstWhere((p) => p.element is TimeSignature)
+          .position
+          .dx;
       expect(clefX, lessThan(keyX));
       expect(keyX, lessThan(timeX));
     });
@@ -74,33 +83,45 @@ void main() {
     test('a mid-measure change still keeps document order (F-01)', () {
       final first = _n('C', 4);
       final second = _n('C', 4);
-      final engine = engineFor(Staff(measures: [
-        _bar([
-          Clef(clefType: ClefType.treble),
-          first,
-          Clef(clefType: ClefType.bass),
-          second,
-        ])
-      ]));
+      final engine = engineFor(
+        Staff(
+          measures: [
+            _bar([
+              Clef(clefType: ClefType.treble),
+              first,
+              Clef(clefType: ClefType.bass),
+              second,
+            ]),
+          ],
+        ),
+      );
       final placed = engine.layout();
-      final clefs =
-          placed.where((p) => p.element is Clef).map((p) => p.position.dx);
-      expect(clefs.last, greaterThan(engine.noteXPositions[first]!),
-          reason: 'the bass clef must stay after the note it follows');
-      expect(engine.noteYPositions[first],
-          isNot(engine.noteYPositions[second]));
+      final clefs = placed
+          .where((p) => p.element is Clef)
+          .map((p) => p.position.dx);
+      expect(
+        clefs.last,
+        greaterThan(engine.noteXPositions[first]!),
+        reason: 'the bass clef must stay after the note it follows',
+      );
+      expect(
+        engine.noteYPositions[first],
+        isNot(engine.noteYPositions[second]),
+      );
     });
   });
 
   // ------------------------------------------------------------ N-01 / N-02 --
   group('N-01 / N-02 — a wrapped system rebuilds its first bar faithfully', () {
-    Staff bassOf(int bars) => Staff(measures: [
-          for (var i = 0; i < bars; i++)
-            _bar([
-              if (i == 0) Clef(clefType: ClefType.bass),
-              _n('C', 3, d: DurationType.whole),
-            ])
-        ]);
+    Staff bassOf(int bars) => Staff(
+      measures: [
+        for (var i = 0; i < bars; i++)
+          _bar([
+            if (i == 0) Clef(clefType: ClefType.bass),
+            _n('C', 3, d: DurationType.whole),
+          ]),
+      ],
+    );
 
     test('an over-full bar does not take the painter down', () {
       // `Measure.elements`' own dartdoc says importers write over-full bars.
@@ -118,8 +139,12 @@ void main() {
       }
       expect(
         () => GrandStaffPainter(
-          staffGroup:
-              StaffGroup(staves: [Staff(measures: measures), bassOf(12)]),
+          staffGroup: StaffGroup(
+            staves: [
+              Staff(measures: measures),
+              bassOf(12),
+            ],
+          ),
           staffSpace: 12,
           metadata: metadata,
           theme: const MusicScoreTheme(),
@@ -136,7 +161,7 @@ void main() {
       for (var i = 0; i < 8; i++) {
         final g = [
           for (final p in ['C', 'D', 'E', 'F', 'G', 'A', 'B', 'C'])
-            _n(p, 4, d: DurationType.eighth)
+            _n(p, 4, d: DurationType.eighth),
         ];
         groups.add(g);
         final m = Measure(autoBeaming: false);
@@ -145,15 +170,23 @@ void main() {
         measures.add(m);
       }
       GrandStaffPainter(
-        staffGroup: StaffGroup(staves: [Staff(measures: measures), bassOf(8)]),
+        staffGroup: StaffGroup(
+          staves: [
+            Staff(measures: measures),
+            bassOf(8),
+          ],
+        ),
         staffSpace: 12,
         metadata: metadata,
         theme: const MusicScoreTheme(),
         availableWidth: 400,
       );
       for (var i = 0; i < 8; i++) {
-        expect(groups[i].where((n) => n.beam != null), isEmpty,
-            reason: 'bar $i had auto-beaming turned off by its author');
+        expect(
+          groups[i].where((n) => n.beam != null),
+          isEmpty,
+          reason: 'bar $i had auto-beaming turned off by its author',
+        );
       }
     });
 
@@ -163,15 +196,21 @@ void main() {
         final mv = MultiVoiceMeasure();
         if (i == 0) mv.elements.add(Clef(clefType: ClefType.treble));
         mv.addVoice(
-            Voice(number: 1, elements: [_n('C', 5, d: DurationType.whole)]));
+          Voice(number: 1, elements: [_n('C', 5, d: DurationType.whole)]),
+        );
         mv.addVoice(
-            Voice(number: 2, elements: [_n('E', 4, d: DurationType.whole)]));
+          Voice(number: 2, elements: [_n('E', 4, d: DurationType.whole)]),
+        );
         measures.add(mv);
       }
       expect(
         () => GrandStaffPainter(
-          staffGroup:
-              StaffGroup(staves: [Staff(measures: measures), bassOf(8)]),
+          staffGroup: StaffGroup(
+            staves: [
+              Staff(measures: measures),
+              bassOf(8),
+            ],
+          ),
           staffSpace: 12,
           metadata: metadata,
           theme: const MusicScoreTheme(),
@@ -195,8 +234,12 @@ void main() {
         TimeSignature(numerator: 4, denominator: 4),
         Dynamic(type: DynamicType.f),
       ]);
-      mv.addVoice(Voice(number: 1, elements: [_n('C', 6, d: DurationType.half)]));
-      mv.addVoice(Voice(number: 2, elements: [_n('C', 4, d: DurationType.half)]));
+      mv.addVoice(
+        Voice(number: 1, elements: [_n('C', 6, d: DurationType.half)]),
+      );
+      mv.addVoice(
+        Voice(number: 2, elements: [_n('C', 4, d: DurationType.half)]),
+      );
 
       final engine = engineFor(Staff(measures: [mv]));
       final placed = engine.layout();
@@ -207,7 +250,10 @@ void main() {
       expect(placed.where((p) => p.element is Dynamic), hasLength(1));
       expect(engine.noteXPositions, hasLength(2));
       expect(
-        placed.where((p) => p.element is Note).map((p) => p.position.dy).toSet(),
+        placed
+            .where((p) => p.element is Note)
+            .map((p) => p.position.dy)
+            .toSet(),
         hasLength(2),
         reason: 'C6 and C4 must not share a Y',
       );
@@ -239,15 +285,17 @@ void main() {
     // Measured before: 400 bars 160 ms, 1600 bars 262 ms, 3200 bars 1156 ms,
     // 6400 bars 5991 ms — `_justifyHorizontally` scanned the whole element list
     // once per system, i.e. O(systems x elements).
-    Staff big(int bars) => Staff(measures: [
-          for (var i = 0; i < bars; i++)
-            _bar([
-              if (i == 0) Clef(clefType: ClefType.treble),
-              if (i == 0) TimeSignature(numerator: 4, denominator: 4),
-              for (final p in ['C', 'D', 'E', 'F', 'G', 'A', 'B', 'C'])
-                _n(p, 4, d: DurationType.eighth),
-            ])
-        ]);
+    Staff big(int bars) => Staff(
+      measures: [
+        for (var i = 0; i < bars; i++)
+          _bar([
+            if (i == 0) Clef(clefType: ClefType.treble),
+            if (i == 0) TimeSignature(numerator: 4, denominator: 4),
+            for (final p in ['C', 'D', 'E', 'F', 'G', 'A', 'B', 'C'])
+              _n(p, 4, d: DurationType.eighth),
+          ]),
+      ],
+    );
 
     const sizes = <int>[400, 800, 1600, 3200];
 
@@ -259,12 +307,17 @@ void main() {
       // 3801 / 7601 / 15201 / 30401, which is exactly `9.5 * bars + 1` at all
       // four sizes.
       final counts = <int, int>{
-        for (final bars in sizes) bars: engineFor(big(bars), width: 1000).layout().length,
+        for (final bars in sizes)
+          bars: engineFor(big(bars), width: 1000).layout().length,
       };
       for (final bars in sizes) {
-        expect(counts[bars], (9.5 * bars + 1).round(),
-            reason: 'element count at $bars bars was ${counts[bars]}, so the '
-                'per-bar output is no longer constant: $counts');
+        expect(
+          counts[bars],
+          (9.5 * bars + 1).round(),
+          reason:
+              'element count at $bars bars was ${counts[bars]}, so the '
+              'per-bar output is no longer constant: $counts',
+        );
       }
 
       // …and the geometry is complete at every size, not just the small ones:
@@ -272,8 +325,11 @@ void main() {
       for (final bars in <int>[400, 3200]) {
         final engine = engineFor(big(bars), width: 1000);
         engine.layout();
-        expect(engine.noteXPositions, hasLength(8 * bars),
-            reason: '$bars bars lost note positions');
+        expect(
+          engine.noteXPositions,
+          hasLength(8 * bars),
+          reason: '$bars bars lost note positions',
+        );
       }
     });
 
@@ -371,15 +427,20 @@ void main() {
       // gap are written down rather than implied.
       final minGrowth = fastest[3200]! / math.max(fastest[1600]!, 1e-6);
       final medianGrowth = median[3200]! / math.max(median[1600]!, 1e-6);
-      final report = 'fastest=$fastest median=$median '
+      final report =
+          'fastest=$fastest median=$median '
           'doubling 1600->3200: min=${minGrowth.toStringAsFixed(2)} '
           'median=${medianGrowth.toStringAsFixed(2)}';
 
-      expect(minGrowth, lessThan(3.8),
-          reason: 'doubling the input must not approach quadratic cost; linear '
-              'is 2x, quadratic is 4x, and the O(systems x elements) defect '
-              'measured 4.4-5.2x per doubling. Worst honest CI reading so far: '
-              '3.31 on a macOS runner. $report');
+      expect(
+        minGrowth,
+        lessThan(3.8),
+        reason:
+            'doubling the input must not approach quadratic cost; linear '
+            'is 2x, quadratic is 4x, and the O(systems x elements) defect '
+            'measured 4.4-5.2x per doubling. Worst honest CI reading so far: '
+            '3.31 on a macOS runner. $report',
+      );
       expect(medianGrowth, lessThan(5.0), reason: report);
     }, timeout: const Timeout.factor(30));
   });
@@ -393,17 +454,23 @@ void main() {
       final c = _n('G', 4);
       final d = _n('B', 4);
       final engine = engineFor(
-          Staff(measures: [
-            _bar([Clef(clefType: ClefType.treble), a, b, c, d])
-          ]),
-          width: 100000);
+        Staff(
+          measures: [
+            _bar([Clef(clefType: ClefType.treble), a, b, c, d]),
+          ],
+        ),
+        width: 100000,
+      );
       engine.layout();
       final before = engine.noteXPositions[b]! - engine.noteXPositions[a]!;
       final after = engine.noteXPositions[c]! - engine.noteXPositions[b]!;
       final plain = engine.noteXPositions[d]! - engine.noteXPositions[c]!;
       expect(before, greaterThan(after));
-      expect(after, closeTo(plain, 0.01),
-          reason: 'the gap AFTER an accidental note must be the plain gap');
+      expect(
+        after,
+        closeTo(plain, 0.01),
+        reason: 'the gap AFTER an accidental note must be the plain gap',
+      );
     });
 
     test('a double flat never overlaps the previous notehead', () {
@@ -411,13 +478,16 @@ void main() {
       // — 7.08 px of overlap under maximum compression.
       final notes = [
         for (var i = 0; i < 32; i++)
-          _n('B', 4, d: DurationType.sixteenth, alter: i.isEven ? -2.0 : 0.0)
+          _n('B', 4, d: DurationType.sixteenth, alter: i.isEven ? -2.0 : 0.0),
       ];
       final engine = engineFor(
-          Staff(measures: [
-            _bar([Clef(clefType: ClefType.treble), ...notes])
-          ]),
-          width: 400);
+        Staff(
+          measures: [
+            _bar([Clef(clefType: ClefType.treble), ...notes]),
+          ],
+        ),
+        width: 400,
+      );
       engine.layout();
 
       final head = engine.noteheadBlackWidth * 12;
@@ -431,9 +501,13 @@ void main() {
             ? natural
             : (notes[i].pitch.alter == -2.0 ? doubleFlat : natural);
         final gap =
-            engine.noteXPositions[notes[i]]! - engine.noteXPositions[notes[i - 1]]!;
-        expect(gap - head - glyph, greaterThanOrEqualTo(0.0),
-            reason: 'note $i: the accidental drove into the previous notehead');
+            engine.noteXPositions[notes[i]]! -
+            engine.noteXPositions[notes[i - 1]]!;
+        expect(
+          gap - head - glyph,
+          greaterThanOrEqualTo(0.0),
+          reason: 'note $i: the accidental drove into the previous notehead',
+        );
       }
     });
   });
@@ -449,22 +523,28 @@ void main() {
     // own slot is visible solely as the tuplet's total width.
     final eighth2 = _n('E', 4, d: DurationType.eighth);
     final t1 = Tuplet(
-        elements: [quarter, eighth, eighth2], actualNotes: 3, normalNotes: 2);
+      elements: [quarter, eighth, eighth2],
+      actualNotes: 3,
+      normalNotes: 2,
+    );
     final e8 = _n('E', 4, d: DurationType.eighth);
     final s1 = _n('F', 4, d: DurationType.sixteenth);
     final s2 = _n('G', 4, d: DurationType.sixteenth);
     final t2 = Tuplet(elements: [e8, s1, s2], actualNotes: 3, normalNotes: 2);
 
     final engine = engineFor(
-        Staff(measures: [
+      Staff(
+        measures: [
           _bar([
             Clef(clefType: ClefType.treble),
             TimeSignature(numerator: 4, denominator: 4),
             t1,
             t2,
-          ])
-        ]),
-        width: 100000);
+          ]),
+        ],
+      ),
+      width: 100000,
+    );
     engine.layout();
 
     // Slots INSIDE t1 …
@@ -475,7 +555,8 @@ void main() {
     // … and inside t2.
     final eighthSlotOfT2 =
         engine.noteXPositions[s1]! - engine.noteXPositions[e8]!;
-    final sixteenthSlot = engine.noteXPositions[s2]! - engine.noteXPositions[s1]!;
+    final sixteenthSlot =
+        engine.noteXPositions[s2]! - engine.noteXPositions[s1]!;
 
     // RE-BASELINED in wave 3 (M-08). The two original assertions were
     //     expect(quarterSlot, greaterThan(eighthSlot));   // eighth of t2
@@ -494,11 +575,18 @@ void main() {
     // eighth. That is the intended consequence of guaranteeing legibility per
     // group; what must hold — and now does, exactly — is the RATIO inside each
     // group, which is the thing N-07 pinned.
-    expect(quarterSlot / eighthSlotOfT1, closeTo(1.4142, 1e-3),
-        reason: 'quarter : eighth inside t1 must be sqrt(2); it was 1.000.');
-    expect(eighthSlotOfT2 / sixteenthSlot, closeTo(1.4142, 1e-3),
-        reason: 'eighth : sixteenth inside t2 must be sqrt(2); it was 1.000 '
-            'before N-07 and 1.2626 while the floor was clamped per child.');
+    expect(
+      quarterSlot / eighthSlotOfT1,
+      closeTo(1.4142, 1e-3),
+      reason: 'quarter : eighth inside t1 must be sqrt(2); it was 1.000.',
+    );
+    expect(
+      eighthSlotOfT2 / sixteenthSlot,
+      closeTo(1.4142, 1e-3),
+      reason:
+          'eighth : sixteenth inside t2 must be sqrt(2); it was 1.000 '
+          'before N-07 and 1.2626 while the floor was clamped per child.',
+    );
     expect(quarterSlot, greaterThan(eighthSlotOfT1));
     expect(eighthSlotOfT2, greaterThan(sixteenthSlot));
   });
@@ -509,11 +597,15 @@ void main() {
     // `_analyzeBeamGroups` returned early for it: beams were stamped but had no
     // stem lengths, no slope and no secondary segments.
     final notes = [
-      for (final p in ['C', 'D', 'E', 'F']) _n(p, 4, d: DurationType.eighth)
+      for (final p in ['C', 'D', 'E', 'F']) _n(p, 4, d: DurationType.eighth),
     ];
-    final engine = engineFor(Staff(measures: [
-      _bar([Clef(clefType: ClefType.treble), ...notes])
-    ]));
+    final engine = engineFor(
+      Staff(
+        measures: [
+          _bar([Clef(clefType: ClefType.treble), ...notes]),
+        ],
+      ),
+    );
     engine.layout();
     expect(engine.advancedBeamGroups, hasLength(1));
     expect(engine.advancedBeamGroups.single.beamSegments, isNotEmpty);
@@ -528,13 +620,17 @@ void main() {
         _n(s1, o1, d: DurationType.eighth),
         _n(s2, o2, d: DurationType.eighth),
       ];
-      final engine = engineFor(Staff(measures: [
-        _bar([
-          Clef(clefType: ClefType.treble),
-          TimeSignature(numerator: 2, denominator: 4),
-          ...notes,
-        ])
-      ]));
+      final engine = engineFor(
+        Staff(
+          measures: [
+            _bar([
+              Clef(clefType: ClefType.treble),
+              TimeSignature(numerator: 2, denominator: 4),
+              ...notes,
+            ]),
+          ],
+        ),
+      );
       engine.layout();
       final group = engine.advancedBeamGroups.single;
       return (group.rightY - group.leftY).abs() / 12;
@@ -562,15 +658,18 @@ void main() {
 </measure></part></score-partwise>''';
     final staff = MusicXMLParser.parseMusicXML(xml);
     expect(staff.transposition?.semitones, -2);
-    expect(staff.measures.first.allElements.whereType<Note>().first.pitch.octave,
-        4,
-        reason: 'the WRITTEN pitch stays written; only playback transposes');
-    final notes = MidiMapper.fromStaff(staff)
-        .tracks
+    expect(
+      staff.measures.first.allElements.whereType<Note>().first.pitch.octave,
+      4,
+      reason: 'the WRITTEN pitch stays written; only playback transposes',
+    );
+    final notes = MidiMapper.fromStaff(staff).tracks
         .expand((t) => t.events)
         .where((e) => e.type == MidiEventType.noteOn)
         .map((e) => e.note);
-    expect(notes, [58], reason: 'written C4 on a B-flat clarinet sounds B-flat 3');
+    expect(notes, [
+      58,
+    ], reason: 'written C4 on a B-flat clarinet sounds B-flat 3');
   });
 
   // ------------------------------------------------------------------ N-15 --
@@ -578,7 +677,8 @@ void main() {
     // MusicXML <pitch> is the SOUNDING pitch. The importer stored it as written
     // and MidiMapper shifted it again, so an imported tenor part was drawn an
     // octave low AND played an octave low.
-    String doc(int change) => '''<?xml version="1.0"?>
+    String doc(int change) =>
+        '''<?xml version="1.0"?>
 <score-partwise version="4.0"><part-list><score-part id="P1"/></part-list>
 <part id="P1"><measure number="1"><attributes><divisions>4</divisions>
 <clef><sign>G</sign><line>2</line>${change == 0 ? '' : '<clef-octave-change>$change</clef-octave-change>'}</clef></attributes>
@@ -592,8 +692,7 @@ void main() {
       final clef = staff.measures.first.allElements.whereType<Clef>().first;
       expect(note.pitch.octave, 4, reason: '<pitch> is stored verbatim');
       positions.add(StaffPositionCalculator.calculate(note.pitch, clef));
-      final notes = MidiMapper.fromStaff(staff)
-          .tracks
+      final notes = MidiMapper.fromStaff(staff).tracks
           .expand((t) => t.events)
           .where((e) => e.type == MidiEventType.noteOn)
           .map((e) => e.note);
@@ -614,25 +713,35 @@ void main() {
       notes: [_n('C', 6), _n('E', 6), _n('G', 6)],
       duration: Duration(DurationType.quarter),
     );
-    final engine = engineFor(Staff(measures: [
-      _bar([
-        Clef(clefType: ClefType.treble),
-        TimeSignature(numerator: 4, denominator: 4),
-        high,
-        sharp,
-        chord,
-      ])
-    ]));
+    final engine = engineFor(
+      Staff(
+        measures: [
+          _bar([
+            Clef(clefType: ClefType.treble),
+            TimeSignature(numerator: 4, denominator: 4),
+            high,
+            sharp,
+            chord,
+          ]),
+        ],
+      ),
+    );
     final placed = engine.layout();
-    final tester =
-        ScoreHitTester(elements: placed, staffSpace: 12, engine: engine);
+    final tester = ScoreHitTester(
+      elements: placed,
+      staffSpace: 12,
+      engine: engine,
+    );
 
     final stemPoint = Offset(
       engine.noteXPositions[high]!,
       engine.noteYPositions[high]! + 24,
     );
-    expect(tester.hitTest(stemPoint)?.element, same(high),
-        reason: 'the stem belongs to its note');
+    expect(
+      tester.hitTest(stemPoint)?.element,
+      same(high),
+      reason: 'the stem belongs to its note',
+    );
 
     final accidentalPoint = Offset(
       engine.noteXPositions[sharp]! - 8,
@@ -645,8 +754,11 @@ void main() {
         engine.noteXPositions[note]!,
         engine.noteYPositions[note]!,
       );
-      expect(tester.hitTest(point)?.element, same(chord),
-          reason: 'a chord high above the staff must still be clickable');
+      expect(
+        tester.hitTest(point)?.element,
+        same(chord),
+        reason: 'a chord high above the staff must still be clickable',
+      );
     }
   });
 
@@ -655,14 +767,17 @@ void main() {
     List<int> groupsOf(DurationType d, int count) {
       final notes = [for (var i = 0; i < count; i++) _n('C', 4, d: d)];
       final engine = engineFor(
-          Staff(measures: [
+        Staff(
+          measures: [
             _bar([
               Clef(clefType: ClefType.treble),
               TimeSignature(numerator: 4, denominator: 4),
               ...notes,
-            ])
-          ]),
-          width: 100000);
+            ]),
+          ],
+        ),
+        width: 100000,
+      );
       engine.layout();
       final sizes = <int>[];
       var current = 0;
@@ -686,10 +801,16 @@ void main() {
       return sizes;
     }
 
-    expect(groupsOf(DurationType.eighth, 8), [4, 4],
-        reason: 'Behind Bars allows quavers across the half bar');
-    expect(groupsOf(DurationType.sixteenth, 16), [4, 4, 4, 4],
-        reason: 'semiquavers are grouped by the crotchet; this used to be 8-8');
+    expect(groupsOf(DurationType.eighth, 8), [
+      4,
+      4,
+    ], reason: 'Behind Bars allows quavers across the half bar');
+    expect(groupsOf(DurationType.sixteenth, 16), [
+      4,
+      4,
+      4,
+      4,
+    ], reason: 'semiquavers are grouped by the crotchet; this used to be 8-8');
   });
 
   // ------------------------------------------------------------------ N-22 --
@@ -711,27 +832,36 @@ void main() {
 
     /// Sixteen consecutive 1/2048 notes in one bar.
     List<Note> shortest() => [
-          for (var i = 0; i < 16; i++)
-            _n('C', 4, d: DurationType.twoThousandFortyEighth)
-        ];
+      for (var i = 0; i < 16; i++)
+        _n('C', 4, d: DurationType.twoThousandFortyEighth),
+    ];
 
     test('the engine emits sixteen distinct quantised onsets', () {
       final notes = shortest();
       final placed = engineFor(
-          Staff(measures: [
-            _bar([Clef(clefType: ClefType.treble), ...notes])
-          ]),
-          width: 100000).layout();
+        Staff(
+          measures: [
+            _bar([Clef(clefType: ClefType.treble), ...notes]),
+          ],
+        ),
+        width: 100000,
+      ).layout();
 
-      final onsets =
-          placed.where((p) => p.element is Note).map((p) => p.onset).toList();
+      final onsets = placed
+          .where((p) => p.element is Note)
+          .map((p) => p.onset)
+          .toList();
       expect(onsets, hasLength(16));
 
       // The grid the engine and the painter actually share.
       final keys = onsets.map((o) => (o * kOnsetGrid).round()).toSet();
-      expect(keys, hasLength(16),
-          reason: 'kOnsetGrid = $kOnsetGrid must resolve a 2048th; the engine '
-              'produced $onsets');
+      expect(
+        keys,
+        hasLength(16),
+        reason:
+            'kOnsetGrid = $kOnsetGrid must resolve a 2048th; the engine '
+            'produced $onsets',
+      );
       // Measured: the sixteen keys come out 0, 4, 8, … 60 — one 2048th is four
       // steps of the 8192 grid, which is the factor of four the constant's
       // dartdoc reserves for nested-tuplet ratios.
@@ -739,13 +869,20 @@ void main() {
 
       // The old 1024 grid, run over the SAME engine onsets: nine keys. This is
       // what makes the test a regression test rather than a tautology.
-      expect(onsets.map((o) => (o * 1024.0).round()).toSet(), hasLength(9),
-          reason: 'the pre-fix grid must still collapse these onsets, or the '
-              'case no longer exercises the defect');
+      expect(
+        onsets.map((o) => (o * 1024.0).round()).toSet(),
+        hasLength(9),
+        reason:
+            'the pre-fix grid must still collapse these onsets, or the '
+            'case no longer exercises the defect',
+      );
 
       // And the collapse was visible on the page, not only in a map key.
       expect(
-        placed.where((p) => p.element is Note).map((p) => p.position.dx).toSet(),
+        placed
+            .where((p) => p.element is Note)
+            .map((p) => p.position.dx)
+            .toSet(),
         hasLength(16),
       );
     });
@@ -763,14 +900,20 @@ void main() {
       ];
 
       final painter = GrandStaffPainter(
-        staffGroup: StaffGroup(staves: [
-          Staff(measures: [
-            _bar([Clef(clefType: ClefType.treble), ...upper])
-          ]),
-          Staff(measures: [
-            _bar([Clef(clefType: ClefType.bass), ...lower])
-          ]),
-        ]),
+        staffGroup: StaffGroup(
+          staves: [
+            Staff(
+              measures: [
+                _bar([Clef(clefType: ClefType.treble), ...upper]),
+              ],
+            ),
+            Staff(
+              measures: [
+                _bar([Clef(clefType: ClefType.bass), ...lower]),
+              ],
+            ),
+          ],
+        ),
         staffSpace: 12,
         metadata: metadata,
         theme: const MusicScoreTheme(),
@@ -778,13 +921,14 @@ void main() {
       );
 
       final system = painter.alignedSystem(0);
-      double xOf(List<PositionedElement> staff, Note note) => staff
-          .firstWhere((p) => identical(p.element, note))
-          .position
-          .dx;
+      double xOf(List<PositionedElement> staff, Note note) =>
+          staff.firstWhere((p) => identical(p.element, note)).position.dx;
 
-      expect(xOf(system[0], upper[8]), closeTo(xOf(system[1], lower[1]), 1e-6),
-          reason: 'onset 8/2048 == 1/256: the two staves must share an X');
+      expect(
+        xOf(system[0], upper[8]),
+        closeTo(xOf(system[1], lower[1]), 1e-6),
+        reason: 'onset 8/2048 == 1/256: the two staves must share an X',
+      );
       // The instants that do NOT coincide must NOT be merged: the upper
       // staff's eighth note (7/2048) has no partner below it.
       expect(xOf(system[0], upper[7]), lessThan(xOf(system[1], lower[1])));
@@ -811,34 +955,46 @@ void main() {
 </score-partwise>''';
       final score = MusicXMLParser.scoreFromMusicXML(xml);
       expect(score.staffGroups.first.name, 'Piano');
-      expect(score.allStaves.map((s) => s.name),
-          ['Right hand', 'Left hand', 'Violoncello']);
+      expect(score.allStaves.map((s) => s.name), [
+        'Right hand',
+        'Left hand',
+        'Violoncello',
+      ]);
       expect(score.allStaves.last.abbreviation, 'Vc.');
 
-      final back =
-          MusicXMLParser.scoreFromMusicXML(MusicXMLParser.scoreToMusicXML(score));
+      final back = MusicXMLParser.scoreFromMusicXML(
+        MusicXMLParser.scoreToMusicXML(score),
+      );
       expect(back.staffGroups.first.name, 'Piano');
-      expect(back.allStaves.map((s) => s.name),
-          ['Right hand', 'Left hand', 'Violoncello']);
+      expect(back.allStaves.map((s) => s.name), [
+        'Right hand',
+        'Left hand',
+        'Violoncello',
+      ]);
     });
 
     test('JSON round-trips lyrics and cross-staff routing', () {
       // Measured before: there was NO exporter, and the importer returned
       // syllables == null and crossStaffMove == 0 whatever went in.
-      final staff = Staff(measures: [
-        _bar([
-          Clef(clefType: ClefType.treble),
-          Note(
-            pitch: const Pitch(step: 'F', octave: 4, alter: 1.0),
-            duration: const Duration(DurationType.eighth, dots: 1),
-            syllables: const [Syllable(text: 'Ky-', type: SyllableType.initial)],
-            crossStaffMove: -1,
-            voice: 2,
-          ),
-        ])
-      ]);
-      final back =
-          JsonMusicParser.parseStaff(JsonMusicParser.staffToJson(staff));
+      final staff = Staff(
+        measures: [
+          _bar([
+            Clef(clefType: ClefType.treble),
+            Note(
+              pitch: const Pitch(step: 'F', octave: 4, alter: 1.0),
+              duration: const Duration(DurationType.eighth, dots: 1),
+              syllables: const [
+                Syllable(text: 'Ky-', type: SyllableType.initial),
+              ],
+              crossStaffMove: -1,
+              voice: 2,
+            ),
+          ]),
+        ],
+      );
+      final back = JsonMusicParser.parseStaff(
+        JsonMusicParser.staffToJson(staff),
+      );
       final note = back.measures.first.allElements.whereType<Note>().first;
       expect(note.syllables?.single.text, 'Ky-');
       expect(note.syllables?.single.type, SyllableType.initial);
@@ -853,8 +1009,10 @@ void main() {
 <part id="P1"><measure number="1">
 <note><pitch><step>C</step></pitch><duration>4</duration><type>quarter</type></note>
 </measure></part></score-partwise>''';
-      expect(() => MusicXMLParser.parseMusicXML(xml),
-          throwsA(isA<FormatException>()));
+      expect(
+        () => MusicXMLParser.parseMusicXML(xml),
+        throwsA(isA<FormatException>()),
+      );
     });
 
     test('MEI clef.shape="TAB" produces a tablature clef', () {
@@ -879,10 +1037,21 @@ void main() {
     MultiVoiceMeasure unison({required bool sameDuration}) {
       final mv = MultiVoiceMeasure();
       mv.elements.add(Clef(clefType: ClefType.treble));
-      mv.addVoice(Voice(number: 1, elements: [_n('D', 5, d: DurationType.whole)]));
-      mv.addVoice(Voice(number: 2, elements: [
-        _n('D', 5, d: sameDuration ? DurationType.whole : DurationType.half)
-      ]));
+      mv.addVoice(
+        Voice(number: 1, elements: [_n('D', 5, d: DurationType.whole)]),
+      );
+      mv.addVoice(
+        Voice(
+          number: 2,
+          elements: [
+            _n(
+              'D',
+              5,
+              d: sameDuration ? DurationType.whole : DurationType.half,
+            ),
+          ],
+        ),
+      );
       return mv;
     }
 
@@ -893,15 +1062,20 @@ void main() {
         .toList();
 
     expect(xsOf(unison(sameDuration: true)).toSet(), hasLength(1));
-    expect(xsOf(unison(sameDuration: false)).toSet(), hasLength(2),
-        reason: 'different values still need separate heads');
+    expect(
+      xsOf(unison(sameDuration: false)).toSet(),
+      hasLength(2),
+      reason: 'different values still need separate heads',
+    );
 
     final second = MultiVoiceMeasure();
     second.elements.add(Clef(clefType: ClefType.treble));
     second.addVoice(
-        Voice(number: 1, elements: [_n('B', 4, d: DurationType.whole)]));
+      Voice(number: 1, elements: [_n('B', 4, d: DurationType.whole)]),
+    );
     second.addVoice(
-        Voice(number: 2, elements: [_n('A', 4, d: DurationType.whole)]));
+      Voice(number: 2, elements: [_n('A', 4, d: DurationType.whole)]),
+    );
     expect(xsOf(second).toSet(), hasLength(2));
   });
 
@@ -911,21 +1085,25 @@ void main() {
     // 1.25: the fifth crotchet fell through and produced a stray trailing group
     // (measured: 4-4-2 for ten quavers).
     final notes = [
-      for (var i = 0; i < 10; i++) _n('C', 4, d: DurationType.eighth)
+      for (var i = 0; i < 10; i++) _n('C', 4, d: DurationType.eighth),
     ];
     final engine = engineFor(
-        Staff(measures: [
+      Staff(
+        measures: [
           _bar([
             Clef(clefType: ClefType.treble),
             TimeSignature(numerator: 5, denominator: 4),
             ...notes,
-          ])
-        ]),
-        width: 100000);
+          ]),
+        ],
+      ),
+      width: 100000,
+    );
     engine.layout();
     // Read through `beamOf` — see the note in N-21.
-    final starts =
-        notes.where((n) => engine.beamOf(n) == BeamType.start).length;
+    final starts = notes
+        .where((n) => engine.beamOf(n) == BeamType.start)
+        .length;
     final ends = notes.where((n) => engine.beamOf(n) == BeamType.end).length;
     expect(starts, ends, reason: 'every opened beam group must be closed');
     expect(starts, 5, reason: '5/4 beams its quavers in five crotchet pairs');

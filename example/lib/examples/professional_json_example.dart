@@ -208,8 +208,7 @@ class ProfessionalJsonExample extends StatelessWidget {
             _buildInfoRow('🎼 Key', 'D major (2 sharps)'),
             _buildInfoRow('⏱️ Compass', '4/4'),
             _buildInfoRow('🎵 Format', 'Professional JSON (JsonMusicParser)'),
-            _buildInfoRow(
-                '✨ Recursos', 'Clefs, Armor, Boost Points, Barlines'),
+            _buildInfoRow('✨ Recursos', 'Clefs, Armor, Boost Points, Barlines'),
           ],
         ),
       ),
@@ -282,8 +281,7 @@ class ProfessionalJsonExample extends StatelessWidget {
           children: [
             const Row(
               children: [
-                Icon(Icons.info_outline,
-                    color: Colors.deepPurple, size: 28),
+                Icon(Icons.info_outline, color: Colors.deepPurple, size: 28),
                 SizedBox(width: 12),
                 Text(
                   'About this Example',

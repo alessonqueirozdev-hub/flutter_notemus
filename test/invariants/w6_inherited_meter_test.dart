@@ -35,18 +35,20 @@ void main() {
     await metadata.load();
   });
 
-  Note n(String step, int octave, DurationType d) =>
-      Note(pitch: Pitch(step: step, octave: octave), duration: Duration(d));
+  Note n(String step, int octave, DurationType d) => Note(
+    pitch: Pitch(step: step, octave: octave),
+    duration: Duration(d),
+  );
 
-  Measure bar(List<MusicalElement> elements) => Measure()
-    ..elements.addAll(elements);
+  Measure bar(List<MusicalElement> elements) =>
+      Measure()..elements.addAll(elements);
 
   LayoutEngine engineFor(Staff staff, {double width = 900}) => LayoutEngine(
-        staff,
-        availableWidth: width,
-        staffSpace: 12,
-        metadata: metadata,
-      );
+    staff,
+    availableWidth: width,
+    staffSpace: 12,
+    metadata: metadata,
+  );
 
   /// Every field of [m] rendered as text, so "the model did not change" can be
   /// asserted field by field rather than by a hand-picked subset.
@@ -55,15 +57,15 @@ void main() {
   /// point of the invariant is that the engine did not touch the CALLER'S
   /// objects, so a copy that merely compares equal would not prove it.
   String dump(Measure m) => [
-        'type=${m.runtimeType}',
-        'autoBeaming=${m.autoBeaming}',
-        'beamingMode=${m.beamingMode}',
-        'manualBeamGroups=${m.manualBeamGroups}',
-        'inheritedTimeSignature=${m.inheritedTimeSignature}',
-        'number=${m.number}',
-        'elements=[${m.elements.map((e) => '${e.runtimeType}#${identityHashCode(e)}').join(',')}]',
-        'allElements=[${m.allElements.map((e) => '${e.runtimeType}#${identityHashCode(e)}').join(',')}]',
-      ].join('\n');
+    'type=${m.runtimeType}',
+    'autoBeaming=${m.autoBeaming}',
+    'beamingMode=${m.beamingMode}',
+    'manualBeamGroups=${m.manualBeamGroups}',
+    'inheritedTimeSignature=${m.inheritedTimeSignature}',
+    'number=${m.number}',
+    'elements=[${m.elements.map((e) => '${e.runtimeType}#${identityHashCode(e)}').join(',')}]',
+    'allElements=[${m.allElements.map((e) => '${e.runtimeType}#${identityHashCode(e)}').join(',')}]',
+  ].join('\n');
 
   /// Bar 1 declares 4/4; bar 2 declares nothing and holds four quarters, so it
   /// is exactly full under the inherited meter and a fifth quarter is the
@@ -74,7 +76,9 @@ void main() {
       TimeSignature(numerator: 4, denominator: 4),
       for (var i = 0; i < 4; i++) n('C', 4, DurationType.quarter),
     ]);
-    final m2 = bar([for (var i = 0; i < 4; i++) n('D', 4, DurationType.quarter)]);
+    final m2 = bar([
+      for (var i = 0; i < 4; i++) n('D', 4, DurationType.quarter),
+    ]);
     return (Staff(measures: [m1, m2]), m2);
   }
 
@@ -85,8 +89,11 @@ void main() {
     try {
       m.add(n('E', 4, DurationType.quarter));
     } on MeasureCapacityException {
-      expect(m.elements.length, before,
-          reason: 'a rejected add must not have appended anything');
+      expect(
+        m.elements.length,
+        before,
+        reason: 'a rejected add must not have appended anything',
+      );
       return false;
     }
     expect(m.elements.length, before + 1);
@@ -94,14 +101,16 @@ void main() {
     return true;
   }
 
-  group('ADR-005 item 8 — layout does not change whether Measure.add throws',
-      () {
+  group('ADR-005 item 8 — layout does not change whether Measure.add throws', () {
     test('the fifth quarter is accepted before AND after layout()', () {
       final (staff, m2) = twoBars();
 
       expect(m2.inheritedTimeSignature, isNull);
-      expect(acceptsFifthQuarter(m2), isTrue,
-          reason: 'baseline: an un-laid-out bar with no meter accepts anything');
+      expect(
+        acceptsFifthQuarter(m2),
+        isTrue,
+        reason: 'baseline: an un-laid-out bar with no meter accepts anything',
+      );
 
       final engine = engineFor(staff);
       final placed = engine.layout();
@@ -109,35 +118,55 @@ void main() {
 
       // The engine must still have DECIDED the inheritance, otherwise "nothing
       // changed" would be trivially true because nothing happened.
-      expect(engine.inheritedTimeSignatures[m2], isNotNull,
-          reason: 'the engine did not derive bar 2\'s meter at all');
+      expect(
+        engine.inheritedTimeSignatures[m2],
+        isNotNull,
+        reason: 'the engine did not derive bar 2\'s meter at all',
+      );
       expect(engine.timeSignatureOf(m2)?.numerator, 4);
       expect(engine.timeSignatureOf(m2)?.denominator, 4);
       // …and it must have derived it WITHOUT touching the model.
-      expect(m2.inheritedTimeSignature, isNull,
-          reason: 'layout() wrote the meter into the caller\'s Measure');
-      expect(acceptsFifthQuarter(m2), isTrue,
-          reason: 'layout() changed whether Measure.add throws');
-    });
-
-    test('the fifth quarter is still accepted after renderStaffToPng',
-        () async {
-      final (staff, m2) = twoBars();
-      expect(acceptsFifthQuarter(m2), isTrue);
-
-      final png = await ScoreRasterizer.renderStaffToPng(
-        staff: staff,
-        metadata: metadata,
-        width: 900,
+      expect(
+        m2.inheritedTimeSignature,
+        isNull,
+        reason: 'layout() wrote the meter into the caller\'s Measure',
       );
-      expect(png, isNotNull,
-          reason: 'nothing was painted, so nothing is proven');
-
-      expect(m2.inheritedTimeSignature, isNull,
-          reason: 'the PAINT pass wrote the meter into the model');
-      expect(acceptsFifthQuarter(m2), isTrue,
-          reason: 'painting changed whether Measure.add throws');
+      expect(
+        acceptsFifthQuarter(m2),
+        isTrue,
+        reason: 'layout() changed whether Measure.add throws',
+      );
     });
+
+    test(
+      'the fifth quarter is still accepted after renderStaffToPng',
+      () async {
+        final (staff, m2) = twoBars();
+        expect(acceptsFifthQuarter(m2), isTrue);
+
+        final png = await ScoreRasterizer.renderStaffToPng(
+          staff: staff,
+          metadata: metadata,
+          width: 900,
+        );
+        expect(
+          png,
+          isNotNull,
+          reason: 'nothing was painted, so nothing is proven',
+        );
+
+        expect(
+          m2.inheritedTimeSignature,
+          isNull,
+          reason: 'the PAINT pass wrote the meter into the model',
+        );
+        expect(
+          acceptsFifthQuarter(m2),
+          isTrue,
+          reason: 'painting changed whether Measure.add throws',
+        );
+      },
+    );
 
     test('every Measure is field-for-field identical across layout()', () {
       final (staff, _) = twoBars();
@@ -146,8 +175,11 @@ void main() {
       engineFor(staff).layout();
 
       for (var i = 0; i < staff.measures.length; i++) {
-        expect(dump(staff.measures[i]), before[i],
-            reason: 'layout() mutated measure $i');
+        expect(
+          dump(staff.measures[i]),
+          before[i],
+          reason: 'layout() mutated measure $i',
+        );
       }
     });
 
@@ -155,60 +187,93 @@ void main() {
       // The field stays writable on purpose: a caller may opt a stand-alone bar
       // into preventive validation, and `GrandStaffPainter` uses it to hand a
       // wrapped system the meter declared before it.
-      final m = Measure(inheritedTimeSignature: TimeSignature(numerator: 4, denominator: 4))
-        ..elements.addAll([for (var i = 0; i < 4; i++) n('C', 4, DurationType.quarter)]);
-      expect(acceptsFifthQuarter(m), isFalse,
-          reason: 'an author-set inherited meter must still enforce capacity');
+      final m =
+          Measure(
+              inheritedTimeSignature: TimeSignature(
+                numerator: 4,
+                denominator: 4,
+              ),
+            )
+            ..elements.addAll([
+              for (var i = 0; i < 4; i++) n('C', 4, DurationType.quarter),
+            ]);
+      expect(
+        acceptsFifthQuarter(m),
+        isFalse,
+        reason: 'an author-set inherited meter must still enforce capacity',
+      );
 
       // And the engine seeds itself from it, so the bars AFTER it inherit too.
-      final follower = bar([for (var i = 0; i < 4; i++) n('D', 4, DurationType.quarter)]);
+      final follower = bar([
+        for (var i = 0; i < 4; i++) n('D', 4, DurationType.quarter),
+      ]);
       final engine = engineFor(Staff(measures: [m, follower]));
       engine.layout();
-      expect(engine.timeSignatureOf(follower)?.numerator, 4,
-          reason: 'the author-supplied seed did not carry forward');
+      expect(
+        engine.timeSignatureOf(follower)?.numerator,
+        4,
+        reason: 'the author-supplied seed did not carry forward',
+      );
     });
   });
 
   group('ADR-005 item 8 — validation still finds over-full inherited bars', () {
-    test('MeasureValidator.validateStaff detects a bar over an earlier meter',
-        () {
-      // Bar 2 declares no meter and holds FIVE quarters against bar 1's 4/4.
-      final staff = Staff(measures: [
-        bar([
-          Clef(clefType: ClefType.treble),
-          TimeSignature(numerator: 4, denominator: 4),
-          for (var i = 0; i < 4; i++) n('C', 4, DurationType.quarter),
-        ]),
-        bar([for (var i = 0; i < 5; i++) n('D', 4, DurationType.quarter)]),
-      ]);
+    test(
+      'MeasureValidator.validateStaff detects a bar over an earlier meter',
+      () {
+        // Bar 2 declares no meter and holds FIVE quarters against bar 1's 4/4.
+        final staff = Staff(
+          measures: [
+            bar([
+              Clef(clefType: ClefType.treble),
+              TimeSignature(numerator: 4, denominator: 4),
+              for (var i = 0; i < 4; i++) n('C', 4, DurationType.quarter),
+            ]),
+            bar([for (var i = 0; i < 5; i++) n('D', 4, DurationType.quarter)]),
+          ],
+        );
 
-      final results = MeasureValidator.validateStaff(staff);
-      expect(results, hasLength(2));
-      expect(results[0].isValid, isTrue);
-      expect(results[1].isValid, isFalse,
-          reason: 'the over-full inherited bar was not detected');
-      expect(results[1].numerator, 4);
-      expect(results[1].denominator, 4);
-      expect(results[1].actualDuration, closeTo(1.25, 1e-9));
+        final results = MeasureValidator.validateStaff(staff);
+        expect(results, hasLength(2));
+        expect(results[0].isValid, isTrue);
+        expect(
+          results[1].isValid,
+          isFalse,
+          reason: 'the over-full inherited bar was not detected',
+        );
+        expect(results[1].numerator, 4);
+        expect(results[1].denominator, 4);
+        expect(results[1].actualDuration, closeTo(1.25, 1e-9));
 
-      // …and it did so without writing anything back.
-      expect(staff.measures[1].inheritedTimeSignature, isNull);
-    });
+        // …and it did so without writing anything back.
+        expect(staff.measures[1].inheritedTimeSignature, isNull);
+      },
+    );
 
     test('a declared meter beats a stale author hint on a later bar', () {
       // The old validateStaff took `_findTimeSignature(measure)` per bar, so a
       // leftover hint of 3/4 on bar 2 overrode the 4/4 the staff declares in
       // bar 1 and reported a legal 4/4 bar as over-full.
-      final stale = Measure(inheritedTimeSignature: TimeSignature(numerator: 3, denominator: 4))
-        ..elements.addAll([for (var i = 0; i < 4; i++) n('D', 4, DurationType.quarter)]);
-      final staff = Staff(measures: [
-        bar([
-          Clef(clefType: ClefType.treble),
-          TimeSignature(numerator: 4, denominator: 4),
-          for (var i = 0; i < 4; i++) n('C', 4, DurationType.quarter),
-        ]),
-        stale,
-      ]);
+      final stale =
+          Measure(
+              inheritedTimeSignature: TimeSignature(
+                numerator: 3,
+                denominator: 4,
+              ),
+            )
+            ..elements.addAll([
+              for (var i = 0; i < 4; i++) n('D', 4, DurationType.quarter),
+            ]);
+      final staff = Staff(
+        measures: [
+          bar([
+            Clef(clefType: ClefType.treble),
+            TimeSignature(numerator: 4, denominator: 4),
+            for (var i = 0; i < 4; i++) n('C', 4, DurationType.quarter),
+          ]),
+          stale,
+        ],
+      );
 
       final results = MeasureValidator.validateStaff(staff);
       expect(results[1].numerator, 4, reason: 'the stale 3/4 hint won');
@@ -230,28 +295,32 @@ void main() {
     //
     // Bar index 6 is the lone half rest; the meter is declared once, in bar 0.
     StaffGroup group({required bool redeclareMeter}) {
-      Staff voice(String step, int octave) => Staff(measures: [
-            for (var i = 0; i < 9; i++)
-              bar([
-                if (i == 0) Clef(clefType: ClefType.treble),
-                if (i == 0) TimeSignature(numerator: 2, denominator: 4),
-                if (i == 6 && redeclareMeter)
-                  TimeSignature(numerator: 2, denominator: 4),
-                if (i == 6)
-                  Rest(duration: const Duration(DurationType.half))
-                else ...[
-                  n(step, octave, DurationType.quarter),
-                  n(step, octave, DurationType.quarter),
-                ],
-              ])
-          ]);
+      Staff voice(String step, int octave) => Staff(
+        measures: [
+          for (var i = 0; i < 9; i++)
+            bar([
+              if (i == 0) Clef(clefType: ClefType.treble),
+              if (i == 0) TimeSignature(numerator: 2, denominator: 4),
+              if (i == 6 && redeclareMeter)
+                TimeSignature(numerator: 2, denominator: 4),
+              if (i == 6)
+                Rest(duration: const Duration(DurationType.half))
+              else ...[
+                n(step, octave, DurationType.quarter),
+                n(step, octave, DurationType.quarter),
+              ],
+            ]),
+        ],
+      );
       return StaffGroup(staves: [voice('C', 5), voice('E', 4)]);
     }
 
     /// X of the single [Rest] on [system], plus the X of the barline that
     /// closes its bar, for the top staff.
     (double rest, double barline)? restAndBarline(
-        GrandStaffPainter painter, int system) {
+      GrandStaffPainter painter,
+      int system,
+    ) {
       final top = painter.alignedSystem(system).first;
       double? rest;
       for (final pe in top) {
@@ -263,66 +332,83 @@ void main() {
       return null;
     }
 
-    test('the half rest in a wrapped system is still centred in its 2/4 bar',
-        () {
-      GrandStaffPainter paint(bool redeclare) => GrandStaffPainter(
-            staffGroup: group(redeclareMeter: redeclare),
-            staffSpace: 12,
-            metadata: metadata,
-            theme: const MusicScoreTheme(),
-            availableWidth: 420,
-          );
+    test(
+      'the half rest in a wrapped system is still centred in its 2/4 bar',
+      () {
+        GrandStaffPainter paint(bool redeclare) => GrandStaffPainter(
+          staffGroup: group(redeclareMeter: redeclare),
+          staffSpace: 12,
+          metadata: metadata,
+          theme: const MusicScoreTheme(),
+          availableWidth: 420,
+        );
 
-      final inherited = paint(false);
-      final declared = paint(true);
+        final inherited = paint(false);
+        final declared = paint(true);
 
-      expect(inherited.systemCount, greaterThan(1),
-          reason: 'the score did not wrap, so nothing about systems 2..n is '
-              'being tested');
+        expect(
+          inherited.systemCount,
+          greaterThan(1),
+          reason:
+              'the score did not wrap, so nothing about systems 2..n is '
+              'being tested',
+        );
 
-      // Find the system holding the rest (the same one in both, since the
-      // extra TimeSignature only widens one bar slightly).
-      (double, double)? found;
-      var foundSystem = -1;
-      for (var s = 0; s < inherited.systemCount; s++) {
-        final pair = restAndBarline(inherited, s);
-        if (pair != null) {
-          found = pair;
-          foundSystem = s;
-          break;
+        // Find the system holding the rest (the same one in both, since the
+        // extra TimeSignature only widens one bar slightly).
+        (double, double)? found;
+        var foundSystem = -1;
+        for (var s = 0; s < inherited.systemCount; s++) {
+          final pair = restAndBarline(inherited, s);
+          if (pair != null) {
+            found = pair;
+            foundSystem = s;
+            break;
+          }
         }
-      }
-      expect(found, isNotNull, reason: 'the full-bar rest was never placed');
-      expect(foundSystem, greaterThan(0),
-          reason: 'the rest landed in system 1, where the meter IS present — '
-              'the trap is only sprung from system 2 on');
+        expect(found, isNotNull, reason: 'the full-bar rest was never placed');
+        expect(
+          foundSystem,
+          greaterThan(0),
+          reason:
+              'the rest landed in system 1, where the meter IS present — '
+              'the trap is only sprung from system 2 on',
+        );
 
-      final (restX, barlineX) = found!;
-      // Centred means the rest sits well right of the bar's content edge. The
-      // uncentred (broken) placement is the content edge itself, so comparing
-      // against the OTHER staff's note X on the same system is the sharpest
-      // available yardstick: a centred rest is right of it by half the slack.
-      final leftEdge = inherited
-          .alignedSystem(foundSystem)
-          .first
-          .where((pe) => pe.element is Clef || pe.element is Rest)
-          .map((pe) => pe.position.dx)
-          .reduce((a, b) => a < b ? a : b);
-      expect(restX, greaterThan(leftEdge),
-          reason: 'the rest was not moved at all');
-      expect(barlineX - restX, greaterThan(0));
+        final (restX, barlineX) = found!;
+        // Centred means the rest sits well right of the bar's content edge. The
+        // uncentred (broken) placement is the content edge itself, so comparing
+        // against the OTHER staff's note X on the same system is the sharpest
+        // available yardstick: a centred rest is right of it by half the slack.
+        final leftEdge = inherited
+            .alignedSystem(foundSystem)
+            .first
+            .where((pe) => pe.element is Clef || pe.element is Rest)
+            .map((pe) => pe.position.dx)
+            .reduce((a, b) => a < b ? a : b);
+        expect(
+          restX,
+          greaterThan(leftEdge),
+          reason: 'the rest was not moved at all',
+        );
+        expect(barlineX - restX, greaterThan(0));
 
-      // The decisive check: inheriting the meter must place the rest exactly
-      // where declaring it in the same bar does.
-      final declaredPair = restAndBarline(declared, foundSystem);
-      expect(declaredPair, isNotNull);
-      final slackInherited = barlineX - restX;
-      final slackDeclared = declaredPair!.$2 - declaredPair.$1;
-      expect(slackInherited, closeTo(slackDeclared, 0.5),
-          reason: 'the wrapped system lost its inherited meter: the full-bar '
+        // The decisive check: inheriting the meter must place the rest exactly
+        // where declaring it in the same bar does.
+        final declaredPair = restAndBarline(declared, foundSystem);
+        expect(declaredPair, isNotNull);
+        final slackInherited = barlineX - restX;
+        final slackDeclared = declaredPair!.$2 - declaredPair.$1;
+        expect(
+          slackInherited,
+          closeTo(slackDeclared, 0.5),
+          reason:
+              'the wrapped system lost its inherited meter: the full-bar '
               'rest was centred when the meter was re-declared in the bar and '
-              'not when it was inherited from bar 1');
-    });
+              'not when it was inherited from bar 1',
+        );
+      },
+    );
   });
 
   // =========================================================================
@@ -378,8 +464,9 @@ void main() {
           // `foo.inheritedTimeSignature =`, `..inheritedTimeSignature =` and
           // `inheritedTimeSignature:` - a named argument is a write too.
           if (!write.hasMatch(line)) continue;
-          final match =
-              allowed.where((a) => path.endsWith(a.$1) && line.contains(a.$2));
+          final match = allowed.where(
+            (a) => path.endsWith(a.$1) && line.contains(a.$2),
+          );
           if (match.isEmpty) {
             offenders.add('$path:${i + 1}: ${line.trim()}');
           } else {
@@ -389,17 +476,25 @@ void main() {
         }
       }
 
-      expect(offenders, isEmpty,
-          reason: 'ADR-005 action item 8: the inherited meter is a VALUE the '
-              'engine owns (LayoutEngine.inheritedTimeSignatures / '
-              'timeSignatureOf). Writing it onto a Measure changes whether '
-              'Measure.add throws - rendering a score would break building '
-              'one. Offending line(s):\n${offenders.join('\n')}');
+      expect(
+        offenders,
+        isEmpty,
+        reason:
+            'ADR-005 action item 8: the inherited meter is a VALUE the '
+            'engine owns (LayoutEngine.inheritedTimeSignatures / '
+            'timeSignatureOf). Writing it onto a Measure changes whether '
+            'Measure.add throws - rendering a score would break building '
+            'one. Offending line(s):\n${offenders.join('\n')}',
+      );
 
       for (final entry in allowed) {
-        expect(counts['${entry.$1}|${entry.$2}'], entry.$3,
-            reason: 'the allow-list entry "${entry.$2}" in ${entry.$1} is out '
-                'of date (expected ${entry.$3}). Reason on file: ${entry.$4}');
+        expect(
+          counts['${entry.$1}|${entry.$2}'],
+          entry.$3,
+          reason:
+              'the allow-list entry "${entry.$2}" in ${entry.$1} is out '
+              'of date (expected ${entry.$3}). Reason on file: ${entry.$4}',
+        );
       }
     });
 
@@ -411,21 +506,24 @@ void main() {
           measure.inheritedTimeSignature = ts;
         }
       ''';
-      final hits = _stripComments(reintroduced)
-          .split('\n')
-          .where(write.hasMatch)
-          .toList();
-      expect(hits, hasLength(1),
-          reason: 'the scanner matched $hits - it must see the real write and '
-              'skip the commented one');
+      final hits = _stripComments(
+        reintroduced,
+      ).split('\n').where(write.hasMatch).toList();
+      expect(
+        hits,
+        hasLength(1),
+        reason:
+            'the scanner matched $hits - it must see the real write and '
+            'skip the commented one',
+      );
       expect(hits.single, contains('measure.inheritedTimeSignature = ts;'));
 
       // ...and it must not fire on a READ, which stays legal.
       expect(
-        _stripComments('final ts = measure.timeSignature ?? '
-                'measure.inheritedTimeSignature;')
-            .split('\n')
-            .where(write.hasMatch),
+        _stripComments(
+          'final ts = measure.timeSignature ?? '
+          'measure.inheritedTimeSignature;',
+        ).split('\n').where(write.hasMatch),
         isEmpty,
       );
     });

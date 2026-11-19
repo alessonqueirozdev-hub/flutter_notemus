@@ -102,12 +102,12 @@ class _Row {
 }
 
 _BarKind _barKind(BarlineType t) => switch (t) {
-      BarlineType.double || BarlineType.lightLight => _BarKind.double_,
-      BarlineType.final_ || BarlineType.lightHeavy => _BarKind.finalBar,
-      BarlineType.repeatBackward => _BarKind.repeatEnd,
-      BarlineType.repeatBoth => _BarKind.repeatStartEnd,
-      _ => _BarKind.single,
-    };
+  BarlineType.double || BarlineType.lightLight => _BarKind.double_,
+  BarlineType.final_ || BarlineType.lightHeavy => _BarKind.finalBar,
+  BarlineType.repeatBackward => _BarKind.repeatEnd,
+  BarlineType.repeatBoth => _BarKind.repeatStartEnd,
+  _ => _BarKind.single,
+};
 
 /// Builds the Jianpu layout (rows of measures) for [staff] within [maxWidth].
 class JianpuLayout {
@@ -140,7 +140,9 @@ class JianpuLayout {
     TimeSignature? timeSig;
     for (final m in staff.measures) {
       for (final e in m.elements) {
-        if (e is KeySignature) headerMapper = JianpuPitchMapper.fromKeySignature(e);
+        if (e is KeySignature) {
+          headerMapper = JianpuPitchMapper.fromKeySignature(e);
+        }
         if (e is TimeSignature) timeSig ??= e;
       }
       if (timeSig != null) break;
@@ -158,8 +160,10 @@ class JianpuLayout {
     double textW(String s, double scale) {
       tp.text = TextSpan(
         text: s,
-        style: TextStyle(fontSize: size * scale, color: theme.color)
-            .withMusicTextFallback(),
+        style: TextStyle(
+          fontSize: size * scale,
+          color: theme.color,
+        ).withMusicTextFallback(),
       );
       tp.layout();
       return tp.width;
@@ -192,7 +196,9 @@ class JianpuLayout {
       );
       g.accX = box.endX;
       var cursor = box.endX;
-      if (g.accidental.isNotEmpty) cursor += textW(g.accidental, 0.6) + size * 0.04;
+      if (g.accidental.isNotEmpty) {
+        cursor += textW(g.accidental, 0.6) + size * 0.04;
+      }
       g.numX = cursor;
       g.numW = textW(g.numeral, 1.0);
       cursor += g.numW + g.augDots * dotAdv + g.dashes * dashW + gap;
@@ -301,16 +307,16 @@ class JianpuPainter extends CustomPainter {
   /// `JianpuLayout.build` — see the note there for the measured `.notdef`
   /// counts that motivated adding the chain.
   TextPainter _text(String s, {double scale = 1.0}) => TextPainter(
-        text: TextSpan(
-          text: s,
-          style: TextStyle(
-            fontSize: theme.numeralSize * scale,
-            color: theme.color,
-            height: 1.0,
-          ).withMusicTextFallback(),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout();
+    text: TextSpan(
+      text: s,
+      style: TextStyle(
+        fontSize: theme.numeralSize * scale,
+        color: theme.color,
+        height: 1.0,
+      ).withMusicTextFallback(),
+    ),
+    textDirection: TextDirection.ltr,
+  )..layout();
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -342,8 +348,15 @@ class JianpuPainter extends CustomPainter {
       double x = barPad;
       for (final box in row.measures) {
         if (box.repeatStart) {
-          _barline(canvas, stroke, thick, x, y, _BarKind.repeatStartEnd,
-              startOnly: true);
+          _barline(
+            canvas,
+            stroke,
+            thick,
+            x,
+            y,
+            _BarKind.repeatStartEnd,
+            startOnly: true,
+          );
           x += barPad;
         }
         // Position this measure's glyphs absolutely from the measure origin
@@ -370,11 +383,11 @@ class JianpuPainter extends CustomPainter {
               final dy = g.octaveDots > 0
                   ? y - num.height / 2 - s * 0.16 - i * (r * 3.2)
                   : y +
-                      num.height / 2 +
-                      s * 0.12 +
-                      g.underlines * underlineGap +
-                      s * 0.12 +
-                      i * (r * 3.2);
+                        num.height / 2 +
+                        s * 0.12 +
+                        g.underlines * underlineGap +
+                        s * 0.12 +
+                        i * (r * 3.2);
               canvas.drawCircle(Offset(g.numCenter, dy), r, stroke);
             }
           }
@@ -389,14 +402,18 @@ class JianpuPainter extends CustomPainter {
           // Augmentation dashes.
           for (var i = 0; i < g.dashes; i++) {
             final dx = c + dashW * 0.18;
-            canvas.drawLine(Offset(dx, y), Offset(dx + dashW * 0.62, y),
-                stroke);
+            canvas.drawLine(
+              Offset(dx, y),
+              Offset(dx + dashW * 0.62, y),
+              stroke,
+            );
             c += dashW;
           }
 
           // Lyrics (verses) centered under the numeral.
           if (g.lyrics.isNotEmpty) {
-            var ly = y +
+            var ly =
+                y +
                 num.height / 2 +
                 g.underlines * underlineGap +
                 (g.octaveDots < 0 ? s * 0.5 : 0) +
@@ -429,7 +446,8 @@ class JianpuPainter extends CustomPainter {
                 box.glyphs[j + 1].beatIndex == beat) {
               j++;
             }
-            final uy = y +
+            final uy =
+                y +
                 _text(box.glyphs[i].numeral).height / 2 +
                 s * 0.06 +
                 (lvl - 1) * underlineGap;

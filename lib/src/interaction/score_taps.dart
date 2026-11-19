@@ -44,7 +44,8 @@ class ScoreNoteTap {
   });
 
   @override
-  String toString() => 'ScoreNoteTap(${note.pitch.step}${note.pitch.octave}, '
+  String toString() =>
+      'ScoreNoteTap(${note.pitch.step}${note.pitch.octave}, '
       'bar index $measureIndex, staff $staffIndex)';
 }
 
@@ -99,14 +100,14 @@ Note? noteForHit(ScoreHit hit, LayoutEngine engine, Offset point) {
 
 /// Every note inside [elements], descending into chords and nested tuplets.
 List<Note> _notesOf(List<MusicalElement> elements) => [
-      for (final e in elements)
-        if (e is Note)
-          e
-        else if (e is Chord)
-          ...e.notes
-        else if (e is Tuplet)
-          ..._notesOf(e.elements),
-    ];
+  for (final e in elements)
+    if (e is Note)
+      e
+    else if (e is Chord)
+      ...e.notes
+    else if (e is Tuplet)
+      ..._notesOf(e.elements),
+];
 
 /// The note of [notes] nearest [point]: by x first, so a tap picks the column
 /// it is on, then by y within that column (a chord). Notes the layout gave no
@@ -186,7 +187,8 @@ int? measureIndexAtX(
   var right = double.negativeInfinity;
   for (final positioned in elements) {
     if (engine != null) {
-      final edge = positioned.position.dx +
+      final edge =
+          positioned.position.dx +
           engine.elementPaintedRightExtent(positioned.element);
       if (edge > right) right = edge;
     }
@@ -206,10 +208,9 @@ int? measureIndexAtX(
   if (x < starts[indices.first]!) return null;
   for (var i = 0; i < indices.length; i++) {
     final index = indices[i];
-    final close = closes[index] ??
-        (i + 1 < indices.length
-            ? starts[indices[i + 1]]!
-            : double.infinity);
+    final close =
+        closes[index] ??
+        (i + 1 < indices.length ? starts[indices[i + 1]]! : double.infinity);
     if (x <= close) return index;
   }
   return indices.last;

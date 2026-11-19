@@ -118,7 +118,9 @@ class PdfPreviewWidget extends StatelessWidget {
   String _generateFileName() {
     final baseTitle = score.title ?? 'score';
     final safeName = baseTitle.replaceAll(RegExp(r'[^\w\s-]'), '').trim();
-    final fileName = safeName.isEmpty ? 'score' : safeName.toLowerCase().replaceAll(' ', '_');
+    final fileName = safeName.isEmpty
+        ? 'score'
+        : safeName.toLowerCase().replaceAll(' ', '_');
     return '$fileName.pdf';
   }
 
@@ -126,15 +128,12 @@ class PdfPreviewWidget extends StatelessWidget {
   Future<void> _sharePdf(BuildContext context) async {
     try {
       final pdfBytes = await _generatePdf(format);
-      await Printing.sharePdf(
-        bytes: pdfBytes,
-        filename: _generateFileName(),
-      );
+      await Printing.sharePdf(bytes: pdfBytes, filename: _generateFileName());
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to share PDF: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to share PDF: $e')));
       }
     }
   }
@@ -153,9 +152,9 @@ class ScorePrintDialog {
       debugPrint('ScorePrintDialog: $warning');
     }
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(exporter.warnings.first)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(exporter.warnings.first)));
   }
 
   /// Show print dialog for a score
@@ -197,9 +196,9 @@ class ScorePrintDialog {
       );
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to print: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to print: $e')));
       }
     }
   }
@@ -231,9 +230,9 @@ class ScorePrintDialog {
       );
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to share: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to share: $e')));
       }
     }
   }
@@ -262,21 +261,19 @@ class ScorePrintDialog {
       final pdfBytes = await exporter.export();
       if (context.mounted) _reportWarnings(context, exporter);
 
-      final fileName = customFileName ??
+      final fileName =
+          customFileName ??
           '${score.title?.replaceAll(' ', '_') ?? 'score'}.pdf';
 
       // On mobile/web, this will trigger download/share dialog
-      await Printing.sharePdf(
-        bytes: pdfBytes,
-        filename: fileName,
-      );
+      await Printing.sharePdf(bytes: pdfBytes, filename: fileName);
 
       return fileName;
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to save: $e')));
       }
       return null;
     }
@@ -308,11 +305,7 @@ extension ScorePdfOperations on Score {
     BuildContext context, {
     PdfPageFormat format = PdfPageFormat.a4,
   }) async {
-    await ScorePrintDialog.print(
-      context,
-      score: this,
-      format: format,
-    );
+    await ScorePrintDialog.print(context, score: this, format: format);
   }
 
   /// Share this score as PDF
@@ -320,10 +313,6 @@ extension ScorePdfOperations on Score {
     BuildContext context, {
     PdfPageFormat format = PdfPageFormat.a4,
   }) async {
-    await ScorePrintDialog.share(
-      context,
-      score: this,
-      format: format,
-    );
+    await ScorePrintDialog.share(context, score: this, format: format);
   }
 }

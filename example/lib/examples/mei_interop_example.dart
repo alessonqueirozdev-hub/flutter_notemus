@@ -141,10 +141,8 @@ class MeiInteropExample extends StatelessWidget {
   static String _octlessOutcome() {
     try {
       final staff = MEIParser.parseMEI(_octless);
-      final notes = staff.measures
-          .expand((m) => m.elements)
-          .whereType<Note>()
-          .length;
+      final notes =
+          staff.measures.expand((m) => m.elements).whereType<Note>().length;
       return 'No exception. Imported $notes note(s) — this is the old '
           'behaviour and should not happen.';
     } on FormatException catch (e) {

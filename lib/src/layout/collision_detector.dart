@@ -6,13 +6,7 @@ import 'layout_engine.dart';
 
 /// Prioridade de colisão for elementos musicais
 /// Elementos with greater prioridade are desenhados first and not movidos
-enum CollisionPriority {
-  veryLow,
-  low,
-  medium,
-  high,
-  veryHigh,
-}
+enum CollisionPriority { veryLow, low, medium, high, veryHigh }
 
 /// Categoria de elemento musical for detecção de colisões
 enum CollisionCategory {
@@ -67,11 +61,11 @@ class BoundingBox {
 
   /// Returns o retângulo representando this bounding box
   Rect get rect => Rect.fromLTWH(
-        position.dx - width / 2,
-        position.dy - height / 2,
-        width,
-        height,
-      );
+    position.dx - width / 2,
+    position.dy - height / 2,
+    width,
+    height,
+  );
 
   /// Checks if this bounding box intersecta with other
   bool intersects(BoundingBox other) {
@@ -141,8 +135,10 @@ class CollisionDetector {
 
   CollisionDetector({
     required this.staffSpace,
-    double? defaultMargin, // COMPATIBILIDADE: Parâmetro ignorado, mantido para API legacy
-    Map<CollisionCategory, double>? categoryMargins, // COMPATIBILIDADE: Parâmetro ignorado
+    double?
+    defaultMargin, // COMPATIBILIDADE: Parâmetro ignorado, mantido para API legacy
+    Map<CollisionCategory, double>?
+    categoryMargins, // COMPATIBILIDADE: Parâmetro ignorado
   });
 
   /// Registra a região ocupada by a elemento
@@ -164,16 +160,19 @@ class CollisionDetector {
     required CollisionCategory category,
     required CollisionPriority priority,
   }) {
-    _registeredItems.add(CollisionItem(
-      id: id,
-      bounds: bounds,
-      category: category,
-      priority: priority,
-    ));
+    _registeredItems.add(
+      CollisionItem(
+        id: id,
+        bounds: bounds,
+        category: category,
+        priority: priority,
+      ),
+    );
   }
 
   /// Returns all os itens registrados
-  List<CollisionItem> get registeredItems => List.unmodifiable(_registeredItems);
+  List<CollisionItem> get registeredItems =>
+      List.unmodifiable(_registeredItems);
 
   /// Detecta colisões between itens registrados
   List<CollisionItem> detectCollisions() {
@@ -195,16 +194,15 @@ class CollisionDetector {
   }
 
   /// Checks if a position causaria colisão
-  bool wouldCollide(
-    BoundingBox proposedBox,
-    List<String> ignoreTypes,
-  ) {
+  bool wouldCollide(BoundingBox proposedBox, List<String> ignoreTypes) {
     for (final region in _occupiedRegions) {
       if (ignoreTypes.contains(region.elementType)) continue;
 
       if (proposedBox.intersects(region)) {
-        final minDistance =
-            _getMinDistance(proposedBox.elementType, region.elementType);
+        final minDistance = _getMinDistance(
+          proposedBox.elementType,
+          region.elementType,
+        );
         final actualDistance = proposedBox.verticalDistanceTo(region);
 
         if (actualDistance < minDistance * staffSpace) {
@@ -436,7 +434,8 @@ class CollisionDetector {
 
     for (final item in collisions) {
       final categoryName = item.category.toString();
-      collisionsByCategory[categoryName] = (collisionsByCategory[categoryName] ?? 0) + 1;
+      collisionsByCategory[categoryName] =
+          (collisionsByCategory[categoryName] ?? 0) + 1;
     }
 
     return CollisionStatistics(

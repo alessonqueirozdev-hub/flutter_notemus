@@ -129,7 +129,7 @@ class SymbolPosition {
   double width;
 
   /// Tempo musical absoluto (in frações de semibreve)
-  /// 
+  ///
   /// used for calculation de durational spacing
   final double musicalTime;
 
@@ -137,7 +137,7 @@ class SymbolPosition {
   final double durationToNext;
 
   /// Point de âncora for reescalonamento (0.0 - 1.0)
-  /// 
+  ///
   /// 0.0 = borda left, 0.5 = centre, 1.0 = borda right
   final double anchorPoint;
 
@@ -189,14 +189,16 @@ class TextualSpacing {
     double currentX = 0.0;
     for (final pos in positions) {
       final double scaledWidth = pos.width * scaleFactor;
-      scaledPositions.add(SymbolPosition(
-        symbols: pos.symbols,
-        xPosition: currentX,
-        width: scaledWidth,
-        musicalTime: pos.musicalTime,
-        durationToNext: pos.durationToNext,
-        anchorPoint: pos.anchorPoint,
-      ));
+      scaledPositions.add(
+        SymbolPosition(
+          symbols: pos.symbols,
+          xPosition: currentX,
+          width: scaledWidth,
+          musicalTime: pos.musicalTime,
+          durationToNext: pos.durationToNext,
+          anchorPoint: pos.anchorPoint,
+        ),
+      );
       currentX += scaledWidth;
     }
 
@@ -223,11 +225,7 @@ class DurationalSpacing {
   /// Duração of the note more curta used as reference
   final double shortestNoteDuration;
 
-  DurationalSpacing(
-    this.positions,
-    this.totalWidth,
-    this.shortestNoteDuration,
-  );
+  DurationalSpacing(this.positions, this.totalWidth, this.shortestNoteDuration);
 
   /// Escalar linearmente for a new width
   DurationalSpacing scale(double targetWidth) {
@@ -237,18 +235,24 @@ class DurationalSpacing {
     double currentX = 0.0;
     for (final pos in positions) {
       final double scaledWidth = pos.width * scaleFactor;
-      scaledPositions.add(SymbolPosition(
-        symbols: pos.symbols,
-        xPosition: currentX,
-        width: scaledWidth,
-        musicalTime: pos.musicalTime,
-        durationToNext: pos.durationToNext,
-        anchorPoint: pos.anchorPoint,
-      ));
+      scaledPositions.add(
+        SymbolPosition(
+          symbols: pos.symbols,
+          xPosition: currentX,
+          width: scaledWidth,
+          musicalTime: pos.musicalTime,
+          durationToNext: pos.durationToNext,
+          anchorPoint: pos.anchorPoint,
+        ),
+      );
       currentX += scaledWidth;
     }
 
-    return DurationalSpacing(scaledPositions, targetWidth, shortestNoteDuration);
+    return DurationalSpacing(
+      scaledPositions,
+      targetWidth,
+      shortestNoteDuration,
+    );
   }
 
   @override
@@ -278,13 +282,13 @@ class FinalSpacing {
   int collisionCount;
 
   /// Métrica de consistência (0.0 - 1.0)
-  /// 
+  ///
   /// 1.0 = perfeito (notes de same duração têm spacing idêntico)
   /// 0.0 = caótico (spacing totalmente inconsistente)
   double consistencyScore;
 
   /// Aproveitamento de space (0.0 - 1.0)
-  /// 
+  ///
   /// Razão between width used and width disponível
   double spaceUtilization;
 
@@ -362,16 +366,18 @@ class TimeSlice {
     const double accidentalWidth = 0.9;
 
     if (element is Note) {
-      final double accidental =
-          element.pitch.accidentalGlyph != null ? accidentalWidth : 0.0;
+      final double accidental = element.pitch.accidentalGlyph != null
+          ? accidentalWidth
+          : 0.0;
       return noteheadWidth + accidental;
     }
     if (element is Rest) {
       return 1.0;
     }
     if (element is Chord) {
-      final bool hasAccidental =
-          element.notes.any((n) => n.pitch.accidentalGlyph != null);
+      final bool hasAccidental = element.notes.any(
+        (n) => n.pitch.accidentalGlyph != null,
+      );
       return noteheadWidth + (hasAccidental ? accidentalWidth : 0.0);
     }
     if (element is Tuplet) {

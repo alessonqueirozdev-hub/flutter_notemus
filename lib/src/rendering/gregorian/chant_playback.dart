@@ -47,23 +47,21 @@ extension ChantScoreMidi on ChantScore {
   MidiSequence toMidiSequence({
     ChantPlaybackOptions options = const ChantPlaybackOptions(),
     String trackName = 'Chant',
-  }) =>
-      ChantMidiMapper.fromChant(
-        elements,
-        options: options,
-        softB: clef.flat,
-        trackName: trackName,
-      );
+  }) => ChantMidiMapper.fromChant(
+    elements,
+    options: options,
+    softB: clef.flat,
+    trackName: trackName,
+  );
 
   /// The chant as a [ChantPlayback] (sequence + per-note timeline).
   ChantPlayback toChantPlayback({
     ChantPlaybackOptions options = const ChantPlaybackOptions(),
     String trackName = 'Chant',
-  }) =>
-      ChantMidiMapper.build(
-        elements,
-        options: options,
-        softB: clef.flat,
-        trackName: trackName,
-      );
+  }) => ChantMidiMapper.build(
+    elements,
+    options: options,
+    softB: clef.flat,
+    trackName: trackName,
+  );
 }

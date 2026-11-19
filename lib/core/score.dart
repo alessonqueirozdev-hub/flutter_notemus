@@ -134,19 +134,12 @@ class Score {
   }
 
   /// Factory: Create a simple single-staff score
-  factory Score.singleStaff(
-    Staff staff, {
-    String? title,
-    String? composer,
-  }) {
+  factory Score.singleStaff(Staff staff, {String? title, String? composer}) {
     return Score(
       title: title,
       composer: composer,
       staffGroups: [
-        StaffGroup(
-          staves: [staff],
-          bracket: BracketType.none,
-        ),
+        StaffGroup(staves: [staff], bracket: BracketType.none),
       ],
     );
   }
@@ -200,11 +193,7 @@ class Score {
     String? composer,
     required List<StaffGroup> groups,
   }) {
-    return Score(
-      title: title,
-      composer: composer,
-      staffGroups: groups,
-    );
+    return Score(title: title, composer: composer, staffGroups: groups);
   }
 }
 
@@ -259,10 +248,7 @@ class PageLayout {
 
   /// Factory: A4 page (landscape)
   factory PageLayout.a4Landscape() {
-    return const PageLayout(
-      width: 842.0,
-      height: 595.0,
-    );
+    return const PageLayout(width: 842.0, height: 595.0);
   }
 
   /// Factory: Letter page (US standard)

@@ -72,10 +72,7 @@ class MidiMapper {
         : results.first.playedMeasures;
     if (options.includeMetronome && playedMeasures.isNotEmpty) {
       tracks.add(
-        _buildMetronomeTrack(
-          playedMeasures: playedMeasures,
-          options: options,
-        ),
+        _buildMetronomeTrack(playedMeasures: playedMeasures, options: options),
       );
     }
 
@@ -177,18 +174,17 @@ List<_PlayedMeasureTiming> _longestTimeline(List<_TrackBuildResult> results) {
 
 List<MidiPlayedMeasure> _publicPlayedMeasures(
   List<_PlayedMeasureTiming> played,
-) =>
-    List.unmodifiable([
-      for (final p in played)
-        MidiPlayedMeasure(
-          measureIndex: p.measureIndex,
-          repeatPass: p.repeatPass,
-          startTick: p.startTick,
-          endTick: p.endTick,
-          numerator: p.timeSignature?.numerator,
-          denominator: p.timeSignature?.denominator,
-        ),
-    ]);
+) => List.unmodifiable([
+  for (final p in played)
+    MidiPlayedMeasure(
+      measureIndex: p.measureIndex,
+      repeatPass: p.repeatPass,
+      startTick: p.startTick,
+      endTick: p.endTick,
+      numerator: p.timeSignature?.numerator,
+      denominator: p.timeSignature?.denominator,
+    ),
+]);
 
 /// Builds every MIDI track that belongs to one staff.
 ///
@@ -265,8 +261,8 @@ List<int> _voiceNumbersInStaff(Staff staff) {
 /// Whether [measure] carries note-producing elements directly (outside of its
 /// voices).
 bool _hasSoundingElement(Measure measure) => measure.elements.any(
-      (element) => element is Note || element is Chord || element is Tuplet,
-    );
+  (element) => element is Note || element is Chord || element is Tuplet,
+);
 
 /// Channel for the [voiceIndex]-th voice of a staff whose base channel is
 /// [baseChannel]. The first voice keeps the staff channel; the metronome
@@ -380,16 +376,18 @@ class _TrackEventBuilder {
     if (note.isGraceNote || ticks <= 0) return;
     final only = onlyVoice;
     if (only != null && voiceNumber != only) return;
-    noteSpans.add(MidiNoteSpan(
-      note: note,
-      staffIndex: staffIndex,
-      voiceNumber: declaredVoice ?? voiceNumber,
-      audible: _isVoiceAudible(voiceNumber),
-      measureIndex: _measureIndex,
-      repeatPass: _repeatPass,
-      startTick: startTick,
-      endTick: startTick + ticks,
-    ));
+    noteSpans.add(
+      MidiNoteSpan(
+        note: note,
+        staffIndex: staffIndex,
+        voiceNumber: declaredVoice ?? voiceNumber,
+        audible: _isVoiceAudible(voiceNumber),
+        measureIndex: _measureIndex,
+        repeatPass: _repeatPass,
+        startTick: startTick,
+        endTick: startTick + ticks,
+      ),
+    );
   }
 
   /// Written-to-sounding transposition of the instrument on this staff
@@ -571,8 +569,13 @@ class _TrackEventBuilder {
         voiceNumber: voiceNumber,
         tupletMultiplier: tupletMultiplier,
       );
-      _recordSpan(element, voiceNumber, tick, consumed,
-          declaredVoice: element.voice);
+      _recordSpan(
+        element,
+        voiceNumber,
+        tick,
+        consumed,
+        declaredVoice: element.voice,
+      );
       return consumed;
     }
 
@@ -584,8 +587,13 @@ class _TrackEventBuilder {
         tupletMultiplier: tupletMultiplier,
       );
       for (final note in element.notes) {
-        _recordSpan(note, voiceNumber, tick, consumed,
-            declaredVoice: note.voice ?? element.voice);
+        _recordSpan(
+          note,
+          voiceNumber,
+          tick,
+          consumed,
+          declaredVoice: note.voice ?? element.voice,
+        );
       }
       return consumed;
     }
@@ -631,8 +639,12 @@ class _TrackEventBuilder {
         // unit (e.g. half-note = 80  ->  quarter = 160).
         final beatQuarters = music.Duration(element.beatUnit).realValue * 4.0;
         final quarterBpm = (element.bpm! * beatQuarters).round();
-        metaEvents.add(MidiEvent.tempo(
-            tick: tick, bpm: quarterBpm < 1 ? element.bpm! : quarterBpm));
+        metaEvents.add(
+          MidiEvent.tempo(
+            tick: tick,
+            bpm: quarterBpm < 1 ? element.bpm! : quarterBpm,
+          ),
+        );
       }
       if (element.text != null && element.text!.trim().isNotEmpty) {
         metaEvents.add(
@@ -706,21 +718,29 @@ class _TrackEventBuilder {
       );
       // Borrow from the preceding note when there is room, otherwise crush at
       // the beat. Either way the cursor does not advance (no overflow).
-      final graceStart = startTick >= graceTicks ? startTick - graceTicks : startTick;
-      final graceEnd =
-          startTick >= graceTicks ? startTick : startTick + graceTicks;
+      final graceStart = startTick >= graceTicks
+          ? startTick - graceTicks
+          : startTick;
+      final graceEnd = startTick >= graceTicks
+          ? startTick
+          : startTick + graceTicks;
       final graceMidi = _soundingMidi(note.pitch);
-      final graceVel = (note.dynamicElement != null
-              ? velocityFromDynamic(note.dynamicElement!.type)
-              : (_voiceVelocity[voiceNumber] ?? baseVelocity))
-          .clamp(1, 127);
-      events.add(MidiEvent.noteOn(
+      final graceVel =
+          (note.dynamicElement != null
+                  ? velocityFromDynamic(note.dynamicElement!.type)
+                  : (_voiceVelocity[voiceNumber] ?? baseVelocity))
+              .clamp(1, 127);
+      events.add(
+        MidiEvent.noteOn(
           tick: graceStart,
           channel: channel,
           note: graceMidi,
-          velocity: graceVel));
+          velocity: graceVel,
+        ),
+      );
       events.add(
-          MidiEvent.noteOff(tick: graceEnd, channel: channel, note: graceMidi));
+        MidiEvent.noteOff(tick: graceEnd, channel: channel, note: graceMidi),
+      );
       return 0;
     }
 
@@ -824,8 +844,14 @@ class _TrackEventBuilder {
     void emit(int offset, int from, int to) {
       if (to <= from) return;
       final n = (midiNote + offset).clamp(0, 127);
-      events.add(MidiEvent.noteOn(
-          tick: from, channel: channel, note: n, velocity: velocity));
+      events.add(
+        MidiEvent.noteOn(
+          tick: from,
+          channel: channel,
+          note: n,
+          velocity: velocity,
+        ),
+      );
       events.add(MidiEvent.noteOff(tick: to, channel: channel, note: n));
     }
 
@@ -1001,28 +1027,28 @@ class _TrackEventBuilder {
   }
 }
 
-
 /// Duration "gate" fraction for an articulation (how much of the written
 /// duration actually sounds): staccato shortens, tenuto is near-full.
 double _articulationGate(ArticulationType a) => switch (a) {
-      ArticulationType.staccatissimo => 0.25,
-      ArticulationType.staccato => 0.5,
-      ArticulationType.portato => 0.75,
-      ArticulationType.tenuto => 1.0,
-      _ => 1.0,
-    };
+  ArticulationType.staccatissimo => 0.25,
+  ArticulationType.staccato => 0.5,
+  ArticulationType.portato => 0.75,
+  ArticulationType.tenuto => 1.0,
+  _ => 1.0,
+};
 
 /// Velocity multiplier for an accent-type articulation.
 double _articulationAccent(ArticulationType a) => switch (a) {
-      ArticulationType.strongAccent || ArticulationType.marcato => 1.35,
-      ArticulationType.accent => 1.2,
-      ArticulationType.tenuto => 1.05,
-      _ => 1.0,
-    };
+  ArticulationType.strongAccent || ArticulationType.marcato => 1.35,
+  ArticulationType.accent => 1.2,
+  ArticulationType.tenuto => 1.05,
+  _ => 1.0,
+};
 
 /// Combined gate (min) and accent (max) for a note's articulations.
 ({double gate, double accent}) _articulationEffect(
-    List<ArticulationType> arts) {
+  List<ArticulationType> arts,
+) {
   var gate = 1.0;
   var accent = 1.0;
   for (final a in arts) {

@@ -110,8 +110,11 @@ void main() {
 
       for (final ts in compound) {
         // Compound time: numerator divisible by 3
-        expect(ts.numerator % 3, equals(0),
-          reason: '${ts.numerator}/${ts.denominator} should be compound');
+        expect(
+          ts.numerator % 3,
+          equals(0),
+          reason: '${ts.numerator}/${ts.denominator} should be compound',
+        );
       }
     });
   });
@@ -434,8 +437,11 @@ void main() {
         expect(ts.denominator, equals(denom));
 
         // Check it's a power of 2
-        expect((denom & (denom - 1)), equals(0),
-          reason: '$denom should be power of 2');
+        expect(
+          (denom & (denom - 1)),
+          equals(0),
+          reason: '$denom should be power of 2',
+        );
       }
     });
   });

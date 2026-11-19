@@ -96,8 +96,11 @@ void main() {
 
       for (final type in types) {
         final rest = Rest(duration: Duration(type));
-        expect(rest.duration.type.restGlyphName, isNotEmpty,
-          reason: '${type.name} rest should have valid glyph name');
+        expect(
+          rest.duration.type.restGlyphName,
+          isNotEmpty,
+          reason: '${type.name} rest should have valid glyph name',
+        );
       }
     });
 
@@ -166,11 +169,14 @@ void main() {
     });
 
     test('Dotted quarter rest in 3/4 measure', () {
-      final dottedQuarter = Rest(duration: Duration(DurationType.quarter, dots: 1));
+      final dottedQuarter = Rest(
+        duration: Duration(DurationType.quarter, dots: 1),
+      );
       final eighth = Rest(duration: Duration(DurationType.eighth));
 
       // Dotted quarter + eighth = half measure in 3/4
-      final total = dottedQuarter.duration.absoluteValue + eighth.duration.absoluteValue;
+      final total =
+          dottedQuarter.duration.absoluteValue + eighth.duration.absoluteValue;
       expect(total, equals(0.5));
     });
   });
@@ -180,33 +186,45 @@ void main() {
       final quarterRest = Rest(duration: Duration(DurationType.quarter));
       final wholeRest = Rest(duration: Duration(DurationType.whole));
 
-      expect(quarterRest.duration.absoluteValue * 4, equals(wholeRest.duration.absoluteValue));
+      expect(
+        quarterRest.duration.absoluteValue * 4,
+        equals(wholeRest.duration.absoluteValue),
+      );
     });
 
     test('Two half rests equal one whole rest', () {
       final halfRest = Rest(duration: Duration(DurationType.half));
       final wholeRest = Rest(duration: Duration(DurationType.whole));
 
-      expect(halfRest.duration.absoluteValue * 2, equals(wholeRest.duration.absoluteValue));
+      expect(
+        halfRest.duration.absoluteValue * 2,
+        equals(wholeRest.duration.absoluteValue),
+      );
     });
 
     test('Eight eighth rests equal one whole rest', () {
       final eighthRest = Rest(duration: Duration(DurationType.eighth));
       final wholeRest = Rest(duration: Duration(DurationType.whole));
 
-      expect(eighthRest.duration.absoluteValue * 8, equals(wholeRest.duration.absoluteValue));
+      expect(
+        eighthRest.duration.absoluteValue * 8,
+        equals(wholeRest.duration.absoluteValue),
+      );
     });
   });
 
   group('Rest - Combinations', () {
     test('Quarter rest + dotted quarter rest + eighth rest = half note', () {
       final quarter = Rest(duration: Duration(DurationType.quarter));
-      final dottedQuarter = Rest(duration: Duration(DurationType.quarter, dots: 1));
+      final dottedQuarter = Rest(
+        duration: Duration(DurationType.quarter, dots: 1),
+      );
       final eighth = Rest(duration: Duration(DurationType.eighth));
 
-      final total = quarter.duration.absoluteValue +
-                    dottedQuarter.duration.absoluteValue +
-                    eighth.duration.absoluteValue;
+      final total =
+          quarter.duration.absoluteValue +
+          dottedQuarter.duration.absoluteValue +
+          eighth.duration.absoluteValue;
 
       // 0.25 + 0.375 + 0.125 = 0.75 (dotted half)
       expect(total, equals(0.75));
@@ -216,7 +234,8 @@ void main() {
       final half = Rest(duration: Duration(DurationType.half));
       final quarter = Rest(duration: Duration(DurationType.quarter));
 
-      final total = half.duration.absoluteValue + quarter.duration.absoluteValue;
+      final total =
+          half.duration.absoluteValue + quarter.duration.absoluteValue;
 
       expect(total, equals(0.75));
     });
@@ -309,7 +328,10 @@ void main() {
       final replacementRest = Rest(duration: Duration(DurationType.quarter));
 
       expect(replacementRest.duration.type, equals(originalNote.duration.type));
-      expect(replacementRest.duration.absoluteValue, equals(originalNote.duration.absoluteValue));
+      expect(
+        replacementRest.duration.absoluteValue,
+        equals(originalNote.duration.absoluteValue),
+      );
     });
   });
 
@@ -321,7 +343,10 @@ void main() {
       // Whole rest hangs from line, half rest sits on line
       // This is convention, not explicitly stored in model
       expect(wholeRest.duration.type, isNot(equals(halfRest.duration.type)));
-      expect(wholeRest.duration.type.restGlyphName, isNot(equals(halfRest.duration.type.restGlyphName)));
+      expect(
+        wholeRest.duration.type.restGlyphName,
+        isNot(equals(halfRest.duration.type.restGlyphName)),
+      );
     });
 
     test('All rest types have distinct glyphs', () {
@@ -337,8 +362,11 @@ void main() {
 
       final glyphs = types.map((t) => Duration(t).type.restGlyphName).toSet();
 
-      expect(glyphs.length, equals(types.length),
-        reason: 'Each rest type should have unique glyph');
+      expect(
+        glyphs.length,
+        equals(types.length),
+        reason: 'Each rest type should have unique glyph',
+      );
     });
   });
 }

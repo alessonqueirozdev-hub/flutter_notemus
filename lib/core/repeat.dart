@@ -37,4 +37,3 @@ class RepeatMark extends MusicalElement {
 
   RepeatMark({required this.type, this.label, this.times});
 }
-

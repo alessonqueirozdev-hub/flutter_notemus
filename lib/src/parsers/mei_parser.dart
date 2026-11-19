@@ -26,11 +26,7 @@ class MEIParser {
     int staffIndex = 0,
     List<String>? warnings,
   }) {
-    return parseMeiStaff(
-      meiString,
-      staffIndex: staffIndex,
-      warnings: warnings,
-    );
+    return parseMeiStaff(meiString, staffIndex: staffIndex, warnings: warnings);
   }
 
   /// Imports a whole MEI document: every staff, the `<staffGrp>` bracketing and

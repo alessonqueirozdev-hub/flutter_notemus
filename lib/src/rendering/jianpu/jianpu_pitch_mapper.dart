@@ -58,11 +58,7 @@ class JianpuPitchMapper {
           : naturalPc.lastIndexWhere((pc) => pc < tonicPitchClass);
       if (letter < 0) letter = 0;
     }
-    return JianpuPitchMapper._(
-      tonicPitchClass,
-      letter,
-      preferFlats ? -1 : 0,
-    );
+    return JianpuPitchMapper._(tonicPitchClass, letter, preferFlats ? -1 : 0);
   }
 
   /// Builds a mapper from a [KeySignature] (major-key assumption, 1 = do).
@@ -148,8 +144,8 @@ class JianpuPitchMapper {
     // placed in the C4 region, MIDI 60–71); ±1 per octave away.
     final tonicCentralMidi = 60 + tonicPitchClass;
     final degSemis = (((pitch.pitchClass - tonicPitchClass) % 12) + 12) % 12;
-    final register =
-        ((pitch.midiNumber - degSemis - tonicCentralMidi) / 12).round();
+    final register = ((pitch.midiNumber - degSemis - tonicCentralMidi) / 12)
+        .round();
 
     return JianpuNote(numeral, accidental, register);
   }

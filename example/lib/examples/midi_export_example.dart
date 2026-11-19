@@ -204,8 +204,7 @@ class MidiExportExample extends StatelessWidget {
     final buffer = StringBuffer();
     for (var offset = 0; offset < take.length; offset += 8) {
       final row = take.skip(offset).take(8).toList();
-      final hex =
-          row.map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ');
+      final hex = row.map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ');
       final ascii = row
           .map((b) => b >= 0x20 && b < 0x7F ? String.fromCharCode(b) : '.')
           .join();

@@ -18,15 +18,17 @@ void main() {
     expect(d.dots, 0);
   });
 
-  test('hiding the alias leaves dart:core.Duration usable in the same library',
-      () {
-    // The whole point of the escape hatch: both types, one library, no prefix.
-    const musical = MusicDuration(DurationType.half, dots: 1);
-    const elapsed = Duration(milliseconds: 1500); // dart:core, unshadowed
+  test(
+    'hiding the alias leaves dart:core.Duration usable in the same library',
+    () {
+      // The whole point of the escape hatch: both types, one library, no prefix.
+      const musical = MusicDuration(DurationType.half, dots: 1);
+      const elapsed = Duration(milliseconds: 1500); // dart:core, unshadowed
 
-    expect(musical.absoluteValue, 0.75);
-    expect(elapsed.inMilliseconds, 1500);
-  });
+      expect(musical.absoluteValue, 0.75);
+      expect(elapsed.inMilliseconds, 1500);
+    },
+  );
 
   test('the legacy alias and the canonical name are the same type', () {
     // Imported under a prefix so this library can name both without un-hiding.

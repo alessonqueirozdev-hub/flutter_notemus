@@ -316,10 +316,7 @@ void main() {
         ClefType.treble,
       );
       expect(measure.elements.whereType<KeySignature>().single.count, 2);
-      expect(
-        measure.elements.whereType<TimeSignature>().single.denominator,
-        4,
-      );
+      expect(measure.elements.whereType<TimeSignature>().single.denominator, 4);
       expect(
         measure.voice1!.elements.whereType<Clef>(),
         isEmpty,
@@ -448,8 +445,8 @@ void main() {
           '</measure></part></score-partwise>';
 
       OctaveType read(String type, int size) => MusicXMLParser.parseMusicXML(
-            doc(type, size),
-          ).measures.first.allElements.whereType<OctaveMark>().single.type;
+        doc(type, size),
+      ).measures.first.allElements.whereType<OctaveMark>().single.type;
 
       expect(read('down', 8), OctaveType.va8);
       expect(read('up', 8), OctaveType.vb8);
@@ -463,18 +460,15 @@ void main() {
       // of the measure the start was found in.
       for (final closing in ['stop', 'continue']) {
         expect(
-          MusicXMLParser.parseMusicXML(doc(closing, 8))
-              .measures
-              .first
-              .allElements
-              .whereType<OctaveMark>(),
+          MusicXMLParser.parseMusicXML(
+            doc(closing, 8),
+          ).measures.first.allElements.whereType<OctaveMark>(),
           isEmpty,
         );
       }
     });
 
-    test('an OctaveMark displaces the PRINTED pitch, never the sounding one',
-        () {
+    test('an OctaveMark displaces the PRINTED pitch, never the sounding one', () {
       // Measured before W1-M09: C6 printed at staffPosition 8 with no mark AND
       // at staffPosition 8 under all six mark types — `OctaveMark.octaveShift`
       // had no reader anywhere in the package.
@@ -482,9 +476,7 @@ void main() {
         final clef = Clef(clefType: ClefType.treble);
         final span = OctaveSpanTracker();
         if (type != null) {
-          span.advance(
-            OctaveMark(type: type, startMeasure: 0, endMeasure: 0),
-          );
+          span.advance(OctaveMark(type: type, startMeasure: 0, endMeasure: 0));
         }
         return StaffPositionCalculator.calculate(
           Pitch(step: 'C', octave: 6, alter: 0.0),

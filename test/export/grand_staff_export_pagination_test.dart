@@ -111,9 +111,9 @@ void main() {
     metadata = SmuflMetadata();
     await metadata.load();
     final bytes = await File('assets/smufl/Bravura.otf').readAsBytes();
-    await (FontLoader('packages/flutter_notemus/Bravura')
-          ..addFont(Future.value(ByteData.view(bytes.buffer))))
-        .load();
+    await (FontLoader(
+      'packages/flutter_notemus/Bravura',
+    )..addFont(Future.value(ByteData.view(bytes.buffer)))).load();
   });
 
   group('M-12 grand-staff pagination', () {

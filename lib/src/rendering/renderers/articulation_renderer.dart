@@ -26,8 +26,10 @@ class ArticulationRenderer extends BaseGlyphRenderer {
 
     // Marcato is always placed above the note (Behind Bars p.117), regardless
     // of stem direction; otherwise articulations sit opposite the stem.
-    final hasMarcato = articulations.any((a) =>
-        a == ArticulationType.marcato || a == ArticulationType.strongAccent);
+    final hasMarcato = articulations.any(
+      (a) =>
+          a == ArticulationType.marcato || a == ArticulationType.strongAccent,
+    );
     final articulationAbove = hasMarcato ? true : !stemUp;
 
     // Stack multiple articulations outward from the notehead (Behind Bars):
@@ -71,12 +73,12 @@ class ArticulationRenderer extends BaseGlyphRenderer {
 
   /// Stacking order from the notehead outward (lower = closer).
   static int _stackRank(ArticulationType type) => switch (type) {
-        ArticulationType.staccato || ArticulationType.staccatissimo => 0,
-        ArticulationType.tenuto || ArticulationType.portato => 1,
-        ArticulationType.accent => 2,
-        ArticulationType.strongAccent || ArticulationType.marcato => 3,
-        _ => 4,
-      };
+    ArticulationType.staccato || ArticulationType.staccatissimo => 0,
+    ArticulationType.tenuto || ArticulationType.portato => 1,
+    ArticulationType.accent => 2,
+    ArticulationType.strongAccent || ArticulationType.marcato => 3,
+    _ => 4,
+  };
 
   String? _getArticulationGlyph(ArticulationType type, bool above) {
     return switch (type) {

@@ -104,17 +104,23 @@ double _firstNoteAnchorOf(GreciliaeFont font) =>
 
 /// Debug-only check of the Pes progression invariant documented above.
 bool _assertPesProgression(GreciliaeFont font, double unitsPerStep) {
-  const family = ['PesTwoNothing', 'PesThreeNothing', 'PesFourNothing',
-      'PesFiveNothing'];
+  const family = [
+    'PesTwoNothing',
+    'PesThreeNothing',
+    'PesFourNothing',
+    'PesFiveNothing',
+  ];
   for (var i = 1; i < family.length; i++) {
     final lo = font.centerYUnitsOrNull(family[i - 1]);
     final hi = font.centerYUnitsOrNull(family[i]);
     if (lo == null || hi == null) continue;
     final drift = (hi - lo - unitsPerStep / 2).abs();
     if (drift >= 3.0) {
-      throw StateError('Greciliae Pes progression off by '
-          '${drift.toStringAsFixed(1)} units between ${family[i - 1]} and '
-          '${family[i]} (step = ${unitsPerStep.toStringAsFixed(1)})');
+      throw StateError(
+        'Greciliae Pes progression off by '
+        '${drift.toStringAsFixed(1)} units between ${family[i - 1]} and '
+        '${family[i]} (step = ${unitsPerStep.toStringAsFixed(1)})',
+      );
     }
   }
   return true;
@@ -182,8 +188,15 @@ class _NeumeBox {
   final bool isAccidentalSign;
 
   double startX = 0;
-  _NeumeBox(this.glyphs, this.marks, this.width, this.syllable, this.hyphen,
-      this.firstStep, {this.isAccidentalSign = false});
+  _NeumeBox(
+    this.glyphs,
+    this.marks,
+    this.width,
+    this.syllable,
+    this.hyphen,
+    this.firstStep, {
+    this.isAccidentalSign = false,
+  });
   double get endX => startX + width;
 }
 
@@ -216,28 +229,33 @@ class _Row {
 
 /// Accidental glyph name.
 String _accidentalGlyph(NeumeAccidental a) => switch (a) {
-      NeumeAccidental.flat => 'Flat',
-      NeumeAccidental.natural => 'Natural',
-      NeumeAccidental.sharp => 'Sharp',
-      NeumeAccidental.none => 'Natural',
-    };
+  NeumeAccidental.flat => 'Flat',
+  NeumeAccidental.natural => 'Natural',
+  NeumeAccidental.sharp => 'Sharp',
+  NeumeAccidental.none => 'Natural',
+};
 
 /// Single-note glyph name by form.
 String _singleGlyph(NcForm form) => switch (form) {
-      NcForm.virga => 'Virga',
-      NcForm.quilisma => 'Quilisma',
-      NcForm.oriscus => 'AscendensOriscus',
-      NcForm.stropha => 'Stropha',
-      _ => 'Punctum',
-    };
+  NcForm.virga => 'Virga',
+  NcForm.quilisma => 'Quilisma',
+  NcForm.oriscus => 'AscendensOriscus',
+  NcForm.stropha => 'Stropha',
+  _ => 'Punctum',
+};
 
 /// Picks the precomposed Greciliae glyph name for a neume, or null if it must be
 /// assembled from components. When [liquescent], prefers the diminished
 /// (`Deminutus`) variant — the epiphonus (pes), cephalicus (clivis), etc. —
 /// falling back to the full (`Nothing`) form if that ambitus has no liquescent
 /// glyph. The returned name is guaranteed present in [font].
-String? _neumeGlyphName(NeumeType type, List<int> steps, List<NcForm> forms,
-    bool liquescent, GreciliaeFont font) {
+String? _neumeGlyphName(
+  NeumeType type,
+  List<int> steps,
+  List<NcForm> forms,
+  bool liquescent,
+  GreciliaeFont font,
+) {
   int up(int i, int j) => steps[j] - steps[i];
   int dn(int i, int j) => steps[i] - steps[j];
   final suffix = liquescent ? 'Deminutus' : 'Nothing';
@@ -304,7 +322,11 @@ String? _neumeGlyphName(NeumeType type, List<int> steps, List<NcForm> forms,
 
 /// Emits the glyph ops + rhythmic marks for one neume using the [font].
 _NeumeBox _emitNeume(
-    Neume e, List<int> steps, GreciliaeFont font, double scale) {
+  Neume e,
+  List<int> steps,
+  GreciliaeFont font,
+  double scale,
+) {
   final forms = e.components.map((c) => c.form).toList();
   final comps = e.components;
   double advPx(String name) {
@@ -319,8 +341,15 @@ _NeumeBox _emitNeume(
   if (comps.length == 1 && comps[0].accidental != NeumeAccidental.none) {
     final g = _accidentalGlyph(comps[0].accidental);
     final name = font.has(g) ? g : 'Punctum';
-    return _NeumeBox([_GlyphOp(name, steps[0], 0)], const [], advPx(name),
-        e.syllable, e.hyphenAfter, steps[0], isAccidentalSign: true);
+    return _NeumeBox(
+      [_GlyphOp(name, steps[0], 0)],
+      const [],
+      advPx(name),
+      e.syllable,
+      e.hyphenAfter,
+      steps[0],
+      isAccidentalSign: true,
+    );
   }
 
   // Build the glyph ops, the box width, and a center-x per component (px), used
@@ -339,7 +368,8 @@ _NeumeBox _emitNeume(
     // The liquescent (melting) note is the last of the neume; prefer the
     // diminished glyph when it is flagged liquescent.
     final last = comps.last;
-    final liquescent = last.isLiquescent ||
+    final liquescent =
+        last.isLiquescent ||
         last.form == NcForm.liquescentAscending ||
         last.form == NcForm.liquescentDescending;
     final name = _neumeGlyphName(e.type, steps, forms, liquescent, font);
@@ -363,8 +393,8 @@ _NeumeBox _emitNeume(
           g = font.has('DescendensPunctumInclinatum')
               ? 'DescendensPunctumInclinatum'
               : (font.has('PunctumInclinatumDeminutus')
-                  ? 'PunctumInclinatumDeminutus'
-                  : 'Punctum');
+                    ? 'PunctumInclinatumDeminutus'
+                    : 'Punctum');
         } else if (i == 0 && steps.length > 1 && steps[1] < steps[0]) {
           g = 'Virga'; // climacus head
         } else {
@@ -378,13 +408,15 @@ _NeumeBox _emitNeume(
         // the run reads as one neume rather than detached puncta; same-pitch
         // repeated strophae (di/tristropha) also sit closer than puncta.
         final nextDescends = i + 1 < steps.length && steps[i + 1] < steps[i];
-        final nextSameStropha = i + 1 < steps.length &&
+        final nextSameStropha =
+            i + 1 < steps.length &&
             steps[i + 1] == steps[i] &&
             forms[i] == NcForm.stropha;
         // GABC fusion (`@`): the two notes are drawn as ONE fused figure, so
         // they touch instead of being spaced as independent puncta.
         final fused = i + 1 < comps.length && comps[i].connected;
-        cx += w *
+        cx +=
+            w *
             (fused
                 ? 0.62
                 : (nextDescends ? 0.72 : (nextSameStropha ? 0.78 : 0.98)));
@@ -404,8 +436,13 @@ _NeumeBox _emitNeume(
       marks.add(_Mark(_MarkType.episema, steps[i], x, form: c.form));
     }
     if (c.ictus) {
-      marks.add(_Mark(
-          c.ictusAbove ? _MarkType.ictusAbove : _MarkType.ictus, steps[i], x));
+      marks.add(
+        _Mark(
+          c.ictusAbove ? _MarkType.ictusAbove : _MarkType.ictus,
+          steps[i],
+          x,
+        ),
+      );
     }
     for (var d = 0; d < c.morae; d++) {
       // Mora dot(s) sit to the right of the note; successive dots step further.
@@ -481,7 +518,9 @@ class GregorianLayout {
         }).toList();
         if (steps.isEmpty) continue;
         final box = _emitNeume(e, steps, font, scale);
-        if (box.syllable != null && box.syllable!.isNotEmpty) hasSyllables = true;
+        if (box.syllable != null && box.syllable!.isNotEmpty) {
+          hasSyllables = true;
+        }
         ordered.add(box);
       } else if (e is NeumeDivision) {
         ordered.add(_Divisio(e.type));
@@ -504,10 +543,10 @@ class GregorianLayout {
     final hardWidth = maxWidth.isFinite && maxWidth > sp * 10 ? maxWidth : 0.0;
 
     double itemWidth(Object o) => switch (o) {
-          _NeumeBox b => b.width,
-          _ClefBox c => c.suppressed ? 0.0 : c.width,
-          _ => sp * 0.3,
-        };
+      _NeumeBox b => b.width,
+      _ClefBox c => c.suppressed ? 0.0 : c.width,
+      _ => sp * 0.3,
+    };
 
     // -- Line-breaking rule (Gregorio / Solesmes practice) -------------------
     //
@@ -535,7 +574,8 @@ class GregorianLayout {
     final chunks = <List<Object>>[];
     var current = <Object>[];
     for (final o in ordered) {
-      final opensUnit = o is _ClefBox ||
+      final opensUnit =
+          o is _ClefBox ||
           (o is _NeumeBox &&
               !o.isAccidentalSign &&
               (o.syllable?.isNotEmpty ?? false));
@@ -558,7 +598,9 @@ class GregorianLayout {
     if (current.isNotEmpty) chunks.add(current);
 
     double chunkWidth(List<Object> c) => c.fold<double>(
-        0, (a, o) => a + itemWidth(o) + (o is _Divisio ? divisioGap : gap));
+      0,
+      (a, o) => a + itemWidth(o) + (o is _Divisio ? divisioGap : gap),
+    );
 
     final rows = <_Row>[];
     var rowClef = clef;
@@ -620,7 +662,9 @@ class GregorianLayout {
       final isLast = r == rows.length - 1;
       final sumW = items.fold<double>(0, (a, o) => a + itemWidth(o));
       final breath = items.fold<double>(
-          0, (a, o) => a + breathBefore(o) + breathAfter(o));
+        0,
+        (a, o) => a + breathBefore(o) + breathAfter(o),
+      );
       final avail = (fullWidth - rightPad) - notesStartX;
       final g = (!isLast && items.length > 1 && avail > sumW + breath)
           ? (avail - sumW - breath) / items.length
@@ -711,20 +755,34 @@ class GregorianPainter extends CustomPainter {
   /// for a do-clef, three above "fa" for an fa-clef.
   void _drawClef(Canvas canvas, ChantClef clef, double x, double cy) {
     final lineStep = _clefLineStep(clef);
-    _glyph(canvas, clef.glyphName, x, _staffY(cy, lineStep),
-        anchorUnits: font.centerYUnits(clef.glyphName));
+    _glyph(
+      canvas,
+      clef.glyphName,
+      x,
+      _staffY(cy, lineStep),
+      anchorUnits: font.centerYUnits(clef.glyphName),
+    );
     if (clef.flat) {
       final siSteps = clef.type == ChantClefType.doClef ? -1 : 3;
-      _glyph(canvas, font.has('Flat') ? 'Flat' : 'Punctum', x + _sp * 0.8,
-          _staffY(cy, lineStep + siSteps));
+      _glyph(
+        canvas,
+        font.has('Flat') ? 'Flat' : 'Punctum',
+        x + _sp * 0.8,
+        _staffY(cy, lineStep + siSteps),
+      );
     }
   }
 
   /// Draws a Greciliae glyph by [name] so the font-y [anchorUnits] lands at
   /// (x, y). Notes use the first-note anchor; clef/custos register by bbox
   /// center so they sit centered on their line.
-  void _glyph(Canvas canvas, String name, double x, double y,
-      {double? anchorUnits}) {
+  void _glyph(
+    Canvas canvas,
+    String name,
+    double x,
+    double y, {
+    double? anchorUnits,
+  }) {
     final ch = font.glyph(name);
     if (ch == null) return;
     final anchor = anchorUnits ?? _firstNoteAnchorOf(font);
@@ -760,10 +818,10 @@ class GregorianPainter extends CustomPainter {
   /// injection point; an app that wants Georgia now says so, via
   /// [GregorianTheme.lyricTextFamily] or `MusicTextFont.use('Georgia')`.
   TextStyle get _lyricStyle => TextStyle(
-        fontSize: theme.lyricSize,
-        color: theme.color,
-        fontFamily: theme.lyricTextFamily,
-      ).withMusicTextFallback();
+    fontSize: theme.lyricSize,
+    color: theme.color,
+    fontFamily: theme.lyricTextFamily,
+  ).withMusicTextFallback();
 
   void _lyric(Canvas canvas, String text, double centerX, double topY) {
     final tp = TextPainter(
@@ -842,8 +900,13 @@ class GregorianPainter extends CustomPainter {
   /// Draws a rhythmic mark centered on a note at screen (cx, ny): a horizontal
   /// episema above, a vertical episema (ictus) below (or above), or a mora
   /// (augmentum) dot to the right at note height.
-  void _drawMark(Canvas canvas, _MarkType type, double cx, double ny,
-      {NcForm form = NcForm.punctum}) {
+  void _drawMark(
+    Canvas canvas,
+    _MarkType type,
+    double cx,
+    double ny, {
+    NcForm form = NcForm.punctum,
+  }) {
     final sp = _sp;
     final p = Paint()
       ..color = theme.color
@@ -856,11 +919,19 @@ class GregorianPainter extends CustomPainter {
         // dot if the glyph is unavailable.
         if (font.has('AuctumMora')) {
           final w = font.advanceUnits('AuctumMora') * _scale;
-          _glyph(canvas, 'AuctumMora', cx - w / 2, ny,
-              anchorUnits: font.centerYUnits('AuctumMora'));
+          _glyph(
+            canvas,
+            'AuctumMora',
+            cx - w / 2,
+            ny,
+            anchorUnits: font.centerYUnits('AuctumMora'),
+          );
         } else {
           canvas.drawCircle(
-              Offset(cx, ny), sp * 0.13, Paint()..color = theme.color);
+            Offset(cx, ny),
+            sp * 0.13,
+            Paint()..color = theme.color,
+          );
         }
         break;
       case _MarkType.episema:
@@ -877,11 +948,19 @@ class GregorianPainter extends CustomPainter {
             : (font.has('HEpisemaPunctum') ? 'HEpisemaPunctum' : null);
         if (glyph != null) {
           final w = font.advanceUnits(glyph) * _scale;
-          _glyph(canvas, glyph, cx - w / 2, y,
-              anchorUnits: font.centerYUnits(glyph));
+          _glyph(
+            canvas,
+            glyph,
+            cx - w / 2,
+            y,
+            anchorUnits: font.centerYUnits(glyph),
+          );
         } else {
           canvas.drawLine(
-              Offset(cx - sp * 0.34, y), Offset(cx + sp * 0.34, y), p);
+            Offset(cx - sp * 0.34, y),
+            Offset(cx + sp * 0.34, y),
+            p,
+          );
         }
         break;
       case _MarkType.ictus:
@@ -900,7 +979,12 @@ class GregorianPainter extends CustomPainter {
   /// are drawn directly: minima cuts the top space, minor the upper half, maior
   /// the whole staff, finalis a double full bar (end of piece).
   void _drawDivisio(
-      Canvas canvas, NeumeDivisionType t, double x, double cy, Paint p) {
+    Canvas canvas,
+    NeumeDivisionType t,
+    double x,
+    double cy,
+    Paint p,
+  ) {
     final top = _lineY(cy, 4);
     final l3 = _lineY(cy, 3);
     final l2 = _lineY(cy, 2);
@@ -918,7 +1002,10 @@ class GregorianPainter extends CustomPainter {
       case NeumeDivisionType.finalis:
         canvas.drawLine(Offset(x, top), Offset(x, bottom), p);
         canvas.drawLine(
-            Offset(x + _sp * 0.3, top), Offset(x + _sp * 0.3, bottom), p);
+          Offset(x + _sp * 0.3, top),
+          Offset(x + _sp * 0.3, bottom),
+          p,
+        );
         break;
     }
   }

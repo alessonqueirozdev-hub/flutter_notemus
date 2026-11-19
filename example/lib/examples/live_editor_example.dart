@@ -77,8 +77,7 @@ class _LiveEditorExampleState extends State<LiveEditorExample> {
 
     return ExampleShowcasePage(
       title: 'Live Editor',
-      subtitle:
-          'Edit the source and the staff re-renders as you type. JSON, '
+      subtitle: 'Edit the source and the staff re-renders as you type. JSON, '
           'MusicXML and MEI, through the same parsers the rest of the package '
           'uses.',
       accentColor: _accent,
@@ -154,8 +153,8 @@ class _LiveEditorExampleState extends State<LiveEditorExample> {
               Row(
                 children: [
                   CupertinoButton(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     minimumSize: Size.zero,
                     onPressed: () => setState(() {
                       _controller.text = _seedFor(_format);
@@ -222,10 +221,8 @@ class _LiveEditorExampleState extends State<LiveEditorExample> {
       final staff = outcome.staff!;
       final elements =
           staff.measures.fold<int>(0, (a, m) => a + m.elements.length);
-      final notes = staff.measures
-          .expand((m) => m.elements)
-          .whereType<Note>()
-          .length;
+      final notes =
+          staff.measures.expand((m) => m.elements).whereType<Note>().length;
       lines.add('measures  ${staff.measures.length}');
       lines.add('elements  $elements');
       lines.add('notes     $notes');

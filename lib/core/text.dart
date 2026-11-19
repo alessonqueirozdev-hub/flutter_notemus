@@ -36,12 +36,16 @@ enum TextPlacement { above, below, inside }
 enum SyllableType {
   /// Palavra completa / syllable única (MEI `con` ausente or "s")
   single,
+
   /// Syllable initial, seguida de hífen (MEI `con="i"`)
   initial,
+
   /// Syllable intermediária (MEI `con="m"`)
   middle,
+
   /// Syllable final (MEI `con="t"`)
   terminal,
+
   /// Hífen explícito (MEI `con="d"` — double bar extension)
   hyphen,
 }
@@ -93,11 +97,7 @@ class Verse extends MusicalElement {
   /// Idioma of the verse (MEI `@xml:lang`), e.g., 'la', 'pt', 'en'.
   final String? language;
 
-  Verse({
-    this.number = 1,
-    required this.syllables,
-    this.language,
-  });
+  Verse({this.number = 1, required this.syllables, this.language});
 }
 
 /// Representa text musical

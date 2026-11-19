@@ -8,10 +8,6 @@ class Beam extends MusicalElement {
   final List<Note> notes;
   final int beamCount;
   final bool primary;
-  
-  Beam({
-    required this.notes,
-    this.beamCount = 1,
-    this.primary = true,
-  });
+
+  Beam({required this.notes, this.beamCount = 1, this.primary = true});
 }

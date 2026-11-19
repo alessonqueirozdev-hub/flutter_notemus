@@ -109,7 +109,10 @@ Future<void> loadNotemusFonts() async {
     final greciliae = File('assets/gregorian/greciliae.ttf');
     if (greciliae.existsSync()) {
       final gb = await greciliae.readAsBytes();
-      for (final family in const ['Greciliae', 'packages/flutter_notemus/Greciliae']) {
+      for (final family in const [
+        'Greciliae',
+        'packages/flutter_notemus/Greciliae',
+      ]) {
         final loader = FontLoader(family)
           ..addFont(Future.value(ByteData.view(gb.buffer)));
         await loader.load();
@@ -175,13 +178,16 @@ Future<Finder> pumpCase(WidgetTester tester, CorpusCase c) async {
                 theme: textFontAvailable
                     ? const MusicScoreTheme(
                         lyricTextStyle: TextStyle(fontFamily: kTextFontFamily),
-                        dynamicTextStyle: TextStyle(fontFamily: kTextFontFamily),
+                        dynamicTextStyle: TextStyle(
+                          fontFamily: kTextFontFamily,
+                        ),
                         // Measure numbers and rehearsal marks are plain text
                         // too: without a real family they rasterize as Ahem
                         // boxes under `flutter test` and the goldens record a
                         // black square instead of the label.
-                        measureNumberTextStyle:
-                            TextStyle(fontFamily: kTextFontFamily),
+                        measureNumberTextStyle: TextStyle(
+                          fontFamily: kTextFontFamily,
+                        ),
                         rehearsalTextStyle: TextStyle(
                           fontFamily: kTextFontFamily,
                           fontWeight: FontWeight.w700,

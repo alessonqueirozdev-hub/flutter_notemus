@@ -107,11 +107,7 @@ class TabChord extends TabElement {
   final Duration duration;
   final String? name; // Nome do acorde (C, Am, etc.)
 
-  TabChord({
-    required this.notes,
-    required this.duration,
-    this.name,
-  });
+  TabChord({required this.notes, required this.duration, this.name});
 }
 
 /// Técnicas especiais for instrumentos de corda
@@ -124,20 +120,17 @@ enum TabTechnique {
   release, // Release bend
   vibrato, // Vibrato
   trill, // Trill
-
   // Técnicas de mão right
   palm, // Palm mute
   harmonics, // Harmônicos
   pinch, // Pinch harmonics
   tremolo, // Tremolo picking
-
   // Técnicas avançadas
   tap, // Tapping
   slap, // Slap (baixo)
   pop, // Pop (baixo)
   ghost, // Ghost note
   deadNote, // Nota morta/abafada
-
   // Articulations específicas
   accent,
   staccato,
@@ -291,11 +284,7 @@ class TabHarmonic extends TabElement {
   final HarmonicType type;
   final String? notation; // Notação específica (12, 7, etc.)
 
-  TabHarmonic({
-    required this.fret,
-    required this.type,
-    this.notation,
-  });
+  TabHarmonic({required this.fret, required this.type, this.notation});
 }
 
 /// Tremolo picking
@@ -303,10 +292,7 @@ class TremoloPicking extends TabElement {
   final int numberOfStrokes;
   final Duration totalDuration;
 
-  TremoloPicking({
-    required this.numberOfStrokes,
-    required this.totalDuration,
-  });
+  TremoloPicking({required this.numberOfStrokes, required this.totalDuration});
 }
 
 /// Representação de rhythm/groove
@@ -322,11 +308,7 @@ class RhythmSlash extends TabElement {
   });
 }
 
-enum RhythmSlashType {
-  normal,
-  muted,
-  ghost,
-}
+enum RhythmSlashType { normal, muted, ghost }
 
 /// Utilitários for tablatura
 class TabUtils {

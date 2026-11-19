@@ -159,14 +159,18 @@ class EnsembleScoreExample extends StatelessWidget {
             bracket: BracketType.brace,
             connectBarlines: true,
             staves: [
-              _line(ClefType.treble, [
-                Tuplet(actualNotes: 3, normalNotes: 2, elements: [
-                  _n('C', 5, d: DurationType.eighth),
-                  _n('E', 5, d: DurationType.eighth),
-                  _n('G', 5, d: DurationType.eighth),
-                ]),
-                _n('C', 6, d: DurationType.half, dots: 1),
-              ], name: 'Piano', abbreviation: 'Pno.'),
+              _line(
+                  ClefType.treble,
+                  [
+                    Tuplet(actualNotes: 3, normalNotes: 2, elements: [
+                      _n('C', 5, d: DurationType.eighth),
+                      _n('E', 5, d: DurationType.eighth),
+                      _n('G', 5, d: DurationType.eighth),
+                    ]),
+                    _n('C', 6, d: DurationType.half, dots: 1),
+                  ],
+                  name: 'Piano',
+                  abbreviation: 'Pno.'),
               _line(ClefType.bass, [
                 _n('C', 3, d: DurationType.half),
                 _n('G', 2, d: DurationType.half),

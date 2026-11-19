@@ -152,10 +152,9 @@ class GrandStaffPainter extends CustomPainter {
   /// spanning beam can be drawn from one run.
   @visibleForTesting
   List<List<PositionedElement>> alignedSystem(int systemIndex) =>
-      _relocateCrossStaff(
-        [for (final layout in _systems[systemIndex]) layout.elements],
-        (_) => true,
-      );
+      _relocateCrossStaff([
+        for (final layout in _systems[systemIndex]) layout.elements,
+      ], (_) => true);
 
   /// Number of wrapped systems this painter produced.
   ///
@@ -193,7 +192,8 @@ class GrandStaffPainter extends CustomPainter {
           // purpose, and a canvas sized to the advance clips the flag of the
           // last note on a system (0.93 staff spaces of it, measured at
           // staffSpace 48).
-          final right = positioned.position.dx +
+          final right =
+              positioned.position.dx +
               layout.engine.elementPaintedRightExtent(element);
           if (right > maxRight) maxRight = right;
         }
@@ -251,10 +251,12 @@ class GrandStaffPainter extends CustomPainter {
     required this.theme,
     required this.availableWidth,
     double? staffGap,
-  })  : assert(staffGroup != null || groups != null,
-            'Provide either staffGroup or groups'),
-        groups = groups ?? [staffGroup!],
-        staffGap = staffGap ?? staffSpace * 11.0 {
+  }) : assert(
+         staffGroup != null || groups != null,
+         'Provide either staffGroup or groups',
+       ),
+       groups = groups ?? [staffGroup!],
+       staffGap = staffGap ?? staffSpace * 11.0 {
     _bracePad = staffSpace * 2.2;
     // Now, not on first read: a lazy signature first read by shouldRepaint
     // AFTER an edit would hash the edited score for the OLD painter too, and
@@ -297,13 +299,13 @@ class GrandStaffPainter extends CustomPainter {
     double cut(int i) {
       if (i <= 0) return 0.0;
       if (i >= n) return totalHeight;
-      final previousBottom = contentTopInset +
+      final previousBottom =
+          contentTopInset +
           (i - 1) * block +
           staffSpan +
           _baseline0 +
           staffSpace * 2;
-      final nextTop =
-          contentTopInset + i * block + _baseline0 - staffSpace * 2;
+      final nextTop = contentTopInset + i * block + _baseline0 - staffSpace * 2;
       return (previousBottom + nextTop) / 2;
     }
 
@@ -348,7 +350,8 @@ class GrandStaffPainter extends CustomPainter {
   /// The x glides between the bar's rhythmic events on the shared grid, so
   /// it reaches each note — on any staff — as that note starts to sound.
   ({double x, double top, double bottom})? playheadAt(
-      PlaybackPosition position) {
+    PlaybackPosition position,
+  ) {
     for (var system = 0; system < _ranges.length; system++) {
       final range = _ranges[system];
       if (position.measureIndex < range.start ||
@@ -356,9 +359,7 @@ class GrandStaffPainter extends CustomPainter {
         continue;
       }
       final local = position.measureIndex - range.start;
-      final line = [
-        for (final layout in _systems[system]) ...layout.elements,
-      ];
+      final line = [for (final layout in _systems[system]) ...layout.elements];
       final bar = [
         for (final e in line)
           if (e.measureIndex == local) e,
@@ -371,11 +372,13 @@ class GrandStaffPainter extends CustomPainter {
         closingX: closingBarlineX(line, local),
       );
       if (x == null) return null;
-      final top = contentTopInset +
+      final top =
+          contentTopInset +
           system * systemBlockHeight +
           _baseline0 -
           staffSpace * 3;
-      final bottom = contentTopInset +
+      final bottom =
+          contentTopInset +
           system * systemBlockHeight +
           (_systems[system].length - 1) * staffGap +
           _baseline0 +
@@ -411,8 +414,10 @@ class GrandStaffPainter extends CustomPainter {
     if (_systems.isEmpty) return null;
     final x = point.dx - _bracePad;
     final y = point.dy - contentTopInset;
-    final system =
-        (y / systemBlockHeight).floor().clamp(0, _systems.length - 1);
+    final system = (y / systemBlockHeight).floor().clamp(
+      0,
+      _systems.length - 1,
+    );
     return (system: system, local: Offset(x, y - system * systemBlockHeight));
   }
 
@@ -432,8 +437,7 @@ class GrandStaffPainter extends CustomPainter {
     ({ScoreHit hit, int staff, Offset local})? best;
     for (var i = 0; i < testers.length; i++) {
       final local = located.local - Offset(0, i * staffGap);
-      final hit =
-          testers[i].hitTest(local, tolerance: tolerance ?? staffSpace);
+      final hit = testers[i].hitTest(local, tolerance: tolerance ?? staffSpace);
       if (hit == null) continue;
       if (best == null || hit.distance < best.hit.distance) {
         best = (hit: hit, staff: i, local: local);
@@ -456,7 +460,9 @@ class GrandStaffPainter extends CustomPainter {
     var bestDistance = best?.hit.distance ?? double.infinity;
     final p = located.local;
     for (final group in _crossStaffBeamGeometry(
-        _systems[located.system], _baseline0)) {
+      _systems[located.system],
+      _baseline0,
+    )) {
       final beamY = group.beamY;
       if (beamY == null) continue;
       for (final head in group.points) {
@@ -492,7 +498,9 @@ class GrandStaffPainter extends CustomPainter {
     final lists = [for (final l in _systems[located.system]) l.elements];
     final beamed = <Note>{
       for (final group in _crossStaffBeamGeometry(
-          _systems[located.system], _baseline0))
+        _systems[located.system],
+        _baseline0,
+      ))
         if (group.beamY != null)
           for (final head in group.points) head.note,
     };
@@ -509,7 +517,8 @@ class GrandStaffPainter extends CustomPainter {
         final stemUp = voice != null
             ? voice.isOdd
             : StaffPositionCalculator.stemUpFor(position);
-        final headY = _baseline0 + target * staffGap - position * staffSpace / 2;
+        final headY =
+            _baseline0 + target * staffGap - position * staffSpace / 2;
         final middle = _baseline0 + target * staffGap;
         // A stem is 3.5 spaces, and reaches the middle line from a ledger note.
         final stemEnd = stemUp
@@ -556,17 +565,22 @@ class GrandStaffPainter extends CustomPainter {
     if (located == null) return null;
     final lists = alignedSystem(located.system);
     if (lists.isEmpty) return null;
-    final staff = ((located.local.dy - _baseline0) / staffGap)
-        .round()
-        .clamp(0, lists.length - 1);
-    final local = measureIndexAtX(lists[staff], located.local.dx,
-        engine: _systems[located.system][staff].engine);
+    final staff = ((located.local.dy - _baseline0) / staffGap).round().clamp(
+      0,
+      lists.length - 1,
+    );
+    final local = measureIndexAtX(
+      lists[staff],
+      located.local.dx,
+      engine: _systems[located.system][staff].engine,
+    );
     if (local == null) return null;
     final index = _ranges[located.system].start + local;
     final staffModel = _allStaves[staff];
     return ScoreMeasureTap(
       measureIndex: index,
-      measureNumber: _measureNumbers[staffModel]![index] ??
+      measureNumber:
+          _measureNumbers[staffModel]![index] ??
           _numberBefore(staffModel, index + 1),
       staffIndex: staff,
       localPosition: point,
@@ -606,10 +620,9 @@ class GrandStaffPainter extends CustomPainter {
     // beamed notes on the DESTINATION staff instead of keeping the run whole
     // on the home staff. Every cross-staff beam in the package was silently
     // not drawn.
-    final relocated = _relocateCrossStaff(
-      [for (final l in layouts) l.elements],
-      (note) => _effectiveBeam(layouts, note) == null,
-    );
+    final relocated = _relocateCrossStaff([
+      for (final l in layouts) l.elements,
+    ], (note) => _effectiveBeam(layouts, note) == null);
     for (var i = 0; i < layouts.length; i++) {
       layouts[i] = _StaffLayout(relocated[i], layouts[i].engine);
     }
@@ -656,8 +669,7 @@ class GrandStaffPainter extends CustomPainter {
       for (final pe in lists[home]) {
         final e = pe.element;
         if (e is Note && e.crossStaffMove != 0 && shouldMove(e)) {
-          final target =
-              (home + e.crossStaffMove).clamp(0, lists.length - 1);
+          final target = (home + e.crossStaffMove).clamp(0, lists.length - 1);
           if (target != home) {
             moved.add((target: target, pe: pe));
             continue;
@@ -760,12 +772,14 @@ class GrandStaffPainter extends CustomPainter {
     for (var i = a; i <= b && i < staff.measures.length; i++) {
       final orig = staff.measures[i];
       if (i == a && a > 0) {
-        measures.add(_restated(
-          orig,
-          clef: prevailing.clef,
-          key: prevailing.key,
-          inheritedMeter: prevailing.timeSignature,
-        ));
+        measures.add(
+          _restated(
+            orig,
+            clef: prevailing.clef,
+            key: prevailing.key,
+            inheritedMeter: prevailing.timeSignature,
+          ),
+        );
       } else {
         measures.add(orig);
       }
@@ -952,7 +966,8 @@ class GrandStaffPainter extends CustomPainter {
       // the other part instead of the note it belongs to. The main note is the
       // musical instant; the grace rides in front of it and is carried along
       // by the piecewise-linear remap below.
-      final counts = (e is Note && !e.isGraceNote) ||
+      final counts =
+          (e is Note && !e.isGraceNote) ||
           e is Rest ||
           e is Chord ||
           e is Tuplet ||
@@ -1056,7 +1071,8 @@ class GrandStaffPainter extends CustomPainter {
       var widestStep = 0.0;
       for (var s = 0; s < perStaff.length; s++) {
         if (perStaff[s].isEmpty) continue;
-        final step = _xAtOnset(perStaff[s], onsets[k]) -
+        final step =
+            _xAtOnset(perStaff[s], onsets[k]) -
             _xAtOnset(perStaff[s], onsets[k - 1]);
         if (step > widestStep) widestStep = step;
       }
@@ -1154,8 +1170,7 @@ class GrandStaffPainter extends CustomPainter {
   ) {
     // Notes drawn by the cross-staff beam pass (skipped by their home staff).
     final skipPerStaff = [
-      for (var i = 0; i < layouts.length; i++)
-        _crossStaffNotesOf(layouts, i),
+      for (var i = 0; i < layouts.length; i++) _crossStaffNotesOf(layouts, i),
     ];
 
     for (var i = 0; i < layouts.length; i++) {
@@ -1217,8 +1232,9 @@ class GrandStaffPainter extends CustomPainter {
     for (final g in groups) {
       final gTop = baseline0 + staffIdx * staffGap - staffSpace * 2;
       final gBottom =
-          baseline0 + (staffIdx + g.staves.length - 1) * staffGap +
-              staffSpace * 2;
+          baseline0 +
+          (staffIdx + g.staves.length - 1) * staffGap +
+          staffSpace * 2;
       bracket.render(canvas, g, gTop, gBottom, leftX);
       staffIdx += g.staves.length;
     }
@@ -1231,7 +1247,7 @@ class GrandStaffPainter extends CustomPainter {
         ..color = theme.barlineColor
         ..strokeWidth =
             metadata.getEngravingDefault('thinBarlineThickness', 0.16) *
-                staffSpace;
+            staffSpace;
       canvas.drawLine(Offset(leftX, topY), Offset(leftX, bottomY), paint);
     }
   }
@@ -1261,10 +1277,10 @@ class GrandStaffPainter extends CustomPainter {
     double topY,
     double bottomY,
   ) {
-    final thin = metadata.getEngravingDefault('thinBarlineThickness', 0.16) *
-        staffSpace;
-    final thick = metadata.getEngravingDefault('thickBarlineThickness', 0.5) *
-        staffSpace;
+    final thin =
+        metadata.getEngravingDefault('thinBarlineThickness', 0.16) * staffSpace;
+    final thick =
+        metadata.getEngravingDefault('thickBarlineThickness', 0.5) * staffSpace;
     final color = theme.barlineColor;
     Paint p(double w) => Paint()
       ..color = color
@@ -1422,8 +1438,9 @@ class GrandStaffPainter extends CustomPainter {
             ),
             textDirection: TextDirection.ltr,
           )..layout();
-          final baselineFromTop =
-              tp.computeDistanceToActualBaseline(TextBaseline.alphabetic);
+          final baselineFromTop = tp.computeDistanceToActualBaseline(
+            TextBaseline.alphabetic,
+          );
           tp.paint(canvas, Offset(p.x, p.y - baselineFromTop));
         }
       }
@@ -1432,9 +1449,8 @@ class GrandStaffPainter extends CustomPainter {
 
       // Stems attach at the notehead edge nearest the beam: a note below the
       // beam stems up (right edge); a note above stems down (left edge).
-      double stemXof(({double x, double y}) p) => p.y > beamY
-          ? p.x + noteheadW - stemW * 0.5
-          : p.x + stemW * 0.5;
+      double stemXof(({double x, double y}) p) =>
+          p.y > beamY ? p.x + noteheadW - stemW * 0.5 : p.x + stemW * 0.5;
       for (final p in pts) {
         final sx = stemXof((x: p.x, y: p.y));
         canvas.drawLine(Offset(sx, p.y), Offset(sx, beamY), stemPaint);
@@ -1458,20 +1474,22 @@ class GrandStaffPainter extends CustomPainter {
   /// or null for a group of one, which draws no beam. Shared with
   /// [noteTapAt] so a tap tests the stems that are actually drawn.
   List<
-      ({
-        List<({Note note, int staff, int measureIndex, double x, double y})>
-            points,
-        double? beamY,
-      })> _crossStaffBeamGeometry(
-    List<_StaffLayout> layouts,
-    double baseline0,
-  ) {
-    final ss = staffSpace;
-    final groups = <({
+    ({
       List<({Note note, int staff, int measureIndex, double x, double y})>
-          points,
+      points,
       double? beamY,
-    })>[];
+    })
+  >
+  _crossStaffBeamGeometry(List<_StaffLayout> layouts, double baseline0) {
+    final ss = staffSpace;
+    final groups =
+        <
+          ({
+            List<({Note note, int staff, int measureIndex, double x, double y})>
+            points,
+            double? beamY,
+          })
+        >[];
     for (var home = 0; home < layouts.length; home++) {
       // Note X positions from the (aligned) positioned elements.
       final placed = <Note, PositionedElement>{};
@@ -1485,8 +1503,10 @@ class GrandStaffPainter extends CustomPainter {
           final pe = placed[note];
           if (pe == null) continue;
           final x = pe.position.dx;
-          final target = (home + note.crossStaffMove)
-              .clamp(0, _allStaves.length - 1);
+          final target = (home + note.crossStaffMove).clamp(
+            0,
+            _allStaves.length - 1,
+          );
           final pos = StaffPositionCalculator.calculate(
             note.pitch,
             // The clef in force on the DESTINATION staff at this X. It used to
@@ -1616,7 +1636,11 @@ int staffGroupsSignature(List<StaffGroup> groups) {
     );
     for (final staff in group.staves) {
       hash = Object.hash(
-          hash, identityHashCode(staff), staff.lineCount, staff.measures.length);
+        hash,
+        identityHashCode(staff),
+        staff.lineCount,
+        staff.measures.length,
+      );
       for (final measure in staff.measures) {
         hash = Object.hash(
           hash,
@@ -1642,8 +1666,12 @@ int staffGroupsSignature(List<StaffGroup> groups) {
         // same flat order.
         if (measure is MultiVoiceMeasure) {
           for (final voice in measure.sortedVoices) {
-            hash = Object.hash(hash, identityHashCode(voice), voice.number,
-                voice.elements.length);
+            hash = Object.hash(
+              hash,
+              identityHashCode(voice),
+              voice.number,
+              voice.elements.length,
+            );
             for (final element in voice.elements) {
               hash = _signElement(hash, element);
             }

@@ -32,23 +32,20 @@ class VoltaBracketsExample extends StatelessWidget {
             ),
             _buildSection(
               title: '1st Ending — Open End',
-              description:
-                  'Press back with hasOpenEnd: true — no vertical line'
+              description: 'Press back with hasOpenEnd: true — no vertical line'
                   'at the end. Indicates the music continues directly '
                   'for repetition without pause.',
               score: _buildOpenEnd(),
             ),
             _buildSection(
               title: 'Three Endings (1., 2., 3.)',
-              description:
-                  'Three alternate endings. Each repeat uses a '
+              description: 'Three alternate endings. Each repeat uses a '
                   'different bracket. Common in dances and strophic forms.',
               score: _buildThreeVoltas(),
             ),
             _buildSection(
               title: 'Custom Label (1.-3. and 4.)',
-              description:
-                  'VoltaBracket with custom label. The first ending '
+              description: 'VoltaBracket with custom label. The first ending '
                   '"1.-3." is played on the first 3 repeats; '
                   '"4." only on the last one.',
               score: _buildCustomLabel(),

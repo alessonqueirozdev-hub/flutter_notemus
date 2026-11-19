@@ -13,8 +13,9 @@ void main() {
   final calc = SlurCalculator();
 
   /// Samples the curve densely and returns the points.
-  List<Offset> sample(CubicBezierCurve c, {int n = 60}) =>
-      [for (var i = 0; i <= n; i++) c.pointAt(i / n)];
+  List<Offset> sample(CubicBezierCurve c, {int n = 60}) => [
+    for (var i = 0; i <= n; i++) c.pointAt(i / n),
+  ];
 
   void assertContinuousArc(
     CubicBezierCurve curve,

@@ -82,7 +82,8 @@ typedef Mutation = ({String name, String Function(String, math.Random) apply});
 final List<Mutation> mutations = <Mutation>[
   (
     name: 'truncate',
-    apply: (s, r) => s.substring(0, math.max(1, (s.length * r.nextDouble()).floor())),
+    apply: (s, r) =>
+        s.substring(0, math.max(1, (s.length * r.nextDouble()).floor())),
   ),
   (
     name: 'drop a random element',
@@ -93,34 +94,132 @@ final List<Mutation> mutations = <Mutation>[
       return s.replaceFirst(m.group(0)!, '<zzz');
     },
   ),
-  (name: 'octave -> negative', apply: (s, r) => s.replaceFirst(RegExp(r'oct="\d+"'), 'oct="-9"').replaceFirst(RegExp(r'<octave>\d+</octave>'), '<octave>-9</octave>')),
-  (name: 'octave -> huge', apply: (s, r) => s.replaceFirst(RegExp(r'oct="\d+"'), 'oct="999999"').replaceFirst(RegExp(r'<octave>\d+</octave>'), '<octave>999999</octave>')),
-  (name: 'octave -> text', apply: (s, r) => s.replaceFirst(RegExp(r'oct="\d+"'), 'oct="abc"').replaceFirst(RegExp(r'<octave>\d+</octave>'), '<octave>abc</octave>')),
-  (name: 'octave -> empty', apply: (s, r) => s.replaceFirst(RegExp(r'<octave>\d+</octave>'), '<octave></octave>')),
-  (name: 'step -> H', apply: (s, r) => s.replaceFirst('<step>C</step>', '<step>H</step>').replaceFirst('pname="c"', 'pname="h"')),
-  (name: 'step -> lowercase', apply: (s, r) => s.replaceFirst('<step>C</step>', '<step>c</step>')),
-  (name: 'step -> empty', apply: (s, r) => s.replaceFirst('<step>C</step>', '<step></step>').replaceFirst('pname="c"', 'pname=""')),
-  (name: 'step -> symbol', apply: (s, r) => s.replaceFirst('<step>C</step>', '<step>@</step>').replaceFirst('pname="c"', 'pname="@"')),
-  (name: 'duration -> negative', apply: (s, r) => s.replaceFirst(RegExp(r'<duration>\d+</duration>'), '<duration>-5</duration>')),
-  (name: 'duration -> zero', apply: (s, r) => s.replaceFirst(RegExp(r'<duration>\d+</duration>'), '<duration>0</duration>')),
-  (name: 'duration -> 1e9', apply: (s, r) => s.replaceFirst(RegExp(r'<duration>\d+</duration>'), '<duration>1000000000</duration>')),
-  (name: 'divisions -> zero', apply: (s, r) => s.replaceFirst(RegExp(r'<divisions>\d+</divisions>'), '<divisions>0</divisions>')),
-  (name: 'dur -> bogus', apply: (s, r) => s.replaceFirst('dur="4"', 'dur="bogus"').replaceFirst('<type>quarter</type>', '<type>bogus</type>')),
-  (name: 'duplicate xml:id', apply: (s, r) => s.replaceAll('xml:id="n2"', 'xml:id="n1"')),
-  (name: 'beam without end', apply: (s, r) => s.replaceFirst('<beam number="1">end</beam>', '<beam number="1">begin</beam>')),
-  (name: 'drop the clef', apply: (s, r) => s.replaceFirst(RegExp(r'<clef>.*?</clef>', dotAll: true), '').replaceFirst(RegExp(r'clef\.shape="G" clef\.line="2"'), '')),
+  (
+    name: 'octave -> negative',
+    apply: (s, r) => s
+        .replaceFirst(RegExp(r'oct="\d+"'), 'oct="-9"')
+        .replaceFirst(RegExp(r'<octave>\d+</octave>'), '<octave>-9</octave>'),
+  ),
+  (
+    name: 'octave -> huge',
+    apply: (s, r) => s
+        .replaceFirst(RegExp(r'oct="\d+"'), 'oct="999999"')
+        .replaceFirst(
+          RegExp(r'<octave>\d+</octave>'),
+          '<octave>999999</octave>',
+        ),
+  ),
+  (
+    name: 'octave -> text',
+    apply: (s, r) => s
+        .replaceFirst(RegExp(r'oct="\d+"'), 'oct="abc"')
+        .replaceFirst(RegExp(r'<octave>\d+</octave>'), '<octave>abc</octave>'),
+  ),
+  (
+    name: 'octave -> empty',
+    apply: (s, r) =>
+        s.replaceFirst(RegExp(r'<octave>\d+</octave>'), '<octave></octave>'),
+  ),
+  (
+    name: 'step -> H',
+    apply: (s, r) => s
+        .replaceFirst('<step>C</step>', '<step>H</step>')
+        .replaceFirst('pname="c"', 'pname="h"'),
+  ),
+  (
+    name: 'step -> lowercase',
+    apply: (s, r) => s.replaceFirst('<step>C</step>', '<step>c</step>'),
+  ),
+  (
+    name: 'step -> empty',
+    apply: (s, r) => s
+        .replaceFirst('<step>C</step>', '<step></step>')
+        .replaceFirst('pname="c"', 'pname=""'),
+  ),
+  (
+    name: 'step -> symbol',
+    apply: (s, r) => s
+        .replaceFirst('<step>C</step>', '<step>@</step>')
+        .replaceFirst('pname="c"', 'pname="@"'),
+  ),
+  (
+    name: 'duration -> negative',
+    apply: (s, r) => s.replaceFirst(
+      RegExp(r'<duration>\d+</duration>'),
+      '<duration>-5</duration>',
+    ),
+  ),
+  (
+    name: 'duration -> zero',
+    apply: (s, r) => s.replaceFirst(
+      RegExp(r'<duration>\d+</duration>'),
+      '<duration>0</duration>',
+    ),
+  ),
+  (
+    name: 'duration -> 1e9',
+    apply: (s, r) => s.replaceFirst(
+      RegExp(r'<duration>\d+</duration>'),
+      '<duration>1000000000</duration>',
+    ),
+  ),
+  (
+    name: 'divisions -> zero',
+    apply: (s, r) => s.replaceFirst(
+      RegExp(r'<divisions>\d+</divisions>'),
+      '<divisions>0</divisions>',
+    ),
+  ),
+  (
+    name: 'dur -> bogus',
+    apply: (s, r) => s
+        .replaceFirst('dur="4"', 'dur="bogus"')
+        .replaceFirst('<type>quarter</type>', '<type>bogus</type>'),
+  ),
+  (
+    name: 'duplicate xml:id',
+    apply: (s, r) => s.replaceAll('xml:id="n2"', 'xml:id="n1"'),
+  ),
+  (
+    name: 'beam without end',
+    apply: (s, r) => s.replaceFirst(
+      '<beam number="1">end</beam>',
+      '<beam number="1">begin</beam>',
+    ),
+  ),
+  (
+    name: 'drop the clef',
+    apply: (s, r) => s
+        .replaceFirst(RegExp(r'<clef>.*?</clef>', dotAll: true), '')
+        .replaceFirst(RegExp(r'clef\.shape="G" clef\.line="2"'), ''),
+  ),
   (
     name: 'malformed nested tuplets',
     apply: (s, r) => s.replaceFirst(
       '<rest dur="4"/>',
       '<tuplet num="3" numbase="2"><tuplet num="5" numbase="4">'
-      '<note pname="c" oct="5" dur="16"/></tuplet>',
+          '<note pname="c" oct="5" dur="16"/></tuplet>',
     ),
   ),
-  (name: 'time signature -> zero', apply: (s, r) => s.replaceFirst('<beats>4</beats>', '<beats>0</beats>').replaceFirst('meter.count="4"', 'meter.count="0"')),
-  (name: 'fifths -> absurd', apply: (s, r) => s.replaceFirst('<fifths>2</fifths>', '<fifths>99</fifths>')),
+  (
+    name: 'time signature -> zero',
+    apply: (s, r) => s
+        .replaceFirst('<beats>4</beats>', '<beats>0</beats>')
+        .replaceFirst('meter.count="4"', 'meter.count="0"'),
+  ),
+  (
+    name: 'fifths -> absurd',
+    apply: (s, r) =>
+        s.replaceFirst('<fifths>2</fifths>', '<fifths>99</fifths>'),
+  ),
   (name: 'unclosed tag', apply: (s, r) => s.replaceFirst('</measure>', '')),
-  (name: 'stray ampersand', apply: (s, r) => s.replaceFirst('<part-name>Music</part-name>', '<part-name>M & M</part-name>')),
+  (
+    name: 'stray ampersand',
+    apply: (s, r) => s.replaceFirst(
+      '<part-name>Music</part-name>',
+      '<part-name>M & M</part-name>',
+    ),
+  ),
 ];
 
 // --------------------------------------------------------------- contract ---
@@ -146,15 +245,25 @@ void main() {
     for (final measure in staff.measures) {
       for (final element in measure.allElements) {
         if (element is! Note) continue;
-        expect(Pitch.isValidStep(element.pitch.step), isTrue,
-            reason: '$label produced step "${element.pitch.step}"');
-        expect(element.pitch.octave, inInclusiveRange(-1, 10),
-            reason: '$label produced octave ${element.pitch.octave}');
+        expect(
+          Pitch.isValidStep(element.pitch.step),
+          isTrue,
+          reason: '$label produced step "${element.pitch.step}"',
+        );
+        expect(
+          element.pitch.octave,
+          inInclusiveRange(-1, 10),
+          reason: '$label produced octave ${element.pitch.octave}',
+        );
       }
     }
 
-    final engine = LayoutEngine(staff,
-        availableWidth: 800, staffSpace: 12, metadata: metadata);
+    final engine = LayoutEngine(
+      staff,
+      availableWidth: 800,
+      staffSpace: 12,
+      metadata: metadata,
+    );
     final positioned = engine.layout();
     for (final p in positioned) {
       expect(p.position.dx.isFinite, isTrue, reason: '$label: non-finite x');
@@ -165,12 +274,18 @@ void main() {
     final sequence = MidiMapper.fromStaff(staff);
     for (final track in sequence.tracks) {
       for (final event in track.events) {
-        expect(event.tick, greaterThanOrEqualTo(0),
-            reason: '$label: negative tick');
+        expect(
+          event.tick,
+          greaterThanOrEqualTo(0),
+          reason: '$label: negative tick',
+        );
         final note = event.note;
         if (note != null) {
-          expect(note, inInclusiveRange(0, 127),
-              reason: '$label: MIDI note out of range');
+          expect(
+            note,
+            inInclusiveRange(0, 127),
+            reason: '$label: MIDI note out of range',
+          );
         }
       }
     }
@@ -183,8 +298,11 @@ void main() {
     try {
       staff = parse();
     } catch (e) {
-      expect(isDomainFailure(e), isTrue,
-          reason: '$label must fail with a domain exception, got ${describe(e)}');
+      expect(
+        isDomainFailure(e),
+        isTrue,
+        reason: '$label must fail with a domain exception, got ${describe(e)}',
+      );
       return;
     }
     assertUsable(staff, label);
@@ -196,16 +314,20 @@ void main() {
         final rnd = math.Random(1337);
         for (var i = 0; i < 3; i++) {
           final doc = mutation.apply(validMusicXml, rnd);
-          fuzzCase('MusicXML/${mutation.name}#$i',
-              () => MusicXMLParser.parseMusicXML(doc));
+          fuzzCase(
+            'MusicXML/${mutation.name}#$i',
+            () => MusicXMLParser.parseMusicXML(doc),
+          );
         }
       });
     }
 
     test('survives byte-level truncation', () {
       for (var cut = 1; cut < validMusicXml.length; cut += 37) {
-        fuzzCase('truncate@$cut',
-            () => MusicXMLParser.parseMusicXML(validMusicXml.substring(0, cut)));
+        fuzzCase(
+          'truncate@$cut',
+          () => MusicXMLParser.parseMusicXML(validMusicXml.substring(0, cut)),
+        );
       }
     });
   });
@@ -223,8 +345,10 @@ void main() {
 
     test('survives byte-level truncation', () {
       for (var cut = 1; cut < validMei.length; cut += 29) {
-        fuzzCase('truncate@$cut',
-            () => MEIParser.parseMEI(validMei.substring(0, cut)));
+        fuzzCase(
+          'truncate@$cut',
+          () => MEIParser.parseMEI(validMei.substring(0, cut)),
+        );
       }
     });
   });
@@ -265,10 +389,12 @@ void main() {
       }
       sb
         ..writeln(']>')
-        ..writeln('<score-partwise version="4.0">'
-            '<part-list><score-part id="P1"><part-name>&e6;</part-name>'
-            '</score-part></part-list>'
-            '<part id="P1"><measure number="1"/></part></score-partwise>');
+        ..writeln(
+          '<score-partwise version="4.0">'
+          '<part-list><score-part id="P1"><part-name>&e6;</part-name>'
+          '</score-part></part-list>'
+          '<part id="P1"><measure number="1"/></part></score-partwise>',
+        );
 
       final sw = Stopwatch()..start();
       try {
@@ -277,12 +403,16 @@ void main() {
         expect(isDomainFailure(e) || e is Exception, isTrue);
       }
       sw.stop();
-      expect(sw.elapsedMilliseconds, lessThan(2000),
-          reason: 'a billion-laughs document must not become a hang.');
+      expect(
+        sw.elapsedMilliseconds,
+        lessThan(2000),
+        reason: 'a billion-laughs document must not become a hang.',
+      );
     });
 
     test('an external entity reference resolves to nothing', () {
-      const xxe = '<?xml version="1.0"?>'
+      const xxe =
+          '<?xml version="1.0"?>'
           '<!DOCTYPE score [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>'
           '<score-partwise version="4.0">'
           '<part-list><score-part id="P1"><part-name>&xxe;</part-name>'
@@ -291,8 +421,11 @@ void main() {
       try {
         final meta = MusicXMLParser.extractMetadata(xxe);
         final title = '${meta['title']}';
-        expect(title.contains('root:'), isFalse,
-            reason: 'the parser must never inline an external file.');
+        expect(
+          title.contains('root:'),
+          isFalse,
+          reason: 'the parser must never inline an external file.',
+        );
       } catch (e) {
         expect(isDomainFailure(e) || e is Exception, isTrue);
       }
@@ -313,14 +446,18 @@ void main() {
         final back = MusicXMLParser.parseMusicXML(xml);
 
         List<String> pitchesOf(Staff s) => [
-              for (final m in s.measures)
-                for (final e in m.allElements)
-                  if (e is Note) '${e.pitch.step}${e.pitch.octave}'
-                      '${e.pitch.effectiveAlter}',
-            ];
+          for (final m in s.measures)
+            for (final e in m.allElements)
+              if (e is Note)
+                '${e.pitch.step}${e.pitch.octave}'
+                    '${e.pitch.effectiveAlter}',
+        ];
 
-        expect(pitchesOf(back), pitchesOf(original),
-            reason: '$label lost or altered pitches on round-trip.');
+        expect(
+          pitchesOf(back),
+          pitchesOf(original),
+          reason: '$label lost or altered pitches on round-trip.',
+        );
       });
     });
 
@@ -335,12 +472,16 @@ void main() {
           continue; // rejected: nothing to round-trip
         }
         try {
-          final back =
-              MusicXMLParser.parseMusicXML(MusicXMLParser.staffToMusicXML(staff));
+          final back = MusicXMLParser.parseMusicXML(
+            MusicXMLParser.staffToMusicXML(staff),
+          );
           assertUsable(back, 'round-trip/${mutation.name}');
         } catch (e) {
-          expect(isDomainFailure(e), isTrue,
-              reason: 'round-trip of "${mutation.name}" threw ${describe(e)}');
+          expect(
+            isDomainFailure(e),
+            isTrue,
+            reason: 'round-trip of "${mutation.name}" threw ${describe(e)}',
+          );
         }
       }
     });

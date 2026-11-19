@@ -62,8 +62,12 @@ class GabcResult {
   /// when the document used nothing outside the supported subset.
   final List<String> unsupported;
 
-  const GabcResult(this.clef, this.elements, this.headers,
-      {this.unsupported = const <String>[]});
+  const GabcResult(
+    this.clef,
+    this.elements,
+    this.headers, {
+    this.unsupported = const <String>[],
+  });
 }
 
 class GabcParser {
@@ -88,8 +92,10 @@ class GabcParser {
     for (final line in headerLines) {
       final idx = line.indexOf(':');
       if (idx > 0) {
-        headers[line.substring(0, idx).trim()] =
-            line.substring(idx + 1).replaceAll(';', '').trim();
+        headers[line.substring(0, idx).trim()] = line
+            .substring(idx + 1)
+            .replaceAll(';', '')
+            .trim();
       }
     }
 
@@ -134,7 +140,8 @@ class GabcParser {
         );
         // Double clef (`c3@c1`): Gregorio draws two clefs for two-choir
         // notation. Only the first governs the pitches here.
-        if (clefMatch.group(4) != null && !unsupported.contains(_doubleClefNote)) {
+        if (clefMatch.group(4) != null &&
+            !unsupported.contains(_doubleClefNote)) {
           unsupported.add(_doubleClefNote);
         }
         if (!sawClef) {
@@ -163,15 +170,20 @@ class GabcParser {
       _parseSyllable(notes, text, elements, clef, hyphenAfter);
     }
 
-    return GabcResult(sawClef ? firstClef : clef, elements, headers,
-        unsupported: List<String>.unmodifiable(unsupported));
+    return GabcResult(
+      sawClef ? firstClef : clef,
+      elements,
+      headers,
+      unsupported: List<String>.unmodifiable(unsupported),
+    );
   }
 
   /// Clef token: `c1..c4` / `f1..f4`, optional `b` for the clef-flat, plus the
   /// optional second half of a DOUBLE clef (`c3@c1`), which is recognised so it
   /// cannot be mistaken for notes but is otherwise ignored.
-  static final RegExp _clefRe =
-      RegExp(r'^([cf])(b?)([1-4])(?:@([cf])(b?)([1-4]))?$');
+  static final RegExp _clefRe = RegExp(
+    r'^([cf])(b?)([1-4])(?:@([cf])(b?)([1-4]))?$',
+  );
 
   static const String _nabcNote =
       'nabc (adiastematic notation after `|`) was discarded.';
@@ -240,8 +252,12 @@ class GabcParser {
       segment.clear();
       if (s.trim().isEmpty) return;
       // Only the neume that actually carries the syllable gets the hyphen.
-      final elems = _buildNeume(s, assignedSyllable ? null : syllable, clef,
-          assignedSyllable ? false : hyphenAfter);
+      final elems = _buildNeume(
+        s,
+        assignedSyllable ? null : syllable,
+        clef,
+        assignedSyllable ? false : hyphenAfter,
+      );
       if (elems.isNotEmpty) {
         out.addAll(elems);
         assignedSyllable = true;
@@ -295,7 +311,11 @@ class GabcParser {
   /// every divisio and at every word start (a word start being the first
   /// syllable after one whose `hyphenAfter` is false).
   static List<MusicalElement> _buildNeume(
-      String seg, String? syllable, ChantClef clef, bool hyphenAfter) {
+    String seg,
+    String? syllable,
+    ChantClef clef,
+    bool hyphenAfter,
+  ) {
     final result = <MusicalElement>[];
     var comps = <NeumeComponent>[];
     var steps = <int>[];
@@ -305,12 +325,14 @@ class GabcParser {
     void flushNotes() {
       if (comps.isEmpty) return;
       final carriesSyllable = !syllableUsed;
-      result.add(Neume(
-        type: _classify(steps, hasInclinatum, comps),
-        components: comps,
-        syllable: carriesSyllable ? syllable : null,
-        hyphenAfter: carriesSyllable && hyphenAfter,
-      ));
+      result.add(
+        Neume(
+          type: _classify(steps, hasInclinatum, comps),
+          components: comps,
+          syllable: carriesSyllable ? syllable : null,
+          hyphenAfter: carriesSyllable && hyphenAfter,
+        ),
+      );
       syllableUsed = true;
       comps = <NeumeComponent>[];
       steps = <int>[];
@@ -385,30 +407,34 @@ class GabcParser {
       if (accidental != NeumeAccidental.none) {
         // Standalone accidental sign at this staff position.
         flushNotes();
-        result.add(Neume(
-          type: NeumeType.custom,
-          components: [
-            NeumeComponent(
-              pitchName: step,
-              octave: octave,
-              accidental: accidental,
-            ),
-          ],
-        ));
+        result.add(
+          Neume(
+            type: NeumeType.custom,
+            components: [
+              NeumeComponent(
+                pitchName: step,
+                octave: octave,
+                accidental: accidental,
+              ),
+            ],
+          ),
+        );
         continue;
       }
 
       if (upper) hasInclinatum = true;
-      comps.add(NeumeComponent(
-        pitchName: step,
-        octave: octave,
-        form: form,
-        isLiquescent: liquescent,
-        connected: fused,
-        episema: episema,
-        ictus: ictus,
-        morae: morae,
-      ));
+      comps.add(
+        NeumeComponent(
+          pitchName: step,
+          octave: octave,
+          form: form,
+          isLiquescent: liquescent,
+          connected: fused,
+          episema: episema,
+          ictus: ictus,
+          morae: morae,
+        ),
+      );
       steps.add(idx);
     }
 

@@ -200,7 +200,8 @@ class TupletGrid {
     // caller supplied one) — not for this group alone. See
     // [smallestRawLeafSpaces].
     final denominator = contextSmallestLeafSpaces ?? smallestLeaf;
-    final scale = denominator.isFinite &&
+    final scale =
+        denominator.isFinite &&
             denominator > 0 &&
             denominator < minimumSlotSpaces
         ? minimumSlotSpaces / denominator
@@ -338,14 +339,13 @@ class TupletGrid {
     TupletLeftExtent? leftExtent,
     double noteheadAdvanceSpaces = defaultNoteheadAdvanceSpaces,
     double? contextSmallestLeafSpaces,
-  }) =>
-      offsets(
-        tuplet,
-        staffSpace,
-        leftExtent: leftExtent,
-        noteheadAdvanceSpaces: noteheadAdvanceSpaces,
-        contextSmallestLeafSpaces: contextSmallestLeafSpaces,
-      ).last;
+  }) => offsets(
+    tuplet,
+    staffSpace,
+    leftExtent: leftExtent,
+    noteheadAdvanceSpaces: noteheadAdvanceSpaces,
+    contextSmallestLeafSpaces: contextSmallestLeafSpaces,
+  ).last;
 
   static Duration? _durationOf(MusicalElement element) {
     if (element is Note) return element.duration;

@@ -18,9 +18,14 @@ void main() {
       for (var b = a + 1; b < positions.length; b++) {
         if (cols[a] == cols[b]) {
           final gap = (positions[a] - positions[b]).abs();
-          final need = clearances[a] < clearances[b] ? clearances[a] : clearances[b];
-          expect(gap, greaterThanOrEqualTo(need),
-              reason: 'accidentals $a and $b share column ${cols[a]} but overlap');
+          final need = clearances[a] < clearances[b]
+              ? clearances[a]
+              : clearances[b];
+          expect(
+            gap,
+            greaterThanOrEqualTo(need),
+            reason: 'accidentals $a and $b share column ${cols[a]} but overlap',
+          );
         }
       }
     }
@@ -39,7 +44,10 @@ void main() {
 
   test('far-apart accidentals (>= clearance) can share column 0', () {
     // Two accidentals a tenth apart (positions 5 and -5 -> gap 10 >= 5.9).
-    final cols = ChordRenderer.assignAccidentalColumns([5, -5], [sharpClearance, sharpClearance]);
+    final cols = ChordRenderer.assignAccidentalColumns(
+      [5, -5],
+      [sharpClearance, sharpClearance],
+    );
     expect(cols, [0, 0]);
   });
 

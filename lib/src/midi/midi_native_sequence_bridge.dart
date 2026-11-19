@@ -43,8 +43,10 @@ class MidiNativeSequenceBridge {
     // player applies them — PlaybackPlan's reading. Taking the first one sent
     // the mapper's default 120 even when the score's own mark at tick 0 says
     // otherwise.
-    final plan =
-        PlaybackPlan.fromSequence(sequence, fallbackBpm: fallbackTempoBpm);
+    final plan = PlaybackPlan.fromSequence(
+      sequence,
+      fallbackBpm: fallbackTempoBpm,
+    );
     final tempo = _extractInitialTempo(sequence) == null
         ? fallbackTempoBpm
         : plan.tempoChanges.first.bpm;
@@ -106,17 +108,21 @@ class MidiNativeSequenceBridge {
         }
         // A sequence that already carries its metronome track, uploaded with
         // includeMetronomeTrackNotes, has its clicks among the notes above.
-        final clicksUploaded = includeMetronomeTrackNotes &&
+        final clicksUploaded =
+            includeMetronomeTrackNotes &&
             sequence.tracks.any((t) => t.name.toLowerCase() == 'metronome');
-        for (final click in clicksUploaded
-            ? const <({int tick, bool accent})>[]
-            : _metronomeClicks(
-                sequence,
-                fallbackBeatsPerBar:
-                    timeSignature?.numerator ?? fallbackNumerator,
-              )) {
+        for (final click
+            in clicksUploaded
+                ? const <({int tick, bool accent})>[]
+                : _metronomeClicks(
+                    sequence,
+                    fallbackBeatsPerBar:
+                        timeSignature?.numerator ?? fallbackNumerator,
+                  )) {
           final start = warp(click.tick);
-          final end = warp(click.tick + _clickOptions.metronomeClickDurationTicks);
+          final end = warp(
+            click.tick + _clickOptions.metronomeClickDurationTicks,
+          );
           await backend.scheduleNote(
             midiNote: click.accent
                 ? _clickOptions.metronomeAccentNote
@@ -173,7 +179,8 @@ List<({int tick, bool accent})> _metronomeClicks(
     for (final bar in sequence.playedMeasures)
       for (var beat = 0; beat < _beatsOf(bar); beat++)
         (
-          tick: bar.startTick +
+          tick:
+              bar.startTick +
               (beat * bar.durationTicks / _beatsOf(bar)).round(),
           accent: beat == 0,
         ),
@@ -189,10 +196,14 @@ int _beatsOf(MidiPlayedMeasure bar) {
 /// actually sounds, through every tempo change. The identity when the
 /// sequence never changes tempo.
 int Function(int) _tempoWarp(
-    PlaybackPlan plan, int ticksPerQuarter, int openingBpm) {
+  PlaybackPlan plan,
+  int ticksPerQuarter,
+  int openingBpm,
+) {
   if (plan.tempoChanges.length < 2) return (tick) => tick;
   final ticksPerMicro = openingBpm * ticksPerQuarter / 60000000;
-  return (tick) => (plan.timeAtTick(tick).inMicroseconds * ticksPerMicro).round();
+  return (tick) =>
+      (plan.timeAtTick(tick).inMicroseconds * ticksPerMicro).round();
 }
 
 List<ScheduledMidiNote> extractScheduledNotes(

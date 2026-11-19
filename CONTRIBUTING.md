@@ -1,4 +1,4 @@
-# Contributing to Flutter Notemus
+﻿# Contributing to Flutter Notemus
 
 Thank you for considering a contribution. This document is short on ceremony and
 long on the two things that actually matter here: **how the project decides what
@@ -34,10 +34,18 @@ otherwise have to guess why a number is what it is.
 flutter pub get
 flutter test
 dart analyze
+dart format lib test example
 ```
 
-The suite is around 1000 tests and takes roughly two minutes. It must be green
+The suite is around 1100 tests and takes a few minutes. It must be green
 before and after your change.
+
+**Formatting is checked in CI.** Run `dart format lib test example` before you
+push, after `flutter pub get` at the root and in `example/`. Without a resolved
+package config, the formatter falls back to the newest style and rewrites files
+that are already correct. The `Format` job runs on the latest stable Flutter
+and fails on any difference. An older SDK can still disagree in a few places,
+so when the job fails, apply the diff it prints rather than your local output.
 
 > **Gotcha:** running `flutter analyze` inside `example/` rewrites the root's
 > package resolution and makes `package:pdf` unresolvable. If `dart analyze`
@@ -51,13 +59,25 @@ before and after your change.
 2. **The measurement.** Numbers, with units and the conditions they were taken
    under (`staffSpace`, canvas width, which font). "Fixed the spacing" is not a
    description; "the gap went from 26.90 px to 38.57 px at staffSpace 12" is.
-3. **A green suite and a clean analyzer**, at the repo root and in `example/`.
+3. **A green suite, a clean analyzer and formatted code**, at the repo root
+   and in `example/`.
 
 ## Engraving changes and golden images
 
-`test/golden/` holds 53 reference images. If your change moves a pixel, several
-will go red. That is expected and fine — what is *not* fine is re-recording them
-without looking.
+`test/golden/goldens/` holds the reference images, and they are committed. If
+your change moves a pixel, several will go red. That is expected and fine. What
+is *not* fine is re-recording them without looking.
+
+**The goldens are recorded on Windows only.** Font rasterisation, hinting and
+anti-aliasing differ per OS, so CI compares them on `windows-latest`. An image
+recorded on macOS or Linux will not match there. That gives two cases:
+
+- **You are not on Windows:** don't commit re-recorded or new PNGs. Add or
+  change the case in `test/golden/corpus.dart`, attach your local renders to the
+  PR for reference, and a maintainer will record the Windows images on your
+  branch. Leave "Allow edits by maintainers" on.
+- **You are on Windows:** record with
+  `flutter test --update-goldens test/golden` and follow the steps below.
 
 **Before running `flutter test --update-goldens`:**
 

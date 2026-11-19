@@ -6,7 +6,9 @@ void main() {
   group('ArticulationRenderer.getArticulationClearanceSS', () {
     test('keeps accented articulations farther from the notehead', () {
       expect(
-        ArticulationRenderer.getArticulationClearanceSS(ArticulationType.accent),
+        ArticulationRenderer.getArticulationClearanceSS(
+          ArticulationType.accent,
+        ),
         greaterThan(
           ArticulationRenderer.getArticulationClearanceSS(
             ArticulationType.staccato,
@@ -27,7 +29,9 @@ void main() {
 
     test('keeps tenuto farther than staccato for readability', () {
       expect(
-        ArticulationRenderer.getArticulationClearanceSS(ArticulationType.tenuto),
+        ArticulationRenderer.getArticulationClearanceSS(
+          ArticulationType.tenuto,
+        ),
         greaterThan(
           ArticulationRenderer.getArticulationClearanceSS(
             ArticulationType.staccato,

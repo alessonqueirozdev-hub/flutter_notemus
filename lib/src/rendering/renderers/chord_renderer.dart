@@ -363,10 +363,10 @@ class ChordRenderer extends BaseGlyphRenderer {
     Map<Note, AccidentalDisplay>? accidentalDecisions,
   }) {
     int posOf(Note n) => StaffPositionCalculator.calculate(
-          n.pitch,
-          clef,
-          extraOctaveShift: extraOctaveShift,
-        );
+      n.pitch,
+      clef,
+      extraOctaveShift: extraOctaveShift,
+    );
 
     final sortedNotes = [...chord.notes]
       ..sort((a, b) => posOf(b).compareTo(posOf(a)));
@@ -554,17 +554,19 @@ class ChordRenderer extends BaseGlyphRenderer {
       // reserved for the columns that were used — no more, no less.
       assert(
         (geometry.accidentalColumnLeftX.last -
-                (clusterOffsets.reduce(math.min) -
-                    geometry.accidentalBlockWidth))
-            .abs() <
+                    (clusterOffsets.reduce(math.min) -
+                        geometry.accidentalBlockWidth))
+                .abs() <
             1e-3,
         'chord accidental block width does not match the columns in use',
       );
 
       for (final entry in accidentalColumns.entries) {
         final i = entry.key;
-        final accidentalGlyph =
-            effectiveAccidentalGlyph(sortedNotes[i], accidentalDecisions)!;
+        final accidentalGlyph = effectiveAccidentalGlyph(
+          sortedNotes[i],
+          accidentalDecisions,
+        )!;
         final noteY = StaffPositionCalculator.toPixelY(
           positions[i],
           coordinates.staffSpace,
@@ -575,8 +577,7 @@ class ChordRenderer extends BaseGlyphRenderer {
         accidentalRenderer.drawDecoratedAccidental(
           canvas,
           glyphName: accidentalGlyph,
-          leftX: basePosition.dx +
-              geometry.accidentalColumnLeftX[entry.value],
+          leftX: basePosition.dx + geometry.accidentalColumnLeftX[entry.value],
           y: noteY,
           color: theme.accidentalColor ?? theme.noteheadColor,
           paren: sortedNotes[i].accidentalParenthesis,
@@ -740,8 +741,8 @@ class ChordRenderer extends BaseGlyphRenderer {
         // p.137 says. Passing a notehead CENTRE was the second half of the
         // problem: measured on a C5-E5-G5 chord at staffSpace 26, the ink ran
         // columns 252-281 and the sign landed at 273-284, inside it.
-        arpeggioReferenceCenterX: basePosition.dx +
-            clusterOffsets.reduce((a, b) => a < b ? a : b),
+        arpeggioReferenceCenterX:
+            basePosition.dx + clusterOffsets.reduce((a, b) => a < b ? a : b),
         stemUp: stemUp,
       );
     }
@@ -886,10 +887,10 @@ class ChordRenderer extends BaseGlyphRenderer {
     final farIndex = stemUp ? 0 : positions.length - 1;
     final glyph = chord.duration.type.glyphName;
     double pixelYOf(int index) => StaffPositionCalculator.toPixelY(
-          positions[index],
-          coordinates.staffSpace,
-          coordinates.staffBaseline.dy,
-        );
+      positions[index],
+      coordinates.staffSpace,
+      coordinates.staffBaseline.dy,
+    );
     return (
       x: noteRenderer.positioningEngine.calculateStemX(
         noteX: basePosition.dx + geometry.clusterOffsets[nearIndex],

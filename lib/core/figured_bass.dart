@@ -8,10 +8,13 @@ import 'musical_element.dart';
 enum FigureSuffix {
   /// Nenhum sufixo
   none,
+
   /// Extension horizontal (extension line)
   extender,
+
   /// Barra diagonal descendente (crossing)
   slash,
+
   /// Backtick (tick mark)
   tick,
 }
@@ -19,14 +22,7 @@ enum FigureSuffix {
 /// Sinal de alteração de a figure de bottom cifrado.
 ///
 /// Correspwhere to the atributo `@accid` of the element `<f>` no MEI v5.
-enum FigureAccidental {
-  none,
-  sharp,
-  flat,
-  natural,
-  doubleSharp,
-  doubleFlat,
-}
+enum FigureAccidental { none, sharp, flat, natural, doubleSharp, doubleFlat }
 
 /// Representa a única figure of the bottom cifrado, correspwherendo to the
 /// elemento `<f>` (figure) within de `<fb>` no MEI v5.
@@ -75,8 +71,5 @@ class FiguredBass extends MusicalElement {
   /// Indicates if a realização must be displayed above the note (default = below).
   final bool above;
 
-  FiguredBass({
-    required this.figures,
-    this.above = false,
-  });
+  FiguredBass({required this.figures, this.above = false});
 }

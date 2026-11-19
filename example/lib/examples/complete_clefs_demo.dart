@@ -139,7 +139,8 @@ class CompleteClefsDemoExample extends StatelessWidget {
 
     // Escala de D major ascendente
     measure1.add(Note(
-      pitch: Pitch.withAccidental(step: 'D', octave: 4, accidentalType: AccidentalType.natural),
+      pitch: Pitch.withAccidental(
+          step: 'D', octave: 4, accidentalType: AccidentalType.natural),
       duration: const Duration(DurationType.quarter),
     ));
     measure1.add(Note(
@@ -147,7 +148,8 @@ class CompleteClefsDemoExample extends StatelessWidget {
       duration: const Duration(DurationType.quarter),
     ));
     measure1.add(Note(
-      pitch: Pitch.withAccidental(step: 'F', octave: 4, accidentalType: AccidentalType.sharp),
+      pitch: Pitch.withAccidental(
+          step: 'F', octave: 4, accidentalType: AccidentalType.sharp),
       duration: const Duration(DurationType.quarter),
     ));
     measure1.add(Note(
@@ -166,7 +168,8 @@ class CompleteClefsDemoExample extends StatelessWidget {
       duration: const Duration(DurationType.quarter),
     ));
     measure2.add(Note(
-      pitch: Pitch.withAccidental(step: 'C', octave: 5, accidentalType: AccidentalType.sharp),
+      pitch: Pitch.withAccidental(
+          step: 'C', octave: 5, accidentalType: AccidentalType.sharp),
       duration: const Duration(DurationType.quarter),
     ));
     measure2.add(Note(
@@ -197,7 +200,8 @@ class CompleteClefsDemoExample extends StatelessWidget {
 
     // Escala de Mi♭ Greater
     measure1.add(Note(
-      pitch: Pitch.withAccidental(step: 'E', octave: 2, accidentalType: AccidentalType.flat),
+      pitch: Pitch.withAccidental(
+          step: 'E', octave: 2, accidentalType: AccidentalType.flat),
       duration: const Duration(DurationType.quarter),
     ));
     measure1.add(Note(
@@ -212,11 +216,13 @@ class CompleteClefsDemoExample extends StatelessWidget {
     // Measure 2
     final measure2 = Measure();
     measure2.add(Note(
-      pitch: Pitch.withAccidental(step: 'A', octave: 2, accidentalType: AccidentalType.flat),
+      pitch: Pitch.withAccidental(
+          step: 'A', octave: 2, accidentalType: AccidentalType.flat),
       duration: const Duration(DurationType.quarter),
     ));
     measure2.add(Note(
-      pitch: Pitch.withAccidental(step: 'B', octave: 2, accidentalType: AccidentalType.flat),
+      pitch: Pitch.withAccidental(
+          step: 'B', octave: 2, accidentalType: AccidentalType.flat),
       duration: const Duration(DurationType.quarter),
     ));
     measure2.add(Note(
@@ -231,7 +237,8 @@ class CompleteClefsDemoExample extends StatelessWidget {
       duration: const Duration(DurationType.quarter),
     ));
     measure3.add(Note(
-      pitch: Pitch.withAccidental(step: 'E', octave: 3, accidentalType: AccidentalType.flat),
+      pitch: Pitch.withAccidental(
+          step: 'E', octave: 3, accidentalType: AccidentalType.flat),
       duration: const Duration(DurationType.quarter),
     ));
     measure3.add(Rest(duration: const Duration(DurationType.quarter)));
@@ -287,7 +294,8 @@ class CompleteClefsDemoExample extends StatelessWidget {
       duration: const Duration(DurationType.quarter),
     ));
     measure2.add(Note(
-      pitch: Pitch.withAccidental(step: 'F', octave: 4, accidentalType: AccidentalType.sharp),
+      pitch: Pitch.withAccidental(
+          step: 'F', octave: 4, accidentalType: AccidentalType.sharp),
       duration: const Duration(DurationType.quarter),
     ));
     measure2.add(Note(
@@ -318,7 +326,8 @@ class CompleteClefsDemoExample extends StatelessWidget {
 
     // Melodic pattern in 6/8
     measure1.add(Note(
-      pitch: Pitch.withAccidental(step: 'B', octave: 3, accidentalType: AccidentalType.flat),
+      pitch: Pitch.withAccidental(
+          step: 'B', octave: 3, accidentalType: AccidentalType.flat),
       duration: const Duration(DurationType.eighth),
     ));
     measure1.add(Note(
@@ -330,7 +339,8 @@ class CompleteClefsDemoExample extends StatelessWidget {
       duration: const Duration(DurationType.eighth),
     ));
     measure1.add(Note(
-      pitch: Pitch.withAccidental(step: 'E', octave: 4, accidentalType: AccidentalType.flat),
+      pitch: Pitch.withAccidental(
+          step: 'E', octave: 4, accidentalType: AccidentalType.flat),
       duration: const Duration(DurationType.eighth),
     ));
     measure1.add(Note(
@@ -452,4 +462,3 @@ class CompleteClefsDemoExample extends StatelessWidget {
     );
   }
 }
-

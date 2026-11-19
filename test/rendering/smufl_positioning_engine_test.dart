@@ -45,24 +45,30 @@ void main() {
 
       expect(
         positioned.dx,
-        closeTo(-(accidentalWidth + engine.accidentalToNoteheadDistance), 0.0001),
+        closeTo(
+          -(accidentalWidth + engine.accidentalToNoteheadDistance),
+          0.0001,
+        ),
       );
       expect(positioned.dy, 0);
     });
 
-    test('falls back to a default accidental width when metadata is missing', () {
-      final positioned = engine.calculateAccidentalPosition(
-        accidentalGlyph: 'missingAccidental',
-        noteheadGlyph: 'missingNotehead',
-        staffPosition: 0,
-      );
+    test(
+      'falls back to a default accidental width when metadata is missing',
+      () {
+        final positioned = engine.calculateAccidentalPosition(
+          accidentalGlyph: 'missingAccidental',
+          noteheadGlyph: 'missingNotehead',
+          staffPosition: 0,
+        );
 
-      expect(
-        positioned.dx,
-        closeTo(-(1.0 + engine.accidentalToNoteheadDistance), 0.0001),
-      );
-      expect(positioned.dy, 0);
-    });
+        expect(
+          positioned.dx,
+          closeTo(-(1.0 + engine.accidentalToNoteheadDistance), 0.0001),
+        );
+        expect(positioned.dy, 0);
+      },
+    );
   });
 
   group('SMuFLPositioningEngine.calculateStemStartY', () {

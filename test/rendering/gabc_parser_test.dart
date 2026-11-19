@@ -47,7 +47,9 @@ mode: 1;
     test('classifies three-note neumes by contour', () {
       // torculus (low-high-low), porrectus (high-low-high), climacus (descending)
       const gabc = '(c4) a(fgf)b(hgh)c(hgf)';
-      final neumes = GabcParser.parse(gabc).elements.whereType<Neume>().toList();
+      final neumes = GabcParser.parse(
+        gabc,
+      ).elements.whereType<Neume>().toList();
       expect(neumes[0].type, NeumeType.torculus);
       expect(neumes[1].type, NeumeType.porrectus);
       expect(neumes[2].type, NeumeType.climacus);
@@ -55,7 +57,9 @@ mode: 1;
 
     test('recognizes virga and quilisma shapes', () {
       const gabc = '(c4) a(gv)b(gwh)';
-      final neumes = GabcParser.parse(gabc).elements.whereType<Neume>().toList();
+      final neumes = GabcParser.parse(
+        gabc,
+      ).elements.whereType<Neume>().toList();
       expect(neumes[0].type, NeumeType.virga);
       expect(neumes[1].components.first.form, NcForm.quilisma);
     });
@@ -63,7 +67,9 @@ mode: 1;
     test('emits standalone accidental signs (flat/natural/sharp)', () {
       // `ix` = flat sign at i, then a note i; `gy` = natural at g, then note g.
       const gabc = '(c4) Do(ixi)mi(g#g)ne(gy)';
-      final neumes = GabcParser.parse(gabc).elements.whereType<Neume>().toList();
+      final neumes = GabcParser.parse(
+        gabc,
+      ).elements.whereType<Neume>().toList();
 
       // ix -> flat sign (accidental-only, no sung note); i -> note.
       expect(neumes[0].components.single.accidental, NeumeAccidental.flat);
@@ -80,7 +86,9 @@ mode: 1;
 
     test('classifies salicus (oriscus middle) vs scandicus', () {
       const gabc = '(c4) a(fgh)b(fgoh)';
-      final neumes = GabcParser.parse(gabc).elements.whereType<Neume>().toList();
+      final neumes = GabcParser.parse(
+        gabc,
+      ).elements.whereType<Neume>().toList();
       expect(neumes[0].type, NeumeType.scandicus); // plain three rising
       expect(neumes[1].type, NeumeType.salicus); // oriscus on middle note
     });
@@ -88,26 +96,27 @@ mode: 1;
     test('classifies four-note compound neumes by contour', () {
       // up-down-up = torculus resupinus; down-up-down = porrectus flexus.
       const gabc = '(c4) a(fhgi)b(hfgf)';
-      final neumes = GabcParser.parse(gabc).elements.whereType<Neume>().toList();
+      final neumes = GabcParser.parse(
+        gabc,
+      ).elements.whereType<Neume>().toList();
       expect(neumes[0].type, NeumeType.torculusResupinus);
       expect(neumes[1].type, NeumeType.porrectusFlexus);
     });
 
     test('classifies repeated unison notes (bivirga vs repeated puncta)', () {
       const gabc = '(c4) a(gvgv)b(gg)';
-      final neumes = GabcParser.parse(gabc).elements.whereType<Neume>().toList();
+      final neumes = GabcParser.parse(
+        gabc,
+      ).elements.whereType<Neume>().toList();
       expect(neumes[0].type, NeumeType.bivirga); // two virgae, same pitch
       expect(neumes[0].components.length, 2);
       expect(neumes[1].type, NeumeType.custom); // two puncta, same pitch
     });
 
     test('resolves absolute pitch relative to the clef (do-clef line = C)', () {
-      NeumeComponent single(String gabc) => GabcParser.parse(gabc)
-          .elements
-          .whereType<Neume>()
-          .first
-          .components
-          .single;
+      NeumeComponent single(String gabc) => GabcParser.parse(
+        gabc,
+      ).elements.whereType<Neume>().first.components.single;
       // c4: line 4 = do = C; slot 'j' sits on line 4.
       final c4 = single('(c4) a(j)');
       expect(c4.pitchName, 'C');
@@ -131,8 +140,9 @@ mode: 1;
       // 'Ky','ri','e' are one word (contiguous tokens); a space starts a new
       // word, so the last syllable before the space is not hyphenated.
       const gabc = '(c4) Ky(g)ri(h)e(g) e(h)le(g)';
-      final neumes =
-          GabcParser.parse(gabc).elements.whereType<Neume>().toList();
+      final neumes = GabcParser.parse(
+        gabc,
+      ).elements.whereType<Neume>().toList();
       expect(neumes[0].syllable, 'Ky');
       expect(neumes[0].hyphenAfter, isTrue); // Ky-
       expect(neumes[1].hyphenAfter, isTrue); // ri-

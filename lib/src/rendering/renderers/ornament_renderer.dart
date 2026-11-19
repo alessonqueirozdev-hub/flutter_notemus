@@ -256,7 +256,6 @@ class OrnamentRenderer extends BaseGlyphRenderer {
 
     final ornamentColor = theme.ornamentColor ?? theme.noteheadColor;
 
-
     // An arpeggio sign goes to the LEFT of the chord. Always.
     //
     // The rule here used to be "on the side opposite the stem", cited to Gould
@@ -273,8 +272,7 @@ class OrnamentRenderer extends BaseGlyphRenderer {
     // Rotated -90 degrees, so the bounding box HEIGHT is the horizontal
     // extent. `.abs()` because a box expressed SW-to-NE can report it either
     // way round, and a sign flip here would push the tile INTO the chord.
-    final rotatedHalfWidth =
-        (bBox.height * coordinates.staffSpace * 0.5).abs();
+    final rotatedHalfWidth = (bBox.height * coordinates.staffSpace * 0.5).abs();
 
     // Clearance from the chord's left edge. 0.03 staff spaces was not a gap,
     // it was a rounding error.
@@ -294,8 +292,7 @@ class OrnamentRenderer extends BaseGlyphRenderer {
     // against a glyph 1.300 staff spaces wide (33.8 px) plus half its 0.476
     // height (6.2 px). Compensating for the width is what the rotation ate.
     final rotationResidual = bBox.width * coordinates.staffSpace;
-    final tileCenterX =
-        chordPos.dx - gap - rotatedHalfWidth - rotationResidual;
+    final tileCenterX = chordPos.dx - gap - rotatedHalfWidth - rotationResidual;
 
     final arpeggioTopY =
         math.min(topY, bottomY) - (coordinates.staffSpace * 0.18);

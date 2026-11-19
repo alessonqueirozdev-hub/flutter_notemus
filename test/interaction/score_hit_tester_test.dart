@@ -20,7 +20,7 @@ void main() {
   });
 
   ({LayoutEngine engine, List<PositionedElement> elements, List<Note> notes})
-      build() {
+  build() {
     final notes = <Note>[
       for (var i = 0; i < 8; i++)
         Note(
@@ -64,9 +64,13 @@ void main() {
 
     final hit = tester.hitTest(Offset(x! + 2, y!));
     expect(hit, isNotNull);
-    expect(identical(hit!.element, target), isTrue,
-        reason: 'the engine used to hand back cloned notes, which made every '
-            'form of selection and editing impossible.');
+    expect(
+      identical(hit!.element, target),
+      isTrue,
+      reason:
+          'the engine used to hand back cloned notes, which made every '
+          'form of selection and editing impossible.',
+    );
   });
 
   test('a hit carries bar, voice and musical time', () {
@@ -77,10 +81,12 @@ void main() {
       engine: b.engine,
     );
     final target = b.notes[5]; // second bar, voice 2, beat 2
-    final hit = tester.hitTest(Offset(
-      b.engine.noteXPositions[target]!,
-      b.engine.noteYPositions[target]!,
-    ));
+    final hit = tester.hitTest(
+      Offset(
+        b.engine.noteXPositions[target]!,
+        b.engine.noteYPositions[target]!,
+      ),
+    );
     expect(hit, isNotNull);
     expect(hit!.measureIndex, 1);
     expect(hit.onset, closeTo(1.25, 1e-9));
@@ -108,8 +114,10 @@ void main() {
     expect(bar0.where((h) => h.element is Note).length, 4);
     expect(bar0.any((h) => h.element is Clef), isTrue);
 
-    final bar1Notes =
-        tester.selectMeasure(1).where((h) => h.element is Note).toList();
+    final bar1Notes = tester
+        .selectMeasure(1)
+        .where((h) => h.element is Note)
+        .toList();
     expect(bar1Notes, hasLength(4));
     expect(identical(bar1Notes.first.element, b.notes[4]), isTrue);
 
@@ -164,10 +172,12 @@ void main() {
       engine: b.engine,
     );
     final target = b.notes[6];
-    final where = tester.timeAt(Offset(
-      b.engine.noteXPositions[target]!,
-      b.engine.noteYPositions[target]!,
-    ));
+    final where = tester.timeAt(
+      Offset(
+        b.engine.noteXPositions[target]!,
+        b.engine.noteYPositions[target]!,
+      ),
+    );
     expect(where, isNotNull);
     expect(where!.measureIndex, 1);
     expect(where.onset, closeTo(1.5, 1e-9));

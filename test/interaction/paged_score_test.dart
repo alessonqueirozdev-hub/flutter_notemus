@@ -10,14 +10,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_notemus/flutter_notemus.dart' hide Duration;
 
 Note _w(String step, int octave) => Note(
-      pitch: Pitch(step: step, octave: octave),
-      duration: const MusicDuration(DurationType.whole),
-    );
+  pitch: Pitch(step: step, octave: octave),
+  duration: const MusicDuration(DurationType.whole),
+);
 
 /// A two-staff piano group of [bars] whole-note bars: enough systems to fill
 /// several pages.
-StaffGroup _piano(int bars) => StaffGroup(bracket: BracketType.brace, staves: [
-      Staff(measures: [
+StaffGroup _piano(int bars) => StaffGroup(
+  bracket: BracketType.brace,
+  staves: [
+    Staff(
+      measures: [
         for (var i = 0; i < bars; i++)
           Measure()
             ..elements.addAll([
@@ -25,8 +28,10 @@ StaffGroup _piano(int bars) => StaffGroup(bracket: BracketType.brace, staves: [
               if (i == 0) TimeSignature(numerator: 4, denominator: 4),
               _w(i.isEven ? 'E' : 'G', 5),
             ]),
-      ]),
-      Staff(measures: [
+      ],
+    ),
+    Staff(
+      measures: [
         for (var i = 0; i < bars; i++)
           Measure()
             ..elements.addAll([
@@ -34,22 +39,24 @@ StaffGroup _piano(int bars) => StaffGroup(bracket: BracketType.brace, staves: [
               if (i == 0) TimeSignature(numerator: 4, denominator: 4),
               _w('C', 3),
             ]),
-      ]),
-    ]);
+      ],
+    ),
+  ],
+);
 
 Widget _host(Widget child) => MaterialApp(
-      home: Scaffold(
-        body: SizedBox(width: 600, height: 850, child: child),
-      ),
-    );
+  home: Scaffold(body: SizedBox(width: 600, height: 850, child: child)),
+);
 
 final _painterFinder = find.byWidgetPredicate(
-    (w) => w is CustomPaint && w.painter is GrandStaffPainter);
+  (w) => w is CustomPaint && w.painter is GrandStaffPainter,
+);
 
 Future<void> _settle(WidgetTester tester) async {
   for (var i = 0; i < 100 && _painterFinder.evaluate().isEmpty; i++) {
     await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 50)));
+      () => Future<void>.delayed(const Duration(milliseconds: 50)),
+    );
     await tester.pump();
   }
   await tester.pumpAndSettle();
@@ -66,15 +73,14 @@ void main() {
     });
 
     GrandStaffPainter painter(int bars) => GrandStaffPainter(
-          staffGroup: _piano(bars),
-          staffSpace: 7,
-          metadata: metadata,
-          theme: const MusicScoreTheme(),
-          availableWidth: 515,
-        );
+      staffGroup: _piano(bars),
+      staffSpace: 7,
+      metadata: metadata,
+      theme: const MusicScoreTheme(),
+      availableWidth: 515,
+    );
 
-    test('pages cover every system once, in order, each within the height',
-        () {
+    test('pages cover every system once, in order, each within the height', () {
       final p = painter(80);
       const maxHeight = 762.0;
       final pages = p.pages(maxHeight: maxHeight, firstPageReserve: 40);
@@ -90,8 +96,10 @@ void main() {
       expect(next, p.systemCount);
       // Bands tile the painter's canvas with no gap and no overlap.
       for (var i = 1; i < pages.length; i++) {
-        expect(pages[i].top,
-            closeTo(pages[i - 1].top + pages[i - 1].height, 1e-6));
+        expect(
+          pages[i].top,
+          closeTo(pages[i - 1].top + pages[i - 1].height, 1e-6),
+        );
       }
       expect(pages.last.top + pages.last.height, closeTo(p.totalHeight, 1e-6));
     });
@@ -115,9 +123,11 @@ void main() {
             .where((e) => e.element is Barline)
             .map((e) => (e.element as Barline).type)
             .toList();
-        expect(barlines.last,
-            system == p.systemCount - 1 ? BarlineType.final_ : BarlineType.single,
-            reason: 'system $system');
+        expect(
+          barlines.last,
+          system == p.systemCount - 1 ? BarlineType.final_ : BarlineType.single,
+          reason: 'system $system',
+        );
       }
     });
 
@@ -126,14 +136,15 @@ void main() {
       // kept the old raster on screen.
       final group = _piano(4);
       final groups = [group]; // one list, as a Score holds it
-      GrandStaffPainter build({MusicScoreTheme theme = const MusicScoreTheme()}) =>
-          GrandStaffPainter(
-            groups: groups,
-            staffSpace: 7,
-            metadata: metadata,
-            theme: theme,
-            availableWidth: 515,
-          );
+      GrandStaffPainter build({
+        MusicScoreTheme theme = const MusicScoreTheme(),
+      }) => GrandStaffPainter(
+        groups: groups,
+        staffSpace: 7,
+        metadata: metadata,
+        theme: theme,
+        availableWidth: 515,
+      );
       final before = build();
       expect(build().shouldRepaint(before), isFalse);
       final bar = group.staves.first.measures[1];
@@ -141,9 +152,11 @@ void main() {
       expect(build().shouldRepaint(before), isTrue);
       final after = build();
       expect(
-          build(theme: const MusicScoreTheme(noteheadColor: Color(0xFFFF0000)))
-              .shouldRepaint(after),
-          isTrue);
+        build(
+          theme: const MusicScoreTheme(noteheadColor: Color(0xFFFF0000)),
+        ).shouldRepaint(after),
+        isTrue,
+      );
     });
 
     test("the signature sees a bar's own settings changed in place", () {
@@ -161,50 +174,57 @@ void main() {
       expect(staffGroupsSignature(groups), isNot(grouped));
     });
 
-    test("a painter's signature is taken when it is built, not when read",
-        () {
+    test("a painter's signature is taken when it is built, not when read", () {
       // Lazily, the OLD painter's signature was first computed by
       // shouldRepaint after the edit, over the edited score, and matched the
       // new one: the old raster stayed.
       final groups = [_piano(4)];
       GrandStaffPainter build() => GrandStaffPainter(
-            groups: groups,
-            staffSpace: 7,
-            metadata: metadata,
-            theme: const MusicScoreTheme(),
-            availableWidth: 515,
-          );
+        groups: groups,
+        staffSpace: 7,
+        metadata: metadata,
+        theme: const MusicScoreTheme(),
+        availableWidth: 515,
+      );
       final before = build(); // its signature never read before the edit
       final bar = groups.first.staves.first.measures[1];
       bar.elements[bar.elements.length - 1] = _w('A', 5);
       expect(build().shouldRepaint(before), isTrue);
     });
 
-    test('the signature sees beam hints and edits inside chords and tuplets',
-        () {
-      final note = _w('E', 5);
-      final inner = _w('G', 5);
-      final triplet = Tuplet.triplet(elements: [inner]);
-      final groups = [
-        StaffGroup(staves: [
-          Staff(measures: [Measure()..elements.addAll([note, triplet])]),
-        ]),
-      ];
-      var last = staffGroupsSignature(groups);
-      int changed() {
-        final now = staffGroupsSignature(groups);
-        final differs = now != last;
-        last = now;
-        return differs ? 1 : 0;
-      }
+    test(
+      'the signature sees beam hints and edits inside chords and tuplets',
+      () {
+        final note = _w('E', 5);
+        final inner = _w('G', 5);
+        final triplet = Tuplet.triplet(elements: [inner]);
+        final groups = [
+          StaffGroup(
+            staves: [
+              Staff(
+                measures: [
+                  Measure()..elements.addAll([note, triplet]),
+                ],
+              ),
+            ],
+          ),
+        ];
+        var last = staffGroupsSignature(groups);
+        int changed() {
+          final now = staffGroupsSignature(groups);
+          final differs = now != last;
+          last = now;
+          return differs ? 1 : 0;
+        }
 
-      note.beam = BeamType.start;
-      expect(changed(), 1, reason: 'Note.beam set in place');
-      inner.beam = BeamType.start;
-      expect(changed(), 1, reason: 'a beam hint inside a tuplet');
-      triplet.elements[0] = _w('A', 5);
-      expect(changed(), 1, reason: 'a note replaced inside a tuplet');
-    });
+        note.beam = BeamType.start;
+        expect(changed(), 1, reason: 'Note.beam set in place');
+        inner.beam = BeamType.start;
+        expect(changed(), 1, reason: 'a beam hint inside a tuplet');
+        triplet.elements[0] = _w('A', 5);
+        expect(changed(), 1, reason: 'a note replaced inside a tuplet');
+      },
+    );
 
     test('the signature sees a note moved to another voice', () {
       // allElements flattens voices: moving the note kept the same order.
@@ -216,7 +236,11 @@ void main() {
         ..addVoice(v1)
         ..addVoice(v2);
       final groups = [
-        StaffGroup(staves: [Staff(measures: [measure])]),
+        StaffGroup(
+          staves: [
+            Staff(measures: [measure]),
+          ],
+        ),
       ];
       final before = staffGroupsSignature(groups);
       v1.elements.remove(b);
@@ -243,9 +267,15 @@ void main() {
         ornaments: <Ornament>[],
       );
       final groups = [
-        StaffGroup(staves: [
-          Staff(measures: [Measure()..elements.addAll([note, chord, rest])]),
-        ]),
+        StaffGroup(
+          staves: [
+            Staff(
+              measures: [
+                Measure()..elements.addAll([note, chord, rest]),
+              ],
+            ),
+          ],
+        ),
       ];
       var last = staffGroupsSignature(groups);
       bool changed() {
@@ -273,10 +303,17 @@ void main() {
         const AdditiveMeterGroup(2),
       ];
       final meter = TimeSignature(
-          numerator: 7, denominator: 8, additiveGroups: groups3);
+        numerator: 7,
+        denominator: 8,
+        additiveGroups: groups3,
+      );
       final measure = Measure(inheritedTimeSignature: meter);
       final staffGroups = [
-        StaffGroup(staves: [Staff(measures: [measure])]),
+        StaffGroup(
+          staves: [
+            Staff(measures: [measure]),
+          ],
+        ),
       ];
       final before = staffGroupsSignature(staffGroups);
       groups3
@@ -294,7 +331,9 @@ void main() {
       final groups = [original];
       final before = staffGroupsSignature(groups);
       groups[0] = StaffGroup(
-          staves: original.staves, bracket: BracketType.bracket);
+        staves: original.staves,
+        bracket: BracketType.bracket,
+      );
       expect(staffGroupsSignature(groups), isNot(before));
     });
 
@@ -310,17 +349,22 @@ void main() {
   });
 
   group('PagedScoreView', () {
-    testWidgets('a long score becomes several pages; the first has the title',
-        (t) async {
+    testWidgets('a long score becomes several pages; the first has the title', (
+      t,
+    ) async {
       final controller = PagedScoreController();
-      await t.pumpWidget(_host(PagedScoreView(
-        score: Score(
-          title: 'Chorale',
-          composer: 'Anon.',
-          staffGroups: [_piano(80)],
+      await t.pumpWidget(
+        _host(
+          PagedScoreView(
+            score: Score(
+              title: 'Chorale',
+              composer: 'Anon.',
+              staffGroups: [_piano(80)],
+            ),
+            controller: controller,
+          ),
         ),
-        controller: controller,
-      )));
+      );
       await _settle(t);
       expect(controller.pageCount, greaterThan(1));
       expect(controller.currentPage, 0);
@@ -333,21 +377,27 @@ void main() {
       controller.dispose();
     });
 
-    testWidgets('a bar tap on page 2 reports a bar printed on page 2',
-        (t) async {
+    testWidgets('a bar tap on page 2 reports a bar printed on page 2', (
+      t,
+    ) async {
       final controller = PagedScoreController();
       final bars = <ScoreMeasureTap>[];
-      await t.pumpWidget(_host(PagedScoreView(
-        score: Score(staffGroups: [_piano(80)]),
-        controller: controller,
-        onMeasureTap: bars.add,
-      )));
+      await t.pumpWidget(
+        _host(
+          PagedScoreView(
+            score: Score(staffGroups: [_piano(80)]),
+            controller: controller,
+            onMeasureTap: bars.add,
+          ),
+        ),
+      );
       await _settle(t);
       controller.jumpToPage(1);
       await t.pumpAndSettle();
 
       final painter =
-          t.widget<CustomPaint>(_painterFinder.first).painter! as GrandStaffPainter;
+          t.widget<CustomPaint>(_painterFinder.first).painter!
+              as GrandStaffPainter;
       final pages = painter.pages(maxHeight: 842 - 80);
       await t.tapAt(t.getCenter(find.byType(PageView)));
       expect(bars, isNotEmpty);
@@ -361,7 +411,8 @@ void main() {
       final controller = PagedScoreController();
       final group = _piano(80);
       final score = Score(staffGroups: [group]);
-      Widget view() => _host(PagedScoreView(score: score, controller: controller));
+      Widget view() =>
+          _host(PagedScoreView(score: score, controller: controller));
       await t.pumpWidget(view());
       await _settle(t);
       final before = controller.pageCount;
@@ -376,19 +427,24 @@ void main() {
       controller.dispose();
     });
 
-    testWidgets('a position set before the pages exist is still followed',
-        (t) async {
+    testWidgets('a position set before the pages exist is still followed', (
+      t,
+    ) async {
       // The listener fired while there was no painter; nothing retried it.
       final controller = PagedScoreController();
       final score = Score(staffGroups: [_piano(80)]);
       final position = ValueNotifier<PlaybackPosition?>(
-          PlaybackPlan.fromScore(score)
-              .positionAt(const Duration(seconds: 158)));
-      await t.pumpWidget(_host(PagedScoreView(
-        score: score,
-        controller: controller,
-        playbackPosition: position,
-      )));
+        PlaybackPlan.fromScore(score).positionAt(const Duration(seconds: 158)),
+      );
+      await t.pumpWidget(
+        _host(
+          PagedScoreView(
+            score: score,
+            controller: controller,
+            playbackPosition: position,
+          ),
+        ),
+      );
       await _settle(t);
       expect(controller.currentPage, controller.pageCount - 1);
       controller.dispose();
@@ -398,12 +454,16 @@ void main() {
       final first = PagedScoreController();
       final second = PagedScoreController();
       final score = Score(staffGroups: [_piano(80)]);
-      await t.pumpWidget(_host(PagedScoreView(score: score, controller: first)));
+      await t.pumpWidget(
+        _host(PagedScoreView(score: score, controller: first)),
+      );
       await _settle(t);
       final pages = first.pageCount;
       expect(pages, greaterThan(1));
 
-      await t.pumpWidget(_host(PagedScoreView(score: score, controller: second)));
+      await t.pumpWidget(
+        _host(PagedScoreView(score: score, controller: second)),
+      );
       await t.pumpAndSettle();
       expect(second.pageCount, pages);
       second.nextPage();
@@ -413,45 +473,59 @@ void main() {
       second.dispose();
     });
 
-    testWidgets('a replacement notifier holding a position is followed',
-        (t) async {
+    testWidgets('a replacement notifier holding a position is followed', (
+      t,
+    ) async {
       // A listener hears the next change only; a paused player never sends
       // one.
       final controller = PagedScoreController();
       final score = Score(staffGroups: [_piano(80)]);
       final idle = ValueNotifier<PlaybackPosition?>(null);
-      await t.pumpWidget(_host(PagedScoreView(
-        score: score,
-        controller: controller,
-        playbackPosition: idle,
-      )));
+      await t.pumpWidget(
+        _host(
+          PagedScoreView(
+            score: score,
+            controller: controller,
+            playbackPosition: idle,
+          ),
+        ),
+      );
       await _settle(t);
       expect(controller.currentPage, 0);
 
-      final paused = ValueNotifier<PlaybackPosition?>(PlaybackPlan.fromScore(score)
-          .positionAt(const Duration(seconds: 158)));
-      await t.pumpWidget(_host(PagedScoreView(
-        score: score,
-        controller: controller,
-        playbackPosition: paused,
-      )));
+      final paused = ValueNotifier<PlaybackPosition?>(
+        PlaybackPlan.fromScore(score).positionAt(const Duration(seconds: 158)),
+      );
+      await t.pumpWidget(
+        _host(
+          PagedScoreView(
+            score: score,
+            controller: controller,
+            playbackPosition: paused,
+          ),
+        ),
+      );
       await t.pumpAndSettle();
       expect(controller.currentPage, controller.pageCount - 1);
       controller.dispose();
     });
 
-    testWidgets('turning followPlayback on goes to the paused cursor',
-        (t) async {
+    testWidgets('turning followPlayback on goes to the paused cursor', (
+      t,
+    ) async {
       final controller = PagedScoreController();
       final score = Score(staffGroups: [_piano(80)]);
-      final paused = ValueNotifier<PlaybackPosition?>(PlaybackPlan.fromScore(score)
-          .positionAt(const Duration(seconds: 158)));
-      Widget view(bool follow) => _host(PagedScoreView(
-            score: score,
-            controller: controller,
-            playbackPosition: paused,
-            followPlayback: follow,
-          ));
+      final paused = ValueNotifier<PlaybackPosition?>(
+        PlaybackPlan.fromScore(score).positionAt(const Duration(seconds: 158)),
+      );
+      Widget view(bool follow) => _host(
+        PagedScoreView(
+          score: score,
+          controller: controller,
+          playbackPosition: paused,
+          followPlayback: follow,
+        ),
+      );
       await t.pumpWidget(view(false));
       await _settle(t);
       expect(controller.currentPage, 0);
@@ -461,19 +535,24 @@ void main() {
       controller.dispose();
     });
 
-    testWidgets('an unbounded parent gets one page, not a layout failure',
-        (t) async {
+    testWidgets('an unbounded parent gets one page, not a layout failure', (
+      t,
+    ) async {
       // A Column child without Expanded leaves the height unbounded; the
       // PageView got that constraint and its horizontal viewport threw.
-      await t.pumpWidget(MaterialApp(
-        home: Scaffold(
-          body: SingleChildScrollView(
-            child: Column(children: [
-              PagedScoreView(score: Score(staffGroups: [_piano(8)])),
-            ]),
+      await t.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: Column(
+                children: [
+                  PagedScoreView(score: Score(staffGroups: [_piano(8)])),
+                ],
+              ),
+            ),
           ),
         ),
-      ));
+      );
       await _settle(t);
       expect(t.takeException(), isNull);
       final view = t.getSize(find.byType(PagedScoreView));
@@ -484,7 +563,8 @@ void main() {
       final controller = PagedScoreController();
       final group = _piano(80);
       final score = Score(staffGroups: [group]);
-      Widget view() => _host(PagedScoreView(score: score, controller: controller));
+      Widget view() =>
+          _host(PagedScoreView(score: score, controller: controller));
       await t.pumpWidget(view());
       await _settle(t);
       expect(controller.pageCount, greaterThan(1));
@@ -500,11 +580,15 @@ void main() {
       final controller = PagedScoreController();
       final position = ValueNotifier<PlaybackPosition?>(null);
       final score = Score(staffGroups: [_piano(80)]);
-      await t.pumpWidget(_host(PagedScoreView(
-        score: score,
-        controller: controller,
-        playbackPosition: position,
-      )));
+      await t.pumpWidget(
+        _host(
+          PagedScoreView(
+            score: score,
+            controller: controller,
+            playbackPosition: position,
+          ),
+        ),
+      );
       await _settle(t);
       final plan = PlaybackPlan.fromScore(score);
       // The last bar: 79 whole notes in at 120 bpm.

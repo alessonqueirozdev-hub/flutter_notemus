@@ -33,7 +33,7 @@ class AdvancedBeamGroup {
     if (rightX == leftX) return 0;
     return (rightY - leftY) / (rightX - leftX);
   }
-  
+
   /// Whether the beam is horizontal (no slope).
   bool get isHorizontal => leftY == rightY;
 
@@ -53,7 +53,7 @@ class AdvancedBeamGroup {
   @override
   String toString() {
     return 'AdvancedBeamGroup(notes: ${notes.length}, '
-           'segments: ${beamSegments.length}, '
-           'slope: ${slope.toStringAsFixed(3)}';
+        'segments: ${beamSegments.length}, '
+        'slope: ${slope.toStringAsFixed(3)}';
   }
 }

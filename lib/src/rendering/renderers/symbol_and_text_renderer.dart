@@ -672,7 +672,7 @@ class SymbolAndTextRenderer {
 
     final thickness =
         metadata.getEngravingDefault('textEnclosureThickness', 0.16) *
-            coordinates.staffSpace;
+        coordinates.staffSpace;
 
     canvas.drawRect(
       rect,
@@ -687,6 +687,7 @@ class SymbolAndTextRenderer {
     Canvas canvas,
     TempoMark tempo,
     Offset basePosition, {
+
     /// Pixels to lift this mark clear of the ones already occupying the space
     /// above the staff. Computed by `LayoutEngine.aboveStaffLevels`, because a
     /// direction has no horizontal advance and so cannot get out of another
@@ -802,9 +803,7 @@ class SymbolAndTextRenderer {
               fontStyle: FontStyle.italic,
               letterSpacing: 0.15,
             ))
-        .copyWith(
-          color: theme.tempoTextStyle?.color ?? baseColor,
-        )
+        .copyWith(color: theme.tempoTextStyle?.color ?? baseColor)
         .withMusicTextFallback();
   }
 

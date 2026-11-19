@@ -22,17 +22,18 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   List<Note> notesOf(String source, List<String> warnings) =>
-      JsonMusicParser.parseStaff(source, warnings: warnings)
-          .measures
-          .expand((m) => m.elements)
-          .whereType<Note>()
-          .toList();
+      JsonMusicParser.parseStaff(
+        source,
+        warnings: warnings,
+      ).measures.expand((m) => m.elements).whereType<Note>().toList();
 
   test('the canonical nested shape parses, and says nothing', () {
     final warnings = <String>[];
     final notes = notesOf(
-      doc('{"type":"note","pitch":{"step":"D","octave":6},'
-          '"duration":{"type":"quarter"}}'),
+      doc(
+        '{"type":"note","pitch":{"step":"D","octave":6},'
+        '"duration":{"type":"quarter"}}',
+      ),
       warnings,
     );
     expect(notes.single.pitch.step, 'D');
@@ -67,8 +68,10 @@ void main() {
   test('the flat shape carries its accidental too', () {
     final warnings = <String>[];
     final notes = notesOf(
-      doc('{"type":"note","step":"F","octave":5,"accidental":"sharp",'
-          '"duration":"quarter"}'),
+      doc(
+        '{"type":"note","step":"F","octave":5,"accidental":"sharp",'
+        '"duration":"quarter"}',
+      ),
       warnings,
     );
     expect(notes.single.pitch.step, 'F');
@@ -80,8 +83,10 @@ void main() {
   test('a nested "pitch" still wins over top-level fields', () {
     final warnings = <String>[];
     final notes = notesOf(
-      doc('{"type":"note","step":"C","octave":4,'
-          '"pitch":{"step":"G","octave":5},"duration":"quarter"}'),
+      doc(
+        '{"type":"note","step":"C","octave":4,'
+        '"pitch":{"step":"G","octave":5},"duration":"quarter"}',
+      ),
       warnings,
     );
     expect(notes.single.pitch.step, 'G');

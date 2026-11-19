@@ -27,7 +27,8 @@ class RestRenderer extends BaseGlyphRenderer {
     required this.theme,
     required double glyphSize,
     required this.ornamentRenderer,
-    CollisionDetector? collisionDetector, // CORREÇÃO: Adicionar collision detector
+    CollisionDetector?
+    collisionDetector, // CORREÇÃO: Adicionar collision detector
   }) : super(
          coordinates: coordinates,
          metadata: metadata,
@@ -109,8 +110,10 @@ class RestRenderer extends BaseGlyphRenderer {
     //
     // Convenção: voices pares = for bottom, voices ímpares = for top (default)
     glyphName = glyphNameFor(rest.duration.type);
-    staffPosition =
-        staffPositionFor(rest.duration.type, voiceNumber: voiceNumber);
+    staffPosition = staffPositionFor(
+      rest.duration.type,
+      voiceNumber: voiceNumber,
+    );
 
     final restY =
         coordinates.staffBaseline.dy -
@@ -133,7 +136,7 @@ class RestRenderer extends BaseGlyphRenderer {
     if (rest.duration.dots > 0) {
       final advance =
           (metadata.getGlyphAdvanceWidth(glyphName) ?? 1.0) *
-              coordinates.staffSpace;
+          coordinates.staffSpace;
       var dotX = position.dx + advance + coordinates.staffSpace * 0.25;
       final dotY = restY - coordinates.staffSpace * 0.5;
       for (var d = 0; d < rest.duration.dots; d++) {

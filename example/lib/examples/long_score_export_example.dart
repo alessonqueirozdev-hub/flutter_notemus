@@ -197,10 +197,7 @@ class LongScoreExportExample extends StatelessWidget {
     final ordered = systems.keys.toList()..sort();
     for (final index in ordered) {
       final onSystem = systems[index]!;
-      final clef = onSystem
-          .map((e) => e.element)
-          .whereType<Clef>()
-          .firstOrNull;
+      final clef = onSystem.map((e) => e.element).whereType<Clef>().firstOrNull;
       final firstBar = onSystem
           .map((e) => e.measureIndex)
           .where((m) => m >= 0)

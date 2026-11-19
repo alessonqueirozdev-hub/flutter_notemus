@@ -94,14 +94,14 @@ class PositionedElement {
   /// each used to spell the copy out by hand — so adding a field to this class
   /// meant finding every one of them or silently losing it.
   PositionedElement movedTo(Offset newPosition) => PositionedElement(
-        element,
-        newPosition,
-        system: system,
-        voiceNumber: voiceNumber,
-        onset: onset,
-        measureIndex: measureIndex,
-        staffBaselineY: staffBaselineY,
-      );
+    element,
+    newPosition,
+    system: system,
+    voiceNumber: voiceNumber,
+    onset: onset,
+    measureIndex: measureIndex,
+    staffBaselineY: staffBaselineY,
+  );
 
   /// Stable signature used to cheaply compare large positioned element lists.
   ///
@@ -148,8 +148,13 @@ class PositionedElement {
       return Object.hash('Rest', element.duration.type, element.duration.dots);
     }
     if (element is Chord) {
-      var h = Object.hash('Chord', element.duration.type,
-          element.duration.dots, element.beam, element.voice);
+      var h = Object.hash(
+        'Chord',
+        element.duration.type,
+        element.duration.dots,
+        element.beam,
+        element.voice,
+      );
       for (final n in element.notes) {
         h = Object.hash(h, n.pitch);
       }
@@ -173,8 +178,12 @@ class PositionedElement {
       return Object.hash('Barline', element.type);
     }
     if (element is Tuplet) {
-      return Object.hash('Tuplet', element.actualNotes, element.normalNotes,
-          element.elements.length);
+      return Object.hash(
+        'Tuplet',
+        element.actualNotes,
+        element.normalNotes,
+        element.elements.length,
+      );
     }
     // Fall back to the runtime type: enough to notice a structural change,
     // and still deterministic across runs.
@@ -224,7 +233,8 @@ class LayoutCursor {
     Clef clef,
     int extraOctaveShift,
     int? voiceNumber,
-  )? chordGeometry;
+  )?
+  chordGeometry;
 
   double _currentX;
   double _currentY;
@@ -334,8 +344,10 @@ class LayoutCursor {
   }
 
   /// Adds double barline final (end of the peça)
-  void addDoubleBarline(List<PositionedElement> elements,
-      {double onset = 0.0}) {
+  void addDoubleBarline(
+    List<PositionedElement> elements, {
+    double onset = 0.0,
+  }) {
     elements.add(
       PositionedElement(
         Barline(type: BarlineType.final_),
@@ -490,8 +502,7 @@ class LayoutEngine {
   final Map<Note, double> _noteXPositions = {};
   final Map<Note, int> _noteOctaveShifts = {};
   final Map<Note, int> _noteStaffPositions = {};
-  final Map<Note, double> _noteYPositions =
-      {}; // ✅ NOVO: Y absoluto em pixels
+  final Map<Note, double> _noteYPositions = {}; // ✅ NOVO: Y absoluto em pixels
   final List<AdvancedBeamGroup> _advancedBeamGroups = [];
 
   /// Within-measure accidental display decision per note (Behind Bars rule),
@@ -769,14 +780,14 @@ class LayoutEngine {
   /// numbers. A grid queried without the left-extent callback in one place and
   /// with it in another is the divergence M-10 and M-11 are made of.
   List<double> _tupletSlots(Tuplet tuplet) => TupletGrid.slotWidths(
-        tuplet,
-        staffSpace,
-        leftExtent: _leftExtent,
-        noteheadAdvanceSpaces: noteheadBlackWidth,
-        // The legibility scale is a property of the MEASURE, not of one
-        // bracket — see [tupletContextFloor].
-        contextSmallestLeafSpaces: tupletContextFloor[tuplet],
-      );
+    tuplet,
+    staffSpace,
+    leftExtent: _leftExtent,
+    noteheadAdvanceSpaces: noteheadBlackWidth,
+    // The legibility scale is a property of the MEASURE, not of one
+    // bracket — see [tupletContextFloor].
+    contextSmallestLeafSpaces: tupletContextFloor[tuplet],
+  );
 
   /// Horizontal compression applied to the rhythmic spacing of the measure
   /// currently being laid out.
@@ -994,6 +1005,7 @@ class LayoutEngine {
     'rest32nd': 1.452,
     'rest64th': 1.696,
   };
+
   /// Space left AFTER a barline before the next measure's content, in staff
   /// spaces.
   ///
@@ -1027,8 +1039,7 @@ class LayoutEngine {
   // Intelligent spacing: Valores balanceados
   static const double systemMargin = 2.5;
   static const double measureMinWidth = 5.0;
-  static const double noteMinSpacing =
-      3.5; // Base para espaçamento entre notas
+  static const double noteMinSpacing = 3.5; // Base para espaçamento entre notas
   static const double measureEndPadding =
       3.0; // Espaço adequado ANTES da barline (agora corrigido!)
 
@@ -1043,7 +1054,8 @@ class LayoutEngine {
     spacing.SpacingPreferences? spacingPreferences,
   }) {
     // Initialise spacing engine
-    _spacingPreferences = spacingPreferences ?? spacing.SpacingPreferences.normal;
+    _spacingPreferences =
+        spacingPreferences ?? spacing.SpacingPreferences.normal;
     _spacingEngine = spacing.IntelligentSpacingEngine(
       preferences: _spacingPreferences,
     );
@@ -1052,9 +1064,7 @@ class LayoutEngine {
     // Initialise positioning engine for beaming
     // Validation: metadata can be null in some context
     if (metadata == null) {
-      throw ArgumentError(
-        'metadata é obrigatório para beaming avançado',
-      );
+      throw ArgumentError('metadata é obrigatório para beaming avançado');
     }
     final positioningEngine = SMuFLPositioningEngine(metadataLoader: metadata!);
 
@@ -1144,8 +1154,7 @@ class LayoutEngine {
   static Map<int, int> displayMeasureNumbers(
     List<Measure> measures, {
     int offset = 0,
-  }) =>
-      Measure.displayNumbers(measures, offset: offset);
+  }) => Measure.displayNumbers(measures, offset: offset);
 
   /// Returns os Advanced Beam Groups Calculados pelo last layout
   List<AdvancedBeamGroup> get advancedBeamGroups =>
@@ -1400,8 +1409,10 @@ class LayoutEngine {
       final headroom = usable - (cursor.currentX - cursor.systemMargin);
       var overflowingMeasure = false;
       if (measureWidth > headroom && headroom > 0) {
-        _spacingScale =
-            (headroom / measureWidth).clamp(minimumSpacingScale, 1.0);
+        _spacingScale = (headroom / measureWidth).clamp(
+          minimumSpacingScale,
+          1.0,
+        );
         // The compression bottomed out: remember it, and report only after the
         // bar has actually been laid out, so the factor quoted is the REAL
         // overflow and not the pre-pass estimate. Measured on the 40-whole-note
@@ -1605,7 +1616,9 @@ class LayoutEngine {
 
     for (final entry in systemMeasures.entries) {
       final system = entry.key;
-      if (system == lastSystem) continue; // Behind Bars: last line stays natural
+      if (system == lastSystem) {
+        continue; // Behind Bars: last line stays natural
+      }
       if (entry.value.isEmpty) continue;
 
       final indices = bySystem[system];
@@ -1618,8 +1631,7 @@ class LayoutEngine {
       for (final i in indices) {
         final positioned = elements[i];
         final e = positioned.element;
-        final isRhythmic =
-            e is Note || e is Rest || e is Chord || e is Tuplet;
+        final isRhythmic = e is Note || e is Rest || e is Chord || e is Tuplet;
         if (isRhythmic &&
             (contentStartX == null || positioned.position.dx < contentStartX)) {
           contentStartX = positioned.position.dx;
@@ -1638,8 +1650,9 @@ class LayoutEngine {
         if (dx <= contentStartX) continue; // opening block stays put
 
         final ratio = (dx - contentStartX) / span;
-        elements[i] = positioned
-            .movedTo(Offset(dx + extraSpace * ratio, positioned.position.dy));
+        elements[i] = positioned.movedTo(
+          Offset(dx + extraSpace * ratio, positioned.position.dy),
+        );
       }
     }
   }
@@ -1667,15 +1680,17 @@ class LayoutEngine {
       // Only a true full-bar rest: a whole rest (used as a measure rest in any
       // meter) or a rest whose value fills the measure.
       final ts = timeSignatureOf(measure);
-      final isFullBar = rest.duration.type == DurationType.whole ||
+      final isFullBar =
+          rest.duration.type == DurationType.whole ||
           (ts != null &&
               !ts.isFreeTime &&
               rest.duration.realValue >= ts.measureValue - 1e-6);
       if (!isFullBar) continue;
 
       final start = measureStartIndices[i]!;
-      final end =
-          ki + 1 < keys.length ? measureStartIndices[keys[ki + 1]]! : elements.length;
+      final end = ki + 1 < keys.length
+          ? measureStartIndices[keys[ki + 1]]!
+          : elements.length;
 
       var restIdx = -1;
       double? barlineX;
@@ -1693,8 +1708,9 @@ class LayoutEngine {
       if (available <= restWidth) continue;
 
       final newX = leftBound + (available - restWidth) / 2;
-      elements[restIdx] =
-          positioned.movedTo(Offset(newX, positioned.position.dy));
+      elements[restIdx] = positioned.movedTo(
+        Offset(newX, positioned.position.dy),
+      );
     }
   }
 
@@ -1778,8 +1794,9 @@ class LayoutEngine {
       for (final n in infos) {
         if (n.voice != lowerVoice) continue;
         final pe = elements[n.idx];
-        elements[n.idx] =
-            pe.movedTo(Offset(pe.position.dx - noteW, pe.position.dy));
+        elements[n.idx] = pe.movedTo(
+          Offset(pe.position.dx - noteW, pe.position.dy),
+        );
       }
     }
   }
@@ -1874,8 +1891,9 @@ class LayoutEngine {
     final opening = canonicalOpeningBlock(
       measure.elements.where(_isSystemElement).toList(),
     );
-    final measureExtras =
-        measure.elements.where((e) => !_isSystemElement(e)).toList();
+    final measureExtras = measure.elements
+        .where((e) => !_isSystemElement(e))
+        .toList();
 
     double onsetBase = _measureOnsetBase;
     for (final element in opening) {
@@ -1889,8 +1907,8 @@ class LayoutEngine {
           measure.sortedVoices.isEmpty
               ? const <MusicalElement>[]
               : measure.sortedVoices.first.elements
-                  .where((e) => !_isSystemElement(e))
-                  .toList(),
+                    .where((e) => !_isSystemElement(e))
+                    .toList(),
         ),
       );
       startX = cursor.currentX;
@@ -2170,8 +2188,9 @@ class LayoutEngine {
         _isSystemElement(elementsToRender[lead])) {
       lead++;
     }
-    final openingBlock =
-        canonicalOpeningBlock(elementsToRender.sublist(0, lead));
+    final openingBlock = canonicalOpeningBlock(
+      elementsToRender.sublist(0, lead),
+    );
     final body = elementsToRender.sublist(lead);
 
     double onset = _measureOnsetBase;
@@ -2413,8 +2432,7 @@ class LayoutEngine {
     }
 
     final indexed = <({int order, MusicalElement element})>[
-      for (var i = 0; i < leading.length; i++)
-        (order: i, element: leading[i]),
+      for (var i = 0; i < leading.length; i++) (order: i, element: leading[i]),
     ];
     indexed.sort((a, b) {
       final byKind = rank(a.element).compareTo(rank(b.element));
@@ -2567,8 +2585,8 @@ class LayoutEngine {
     final Note? note = element is Note
         ? element
         : (element is Chord && element.notes.isNotEmpty
-            ? element.notes.first
-            : null);
+              ? element.notes.first
+              : null);
     if (note == null) return 0.0;
     if (!note.duration.type.needsFlag) return 0.0;
     // A beamed note has no flag: the beam replaces it.
@@ -2741,7 +2759,8 @@ class LayoutEngine {
       if (element.isAdditive) {
         // Group digits + one '+' separator slot per inter-group gap.
         final groups = element.additiveGroups!;
-        numDigits = groups.fold<int>(0, (a, g) => a + g.numerator.toString().length) +
+        numDigits =
+            groups.fold<int>(0, (a, g) => a + g.numerator.toString().length) +
             (groups.length - 1);
       } else {
         numDigits = element.numerator.toString().length;
@@ -2774,7 +2793,8 @@ class LayoutEngine {
       // `rest8th` 1.0 and `rest64th` 1.696: the short rests were
       // over-reserved and the heavily flagged ones under-reserved.
       final glyph = RestRenderer.glyphNameFor(element.duration.type);
-      var width = (metadata?.getGlyphAdvanceWidth(glyph) ??
+      var width =
+          (metadata?.getGlyphAdvanceWidth(glyph) ??
               _restAdvanceFallbacks[glyph] ??
               1.5) *
           staffSpace;
@@ -3195,8 +3215,8 @@ class LayoutEngine {
     // this gap. Without this a long syllable simply overlapped the previous
     // note (measured: "Extraordinarily" produced exactly the same spacing as no
     // syllable at all).
-    final leadIn = _syllableOverhang(currentElement) +
-        _syllableOverhang(previousElement);
+    final leadIn =
+        _syllableOverhang(currentElement) + _syllableOverhang(previousElement);
     if (leadIn > 0) spacing += leadIn;
 
     spacing *= _spacingScale;
@@ -3213,11 +3233,13 @@ class LayoutEngine {
     final syllables = element is Note
         ? element.syllables
         : (element is Chord
-            ? element.notes
-                .map((n) => n.syllables)
-                .firstWhere((s) => s != null && s.isNotEmpty,
-                    orElse: () => null)
-            : null);
+              ? element.notes
+                    .map((n) => n.syllables)
+                    .firstWhere(
+                      (s) => s != null && s.isNotEmpty,
+                      orElse: () => null,
+                    )
+              : null);
     if (syllables == null || syllables.isEmpty) return 0.0;
 
     double widest = 0;
@@ -3266,7 +3288,8 @@ class LayoutEngine {
     FontWeight? fontWeight,
     double? letterSpacing,
   }) {
-    final key = '${fontSize.toStringAsFixed(2)}|${italic ? 'i' : 'r'}'
+    final key =
+        '${fontSize.toStringAsFixed(2)}|${italic ? 'i' : 'r'}'
         '|${fontWeight?.value ?? -1}|${letterSpacing ?? 0}|$text';
     final cached = _textWidthCache.get(key);
     if (cached != null) return cached;
@@ -3323,8 +3346,10 @@ class LayoutEngine {
   /// 12 800-bar fixture) purely to be read twice and dropped. One shared
   /// instance is also what lets `BeamGrouper` recognise the meter it just
   /// computed a beat table for.
-  static final TimeSignature _defaultBeamingMeter =
-      TimeSignature(numerator: 4, denominator: 4);
+  static final TimeSignature _defaultBeamingMeter = TimeSignature(
+    numerator: 4,
+    denominator: 4,
+  );
 
   /// Resolves beam membership for one run of [elements] into [out], keyed by
   /// note identity. **Nothing is written to the model.**
@@ -3471,8 +3496,7 @@ class LayoutEngine {
       // Painted extent, not advance. A flag hangs past its note's advance on
       // purpose (Gould) — sizing the canvas to the advance clips the flag of
       // the last note on the system.
-      final right =
-          positioned.position.dx + elementPaintedRightExtent(element);
+      final right = positioned.position.dx + elementPaintedRightExtent(element);
       if (right > maxRight) maxRight = right;
     }
     // Justification already parks the last element on the right margin, so only
@@ -3511,7 +3535,8 @@ class LayoutEngine {
     var right = 0.0;
     for (var k = measureStartIndex; k < positionedElements.length; k++) {
       final positioned = positionedElements[k];
-      final edge = positioned.position.dx +
+      final edge =
+          positioned.position.dx +
           _getElementWidthSimple(positioned.element) -
           _leftExtent(positioned.element);
       if (edge > right) right = edge;
@@ -3555,7 +3580,7 @@ class LayoutEngine {
     for (final positioned in elements) {
       final baseline =
           (positioned.system * systemHeightSpaces + firstBaselineSpaces) *
-              staffSpace;
+          staffSpace;
       final reach =
           (baseline - positioned.position.dy) + _aboveStaffExtent(positioned);
       final overflow = reach - headroom;
@@ -3584,12 +3609,13 @@ class LayoutEngine {
         (maxSystem * systemHeightSpaces + firstBaselineSpaces) * staffSpace;
     final defaultBottom =
         (systemHeightSpaces - firstBaselineSpaces) * staffSpace +
-            staffSpace * 2.0;
+        staffSpace * 2.0;
 
     var worst = 0.0;
     for (final positioned in elements) {
       if (positioned.system != maxSystem) continue;
-      final reach = (positioned.position.dy - lastBaseline) +
+      final reach =
+          (positioned.position.dy - lastBaseline) +
           _belowStaffExtent(positioned);
       final overflow = reach - defaultBottom;
       if (overflow > worst) worst = overflow;
@@ -3670,7 +3696,8 @@ class LayoutEngine {
     final digitHeight =
         metadata?.getGlyphBoundingBox('tuplet3')?.height ?? 1.16;
     final numberReach =
-        (staffSpace * 0.95) + ((digitHeight * staffSpace) + staffSpace * 0.55) / 2;
+        (staffSpace * 0.95) +
+        ((digitHeight * staffSpace) + staffSpace * 0.55) / 2;
 
     // Signed distances from the anchor to the extreme noteheads. NOT clamped
     // at zero: a triplet sitting entirely below the middle line has a negative
@@ -3751,7 +3778,8 @@ class LayoutEngine {
 
   double _curveAllowance(MusicalElement element) {
     if (element is Note) {
-      final carries = element.tie != null ||
+      final carries =
+          element.tie != null ||
           element.slur != null ||
           element.slurs.isNotEmpty;
       return carries ? staffSpace * curveReachSpaces : 0.0;
@@ -3765,7 +3793,6 @@ class LayoutEngine {
     }
     return 0.0;
   }
-
 
   /// Stacking level for each mark that floats ABOVE the staff, per system.
   ///
@@ -3850,8 +3877,7 @@ class LayoutEngine {
       return _tupletVerticalReach(element, positioned.position.dy).above;
     }
     if (element is MusicText) {
-      final stack =
-          (aboveStaffLevels[element] ?? 0) * aboveStaffLevelHeight;
+      final stack = (aboveStaffLevels[element] ?? 0) * aboveStaffLevelHeight;
       switch (element.type) {
         case TextType.rehearsal:
           // centre 3.2 SS above the top line, plus half the box.

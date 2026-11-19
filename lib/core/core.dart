@@ -16,13 +16,13 @@ export 'measure.dart';
 export 'staff.dart';
 export 'staff_group.dart';
 export 'score.dart';
-export 'score_def.dart';        // MEI <scoreDef>
+export 'score_def.dart'; // MEI <scoreDef>
 
 // === MELODIC ELEMENTS ===
 export 'note.dart';
 export 'rest.dart';
 export 'chord.dart';
-export 'space.dart';            // MEI <space> and <mSpace>
+export 'space.dart'; // MEI <space> and <mSpace>
 
 // === GROUPINGS ===
 export 'tuplet.dart';
@@ -36,7 +36,7 @@ export 'ornament.dart';
 export 'articulation.dart';
 export 'dynamic.dart';
 export 'technique.dart';
-export 'figured_bass.dart';     // MEI <fb>/<f> (figured bass)
+export 'figured_bass.dart'; // MEI <fb>/<f> (figured bass)
 
 // === SLURS AND LINES ===
 export 'slur.dart';
@@ -51,22 +51,22 @@ export 'breath.dart';
 export 'volta_bracket.dart';
 
 // === TEXT AND ANNOTATIONS ===
-export 'text.dart';             // includes Syllable, Verse (MEI <syl>/<verse>)
+export 'text.dart'; // includes Syllable, Verse (MEI <syl>/<verse>)
 
 // === ADVANCED TECHNIQUES ===
 export 'octave.dart';
 export 'cluster.dart';
 
 // === HARMONIC ANALYSIS (MEI v5) ===
-export 'harmonic_analysis.dart';  // intm, mfunc, deg, inth, ChordTable, HarmonicLabel
+export 'harmonic_analysis.dart'; // intm, mfunc, deg, inth, ChordTable, HarmonicLabel
 
 // === MEI METADATA (meiHead) ===
-export 'mei_header.dart';         // MeiHeader, FileDescription, WorkList, FRBR
+export 'mei_header.dart'; // MeiHeader, FileDescription, WorkList, FRBR
 
 // === SPECIALIZED MEI v5 REPERTORIES ===
-export 'mensural.dart';           // Medieval/Renaissance mensural notation
-export 'neume.dart';              // Neume notation (Gregorian chant)
-export 'tablature.dart';          // Tablature (guitar, lute, bass)
+export 'mensural.dart'; // Medieval/Renaissance mensural notation
+export 'neume.dart'; // Neume notation (Gregorian chant)
+export 'tablature.dart'; // Tablature (guitar, lute, bass)
 
 // === ADDITIONAL SUPPORT ===
 export '../src/music_model/bounding_box_support.dart';

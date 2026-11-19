@@ -13,28 +13,29 @@ import 'package:flutter_notemus/flutter_notemus.dart' hide Duration;
 import 'package:flutter_notemus/src/playback/playhead.dart';
 
 Note _q(String step, int octave) => Note(
-      pitch: Pitch(step: step, octave: octave),
-      duration: const MusicDuration(DurationType.quarter),
-    );
+  pitch: Pitch(step: step, octave: octave),
+  duration: const MusicDuration(DurationType.quarter),
+);
 
 Note _h(String step, int octave) => Note(
-      pitch: Pitch(step: step, octave: octave),
-      duration: const MusicDuration(DurationType.half),
-    );
+  pitch: Pitch(step: step, octave: octave),
+  duration: const MusicDuration(DurationType.half),
+);
 
 Widget _host(Widget child) => MaterialApp(
-      home: Scaffold(
-        body: Align(
-          alignment: Alignment.topLeft,
-          child: SizedBox(width: 900, height: 500, child: child),
-        ),
-      ),
-    );
+  home: Scaffold(
+    body: Align(
+      alignment: Alignment.topLeft,
+      child: SizedBox(width: 900, height: 500, child: child),
+    ),
+  ),
+);
 
 Future<void> _settle(WidgetTester tester, Finder canvas) async {
   for (var i = 0; i < 100 && canvas.evaluate().isEmpty; i++) {
     await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 50)));
+      () => Future<void>.delayed(const Duration(milliseconds: 50)),
+    );
     await tester.pump();
   }
   await tester.pumpAndSettle();
@@ -56,8 +57,12 @@ void main() {
       _at(_q('F', 5), 200, 0.75),
       _at(Barline(), 260, 1.0),
     ];
-    double? x(double offset) => playheadX(bar,
-        offset: offset, measureLength: 1.0, closingX: closingBarlineX(bar, 0));
+    double? x(double offset) => playheadX(
+      bar,
+      offset: offset,
+      measureLength: 1.0,
+      closingX: closingBarlineX(bar, 0),
+    );
 
     test('reaches each note exactly at its onset', () {
       expect(x(0), 40);
@@ -66,8 +71,7 @@ void main() {
       expect(x(0.75), 200);
     });
 
-    test('is linear between notes, and runs to the barline after the last',
-        () {
+    test('is linear between notes, and runs to the barline after the last', () {
       expect(x(0.125), closeTo(70, 1e-9));
       expect(x(0.875), closeTo(230, 1e-9));
       expect(x(1.0), 260);
@@ -77,10 +81,19 @@ void main() {
       // Before a bar that opens with a repeat barline the layout draws only
       // that one, and it belongs to the NEXT bar: the cursor used to sit on
       // the last note for the rest of the bar, then jump.
-      PositionedElement inBar(MusicalElement e, double x, double onset, int m,
-              {int system = 0}) =>
-          PositionedElement(e, Offset(x, 0),
-              onset: onset, measureIndex: m, system: system);
+      PositionedElement inBar(
+        MusicalElement e,
+        double x,
+        double onset,
+        int m, {
+        int system = 0,
+      }) => PositionedElement(
+        e,
+        Offset(x, 0),
+        onset: onset,
+        measureIndex: m,
+        system: system,
+      );
       final line = [
         inBar(_q('C', 5), 40, 0, 0),
         inBar(_h('D', 5), 100, 0.25, 0),
@@ -88,9 +101,17 @@ void main() {
         inBar(_q('E', 5), 330, 1.0, 1),
       ];
       expect(closingBarlineX(line, 0), 300);
-      final halfway = playheadX(line.where((e) => e.measureIndex == 0),
-          offset: 0.625, measureLength: 1.0, closingX: closingBarlineX(line, 0));
-      expect(halfway, closeTo(200, 1e-9), reason: 'halfway from D to the bar end');
+      final halfway = playheadX(
+        line.where((e) => e.measureIndex == 0),
+        offset: 0.625,
+        measureLength: 1.0,
+        closingX: closingBarlineX(line, 0),
+      );
+      expect(
+        halfway,
+        closeTo(200, 1e-9),
+        reason: 'halfway from D to the bar end',
+      );
       // A bar ending a line is not closed by the next line's barline.
       final wrapped = [
         inBar(_q('C', 5), 40, 0, 0),
@@ -101,37 +122,53 @@ void main() {
 
     test('a bar with nothing rhythmic has no cursor', () {
       expect(
-          playheadX([_at(Clef(clefType: ClefType.treble), 0, 0)],
-              offset: 0, measureLength: 1),
-          isNull);
+        playheadX(
+          [_at(Clef(clefType: ClefType.treble), 0, 0)],
+          offset: 0,
+          measureLength: 1,
+        ),
+        isNull,
+      );
     });
   });
 
   group('MusicScore', () {
     final notes = [_q('C', 5), _q('E', 5), _h('G', 5)];
-    Staff staff() => Staff(measures: [
-          Measure()
-            ..add(Clef(clefType: ClefType.treble))
-            ..add(TimeSignature(numerator: 4, denominator: 4))
-            ..elements.addAll(notes),
-          Measure()..add(_q('A', 5))..add(_q('B', 5))..add(_h('C', 6)),
-        ]);
+    Staff staff() => Staff(
+      measures: [
+        Measure()
+          ..add(Clef(clefType: ClefType.treble))
+          ..add(TimeSignature(numerator: 4, denominator: 4))
+          ..elements.addAll(notes),
+        Measure()
+          ..add(_q('A', 5))
+          ..add(_q('B', 5))
+          ..add(_h('C', 6)),
+      ],
+    );
     final cursor = find.byWidgetPredicate(
-        (w) => w is CustomPaint && w.painter is MusicScorePlayheadPainter);
+      (w) => w is CustomPaint && w.painter is MusicScorePlayheadPainter,
+    );
     final score = find.byWidgetPredicate(
-        (w) => w is CustomPaint && w.painter is MusicScorePainter);
+      (w) => w is CustomPaint && w.painter is MusicScorePainter,
+    );
 
-    testWidgets('the cursor stands on each note as PlaybackPlan reaches it',
-        (t) async {
+    testWidgets('the cursor stands on each note as PlaybackPlan reaches it', (
+      t,
+    ) async {
       final s = staff();
       final plan = PlaybackPlan.fromStaff(s);
       final position = ValueNotifier<PlaybackPosition?>(null);
-      await t.pumpWidget(_host(MusicScore(
-        staff: s,
-        enableResponsiveLayout: false,
-        preventVerticalOverflow: false,
-        playbackPosition: position,
-      )));
+      await t.pumpWidget(
+        _host(
+          MusicScore(
+            staff: s,
+            enableResponsiveLayout: false,
+            preventVerticalOverflow: false,
+            playbackPosition: position,
+          ),
+        ),
+      );
       await _settle(t, score);
       final painter =
           t.widget<CustomPaint>(cursor).painter! as MusicScorePlayheadPainter;
@@ -148,19 +185,26 @@ void main() {
             .firstWhere((e) => identical(e.element, span.note))
             .position
             .dx;
-        expect(at!.x, closeTo(layoutX, 0.5),
-            reason: '${span.note.pitch.step}${span.note.pitch.octave}');
+        expect(
+          at!.x,
+          closeTo(layoutX, 0.5),
+          reason: '${span.note.pitch.step}${span.note.pitch.octave}',
+        );
       }
     });
 
     testWidgets('a tick repaints the cursor layer, not the score', (t) async {
       final position = ValueNotifier<PlaybackPosition?>(null);
-      await t.pumpWidget(_host(MusicScore(
-        staff: staff(),
-        enableResponsiveLayout: false,
-        preventVerticalOverflow: false,
-        playbackPosition: position,
-      )));
+      await t.pumpWidget(
+        _host(
+          MusicScore(
+            staff: staff(),
+            enableResponsiveLayout: false,
+            preventVerticalOverflow: false,
+            playbackPosition: position,
+          ),
+        ),
+      );
       await _settle(t, score);
       final scoreBox = t.renderObject<RenderCustomPaint>(score);
       final cursorBox = t.renderObject<RenderCustomPaint>(cursor);
@@ -179,28 +223,39 @@ void main() {
   });
 
   group('GrandStaff', () {
-    testWidgets('the cursor spans the system and lands on each staff\'s notes',
-        (t) async {
+    testWidgets('the cursor spans the system and lands on each staff\'s notes', (
+      t,
+    ) async {
       final treble = [_h('E', 5), _h('G', 5)];
       final bass = [_q('C', 3), _q('E', 3), _q('G', 3), _q('C', 3)];
-      final group = StaffGroup(bracket: BracketType.brace, staves: [
-        Staff(measures: [
-          Measure()
-            ..add(Clef(clefType: ClefType.treble))
-            ..add(TimeSignature(numerator: 4, denominator: 4))
-            ..elements.addAll(treble),
-        ]),
-        Staff(measures: [
-          Measure()
-            ..add(Clef(clefType: ClefType.bass))
-            ..add(TimeSignature(numerator: 4, denominator: 4))
-            ..elements.addAll(bass),
-        ]),
-      ]);
+      final group = StaffGroup(
+        bracket: BracketType.brace,
+        staves: [
+          Staff(
+            measures: [
+              Measure()
+                ..add(Clef(clefType: ClefType.treble))
+                ..add(TimeSignature(numerator: 4, denominator: 4))
+                ..elements.addAll(treble),
+            ],
+          ),
+          Staff(
+            measures: [
+              Measure()
+                ..add(Clef(clefType: ClefType.bass))
+                ..add(TimeSignature(numerator: 4, denominator: 4))
+                ..elements.addAll(bass),
+            ],
+          ),
+        ],
+      );
       final position = ValueNotifier<PlaybackPosition?>(null);
-      await t.pumpWidget(_host(GrandStaff(group: group, playbackPosition: position)));
+      await t.pumpWidget(
+        _host(GrandStaff(group: group, playbackPosition: position)),
+      );
       final canvas = find.byWidgetPredicate(
-          (w) => w is CustomPaint && w.painter is GrandStaffPainter);
+        (w) => w is CustomPaint && w.painter is GrandStaffPainter,
+      );
       await _settle(t, canvas);
       final painter =
           t.widget<CustomPaint>(canvas).painter! as GrandStaffPainter;
@@ -211,7 +266,8 @@ void main() {
       // on a held half note: the shared grid puts the cursor on the bass note.
       for (var i = 0; i < bass.length; i++) {
         final at = painter.playheadAt(
-            plan.positionAt(Duration(milliseconds: 500 * i))!)!;
+          plan.positionAt(Duration(milliseconds: 500 * i))!,
+        )!;
         final noteX = system[1]
             .firstWhere((p) => identical(p.element, bass[i]))
             .position
@@ -219,8 +275,10 @@ void main() {
         expect(at.x, closeTo(noteX + 12 * 2.2, 0.5), reason: 'beat ${i + 1}');
         // From above the top staff to below the bottom one.
         expect(at.top, lessThan(painter.contentTopInset + 12 * 3));
-        expect(at.bottom,
-            greaterThan(painter.contentTopInset + painter.staffGap + 12 * 7));
+        expect(
+          at.bottom,
+          greaterThan(painter.contentTopInset + painter.staffGap + 12 * 7),
+        );
       }
     });
   });

@@ -28,14 +28,16 @@ import 'package:flutter_notemus/src/layout/tuplet_grid.dart';
 
 import '../support/ink_probe.dart';
 
-Note _n(String step, int octave,
-        {DurationType d = DurationType.quarter,
-        double alter = 0.0,
-        int dots = 0}) =>
-    Note(
-      pitch: Pitch(step: step, octave: octave, alter: alter),
-      duration: Duration(d, dots: dots),
-    );
+Note _n(
+  String step,
+  int octave, {
+  DurationType d = DurationType.quarter,
+  double alter = 0.0,
+  int dots = 0,
+}) => Note(
+  pitch: Pitch(step: step, octave: octave, alter: alter),
+  duration: Duration(d, dots: dots),
+);
 
 Measure _bar(List<MusicalElement> elements) =>
     Measure()..elements.addAll(elements);
@@ -50,15 +52,21 @@ void main() {
     // Real glyphs, or every "painted width" below is the width of a `.notdef`
     // box and the raster measurements mean nothing.
     final bytes = await File('assets/smufl/Bravura.otf').readAsBytes();
-    await (FontLoader('packages/flutter_notemus/Bravura')
-          ..addFont(Future.value(ByteData.view(bytes.buffer))))
-        .load();
+    await (FontLoader(
+      'packages/flutter_notemus/Bravura',
+    )..addFont(Future.value(ByteData.view(bytes.buffer)))).load();
   });
 
-  LayoutEngine engineFor(Staff staff,
-          {double width = 900, double staffSpace = 12}) =>
-      LayoutEngine(staff,
-          availableWidth: width, staffSpace: staffSpace, metadata: metadata);
+  LayoutEngine engineFor(
+    Staff staff, {
+    double width = 900,
+    double staffSpace = 12,
+  }) => LayoutEngine(
+    staff,
+    availableWidth: width,
+    staffSpace: staffSpace,
+    metadata: metadata,
+  );
 
   // ------------------------------------------------------------------ M-26 --
   group('M-26 — painting never writes back into the model', () {
@@ -67,21 +75,23 @@ void main() {
     // `BeamAnalyzer` — is the one nearly every score takes, and it writes
     // `Note.beam` from a different place. Export must not depend on whether the
     // score has been displayed.
-    Staff loosEighths() => Staff(measures: [
-          _bar([
-            Clef(clefType: ClefType.treble),
-            TimeSignature(numerator: 4, denominator: 4),
-            for (final p in ['C', 'D', 'E', 'F', 'G', 'A', 'B', 'C'])
-              _n(p, 5, d: DurationType.eighth),
-          ]),
-          _bar([
-            for (final p in ['C', 'B', 'A', 'G'])
-              _n(p, 5, d: DurationType.sixteenth),
-            for (final p in ['F', 'E', 'D', 'C'])
-              _n(p, 5, d: DurationType.sixteenth),
-            _n('C', 5, d: DurationType.half),
-          ]),
-        ]);
+    Staff loosEighths() => Staff(
+      measures: [
+        _bar([
+          Clef(clefType: ClefType.treble),
+          TimeSignature(numerator: 4, denominator: 4),
+          for (final p in ['C', 'D', 'E', 'F', 'G', 'A', 'B', 'C'])
+            _n(p, 5, d: DurationType.eighth),
+        ]),
+        _bar([
+          for (final p in ['C', 'B', 'A', 'G'])
+            _n(p, 5, d: DurationType.sixteenth),
+          for (final p in ['F', 'E', 'D', 'C'])
+            _n(p, 5, d: DurationType.sixteenth),
+          _n('C', 5, d: DurationType.half),
+        ]),
+      ],
+    );
 
     test('layout() leaves the MusicXML and the JSON byte-identical', () {
       final staff = loosEighths();
@@ -94,33 +104,54 @@ void main() {
       // The engine must still have DECIDED the beams — otherwise "nothing
       // changed" would be trivially true because nothing happened.
       final notes = staff.measures.first.allElements.whereType<Note>().toList();
-      expect(notes.where((n) => engine.beamOf(n) != null), isNotEmpty,
-          reason: 'the run of eighths was not beamed at all');
-
-      expect(MusicXMLParser.staffToMusicXML(staff), xml,
-          reason: 'layout() wrote its beam decision into the model');
-      expect(JsonMusicParser.staffToJson(staff), json,
-          reason: 'layout() wrote its beam decision into the model');
-    });
-
-    test('renderStaffToPng leaves the MusicXML and the JSON byte-identical',
-        () async {
-      final staff = loosEighths();
-      final xml = MusicXMLParser.staffToMusicXML(staff);
-      final json = JsonMusicParser.staffToJson(staff);
-
-      final png = await ScoreRasterizer.renderStaffToPng(
-        staff: staff,
-        metadata: metadata,
-        width: 900,
+      expect(
+        notes.where((n) => engine.beamOf(n) != null),
+        isNotEmpty,
+        reason: 'the run of eighths was not beamed at all',
       );
-      expect(png, isNotNull, reason: 'nothing was painted, so nothing is proven');
 
-      expect(MusicXMLParser.staffToMusicXML(staff), xml,
-          reason: 'the PAINT pass wrote Note.beam into the model');
-      expect(JsonMusicParser.staffToJson(staff), json,
-          reason: 'the PAINT pass wrote Note.beam into the model');
+      expect(
+        MusicXMLParser.staffToMusicXML(staff),
+        xml,
+        reason: 'layout() wrote its beam decision into the model',
+      );
+      expect(
+        JsonMusicParser.staffToJson(staff),
+        json,
+        reason: 'layout() wrote its beam decision into the model',
+      );
     });
+
+    test(
+      'renderStaffToPng leaves the MusicXML and the JSON byte-identical',
+      () async {
+        final staff = loosEighths();
+        final xml = MusicXMLParser.staffToMusicXML(staff);
+        final json = JsonMusicParser.staffToJson(staff);
+
+        final png = await ScoreRasterizer.renderStaffToPng(
+          staff: staff,
+          metadata: metadata,
+          width: 900,
+        );
+        expect(
+          png,
+          isNotNull,
+          reason: 'nothing was painted, so nothing is proven',
+        );
+
+        expect(
+          MusicXMLParser.staffToMusicXML(staff),
+          xml,
+          reason: 'the PAINT pass wrote Note.beam into the model',
+        );
+        expect(
+          JsonMusicParser.staffToJson(staff),
+          json,
+          reason: 'the PAINT pass wrote Note.beam into the model',
+        );
+      },
+    );
   });
 
   // ------------------------------------------------------------------ M-01 --
@@ -128,49 +159,64 @@ void main() {
     /// Twelve one-bar systems; bar [changeAt] carries a clef change AFTER its
     /// first note, so `measure.elements.any((e) => e is Clef)` is true for it
     /// while nothing states a clef at its head.
-    Staff wrapped({required int changeAt}) => Staff(measures: [
-          for (var i = 0; i < 12; i++)
-            _bar([
-              if (i == 0) Clef(clefType: ClefType.treble),
-              if (i == 0) TimeSignature(numerator: 4, denominator: 4),
-              _n('C', 4, d: DurationType.half),
-              if (i == changeAt) Clef(clefType: ClefType.bass),
-              _n('C', 4, d: DurationType.half),
-            ])
-        ]);
+    Staff wrapped({required int changeAt}) => Staff(
+      measures: [
+        for (var i = 0; i < 12; i++)
+          _bar([
+            if (i == 0) Clef(clefType: ClefType.treble),
+            if (i == 0) TimeSignature(numerator: 4, denominator: 4),
+            _n('C', 4, d: DurationType.half),
+            if (i == changeAt) Clef(clefType: ClefType.bass),
+            _n('C', 4, d: DurationType.half),
+          ]),
+      ],
+    );
 
     /// `type@x` for every clef the engine placed on [system].
     List<String> clefsOf(List<PositionedElement> placed, int system) => [
-          for (final pe in placed)
-            if (pe.system == system)
-              if (pe.element case final Clef clef)
-                '${clef.clefType.name}@${pe.position.dx.round()}',
-        ];
+      for (final pe in placed)
+        if (pe.system == system)
+          if (pe.element case final Clef clef)
+            '${clef.clefType.name}@${pe.position.dx.round()}',
+    ];
 
-    test('a bar whose ONLY clef is a mid-measure change still gets a head clef',
-        () {
-      // Measured before the `_statesAtHead` fix, on the grand-staff twin of
-      // this case: `sys1 clefs=[bass@56]` — the system opened with no clef at
-      // all at x = 30, because the old test was
-      // `measure.elements.any((e) => e is Clef)` and answered "yes" for a bar
-      // that only changes clef in the middle.
-      final placed = engineFor(wrapped(changeAt: 1), width: 260).layout();
-      final systems = placed.map((p) => p.system).toSet();
-      expect(systems.length, greaterThanOrEqualTo(4),
-          reason: 'the staff has to wrap for the restatement to be exercised');
+    test(
+      'a bar whose ONLY clef is a mid-measure change still gets a head clef',
+      () {
+        // Measured before the `_statesAtHead` fix, on the grand-staff twin of
+        // this case: `sys1 clefs=[bass@56]` — the system opened with no clef at
+        // all at x = 30, because the old test was
+        // `measure.elements.any((e) => e is Clef)` and answered "yes" for a bar
+        // that only changes clef in the middle.
+        final placed = engineFor(wrapped(changeAt: 1), width: 260).layout();
+        final systems = placed.map((p) => p.system).toSet();
+        expect(
+          systems.length,
+          greaterThanOrEqualTo(4),
+          reason: 'the staff has to wrap for the restatement to be exercised',
+        );
 
-      final onChange = clefsOf(placed, 1);
-      expect(onChange, hasLength(2),
-          reason: 'the bar with the mid-measure change must show BOTH the '
-              'restated head clef and the change itself, got $onChange');
-      expect(onChange.first, startsWith('treble@'),
-          reason: 'the head restatement is the clef that was in force BEFORE '
-              'the change');
-      expect(onChange.last, startsWith('bass@'));
-      final headX = double.parse(onChange.first.split('@').last);
-      final changeX = double.parse(onChange.last.split('@').last);
-      expect(headX, lessThan(changeX));
-    });
+        final onChange = clefsOf(placed, 1);
+        expect(
+          onChange,
+          hasLength(2),
+          reason:
+              'the bar with the mid-measure change must show BOTH the '
+              'restated head clef and the change itself, got $onChange',
+        );
+        expect(
+          onChange.first,
+          startsWith('treble@'),
+          reason:
+              'the head restatement is the clef that was in force BEFORE '
+              'the change',
+        );
+        expect(onChange.last, startsWith('bass@'));
+        final headX = double.parse(onChange.first.split('@').last);
+        final changeX = double.parse(onChange.last.split('@').last);
+        expect(headX, lessThan(changeX));
+      },
+    );
 
     test('later systems restate the clef that is actually in force', () {
       // Measured before: `treble@30` on every system after the change — a
@@ -179,10 +225,16 @@ void main() {
       final lastSystem = placed.map((p) => p.system).reduce(math.max);
       for (var system = 2; system <= lastSystem; system++) {
         final clefs = clefsOf(placed, system);
-        expect(clefs, hasLength(1),
-            reason: 'system $system should restate exactly one clef, got $clefs');
-        expect(clefs.single, startsWith('bass@'),
-            reason: 'system $system restated the wrong clef: $clefs');
+        expect(
+          clefs,
+          hasLength(1),
+          reason: 'system $system should restate exactly one clef, got $clefs',
+        );
+        expect(
+          clefs.single,
+          startsWith('bass@'),
+          reason: 'system $system restated the wrong clef: $clefs',
+        );
       }
     });
 
@@ -194,16 +246,20 @@ void main() {
       final placed = engineFor(staff, width: 260).layout();
 
       final painter = GrandStaffPainter(
-        staffGroup: StaffGroup(staves: [
-          wrapped(changeAt: 1),
-          Staff(measures: [
-            for (var i = 0; i < 12; i++)
-              _bar([
-                if (i == 0) Clef(clefType: ClefType.bass),
-                _n('C', 3, d: DurationType.whole),
-              ])
-          ]),
-        ]),
+        staffGroup: StaffGroup(
+          staves: [
+            wrapped(changeAt: 1),
+            Staff(
+              measures: [
+                for (var i = 0; i < 12; i++)
+                  _bar([
+                    if (i == 0) Clef(clefType: ClefType.bass),
+                    _n('C', 3, d: DurationType.whole),
+                  ]),
+              ],
+            ),
+          ],
+        ),
         staffSpace: 12,
         metadata: metadata,
         theme: const MusicScoreTheme(),
@@ -211,18 +267,21 @@ void main() {
       );
 
       List<String> kindsOf(List<PositionedElement> elements) => [
-            for (final pe in elements)
-              if (pe.element case final Clef clef) clef.clefType.name,
-          ];
+        for (final pe in elements)
+          if (pe.element case final Clef clef) clef.clefType.name,
+      ];
 
       final lastSystem = placed.map((p) => p.system).reduce(math.max);
-      for (var system = 0;
-          system <= math.min(lastSystem, painter.systemCount - 1);
-          system++) {
+      for (
+        var system = 0;
+        system <= math.min(lastSystem, painter.systemCount - 1);
+        system++
+      ) {
         expect(
           kindsOf(painter.alignedSystem(system)[0]),
           kindsOf(placed.where((p) => p.system == system).toList()),
-          reason: 'system $system: the two paths disagree about which clefs '
+          reason:
+              'system $system: the two paths disagree about which clefs '
               'are drawn',
         );
       }
@@ -230,72 +289,96 @@ void main() {
   });
 
   // ------------------------------------------------------- tuplet bracket ---
-  test('the tuplet bracket is drawn at engravingDefaults.tupletBracketThickness',
-      () async {
-    // SMuFL gives brackets their own entry precisely because they are NOT
-    // stem-weight: Bravura declares `tupletBracketThickness` 0.16 and
-    // `stemThickness` 0.12. The bracket used to be painted with a literal
-    // `staffSpace * 0.12`, i.e. 25% too thin, and no test could see it because
-    // the two numbers differ by 1 pixel at the usual staffSpace of 12.
-    //
-    // Rendered at staffSpace 60 the difference is 9.6 px against 7.2 px, which
-    // a raster resolves without argument. Three equal quarters keep the bracket
-    // FLAT, so a column's ink run is the stroke width itself and not
-    // `thickness / cos(angle)`.
-    const staffSpace = 60.0;
-    final tuplet = Tuplet(
-      actualNotes: 3,
-      normalNotes: 2,
-      elements: [for (var i = 0; i < 3; i++) _n('C', 4)],
-    );
-    final staff = Staff(measures: [
-      _bar([
-        Clef(clefType: ClefType.treble),
-        TimeSignature(numerator: 4, denominator: 4),
-        tuplet,
-      ])
-    ]);
-    final engine = engineFor(staff, width: 1400, staffSpace: staffSpace);
-    engine.layout();
-    final noteY = engine.noteYPositions[tuplet.elements.first as Note]!;
+  test(
+    'the tuplet bracket is drawn at engravingDefaults.tupletBracketThickness',
+    () async {
+      // SMuFL gives brackets their own entry precisely because they are NOT
+      // stem-weight: Bravura declares `tupletBracketThickness` 0.16 and
+      // `stemThickness` 0.12. The bracket used to be painted with a literal
+      // `staffSpace * 0.12`, i.e. 25% too thin, and no test could see it because
+      // the two numbers differ by 1 pixel at the usual staffSpace of 12.
+      //
+      // Rendered at staffSpace 60 the difference is 9.6 px against 7.2 px, which
+      // a raster resolves without argument. Three equal quarters keep the bracket
+      // FLAT, so a column's ink run is the stroke width itself and not
+      // `thickness / cos(angle)`.
+      const staffSpace = 60.0;
+      final tuplet = Tuplet(
+        actualNotes: 3,
+        normalNotes: 2,
+        elements: [for (var i = 0; i < 3; i++) _n('C', 4)],
+      );
+      final staff = Staff(
+        measures: [
+          _bar([
+            Clef(clefType: ClefType.treble),
+            TimeSignature(numerator: 4, denominator: 4),
+            tuplet,
+          ]),
+        ],
+      );
+      final engine = engineFor(staff, width: 1400, staffSpace: staffSpace);
+      engine.layout();
+      final noteY = engine.noteYPositions[tuplet.elements.first as Note]!;
 
-    final ink = await rasterise(staff, metadata,
-        staffSpace: staffSpace, width: 1400);
+      final ink = await rasterise(
+        staff,
+        metadata,
+        staffSpace: staffSpace,
+        width: 1400,
+      );
 
-    // The bracket is the longest horizontal ink run well above the noteheads.
-    final ceiling = (noteY - staffSpace * 2).round();
-    var bestRow = -1;
-    var best = (start: 0, end: -1);
-    for (var y = 0; y < ceiling; y++) {
-      for (final run in ink.runsInRow(y)) {
-        if (run.end - run.start > best.end - best.start) {
-          best = run;
-          bestRow = y;
+      // The bracket is the longest horizontal ink run well above the noteheads.
+      final ceiling = (noteY - staffSpace * 2).round();
+      var bestRow = -1;
+      var best = (start: 0, end: -1);
+      for (var y = 0; y < ceiling; y++) {
+        for (final run in ink.runsInRow(y)) {
+          if (run.end - run.start > best.end - best.start) {
+            best = run;
+            bestRow = y;
+          }
         }
       }
-    }
-    expect(bestRow, greaterThanOrEqualTo(0), reason: 'no bracket ink found');
-    expect(best.end - best.start, greaterThan((staffSpace * 2).round()),
-        reason: 'the longest run above the noteheads is not a bracket segment');
+      expect(bestRow, greaterThanOrEqualTo(0), reason: 'no bracket ink found');
+      expect(
+        best.end - best.start,
+        greaterThan((staffSpace * 2).round()),
+        reason: 'the longest run above the noteheads is not a bracket segment',
+      );
 
-    final column = (best.start + best.end) ~/ 2;
-    final vertical = InkImage.runContaining(ink.runsInColumn(column), bestRow);
-    expect(vertical, isNotNull);
-    final painted = vertical!.end - vertical.start + 1;
+      final column = (best.start + best.end) ~/ 2;
+      final vertical = InkImage.runContaining(
+        ink.runsInColumn(column),
+        bestRow,
+      );
+      expect(vertical, isNotNull);
+      final painted = vertical!.end - vertical.start + 1;
 
-    final expected =
-        metadata.getEngravingDefault('tupletBracketThickness', 0.16) *
-            staffSpace;
-    final stem = metadata.getEngravingDefault('stemThickness', 0.12) * staffSpace;
+      final expected =
+          metadata.getEngravingDefault('tupletBracketThickness', 0.16) *
+          staffSpace;
+      final stem =
+          metadata.getEngravingDefault('stemThickness', 0.12) * staffSpace;
 
-    // Measured: 10 px against an expected 9.6 (one row of anti-aliased edge).
-    expect(painted.toDouble(), closeTo(expected, 1.5),
-        reason: 'the bracket painted $painted px at staffSpace $staffSpace; '
-            'engravingDefaults.tupletBracketThickness asks for $expected');
-    expect(painted.toDouble(), greaterThan(stem + 1.0),
-        reason: 'the bracket is being drawn at stem weight ($stem px), which '
-            'is the defect this test exists for');
-  }, timeout: const Timeout.factor(30));
+      // Measured: 10 px against an expected 9.6 (one row of anti-aliased edge).
+      expect(
+        painted.toDouble(),
+        closeTo(expected, 1.5),
+        reason:
+            'the bracket painted $painted px at staffSpace $staffSpace; '
+            'engravingDefaults.tupletBracketThickness asks for $expected',
+      );
+      expect(
+        painted.toDouble(),
+        greaterThan(stem + 1.0),
+        reason:
+            'the bracket is being drawn at stem weight ($stem px), which '
+            'is the defect this test exists for',
+      );
+    },
+    timeout: const Timeout.factor(30),
+  );
 
   // ------------------------------------------------ tuplet legibility floor --
   group('the legibility floor the m04m golden froze', () {
@@ -319,20 +402,30 @@ void main() {
       final cases = <String, Tuplet>{
         'm04m 5:4 sixteenths': tupletOf([
           for (final p in ['C', 'D', 'E', 'F', 'G'])
-            _n(p, 5, d: DurationType.sixteenth)
+            _n(p, 5, d: DurationType.sixteenth),
         ]),
         '3:2 eighths': tupletOf(
-            [for (var i = 0; i < 3; i++) _n('C', 5, d: DurationType.eighth)],
-            actual: 3,
-            normal: 2),
-        '3:2 quarter + two eighths': tupletOf([
-          _n('C', 5),
-          _n('D', 5, d: DurationType.eighth),
-          _n('E', 5, d: DurationType.eighth),
-        ], actual: 3, normal: 2),
-        '7:4 thirty-seconds': tupletOf([
-          for (var i = 0; i < 7; i++) _n('C', 5, d: DurationType.thirtySecond)
-        ], actual: 7, normal: 4),
+          [for (var i = 0; i < 3; i++) _n('C', 5, d: DurationType.eighth)],
+          actual: 3,
+          normal: 2,
+        ),
+        '3:2 quarter + two eighths': tupletOf(
+          [
+            _n('C', 5),
+            _n('D', 5, d: DurationType.eighth),
+            _n('E', 5, d: DurationType.eighth),
+          ],
+          actual: 3,
+          normal: 2,
+        ),
+        '7:4 thirty-seconds': tupletOf(
+          [
+            for (var i = 0; i < 7; i++)
+              _n('C', 5, d: DurationType.thirtySecond),
+          ],
+          actual: 7,
+          normal: 4,
+        ),
       };
 
       for (final entry in cases.entries) {
@@ -345,78 +438,97 @@ void main() {
           // The last slot is the group's trailing advance, not a note-to-note
           // distance, so only the inner ones are gaps between two noteheads.
           for (var i = 0; i < slots.length - 1; i++) {
-            final gapSpaces = (slots[i] - headAdvance * staffSpace) / staffSpace;
-            expect(gapSpaces, greaterThanOrEqualTo(minGap - 1e-9),
-                reason: '${entry.key} at staffSpace $staffSpace: slot $i left '
-                    '${gapSpaces.toStringAsFixed(3)} staff spaces of white, '
-                    'under SpacingPreferences.normal.minGap of $minGap');
+            final gapSpaces =
+                (slots[i] - headAdvance * staffSpace) / staffSpace;
+            expect(
+              gapSpaces,
+              greaterThanOrEqualTo(minGap - 1e-9),
+              reason:
+                  '${entry.key} at staffSpace $staffSpace: slot $i left '
+                  '${gapSpaces.toStringAsFixed(3)} staff spaces of white, '
+                  'under SpacingPreferences.normal.minGap of $minGap',
+            );
           }
         }
       }
     });
 
-    test('pixels: the m04m case leaves real white between its noteheads',
-        () async {
-      // The same claim, on ink, for the case the golden froze. Rendered at
-      // pixelRatio 4 so a 0.25-staff-space gap is 12 device pixels and cannot
-      // be argued away as anti-aliasing.
-      const staffSpace = 12.0;
-      const pixelRatio = 4.0;
-      final notes = [
-        for (final p in ['C', 'D', 'E', 'F', 'G'])
-          _n(p, 5, d: DurationType.sixteenth)
-      ];
-      final staff = Staff(measures: [
-        _bar([
-          Clef(clefType: ClefType.treble),
-          TimeSignature(numerator: 4, denominator: 4),
-          Tuplet(
-            actualNotes: 5,
-            normalNotes: 4,
-            numberConfig: const TupletNumber(showAsRatio: true),
-            elements: notes,
-          ),
-        ])
-      ]);
-      final engine = engineFor(staff, width: 900, staffSpace: staffSpace);
-      engine.layout();
+    test(
+      'pixels: the m04m case leaves real white between its noteheads',
+      () async {
+        // The same claim, on ink, for the case the golden froze. Rendered at
+        // pixelRatio 4 so a 0.25-staff-space gap is 12 device pixels and cannot
+        // be argued away as anti-aliasing.
+        const staffSpace = 12.0;
+        const pixelRatio = 4.0;
+        final notes = [
+          for (final p in ['C', 'D', 'E', 'F', 'G'])
+            _n(p, 5, d: DurationType.sixteenth),
+        ];
+        final staff = Staff(
+          measures: [
+            _bar([
+              Clef(clefType: ClefType.treble),
+              TimeSignature(numerator: 4, denominator: 4),
+              Tuplet(
+                actualNotes: 5,
+                normalNotes: 4,
+                numberConfig: const TupletNumber(showAsRatio: true),
+                elements: notes,
+              ),
+            ]),
+          ],
+        );
+        final engine = engineFor(staff, width: 900, staffSpace: staffSpace);
+        engine.layout();
 
-      final ink = await rasterise(staff, metadata,
-          staffSpace: staffSpace, width: 900, pixelRatio: pixelRatio);
+        final ink = await rasterise(
+          staff,
+          metadata,
+          staffSpace: staffSpace,
+          width: 900,
+          pixelRatio: pixelRatio,
+        );
 
-      // Each notehead sits on its own row (the passage is stepwise), so the
-      // gap between two adjacent heads is the horizontal distance between the
-      // ink run of one and the ink run of the next.
-      ({int start, int end}) headOf(Note note) {
-        final y = (engine.noteYPositions[note]! * pixelRatio).round();
-        final x = (engine.noteXPositions[note]! * pixelRatio).round();
-        final row = ink.runsInRow(y);
-        // The notehead's own run: the one that contains the note's origin, or
-        // the nearest one when the origin lands on an anti-aliased edge.
-        final containing = InkImage.runContaining(row, x);
-        if (containing != null) return containing;
-        return row.reduce((a, b) =>
-            (a.start - x).abs() < (b.start - x).abs() ? a : b);
-      }
+        // Each notehead sits on its own row (the passage is stepwise), so the
+        // gap between two adjacent heads is the horizontal distance between the
+        // ink run of one and the ink run of the next.
+        ({int start, int end}) headOf(Note note) {
+          final y = (engine.noteYPositions[note]! * pixelRatio).round();
+          final x = (engine.noteXPositions[note]! * pixelRatio).round();
+          final row = ink.runsInRow(y);
+          // The notehead's own run: the one that contains the note's origin, or
+          // the nearest one when the origin lands on an anti-aliased edge.
+          final containing = InkImage.runContaining(row, x);
+          if (containing != null) return containing;
+          return row.reduce(
+            (a, b) => (a.start - x).abs() < (b.start - x).abs() ? a : b,
+          );
+        }
 
-      for (var i = 0; i < notes.length - 1; i++) {
-        final left = headOf(notes[i]);
-        final right = headOf(notes[i + 1]);
-        final gapDevice = right.start - left.end - 1;
-        final gapSpaces = gapDevice / pixelRatio / staffSpace;
-        // Measured on 2.7.1: 37 device px = 0.771 staff spaces, against the
-        // 2 px = 0.167 staff spaces the old 1.4 floor produced.
-        expect(gapSpaces, greaterThanOrEqualTo(minGap),
-            reason: 'noteheads $i and ${i + 1} are $gapDevice device px apart '
+        for (var i = 0; i < notes.length - 1; i++) {
+          final left = headOf(notes[i]);
+          final right = headOf(notes[i + 1]);
+          final gapDevice = right.start - left.end - 1;
+          final gapSpaces = gapDevice / pixelRatio / staffSpace;
+          // Measured on 2.7.1: 37 device px = 0.771 staff spaces, against the
+          // 2 px = 0.167 staff spaces the old 1.4 floor produced.
+          expect(
+            gapSpaces,
+            greaterThanOrEqualTo(minGap),
+            reason:
+                'noteheads $i and ${i + 1} are $gapDevice device px apart '
                 '(${gapSpaces.toStringAsFixed(3)} staff spaces), under '
-                'SpacingPreferences.normal.minGap of $minGap');
-      }
-    }, timeout: const Timeout.factor(30));
+                'SpacingPreferences.normal.minGap of $minGap',
+          );
+        }
+      },
+      timeout: const Timeout.factor(30),
+    );
   });
 
   // ------------------------------------------------------------ elementWidth --
-  test('elementWidth covers the ink every element type actually paints',
-      () async {
+  test('elementWidth covers the ink every element type actually paints', () async {
     // The class of defect that produced M-16, M-17, M-28 and M-33: the layout
     // reserved a width the renderer then exceeded, and nothing compared the
     // two. `elementWidth` is also what `ScoreHitTester` and `ScoreRasterizer`
@@ -525,17 +637,20 @@ void main() {
 
     for (final entry in cases.entries) {
       final element = entry.value;
-      final staff = Staff(measures: [
-        _bar([
-          Clef(clefType: ClefType.treble),
-          TimeSignature(numerator: 4, denominator: 4),
-        ]),
-        _bar([element]),
-      ]);
+      final staff = Staff(
+        measures: [
+          _bar([
+            Clef(clefType: ClefType.treble),
+            TimeSignature(numerator: 4, denominator: 4),
+          ]),
+          _bar([element]),
+        ],
+      );
       final engine = engineFor(staff, width: 3000, staffSpace: staffSpace);
       final placed = engine.layout();
-      final positioned =
-          placed.firstWhere((p) => identical(p.element, element));
+      final positioned = placed.firstWhere(
+        (p) => identical(p.element, element),
+      );
 
       // The right edge is the PAINTED extent, not the advance.
       //
@@ -547,13 +662,20 @@ void main() {
       // to fit inside is `elementPaintedRightExtent`, which is the number the
       // hit-test box and the raster's content width are built from.
       final left = positioned.position.dx - engine.elementLeftExtent(element);
-      final right = positioned.position.dx +
-          engine.elementPaintedRightExtent(element);
-      expect(right, greaterThan(left),
-          reason: '${entry.key} reserved no width at all');
+      final right =
+          positioned.position.dx + engine.elementPaintedRightExtent(element);
+      expect(
+        right,
+        greaterThan(left),
+        reason: '${entry.key} reserved no width at all',
+      );
 
-      final ink = await rasterise(staff, metadata,
-          staffSpace: staffSpace, width: 3000);
+      final ink = await rasterise(
+        staff,
+        metadata,
+        staffSpace: staffSpace,
+        width: 3000,
+      );
       final columns = ink.inkColumns();
 
       // Only look near the element: its neighbours are a bar away.
@@ -570,10 +692,15 @@ void main() {
         inkFrom = math.min(inkFrom, x.toDouble());
         inkTo = math.max(inkTo, x + 1.0);
         if (x < left) overflowLeft = math.max(overflowLeft, left - x);
-        if (x + 1 > right) overflowRight = math.max(overflowRight, x + 1 - right);
+        if (x + 1 > right) {
+          overflowRight = math.max(overflowRight, x + 1 - right);
+        }
       }
-      expect(sawInk, isTrue,
-          reason: '${entry.key} painted nothing — the measurement is vacuous');
+      expect(
+        sawInk,
+        isTrue,
+        reason: '${entry.key} painted nothing — the measurement is vacuous',
+      );
 
       // Two separate claims, because they fail for different reasons.
       //
@@ -587,28 +714,38 @@ void main() {
       final widthBudget = widthBudgets[entry.key] ?? tolerance;
       final budget = budgets[entry.key] ?? tolerance;
       final worst = math.max(overflowLeft, overflowRight);
-      report.add('${entry.key.padRight(18)} reserved '
-          '${reservedWidth.toStringAsFixed(1)} painted '
-          '${paintedWidth.toStringAsFixed(1)} '
-          'overflow L=${overflowLeft.toStringAsFixed(1)} '
-          'R=${overflowRight.toStringAsFixed(1)} '
-          'budgets width=$widthBudget band=$budget');
+      report.add(
+        '${entry.key.padRight(18)} reserved '
+        '${reservedWidth.toStringAsFixed(1)} painted '
+        '${paintedWidth.toStringAsFixed(1)} '
+        'overflow L=${overflowLeft.toStringAsFixed(1)} '
+        'R=${overflowRight.toStringAsFixed(1)} '
+        'budgets width=$widthBudget band=$budget',
+      );
       if (paintedWidth - reservedWidth > widthBudget) {
-        failures.add('${entry.key}: painted '
-            '${paintedWidth.toStringAsFixed(1)} px into a reservation of '
-            '${reservedWidth.toStringAsFixed(1)} px '
-            '(width budget $widthBudget)');
+        failures.add(
+          '${entry.key}: painted '
+          '${paintedWidth.toStringAsFixed(1)} px into a reservation of '
+          '${reservedWidth.toStringAsFixed(1)} px '
+          '(width budget $widthBudget)',
+        );
       }
       if (worst > budget) {
-        failures.add('${entry.key}: painted ${worst.toStringAsFixed(1)} px '
-            'outside its reserved band (band budget $budget)');
+        failures.add(
+          '${entry.key}: painted ${worst.toStringAsFixed(1)} px '
+          'outside its reserved band (band budget $budget)',
+        );
       }
     }
 
-    expect(failures, isEmpty,
-        reason: 'elementWidth/elementLeftExtent must bound what is drawn — '
-            'hit-testing, collision detection and the raster export all build '
-            'their boxes from them.\n${failures.join('\n')}\n'
-            '${report.join('\n')}');
+    expect(
+      failures,
+      isEmpty,
+      reason:
+          'elementWidth/elementLeftExtent must bound what is drawn — '
+          'hit-testing, collision detection and the raster export all build '
+          'their boxes from them.\n${failures.join('\n')}\n'
+          '${report.join('\n')}',
+    );
   }, timeout: const Timeout.factor(60));
 }

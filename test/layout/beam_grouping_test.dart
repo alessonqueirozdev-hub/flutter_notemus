@@ -9,14 +9,15 @@ import 'package:flutter_notemus/src/layout/beam_grouper.dart';
 
 void main() {
   List<Note> eighths(int n) => List.generate(
-        n,
-        (_) => Note(
-          pitch: const Pitch(step: 'C', octave: 5),
-          duration: const Duration(DurationType.eighth),
-        ),
-      );
+    n,
+    (_) => Note(
+      pitch: const Pitch(step: 'C', octave: 5),
+      duration: const Duration(DurationType.eighth),
+    ),
+  );
 
-  List<int> groupSizes(List<BeamGroup> g) => g.map((x) => x.notes.length).toList();
+  List<int> groupSizes(List<BeamGroup> g) =>
+      g.map((x) => x.notes.length).toList();
 
   test('8 eighths in 4/4 -> two groups of 4 (half-bar)', () {
     final g = BeamGrouper.groupNotesForBeaming(

@@ -28,11 +28,7 @@ class Contributor {
   /// Identificador externo (e.g., VIAF URI, ISNI).
   final String? identifier;
 
-  const Contributor({
-    required this.name,
-    required this.role,
-    this.identifier,
-  });
+  const Contributor({required this.name, required this.role, this.identifier});
 }
 
 /// Descreve a publicação / distribuição of the arquivo codificado.

@@ -15,9 +15,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 
 List<String> _notes(Measure m) => [
-      for (final e in m.allElements)
-        if (e is Note) '${e.pitch.step}${e.pitch.octave}',
-    ];
+  for (final e in m.allElements)
+    if (e is Note) '${e.pitch.step}${e.pitch.octave}',
+];
 
 void main() {
   test('MusicXML: a bar whose only voice is 5 keeps its notes', () {
@@ -92,15 +92,18 @@ void main() {
   test('the MuseScore reference imports every bar, with no warning', () {
     final warnings = <String>[];
     final score = MusicXMLParser.scoreFromBytes(
-      File('test/parsers/fixtures/musescore_4_7_4/notemus_reference.mxl')
-          .readAsBytesSync(),
+      File(
+        'test/parsers/fixtures/musescore_4_7_4/notemus_reference.mxl',
+      ).readAsBytesSync(),
       warnings: warnings,
     );
     expect(warnings, isEmpty);
     final lowerStaff = score.allStaves.last;
-    expect(lowerStaff.measures[1].allElements.whereType<Note>().map(
-          (n) => '${n.pitch.step}${n.pitch.octave}',
-        ),
-        ['D3']);
+    expect(
+      lowerStaff.measures[1].allElements.whereType<Note>().map(
+        (n) => '${n.pitch.step}${n.pitch.octave}',
+      ),
+      ['D3'],
+    );
   });
 }

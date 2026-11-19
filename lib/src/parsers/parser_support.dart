@@ -81,12 +81,21 @@ Staff parseNotationStaff(
 }) {
   final resolvedFormat = format ?? detectNotationFormat(source);
   return switch (resolvedFormat) {
-    NotationFormat.json =>
-      parseJsonStaff(source, staffIndex: staffIndex, warnings: warnings),
-    NotationFormat.musicXml =>
-      parseMusicXmlStaff(source, partIndex: partIndex, warnings: warnings),
-    NotationFormat.mei =>
-      parseMeiStaff(source, staffIndex: staffIndex, warnings: warnings),
+    NotationFormat.json => parseJsonStaff(
+      source,
+      staffIndex: staffIndex,
+      warnings: warnings,
+    ),
+    NotationFormat.musicXml => parseMusicXmlStaff(
+      source,
+      partIndex: partIndex,
+      warnings: warnings,
+    ),
+    NotationFormat.mei => parseMeiStaff(
+      source,
+      staffIndex: staffIndex,
+      warnings: warnings,
+    ),
   };
 }
 
@@ -148,9 +157,10 @@ Staff parseJsonStaff(
     throw const FormatException('JSON notation root must be an object.');
   }
 
-  final staff =
-      _JsonImportParser(staffIndex: staffIndex, warnings: warnings)
-          .parse(decoded);
+  final staff = _JsonImportParser(
+    staffIndex: staffIndex,
+    warnings: warnings,
+  ).parse(decoded);
   warnOverfullMeasures(staff, warnings);
   return staff;
 }
@@ -161,8 +171,10 @@ Staff parseMusicXmlStaff(
   List<String>? warnings,
 }) {
   final document = XmlDocument.parse(source);
-  final staff = _MusicXmlImportParser(partIndex: partIndex, warnings: warnings)
-      .parse(document);
+  final staff = _MusicXmlImportParser(
+    partIndex: partIndex,
+    warnings: warnings,
+  ).parse(document);
   warnOverfullMeasures(staff, warnings);
   return staff;
 }
@@ -170,8 +182,10 @@ Staff parseMusicXmlStaff(
 /// Imports every part/staff of a MusicXML document into a [Score].
 Score parseMusicXmlScore(String source, {List<String>? warnings}) {
   final document = XmlDocument.parse(source);
-  return _MusicXmlImportParser(partIndex: 0, warnings: warnings)
-      .parseScore(document);
+  return _MusicXmlImportParser(
+    partIndex: 0,
+    warnings: warnings,
+  ).parseScore(document);
 }
 
 Staff parseMeiStaff(
@@ -180,8 +194,10 @@ Staff parseMeiStaff(
   List<String>? warnings,
 }) {
   final document = XmlDocument.parse(source);
-  final staff = _MeiImportParser(staffIndex: staffIndex, warnings: warnings)
-      .parse(document);
+  final staff = _MeiImportParser(
+    staffIndex: staffIndex,
+    warnings: warnings,
+  ).parse(document);
   warnOverfullMeasures(staff, warnings);
   return staff;
 }
@@ -239,8 +255,9 @@ Score parseMeiScore(String source, {List<String>? warnings}) {
             ? _meiStaffGrpBracket(scoreElement)
             : BracketType.none,
         name: staffGrp == null ? null : _meiLabel(staffGrp, 'label'),
-        abbreviation:
-            staffGrp == null ? null : _meiLabel(staffGrp, 'labelAbbr'),
+        abbreviation: staffGrp == null
+            ? null
+            : _meiLabel(staffGrp, 'labelAbbr'),
       ),
     ],
     meiHeader: header,
@@ -472,7 +489,9 @@ class _TupletEventInfo {
 /// Notated value of a rhythmic element in whole notes, or 0 for anything that
 /// does not occupy time of its own (grace notes, clefs, dynamics…).
 double _notatedValueOf(MusicalElement element) {
-  if (element is Note) return element.isGraceNote ? 0.0 : element.duration.realValue;
+  if (element is Note) {
+    return element.isGraceNote ? 0.0 : element.duration.realValue;
+  }
   if (element is Rest) return element.duration.realValue;
   if (element is Chord) return element.duration.realValue;
   if (element is Space) return element.duration.realValue;
@@ -1158,8 +1177,7 @@ class _JsonImportParser {
       );
     }
     final staff = Staff(
-      lineCount:
-          declaredLines != null && declaredLines > 0 ? declaredLines : 5,
+      lineCount: declaredLines != null && declaredLines > 0 ? declaredLines : 5,
       name: _asString(json['name']),
       abbreviation: _asString(json['abbreviation']),
       transposition: _parseTranspositionMap(_asMap(json['transposition'])),
@@ -1684,7 +1702,6 @@ class _MusicXmlImportParser {
   /// MusicXML default of 1 tick per quarter. Reset together with [_divisions].
   bool _divisionsDeclared = false;
 
-
   Staff parse(XmlDocument document) {
     final root = document.rootElement;
     switch (root.name.local) {
@@ -1742,8 +1759,7 @@ class _MusicXmlImportParser {
             // so every instrument label of an imported conductor score was
             // lost. A multi-staff part names its GROUP, not each staff.
             name: count == 1 ? partList.partName[partId] : null,
-            abbreviation:
-                count == 1 ? partList.partAbbreviation[partId] : null,
+            abbreviation: count == 1 ? partList.partAbbreviation[partId] : null,
             transposition: _transpositionOf(transposition),
           );
           _divisions = 1; // <divisions> is per-part state; restart each pass.
@@ -1752,37 +1768,44 @@ class _MusicXmlImportParser {
             staff.add(_parseMeasure(m, staffFilter: filter));
           }
           if (transposition != null) {
-            transpositions.add(_musicXmlTranspositionMetadata(
-              transposition,
-              partId: part.getAttribute('id'),
-              staffIndex: globalStaffIndex,
-            ));
+            transpositions.add(
+              _musicXmlTranspositionMetadata(
+                transposition,
+                partId: part.getAttribute('id'),
+                staffIndex: globalStaffIndex,
+              ),
+            );
           }
           globalStaffIndex++;
           partStaves.add(staff);
         }
-        partsData.add(
-          (id: part.getAttribute('id'), staves: partStaves, count: count),
-        );
+        partsData.add((
+          id: part.getAttribute('id'),
+          staves: partStaves,
+          count: count,
+        ));
       }
       // Group consecutive parts that share a <part-group>.
       var i = 0;
       while (i < partsData.length) {
         final gid = partList.groupOf[partsData[i].id];
         if (gid == null) {
-          groups.add(StaffGroup(
-            staves: partsData[i].staves,
-            bracket:
-                partsData[i].count > 1 ? BracketType.brace : BracketType.none,
-            // A multi-staff part (a piano) is one instrument: its <part-name>
-            // labels the GROUP, drawn once beside the brace.
-            name: partsData[i].count > 1
-                ? partList.partName[partsData[i].id]
-                : null,
-            abbreviation: partsData[i].count > 1
-                ? partList.partAbbreviation[partsData[i].id]
-                : null,
-          ));
+          groups.add(
+            StaffGroup(
+              staves: partsData[i].staves,
+              bracket: partsData[i].count > 1
+                  ? BracketType.brace
+                  : BracketType.none,
+              // A multi-staff part (a piano) is one instrument: its <part-name>
+              // labels the GROUP, drawn once beside the brace.
+              name: partsData[i].count > 1
+                  ? partList.partName[partsData[i].id]
+                  : null,
+              abbreviation: partsData[i].count > 1
+                  ? partList.partAbbreviation[partsData[i].id]
+                  : null,
+            ),
+          );
           i++;
         } else {
           final staves = <Staff>[];
@@ -1792,15 +1815,17 @@ class _MusicXmlImportParser {
             i++;
           }
           final groupBracket = partList.bracket[gid] ?? BracketType.bracket;
-          groups.add(StaffGroup(
-            staves: staves,
-            bracket: groupBracket,
-            name: partList.groupName[gid],
-            abbreviation: partList.groupAbbreviation[gid],
-            // Default: barlines join whenever a bracket is drawn. An explicit
-            // <group-barline> overrides that, so `bracket` + `no` survives.
-            connectBarlines: partList.groupBarline[gid],
-          ));
+          groups.add(
+            StaffGroup(
+              staves: staves,
+              bracket: groupBracket,
+              name: partList.groupName[gid],
+              abbreviation: partList.groupAbbreviation[gid],
+              // Default: barlines join whenever a bracket is drawn. An explicit
+              // <group-barline> overrides that, so `bracket` + `no` survives.
+              connectBarlines: partList.groupBarline[gid],
+            ),
+          );
         }
       }
     } else {
@@ -1845,25 +1870,29 @@ class _MusicXmlImportParser {
         for (final element in partElements) {
           final transposition = _musicXmlTranspose(element);
           if (transposition != null) {
-            transpositions.add(_musicXmlTranspositionMetadata(
-              transposition,
-              partId: element.getAttribute('id'),
-              staffIndex: globalStaffIndex,
-            ));
+            transpositions.add(
+              _musicXmlTranspositionMetadata(
+                transposition,
+                partId: element.getAttribute('id'),
+                staffIndex: globalStaffIndex,
+              ),
+            );
             break;
           }
         }
         globalStaffIndex++;
         final gid = partList.groupOf[partId];
-        groups.add(StaffGroup(
-          staves: [staff],
-          bracket: gid == null
-              ? BracketType.none
-              : (partList.bracket[gid] ?? BracketType.bracket),
-          name: gid == null ? null : partList.groupName[gid],
-          abbreviation: gid == null ? null : partList.groupAbbreviation[gid],
-          connectBarlines: gid == null ? null : partList.groupBarline[gid],
-        ));
+        groups.add(
+          StaffGroup(
+            staves: [staff],
+            bracket: gid == null
+                ? BracketType.none
+                : (partList.bracket[gid] ?? BracketType.bracket),
+            name: gid == null ? null : partList.groupName[gid],
+            abbreviation: gid == null ? null : partList.groupAbbreviation[gid],
+            connectBarlines: gid == null ? null : partList.groupBarline[gid],
+          ),
+        );
       }
     }
 
@@ -1927,7 +1956,8 @@ class _MusicXmlImportParser {
     Map<int, bool> groupBarline,
     Map<String, String> partName,
     Map<String, String> partAbbreviation,
-  }) _parsePartList(XmlElement root) {
+  })
+  _parsePartList(XmlElement root) {
     final groupOf = <String, int?>{};
     final bracket = <int, BracketType>{};
     final groupName = <int, String>{};
@@ -1954,15 +1984,17 @@ class _MusicXmlImportParser {
       switch (child.name.local) {
         case 'part-group':
           final type = child.getAttribute('type');
-          final number =
-              int.tryParse(child.getAttribute('number') ?? '1') ?? 1;
+          final number = int.tryParse(child.getAttribute('number') ?? '1') ?? 1;
           if (type == 'start') {
             final id = nextId++;
             bracket[id] = _groupSymbolBracket(
               child.findElements('group-symbol').firstOrNull?.innerText.trim(),
             );
-            final label =
-                child.findElements('group-name').firstOrNull?.innerText.trim();
+            final label = child
+                .findElements('group-name')
+                .firstOrNull
+                ?.innerText
+                .trim();
             if (label != null && label.isNotEmpty) groupName[id] = label;
             // `<group-abbreviation>` is the short label drawn from the second
             // system on. It was never read (nor written), so measured, all
@@ -1997,8 +2029,11 @@ class _MusicXmlImportParser {
           final id = child.getAttribute('id');
           if (id != null) {
             groupOf[id] = open.isNotEmpty ? open.last.id : null;
-            final label =
-                child.findElements('part-name').firstOrNull?.innerText.trim();
+            final label = child
+                .findElements('part-name')
+                .firstOrNull
+                ?.innerText
+                .trim();
             if (label != null && label.isNotEmpty) partName[id] = label;
             final abbr = child
                 .findElements('part-abbreviation')
@@ -2159,8 +2194,9 @@ class _MusicXmlImportParser {
     // Files that never write <voice> get synthetic voice numbers: each
     // <backup> that rewinds the cursor opens the next voice. Multi-staff parts
     // are excluded because there <backup> switches staff, not voice.
-    final bool hasExplicitVoice =
-        measureElement.findAllElements('voice').isNotEmpty;
+    final bool hasExplicitVoice = measureElement
+        .findAllElements('voice')
+        .isNotEmpty;
     final bool useSyntheticVoices = !hasExplicitVoice && staffFilter == null;
     int syntheticVoice = 1;
     // Padding is only emitted for gaps opened by an explicit <forward>.
@@ -2173,8 +2209,9 @@ class _MusicXmlImportParser {
     // Cross-staff routing (multi-staff parts only): a beamed voice whose notes
     // change <staff> mid-beam is kept on its home (beam-start) staff with a
     // crossStaffMove so the beam survives.
-    final crossStaff =
-        staffFilter != null ? _crossStaffMap(measureElement) : null;
+    final crossStaff = staffFilter != null
+        ? _crossStaffMap(measureElement)
+        : null;
 
     _VoiceAccumulator voice(int number) {
       return voices.putIfAbsent(number, () => _VoiceAccumulator(number));
@@ -2213,8 +2250,10 @@ class _MusicXmlImportParser {
               ' lengths may be wrong.',
             );
           }
-          for (final element
-              in _parseMusicXmlAttributes(child, staffFilter: staffFilter)) {
+          for (final element in _parseMusicXmlAttributes(
+            child,
+            staffFilter: staffFilter,
+          )) {
             appendLeadElement(element);
           }
           break;
@@ -2341,16 +2380,19 @@ class _MusicXmlImportParser {
             sawForward = true;
             final int forwardStaff = _asInt(_childText(child, 'staff')) ?? 1;
             if (staffFilter == null || forwardStaff == staffFilter) {
-              forwardEnds[_asInt(_childText(child, 'voice')) ?? syntheticVoice] =
+              forwardEnds[_asInt(_childText(child, 'voice')) ??
+                      syntheticVoice] =
                   cursor;
             }
             // A `<forward>` is padded with invisible Space, so an absurd one
             // does not throw — it inflates the bar. Measured,
             // `<forward><duration>400</duration></forward>` at divisions=4
             // injected 25 whole notes of Space into a single 4/4 bar.
-            final double whole =
-                _divisions > 0 ? forwardTicks / _divisions / 4.0 : 0.0;
-            final double? capacity = currentTimeSignature != null &&
+            final double whole = _divisions > 0
+                ? forwardTicks / _divisions / 4.0
+                : 0.0;
+            final double? capacity =
+                currentTimeSignature != null &&
                     !currentTimeSignature!.isFreeTime
                 ? currentTimeSignature!.measureValue
                 : null;
@@ -2626,8 +2668,10 @@ class _MusicXmlImportParser {
   }
 }
 
-List<MusicalElement> _parseMusicXmlAttributes(XmlElement attributesElement,
-    {int? staffFilter}) {
+List<MusicalElement> _parseMusicXmlAttributes(
+  XmlElement attributesElement, {
+  int? staffFilter,
+}) {
   final List<MusicalElement> result = <MusicalElement>[];
 
   for (final child in attributesElement.children.whereType<XmlElement>()) {
@@ -2772,7 +2816,8 @@ Pitch applyMusicXmlTransposition(
   final int octaveCarry = (shifted - newStepIndex) ~/ 7;
   final int newOctave = written.octave + octaveCarry + octaveChange;
 
-  final double writtenSemitone = _diatonicStepSemitones[stepIndex] +
+  final double writtenSemitone =
+      _diatonicStepSemitones[stepIndex] +
       12 * (written.octave + 1) +
       written.alter;
   final double soundingSemitone =
@@ -2893,10 +2938,7 @@ TempoMark? _musicXmlSoundTempo(XmlElement parent) {
   for (final sound in parent.findElements('sound')) {
     final bpm = _asDouble(sound.getAttribute('tempo'));
     if (bpm != null && bpm > 0) {
-      return TempoMark(
-        beatUnit: DurationType.quarter,
-        bpm: bpm.round(),
-      );
+      return TempoMark(beatUnit: DurationType.quarter, bpm: bpm.round());
     }
   }
   return null;
@@ -3126,8 +3168,10 @@ double _dottedValue(DurationType type, int dots) {
 ///
 /// Returns `null` when no combination is close enough, letting callers fall
 /// back to the notated `<type>`/`@dur` or to a sensible default.
-Duration? _durationFromWholeNoteValue(double wholeNoteValue,
-    {int maxDots = 3}) {
+Duration? _durationFromWholeNoteValue(
+  double wholeNoteValue, {
+  int maxDots = 3,
+}) {
   if (!wholeNoteValue.isFinite || wholeNoteValue <= 0) return null;
 
   Duration? best;
@@ -3182,8 +3226,9 @@ double? _musicXmlNotatedWholeNoteValue(XmlElement noteElement, int divisions) {
   if (raw == null || raw <= 0) return null;
 
   double whole = raw / divisions / 4.0;
-  final timeModification =
-      noteElement.findElements('time-modification').firstOrNull;
+  final timeModification = noteElement
+      .findElements('time-modification')
+      .firstOrNull;
   if (timeModification != null) {
     final int? actual = _asInt(_childText(timeModification, 'actual-notes'));
     final int? normal = _asInt(_childText(timeModification, 'normal-notes'));
@@ -3203,10 +3248,9 @@ Duration _musicXmlMeasureRestDuration(
   TimeSignature? timeSignature,
   double? measuredWhole,
 ) {
-  final double? barValue =
-      timeSignature != null && !timeSignature.isFreeTime
-          ? timeSignature.measureValue
-          : measuredWhole;
+  final double? barValue = timeSignature != null && !timeSignature.isFreeTime
+      ? timeSignature.measureValue
+      : measuredWhole;
   if (barValue == null || !barValue.isFinite || barValue <= 0) {
     return const Duration(DurationType.whole);
   }
@@ -3232,10 +3276,13 @@ Duration _musicXmlDurationFromNote(
   int divisions = 1,
   TimeSignature? currentTimeSignature,
 }) {
-  final double? notatedWhole =
-      _musicXmlNotatedWholeNoteValue(noteElement, divisions);
-  final DurationType? notatedType =
-      _parseDurationType(_childText(noteElement, 'type'));
+  final double? notatedWhole = _musicXmlNotatedWholeNoteValue(
+    noteElement,
+    divisions,
+  );
+  final DurationType? notatedType = _parseDurationType(
+    _childText(noteElement, 'type'),
+  );
   final int writtenDots = noteElement.findElements('dot').length;
 
   if (notatedType != null) {
@@ -3416,13 +3463,16 @@ _TupletEventInfo _musicXmlTupletInfo(XmlElement noteElement) {
   final timeModification = noteElement
       .findElements('time-modification')
       .firstOrNull;
-  final int? declaredActual =
-      _asInt(_childText(timeModification, 'actual-notes'));
-  final int? declaredNormal =
-      _asInt(_childText(timeModification, 'normal-notes'));
+  final int? declaredActual = _asInt(
+    _childText(timeModification, 'actual-notes'),
+  );
+  final int? declaredNormal = _asInt(
+    _childText(timeModification, 'normal-notes'),
+  );
   // A ratio is only usable when both halves are positive AND actually modify
   // the value; `3:3` is a no-op and must not open a group.
-  final bool hasTimeModification = declaredActual != null &&
+  final bool hasTimeModification =
+      declaredActual != null &&
       declaredNormal != null &&
       declaredActual > 0 &&
       declaredNormal > 0 &&
@@ -3434,12 +3484,14 @@ _TupletEventInfo _musicXmlTupletInfo(XmlElement noteElement) {
   // `<normal-type>` names the note value the ratio counts in, which is what
   // makes a heterogeneous group (quarter + eighth as a triplet of eighths)
   // measurable. Falls back to the first element of the group when absent.
-  final DurationType? normalType =
-      _parseDurationType(_childText(timeModification, 'normal-type'));
+  final DurationType? normalType = _parseDurationType(
+    _childText(timeModification, 'normal-type'),
+  );
   final int normalDots =
       timeModification?.findElements('normal-dot').length ?? 0;
-  final double? unit =
-      normalType == null ? null : _dottedValue(normalType, normalDots);
+  final double? unit = normalType == null
+      ? null
+      : _dottedValue(normalType, normalDots);
 
   bool starts = false;
   bool ends = false;
@@ -3648,8 +3700,9 @@ class _MeiImportParser {
           if (startId != null) {
             final d = _parseDynamicType(ev.innerText.trim());
             if (d != null) {
-              (_afterNoteById[startId] ??= <MusicalElement>[])
-                  .add(Dynamic(type: d));
+              (_afterNoteById[startId] ??= <MusicalElement>[]).add(
+                Dynamic(type: d),
+              );
             }
           }
           break;
@@ -3678,8 +3731,9 @@ class _MeiImportParser {
     // MEI encodes the initial clef/key/meter in <scoreDef>/<staffDef>, not
     // inline in <staff>. Capture them and seed the first measure.
     final scoreDef = score.findAllElements('scoreDef').firstOrNull;
-    final defaults =
-        scoreDef == null ? const <MusicalElement>[] : _meiStaffDefaults(scoreDef);
+    final defaults = scoreDef == null
+        ? const <MusicalElement>[]
+        : _meiStaffDefaults(scoreDef);
 
     // <staffDef @lines> sizes the staff (1 = percussion, 6 = guitar tab);
     // Staff.lineCount is final, so it must be resolved up front — and so are
@@ -3705,7 +3759,8 @@ class _MeiImportParser {
           if (first) ...defaults,
           if (ending != null && !identical(ending, openEnding))
             VoltaBracket(
-              number: _asInt(ending.getAttribute('n')) ??
+              number:
+                  _asInt(ending.getAttribute('n')) ??
                   _asInt(ending.getAttribute('label')) ??
                   1,
               label: ending.getAttribute('label'),
@@ -3713,11 +3768,13 @@ class _MeiImportParser {
             ),
         ];
         openEnding = ending;
-        staff.add(_parseMeasure(
-          measure,
-          leadingDefaults: lead,
-          isFirst: staff.measures.isEmpty,
-        ));
+        staff.add(
+          _parseMeasure(
+            measure,
+            leadingDefaults: lead,
+            isFirst: staff.measures.isEmpty,
+          ),
+        );
         first = false;
       }
     }
@@ -3730,9 +3787,11 @@ class _MeiImportParser {
     XmlElement measure,
     XmlElement section,
   ) {
-    for (XmlNode? ancestor = measure.parent;
-        ancestor != null && !identical(ancestor, section);
-        ancestor = ancestor.parent) {
+    for (
+      XmlNode? ancestor = measure.parent;
+      ancestor != null && !identical(ancestor, section);
+      ancestor = ancestor.parent
+    ) {
       if (ancestor is XmlElement && ancestor.name.local == 'ending') {
         return ancestor;
       }
@@ -3773,9 +3832,11 @@ class _MeiImportParser {
     final List<XmlElement> result = <XmlElement>[];
     for (final section in score.findAllElements('section')) {
       var nested = false;
-      for (XmlNode? ancestor = section.parent;
-          ancestor != null && !identical(ancestor, score);
-          ancestor = ancestor.parent) {
+      for (
+        XmlNode? ancestor = section.parent;
+        ancestor != null && !identical(ancestor, score);
+        ancestor = ancestor.parent
+      ) {
         if (ancestor is XmlElement && ancestor.name.local == 'section') {
           nested = true;
           break;
@@ -3853,11 +3914,13 @@ class _MeiImportParser {
     // Seed the first measure with the scoreDef/staffDef clef/key/meter, unless
     // the staff redeclares that element type inline.
     if (leadingDefaults.isNotEmpty) {
-      final inlineNames =
-          staffElement.children.whereType<XmlElement>().map((e) => e.name.local);
+      final inlineNames = staffElement.children.whereType<XmlElement>().map(
+        (e) => e.name.local,
+      );
       final hasClef = inlineNames.contains('clef');
       final hasKey = inlineNames.contains('keySig');
-      final hasMeter = inlineNames.contains('meterSig') ||
+      final hasMeter =
+          inlineNames.contains('meterSig') ||
           inlineNames.contains('meterSigGrp');
       for (final d in leadingDefaults) {
         if (d is Clef && hasClef) continue;
@@ -4049,154 +4112,165 @@ class _MeiImportParser {
     TimeSignature? currentTimeSignature, {
     BeamType? beamOverride,
   }) {
-      switch (child.name.local) {
-        case 'beam':
-          // Position-based beam types over the beamable (note/chord) children.
-          final kids = child.children.whereType<XmlElement>().toList();
-          final beamable = kids
-              .where((e) => e.name.local == 'note' || e.name.local == 'chord')
-              .length;
-          var bi = 0;
-          for (final inner in kids) {
-            final isBeamable =
-                inner.name.local == 'note' || inner.name.local == 'chord';
-            BeamType? bo;
-            if (isBeamable && beamable > 1) {
-              bo = bi == 0
-                  ? BeamType.start
-                  : (bi == beamable - 1 ? BeamType.end : BeamType.inner);
-              bi++;
-            }
-            _appendMeiChild(inner, accumulator, voiceNumber,
-                currentTimeSignature,
-                beamOverride: bo);
+    switch (child.name.local) {
+      case 'beam':
+        // Position-based beam types over the beamable (note/chord) children.
+        final kids = child.children.whereType<XmlElement>().toList();
+        final beamable = kids
+            .where((e) => e.name.local == 'note' || e.name.local == 'chord')
+            .length;
+        var bi = 0;
+        for (final inner in kids) {
+          final isBeamable =
+              inner.name.local == 'note' || inner.name.local == 'chord';
+          BeamType? bo;
+          if (isBeamable && beamable > 1) {
+            bo = bi == 0
+                ? BeamType.start
+                : (bi == beamable - 1 ? BeamType.end : BeamType.inner);
+            bi++;
           }
-          return;
-        case 'tuplet':
+          _appendMeiChild(
+            inner,
+            accumulator,
+            voiceNumber,
+            currentTimeSignature,
+            beamOverride: bo,
+          );
+        }
+        return;
+      case 'tuplet':
+        accumulator.startTuplet(
+          actualNotes: _asInt(child.getAttribute('num')) ?? 3,
+          normalNotes: _asInt(child.getAttribute('numbase')) ?? 2,
+          timeSignature: currentTimeSignature,
+        );
+        for (final inner in child.children.whereType<XmlElement>()) {
+          _appendMeiChild(
+            inner,
+            accumulator,
+            voiceNumber,
+            currentTimeSignature,
+          );
+        }
+        accumulator.finishTuplet();
+        return;
+      case 'note':
+        final noteId = child.getAttribute('xml:id');
+        final note = _meiNote(
+          child,
+          voiceNumber: voiceNumber,
+          beamOverride: beamOverride,
+          slurOverride: noteId == null ? null : _slurById[noteId],
+          tieOverride: noteId == null ? null : _tieById[noteId],
+          warnings: warnings,
+        );
+        if (note == null) return;
+        final tupletInfo = _meiTupletInfo(child);
+        if (tupletInfo.startsTuplet) {
           accumulator.startTuplet(
-            actualNotes: _asInt(child.getAttribute('num')) ?? 3,
-            normalNotes: _asInt(child.getAttribute('numbase')) ?? 2,
+            actualNotes: tupletInfo.actualNotes,
+            normalNotes: tupletInfo.normalNotes,
             timeSignature: currentTimeSignature,
           );
-          for (final inner in child.children.whereType<XmlElement>()) {
-            _appendMeiChild(
-                inner, accumulator, voiceNumber, currentTimeSignature);
+        }
+        accumulator.append(note);
+        // Control events (e.g. <dynam startid>) anchored to this note.
+        if (noteId != null) {
+          for (final extra in _afterNoteById[noteId] ?? const []) {
+            accumulator.append(extra);
           }
+        }
+        if (tupletInfo.endsTuplet) {
           accumulator.finishTuplet();
-          return;
-        case 'note':
-          final noteId = child.getAttribute('xml:id');
-          final note = _meiNote(child,
-              voiceNumber: voiceNumber,
-              beamOverride: beamOverride,
-              slurOverride: noteId == null ? null : _slurById[noteId],
-              tieOverride: noteId == null ? null : _tieById[noteId],
-              warnings: warnings);
-          if (note == null) return;
-          final tupletInfo = _meiTupletInfo(child);
-          if (tupletInfo.startsTuplet) {
-            accumulator.startTuplet(
-              actualNotes: tupletInfo.actualNotes,
-              normalNotes: tupletInfo.normalNotes,
-              timeSignature: currentTimeSignature,
-            );
-          }
-          accumulator.append(note);
-          // Control events (e.g. <dynam startid>) anchored to this note.
-          if (noteId != null) {
-            for (final extra in _afterNoteById[noteId] ?? const []) {
-              accumulator.append(extra);
-            }
-          }
-          if (tupletInfo.endsTuplet) {
-            accumulator.finishTuplet();
-          }
-          return;
-        case 'rest':
-          final rest = _meiRest(child);
-          final tupletInfo = _meiTupletInfo(child);
-          if (tupletInfo.startsTuplet) {
-            accumulator.startTuplet(
-              actualNotes: tupletInfo.actualNotes,
-              normalNotes: tupletInfo.normalNotes,
-              timeSignature: currentTimeSignature,
-            );
-          }
-          accumulator.append(rest);
-          if (tupletInfo.endsTuplet) {
-            accumulator.finishTuplet();
-          }
-          break;
-        case 'chord':
-          final chord =
-              _meiChord(child, voiceNumber: voiceNumber, warnings: warnings);
-          if (chord == null) return;
-          final tupletInfo = _meiTupletInfo(child);
-          if (tupletInfo.startsTuplet) {
-            accumulator.startTuplet(
-              actualNotes: tupletInfo.actualNotes,
-              normalNotes: tupletInfo.normalNotes,
-              timeSignature: currentTimeSignature,
-            );
-          }
-          accumulator.append(chord);
-          if (tupletInfo.endsTuplet) {
-            accumulator.finishTuplet();
-          }
-          break;
-        case 'dynam':
-          accumulator.append(
-            Dynamic(
-              type: _parseDynamicType(child.innerText.trim()) ?? DynamicType.mf,
-            ),
+        }
+        return;
+      case 'rest':
+        final rest = _meiRest(child);
+        final tupletInfo = _meiTupletInfo(child);
+        if (tupletInfo.startsTuplet) {
+          accumulator.startTuplet(
+            actualNotes: tupletInfo.actualNotes,
+            normalNotes: tupletInfo.normalNotes,
+            timeSignature: currentTimeSignature,
           );
-          break;
-        case 'tempo':
-          accumulator.append(
-            TempoMark(
-              beatUnit:
-                  _parseDurationType(child.getAttribute('unit')) ??
-                  DurationType.quarter,
-              bpm: _asInt(
-                child.getAttribute('mm') ?? child.getAttribute('midi.bpm'),
-              ),
-              text: child.innerText.trim().isEmpty
-                  ? null
-                  : child.innerText.trim(),
-            ),
+        }
+        accumulator.append(rest);
+        if (tupletInfo.endsTuplet) {
+          accumulator.finishTuplet();
+        }
+        break;
+      case 'chord':
+        final chord = _meiChord(
+          child,
+          voiceNumber: voiceNumber,
+          warnings: warnings,
+        );
+        if (chord == null) return;
+        final tupletInfo = _meiTupletInfo(child);
+        if (tupletInfo.startsTuplet) {
+          accumulator.startTuplet(
+            actualNotes: tupletInfo.actualNotes,
+            normalNotes: tupletInfo.normalNotes,
+            timeSignature: currentTimeSignature,
           );
-          break;
-        case 'dir':
-          final text = child.innerText.trim();
-          if (text.isEmpty) return;
-          final repeatType = _parseRepeatType(text);
-          if (repeatType != null) {
-            accumulator.append(RepeatMark(type: repeatType, label: text));
-          } else {
-            accumulator.append(
-              MusicText(text: text, type: TextType.expression),
-            );
-          }
-          break;
-        case 'breath':
-          accumulator.append(Breath(type: BreathType.comma));
-          break;
-        case 'caesura':
-          accumulator.append(Caesura());
-          break;
-        case 'repeatMark':
-          final repeatMark = _meiRepeatMark(child);
-          if (repeatMark != null) {
-            accumulator.append(repeatMark);
-          }
-          break;
-        case 'barLine':
-          final barline = _meiBarline(child);
-          if (barline != null) {
-            accumulator.append(barline);
-          }
-          break;
-      }
+        }
+        accumulator.append(chord);
+        if (tupletInfo.endsTuplet) {
+          accumulator.finishTuplet();
+        }
+        break;
+      case 'dynam':
+        accumulator.append(
+          Dynamic(
+            type: _parseDynamicType(child.innerText.trim()) ?? DynamicType.mf,
+          ),
+        );
+        break;
+      case 'tempo':
+        accumulator.append(
+          TempoMark(
+            beatUnit:
+                _parseDurationType(child.getAttribute('unit')) ??
+                DurationType.quarter,
+            bpm: _asInt(
+              child.getAttribute('mm') ?? child.getAttribute('midi.bpm'),
+            ),
+            text: child.innerText.trim().isEmpty
+                ? null
+                : child.innerText.trim(),
+          ),
+        );
+        break;
+      case 'dir':
+        final text = child.innerText.trim();
+        if (text.isEmpty) return;
+        final repeatType = _parseRepeatType(text);
+        if (repeatType != null) {
+          accumulator.append(RepeatMark(type: repeatType, label: text));
+        } else {
+          accumulator.append(MusicText(text: text, type: TextType.expression));
+        }
+        break;
+      case 'breath':
+        accumulator.append(Breath(type: BreathType.comma));
+        break;
+      case 'caesura':
+        accumulator.append(Caesura());
+        break;
+      case 'repeatMark':
+        final repeatMark = _meiRepeatMark(child);
+        if (repeatMark != null) {
+          accumulator.append(repeatMark);
+        }
+        break;
+      case 'barLine':
+        final barline = _meiBarline(child);
+        if (barline != null) {
+          accumulator.append(barline);
+        }
+        break;
+    }
   }
 }
 
@@ -4255,10 +4329,7 @@ Transposition? _meiTransposition(XmlElement def) {
   final semi = _asInt(def.getAttribute('trans.semi'));
   final diat = _asInt(def.getAttribute('trans.diat'));
   if (semi == null && diat == null) return null;
-  final value = Transposition(
-    diatonic: diat ?? 0,
-    chromatic: semi ?? 0,
-  );
+  final value = Transposition(diatonic: diat ?? 0, chromatic: semi ?? 0);
   return value.isConcertPitch ? null : value;
 }
 
@@ -4278,8 +4349,12 @@ Clef? _meiClefFromParts({
   final s = _normalizeToken(sign);
 
   if (s == 'g') {
-    if (dis == 8 && disPlace == 'above') return Clef(clefType: ClefType.treble8va);
-    if (dis == 8 && disPlace == 'below') return Clef(clefType: ClefType.treble8vb);
+    if (dis == 8 && disPlace == 'above') {
+      return Clef(clefType: ClefType.treble8va);
+    }
+    if (dis == 8 && disPlace == 'below') {
+      return Clef(clefType: ClefType.treble8vb);
+    }
     if (dis == 15 && disPlace == 'above') {
       return Clef(clefType: ClefType.treble15ma);
     }
@@ -4291,8 +4366,12 @@ Clef? _meiClefFromParts({
 
   if (s == 'f') {
     if (line == 3) return Clef(clefType: ClefType.bassThirdLine);
-    if (dis == 8 && disPlace == 'above') return Clef(clefType: ClefType.bass8va);
-    if (dis == 8 && disPlace == 'below') return Clef(clefType: ClefType.bass8vb);
+    if (dis == 8 && disPlace == 'above') {
+      return Clef(clefType: ClefType.bass8va);
+    }
+    if (dis == 8 && disPlace == 'below') {
+      return Clef(clefType: ClefType.bass8vb);
+    }
     if (dis == 15 && disPlace == 'above') {
       return Clef(clefType: ClefType.bass15ma);
     }
@@ -4513,18 +4592,20 @@ TimeSignature? _meiTimeSignature(XmlElement meterSigElement) {
 /// * A CMN note missing `@pname` or `@oct` is malformed input and now throws
 ///   [FormatException], with a message naming the missing attribute, matching
 ///   what `_musicXmlPitch` does.
-Note? _meiNote(XmlElement noteElement,
-    {required int voiceNumber,
-    BeamType? beamOverride,
-    SlurType? slurOverride,
-    TieType? tieOverride,
-    List<String>? warnings}) {
+Note? _meiNote(
+  XmlElement noteElement, {
+  required int voiceNumber,
+  BeamType? beamOverride,
+  SlurType? slurOverride,
+  TieType? tieOverride,
+  List<String>? warnings,
+}) {
   final rawStep = noteElement.getAttribute('pname');
   final octave = _asInt(noteElement.getAttribute('oct'));
   if (rawStep == null || octave == null) {
     final bool isTablatureNote =
         noteElement.getAttribute('tab.fret') != null ||
-            noteElement.getAttribute('tab.string') != null;
+        noteElement.getAttribute('tab.string') != null;
     if (isTablatureNote) {
       warnings?.add(
         'MEI <note> is a tablature-only note (tab.fret'
@@ -4632,8 +4713,11 @@ Rest _meiRest(XmlElement restElement) {
   );
 }
 
-Chord? _meiChord(XmlElement chordElement,
-    {required int voiceNumber, List<String>? warnings}) {
+Chord? _meiChord(
+  XmlElement chordElement, {
+  required int voiceNumber,
+  List<String>? warnings,
+}) {
   final duration = Duration(
     _parseDurationType(chordElement.getAttribute('dur')) ??
         DurationType.quarter,
@@ -4642,8 +4726,7 @@ Chord? _meiChord(XmlElement chordElement,
 
   final List<Note> notes = <Note>[];
   for (final child in chordElement.findElements('note')) {
-    final note =
-        _meiNote(child, voiceNumber: voiceNumber, warnings: warnings);
+    final note = _meiNote(child, voiceNumber: voiceNumber, warnings: warnings);
     if (note != null) {
       notes.add(
         Note(
@@ -4792,12 +4875,15 @@ List<Contributor> _parseMeiContributors(XmlElement titleStmt) {
     for (final element in titleStmt.findAllElements(elementName)) {
       final name = element.innerText.trim();
       if (name.isEmpty) continue;
-      result.add(Contributor(
-        name: name,
-        role: role,
-        identifier: element.getAttribute('auth.uri') ??
-            element.getAttribute('codedval'),
-      ));
+      result.add(
+        Contributor(
+          name: name,
+          role: role,
+          identifier:
+              element.getAttribute('auth.uri') ??
+              element.getAttribute('codedval'),
+        ),
+      );
     }
   }
 
@@ -4821,12 +4907,14 @@ List<Contributor> _parseMeiContributors(XmlElement titleStmt) {
       );
       // Skip duplicates already picked up from a dedicated element.
       if (result.any((c) => c.name == name && c.role == role)) continue;
-      result.add(Contributor(
-        name: name,
-        role: role,
-        identifier: person.getAttribute('auth.uri') ??
-            person.getAttribute('nymref'),
-      ));
+      result.add(
+        Contributor(
+          name: name,
+          role: role,
+          identifier:
+              person.getAttribute('auth.uri') ?? person.getAttribute('nymref'),
+        ),
+      );
     }
   }
 
@@ -4870,7 +4958,8 @@ MeiHeader? _parseMeiHeader(XmlElement mei) {
   PublicationStatement? publication;
   if (pubStmt != null) {
     final publisher = _meiText(pubStmt, 'publisher');
-    final date = _meiText(pubStmt, 'date') ??
+    final date =
+        _meiText(pubStmt, 'date') ??
         pubStmt.findAllElements('date').firstOrNull?.getAttribute('isodate');
     final place = _meiText(pubStmt, 'pubPlace');
     final availability = _meiText(pubStmt, 'availability');
@@ -4891,14 +4980,16 @@ MeiHeader? _parseMeiHeader(XmlElement mei) {
   final sourceDesc = fileDesc?.findAllElements('sourceDesc').firstOrNull;
   if (sourceDesc != null) {
     for (final source in sourceDesc.findAllElements('source')) {
-      sources.add(SourceDescription(
-        title: _meiText(source, 'title'),
-        composer: _meiText(source, 'composer'),
-        date: _meiText(source, 'date'),
-        publisher: _meiText(source, 'publisher'),
-        identifier: _meiText(source, 'identifier') ??
-            source.getAttribute('xml:id'),
-      ));
+      sources.add(
+        SourceDescription(
+          title: _meiText(source, 'title'),
+          composer: _meiText(source, 'composer'),
+          date: _meiText(source, 'date'),
+          publisher: _meiText(source, 'publisher'),
+          identifier:
+              _meiText(source, 'identifier') ?? source.getAttribute('xml:id'),
+        ),
+      );
     }
   }
 
@@ -4907,7 +4998,8 @@ MeiHeader? _parseMeiHeader(XmlElement mei) {
   if (encodingDesc != null) {
     final applications = <String>[];
     for (final application in encodingDesc.findAllElements('application')) {
-      final name = _meiText(application, 'name') ??
+      final name =
+          _meiText(application, 'name') ??
           application.getAttribute('label') ??
           application.getAttribute('xml:id');
       if (name != null && name.isNotEmpty) applications.add(name);
@@ -4924,15 +5016,17 @@ MeiHeader? _parseMeiHeader(XmlElement mei) {
   if (workListElement != null) {
     final works = <WorkInfo>[];
     for (final work in workListElement.findAllElements('work')) {
-      works.add(WorkInfo(
-        title: _meiText(work, 'title'),
-        composer: _meiText(work, 'composer'),
-        key: _meiText(work, 'key'),
-        tempo: _meiText(work, 'tempo'),
-        meter: _meiText(work, 'meter'),
-        date: _meiText(work, 'creation') ?? _meiText(work, 'date'),
-        genre: _meiText(work, 'term') ?? _meiText(work, 'genre'),
-      ));
+      works.add(
+        WorkInfo(
+          title: _meiText(work, 'title'),
+          composer: _meiText(work, 'composer'),
+          key: _meiText(work, 'key'),
+          tempo: _meiText(work, 'tempo'),
+          meter: _meiText(work, 'meter'),
+          date: _meiText(work, 'creation') ?? _meiText(work, 'date'),
+          genre: _meiText(work, 'term') ?? _meiText(work, 'genre'),
+        ),
+      );
     }
     if (works.isNotEmpty) workList = WorkList(works: works);
   }
@@ -4942,16 +5036,17 @@ MeiHeader? _parseMeiHeader(XmlElement mei) {
   if (revisionElement != null) {
     final entries = <RevisionEntry>[];
     for (final change in revisionElement.findAllElements('change')) {
-      final date = change.getAttribute('isodate') ??
-          _meiText(change, 'date') ??
-          '';
-      entries.add(RevisionEntry(
-        date: date,
-        author: _meiText(change, 'persName') ?? _meiText(change, 'name'),
-        description: _meiText(change, 'changeDesc') ??
-            change.innerText.trim(),
-        version: change.getAttribute('n'),
-      ));
+      final date =
+          change.getAttribute('isodate') ?? _meiText(change, 'date') ?? '';
+      entries.add(
+        RevisionEntry(
+          date: date,
+          author: _meiText(change, 'persName') ?? _meiText(change, 'name'),
+          description:
+              _meiText(change, 'changeDesc') ?? change.innerText.trim(),
+          version: change.getAttribute('n'),
+        ),
+      );
     }
     if (entries.isNotEmpty) {
       revision = RevisionDescription(entries: entries);

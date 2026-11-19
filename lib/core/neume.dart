@@ -11,18 +11,25 @@ import 'musical_element.dart';
 enum NcForm {
   /// Point simples (punctum)
   punctum,
+
   /// Virga (point with stem ascendente)
   virga,
+
   /// Quilisma (note oscilante)
   quilisma,
+
   /// Oriscus
   oriscus,
+
   /// Stropha
   stropha,
+
   /// Liquescência ascendente
   liquescentAscending,
+
   /// Liquescência descendente
   liquescentDescending,
+
   /// Forma conectada (ligado a note seguinte)
   connected,
 }
@@ -33,10 +40,13 @@ enum NcForm {
 enum NeumeAccidental {
   /// Sem acidente.
   none,
+
   /// Bemol (♭) — GABC `x`.
   flat,
+
   /// Bequadro (♮) — GABC `y`.
   natural,
+
   /// Sustenido (♯) — GABC `#`.
   sharp,
 }
@@ -45,12 +55,16 @@ enum NeumeAccidental {
 enum NeumeInterval {
   /// Uníssono (same height)
   unison,
+
   /// Passo above
   stepAbove,
+
   /// Passo below
   stepBelow,
+
   /// Salto above (>= terça)
   leapAbove,
+
   /// Salto below (>= terça)
   leapBelow,
 }
@@ -126,46 +140,59 @@ enum NeumeType {
   // === Neumas simples ===
   /// Punctum — note única
   punctum,
+
   /// Virga — note única with stem
   virga,
+
   /// Bivirga
   bivirga,
+
   /// Trivirga
   trivirga,
 
   // === Neumas de dois sons ===
   /// Pes / Podatus (ascendente)
   pes,
+
   /// Clivis (descendente)
   clivis,
 
   // === Neumas de três sons ===
   /// Scandicus (dois passos ascendentes)
   scandicus,
+
   /// Climacus (dois passos descendentes)
   climacus,
+
   /// Torculus (ascendente + descendente)
   torculus,
+
   /// Porrectus (descendente + ascendente)
   porrectus,
 
   // === Neumas de quatro sons ===
   /// Torculus resupinus
   torculusResupinus,
+
   /// Porrectus flexus
   porrectusFlexus,
+
   /// Scandicus flexus
   scandicusFlexus,
+
   /// Climacus resupinus
   climacusResupinus,
 
   // === Neumas especiais ===
   /// Quilisma (grupo with quilisma)
   quilismaGroup,
+
   /// Oriscus
   oriscusGroup,
+
   /// Salicus
   salicus,
+
   /// Trigon
   trigon,
 
@@ -218,12 +245,16 @@ class Neume extends MusicalElement {
 enum NeumeNotationStyle {
   /// Noteção quadrada (notação gregoriana with staff, séc. XII in diante)
   square,
+
   /// Noteção adiastemática (sans staff, only direction melódica)
   adiastematic,
+
   /// Noteção neumática alemã (Hufnagel)
   hufnagel,
+
   /// Noteção aquitana (points on/about line)
   aquitanian,
+
   /// Noteção beneventana
   beneventan,
 }
@@ -241,10 +272,13 @@ class NeumeDivision extends MusicalElement {
 enum NeumeDivisionType {
   /// Divisão mínima (curta pausa)
   minima,
+
   /// Divisão smaller
   minor,
+
   /// Divisão greater
   maior,
+
   /// Divisão final (finalis)
   finalis,
 }

@@ -19,8 +19,7 @@ class GregorianChantExample extends StatelessWidget {
   Widget build(BuildContext context) {
     return const ExampleShowcasePage(
       title: 'Gregorian Chant',
-      subtitle:
-          'Square notation rendered with the Greciliae font (SIL OFL) — '
+      subtitle: 'Square notation rendered with the Greciliae font (SIL OFL) — '
           'precomposed neumes, divisiones, episema/mora, and a custos, not '
           'shapes built from common-music noteheads.',
       accentColor: _accent,

@@ -73,14 +73,15 @@ class DynamicRenderer extends BaseGlyphRenderer {
     // Fix: Length proporcional to the number de notes abrangidas
     // If length not especificado, Use length default de 4 staff spaces by note
     // Mas permitir override via dynamic.length
-    final defaultLength = coordinates.staffSpace * 6.0; // Aumentado de 4.0 para 6.0
+    final defaultLength =
+        coordinates.staffSpace * 6.0; // Aumentado de 4.0 para 6.0
     final length = dynamic.length ?? defaultLength;
-    
+
     final hairpinY =
         coordinates.getStaffLineY(1) +
         (coordinates.staffSpace * 2.5) +
         verticalOffset;
-    
+
     // Fix: Meia-abertura of the hairpin ~0.5 SS (abertura total ~1.0 SS)
     final height = coordinates.staffSpace * 0.5;
 
@@ -88,7 +89,8 @@ class DynamicRenderer extends BaseGlyphRenderer {
     final paint = Paint()
       ..color = theme.dynamicColor ?? theme.noteheadColor
       ..strokeWidth = hairpinThickness * coordinates.staffSpace
-      ..strokeCap = StrokeCap.butt; // CORREÇÃO: Pontas quadradas (não arredondadas)
+      ..strokeCap =
+          StrokeCap.butt; // CORREÇÃO: Pontas quadradas (não arredondadas)
 
     if (dynamic.type == DynamicType.crescendo) {
       // Crescendo: ponta to the left, abre to the right (<)
@@ -125,7 +127,12 @@ class DynamicRenderer extends BaseGlyphRenderer {
           fontSize: glyphSize * 0.4,
           fontStyle: FontStyle.italic,
           color: theme.dynamicColor ?? theme.noteheadColor,
-          fontFamilyFallback: const ['Academico', 'Century Schoolbook', 'Edwin', 'serif'],
+          fontFamilyFallback: const [
+            'Academico',
+            'Century Schoolbook',
+            'Edwin',
+            'serif',
+          ],
         );
 
     final textPainter = TextPainter(

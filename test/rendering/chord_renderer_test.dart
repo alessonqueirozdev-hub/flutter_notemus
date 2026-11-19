@@ -5,15 +5,15 @@ import 'package:flutter_notemus/src/rendering/renderers/chord_renderer.dart';
 void main() {
   group('ChordRenderer.resolveStemDirection', () {
     Chord chordOf(List<int> octaves) => Chord(
-          notes: [
-            for (final o in octaves)
-              Note(
-                pitch: Pitch(step: 'C', octave: o),
-                duration: const Duration(DurationType.half),
-              ),
-          ],
-          duration: const Duration(DurationType.half),
-        );
+      notes: [
+        for (final o in octaves)
+          Note(
+            pitch: Pitch(step: 'C', octave: o),
+            duration: const Duration(DurationType.half),
+          ),
+      ],
+      duration: const Duration(DurationType.half),
+    );
 
     test('low chord (furthest note below middle) gets stem up', () {
       // C4/E4/G4 in treble: positions [-7, -5, -3], furthest = -7 (below).

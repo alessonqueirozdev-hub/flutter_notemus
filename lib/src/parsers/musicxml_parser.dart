@@ -119,9 +119,11 @@ class MusicXMLParser {
     Uint8List bytes, {
     int partIndex = 0,
     List<String>? warnings,
-  }) =>
-      parseMusicXML(decodeBytes(bytes),
-          partIndex: partIndex, warnings: warnings);
+  }) => parseMusicXML(
+    decodeBytes(bytes),
+    partIndex: partIndex,
+    warnings: warnings,
+  );
 
   /// The MusicXML text inside [bytes]: the score a `.mxl` archive's
   /// `META-INF/container.xml` points to, or plain MusicXML decoded as UTF-8
@@ -151,8 +153,10 @@ class MusicXMLParser {
                 // could not survive a round trip in either direction.
                 builder.element('part-name', nest: staff.name ?? 'Music');
                 if (staff.abbreviation != null) {
-                  builder.element('part-abbreviation',
-                      nest: staff.abbreviation);
+                  builder.element(
+                    'part-abbreviation',
+                    nest: staff.abbreviation,
+                  );
                 }
               },
             );
@@ -165,10 +169,14 @@ class MusicXMLParser {
             builder.attribute('id', 'P1');
             final numbers = _measureNumberTokens(staff.measures);
             for (int index = 0; index < staff.measures.length; index++) {
-              _buildMeasureXml(builder, staff.measures[index], index + 1,
-                  numberToken: numbers[index],
-                  staffLines: staff.lineCount,
-                  transposition: staff.transposition);
+              _buildMeasureXml(
+                builder,
+                staff.measures[index],
+                index + 1,
+                numberToken: numbers[index],
+                staffLines: staff.lineCount,
+                transposition: staff.transposition,
+              );
             }
           },
         );
@@ -205,101 +213,142 @@ class MusicXMLParser {
         builder.attribute('version', '4.0');
 
         if (score.title != null || score.composer != null) {
-          builder.element('work', nest: () {
-            if (score.title != null) {
-              builder.element('work-title', nest: score.title);
-            }
-          });
+          builder.element(
+            'work',
+            nest: () {
+              if (score.title != null) {
+                builder.element('work-title', nest: score.title);
+              }
+            },
+          );
           if (score.composer != null) {
-            builder.element('identification', nest: () {
-              builder.element('creator', nest: () {
-                builder.attribute('type', 'composer');
-                builder.text(score.composer!);
-              });
-            });
+            builder.element(
+              'identification',
+              nest: () {
+                builder.element(
+                  'creator',
+                  nest: () {
+                    builder.attribute('type', 'composer');
+                    builder.text(score.composer!);
+                  },
+                );
+              },
+            );
           }
         }
 
-        builder.element('part-list', nest: () {
-          StaffGroup? open;
-          var groupNumber = 0;
-          for (var i = 0; i < parts.length; i++) {
-            final part = parts[i];
-            final startsGroup = !identical(part.group, open);
-            if (startsGroup) {
-              if (open != null) {
-                builder.element('part-group', nest: () {
+        builder.element(
+          'part-list',
+          nest: () {
+            StaffGroup? open;
+            var groupNumber = 0;
+            for (var i = 0; i < parts.length; i++) {
+              final part = parts[i];
+              final startsGroup = !identical(part.group, open);
+              if (startsGroup) {
+                if (open != null) {
+                  builder.element(
+                    'part-group',
+                    nest: () {
+                      builder.attribute('type', 'stop');
+                      builder.attribute('number', groupNumber.toString());
+                    },
+                  );
+                }
+                // A group of one staff with no bracket and no label of its own
+                // is just a part; anything else needs a <part-group> to carry
+                // its bracket and/or its labels.
+                if (part.group.staves.length > 1 ||
+                    part.group.bracket != BracketType.none ||
+                    part.group.name != null ||
+                    part.group.abbreviation != null) {
+                  groupNumber++;
+                  builder.element(
+                    'part-group',
+                    nest: () {
+                      builder.attribute('type', 'start');
+                      builder.attribute('number', groupNumber.toString());
+                      builder.element(
+                        'group-symbol',
+                        nest: _groupSymbolName(part.group.bracket),
+                      );
+                      if (part.group.name != null) {
+                        builder.element('group-name', nest: part.group.name);
+                      }
+                      // The short label drawn from the second system on. It was
+                      // never written, so every group of a round-tripped score
+                      // came back with abbreviation = null.
+                      if (part.group.abbreviation != null) {
+                        builder.element(
+                          'group-abbreviation',
+                          nest: part.group.abbreviation,
+                        );
+                      }
+                      // `<group-barline>` is independent of `<group-symbol>`;
+                      // emitted only when it disagrees with the bracket's default
+                      // so ordinary files stay clean.
+                      final defaultConnect =
+                          part.group.bracket != BracketType.none;
+                      if (part.group.connectBarlines != defaultConnect) {
+                        builder.element(
+                          'group-barline',
+                          nest: part.group.connectBarlines ? 'yes' : 'no',
+                        );
+                      }
+                    },
+                  );
+                  open = part.group;
+                } else {
+                  open = null;
+                }
+              }
+              builder.element(
+                'score-part',
+                nest: () {
+                  builder.attribute('id', part.id);
+                  builder.element(
+                    'part-name',
+                    nest: part.staff.name ?? part.group.name ?? 'Part ${i + 1}',
+                  );
+                  if (part.staff.abbreviation != null) {
+                    builder.element(
+                      'part-abbreviation',
+                      nest: part.staff.abbreviation,
+                    );
+                  }
+                },
+              );
+            }
+            if (open != null) {
+              builder.element(
+                'part-group',
+                nest: () {
                   builder.attribute('type', 'stop');
                   builder.attribute('number', groupNumber.toString());
-                });
-              }
-              // A group of one staff with no bracket and no label of its own
-              // is just a part; anything else needs a <part-group> to carry
-              // its bracket and/or its labels.
-              if (part.group.staves.length > 1 ||
-                  part.group.bracket != BracketType.none ||
-                  part.group.name != null ||
-                  part.group.abbreviation != null) {
-                groupNumber++;
-                builder.element('part-group', nest: () {
-                  builder.attribute('type', 'start');
-                  builder.attribute('number', groupNumber.toString());
-                  builder.element('group-symbol',
-                      nest: _groupSymbolName(part.group.bracket));
-                  if (part.group.name != null) {
-                    builder.element('group-name', nest: part.group.name);
-                  }
-                  // The short label drawn from the second system on. It was
-                  // never written, so every group of a round-tripped score
-                  // came back with abbreviation = null.
-                  if (part.group.abbreviation != null) {
-                    builder.element('group-abbreviation',
-                        nest: part.group.abbreviation);
-                  }
-                  // `<group-barline>` is independent of `<group-symbol>`;
-                  // emitted only when it disagrees with the bracket's default
-                  // so ordinary files stay clean.
-                  final defaultConnect =
-                      part.group.bracket != BracketType.none;
-                  if (part.group.connectBarlines != defaultConnect) {
-                    builder.element('group-barline',
-                        nest: part.group.connectBarlines ? 'yes' : 'no');
-                  }
-                });
-                open = part.group;
-              } else {
-                open = null;
-              }
+                },
+              );
             }
-            builder.element('score-part', nest: () {
-              builder.attribute('id', part.id);
-              builder.element('part-name',
-                  nest: part.staff.name ?? part.group.name ?? 'Part ${i + 1}');
-              if (part.staff.abbreviation != null) {
-                builder.element('part-abbreviation',
-                    nest: part.staff.abbreviation);
-              }
-            });
-          }
-          if (open != null) {
-            builder.element('part-group', nest: () {
-              builder.attribute('type', 'stop');
-              builder.attribute('number', groupNumber.toString());
-            });
-          }
-        });
+          },
+        );
 
         for (final part in parts) {
-          builder.element('part', nest: () {
-            builder.attribute('id', part.id);
-            final numbers = _measureNumberTokens(part.staff.measures);
-            for (var m = 0; m < part.staff.measures.length; m++) {
-              _buildMeasureXml(builder, part.staff.measures[m], m + 1,
+          builder.element(
+            'part',
+            nest: () {
+              builder.attribute('id', part.id);
+              final numbers = _measureNumberTokens(part.staff.measures);
+              for (var m = 0; m < part.staff.measures.length; m++) {
+                _buildMeasureXml(
+                  builder,
+                  part.staff.measures[m],
+                  m + 1,
                   numberToken: numbers[m],
                   staffLines: part.staff.lineCount,
-                  transposition: part.staff.transposition);
-            }
-          });
+                  transposition: part.staff.transposition,
+                );
+              }
+            },
+          );
         }
       },
     );
@@ -315,11 +364,11 @@ class MusicXMLParser {
   /// `connectBarlines` from false to true — a bracket drawn, and barlines
   /// joined, where the author asked for neither.
   static String _groupSymbolName(BracketType bracket) => switch (bracket) {
-        BracketType.brace => 'brace',
-        BracketType.line => 'line',
-        BracketType.none => 'none',
-        BracketType.bracket => 'bracket',
-      };
+    BracketType.brace => 'brace',
+    BracketType.line => 'line',
+    BracketType.none => 'none',
+    BracketType.bracket => 'bracket',
+  };
 
   static bool validateMusicXML(String xmlContent) {
     try {
@@ -390,11 +439,15 @@ class MusicXMLParser {
                 'score-part',
                 nest: () {
                   builder.attribute('id', 'P${index + 1}');
-                  builder.element('part-name',
-                      nest: staffs[index].name ?? 'Part ${index + 1}');
+                  builder.element(
+                    'part-name',
+                    nest: staffs[index].name ?? 'Part ${index + 1}',
+                  );
                   if (staffs[index].abbreviation != null) {
-                    builder.element('part-abbreviation',
-                        nest: staffs[index].abbreviation);
+                    builder.element(
+                      'part-abbreviation',
+                      nest: staffs[index].abbreviation,
+                    );
                   }
                 },
               );
@@ -464,8 +517,14 @@ List<String> _measureNumberTokens(List<Measure> measures) {
   ];
 }
 
-void _buildMeasureXml(XmlBuilder builder, Measure measure, int number,
-    {String? numberToken, int staffLines = 5, Transposition? transposition}) {
+void _buildMeasureXml(
+  XmlBuilder builder,
+  Measure measure,
+  int number, {
+  String? numberToken,
+  int staffLines = 5,
+  Transposition? transposition,
+}) {
   builder.element(
     'measure',
     nest: () {
@@ -473,7 +532,9 @@ void _buildMeasureXml(XmlBuilder builder, Measure measure, int number,
       // (divisions/staff-details) is unaffected; what is WRITTEN is the
       // bar's own number (see [_measureNumberTokens]).
       builder.attribute(
-          'number', numberToken ?? (measure.number ?? number).toString());
+        'number',
+        numberToken ?? (measure.number ?? number).toString(),
+      );
       if (measure.isImplicit) builder.attribute('implicit', 'yes');
 
       final systemElements = measure.elements.where(
@@ -523,8 +584,7 @@ void _buildMeasureXml(XmlBuilder builder, Measure measure, int number,
                       ClefType.treble8va || ClefType.bass8va => 1,
                       ClefType.treble8vb ||
                       ClefType.bass8vb ||
-                      ClefType.c8vb =>
-                        -1,
+                      ClefType.c8vb => -1,
                       ClefType.treble15ma || ClefType.bass15ma => 2,
                       ClefType.treble15mb || ClefType.bass15mb => -2,
                       _ => 0,
@@ -532,8 +592,7 @@ void _buildMeasureXml(XmlBuilder builder, Measure measure, int number,
                     builder.element('sign', nest: sign);
                     builder.element('line', nest: line);
                     if (octaveChange != 0) {
-                      builder.element('clef-octave-change',
-                          nest: octaveChange);
+                      builder.element('clef-octave-change', nest: octaveChange);
                     }
                   },
                 );
@@ -571,17 +630,22 @@ void _buildMeasureXml(XmlBuilder builder, Measure measure, int number,
                   builder.element('diatonic', nest: transposition.diatonic);
                   builder.element('chromatic', nest: transposition.chromatic);
                   if (transposition.octaveChange != 0) {
-                    builder.element('octave-change',
-                        nest: transposition.octaveChange);
+                    builder.element(
+                      'octave-change',
+                      nest: transposition.octaveChange,
+                    );
                   }
                   if (transposition.doubled) {
-                    builder.element('double', nest: () {
-                      // MusicXML 4.0: absent `above` means an octave DOWN, so
-                      // the attribute is only written when the doubling is up.
-                      if (transposition.doubledAbove) {
-                        builder.attribute('above', 'yes');
-                      }
-                    });
+                    builder.element(
+                      'double',
+                      nest: () {
+                        // MusicXML 4.0: absent `above` means an octave DOWN, so
+                        // the attribute is only written when the doubling is up.
+                        if (transposition.doubledAbove) {
+                          builder.attribute('above', 'yes');
+                        }
+                      },
+                    );
                   }
                 },
               );
@@ -598,13 +662,18 @@ void _buildMeasureXml(XmlBuilder builder, Measure measure, int number,
           if (vi > 0) {
             final back = _voiceDurationDivisions(voices[vi - 1]);
             if (back > 0) {
-              builder.element('backup',
-                  nest: () => builder.element('duration', nest: back));
+              builder.element(
+                'backup',
+                nest: () => builder.element('duration', nest: back),
+              );
             }
           }
           for (final element in voices[vi].elements) {
-            _buildMeasureElement(builder, element,
-                voiceNumber: voices[vi].number);
+            _buildMeasureElement(
+              builder,
+              element,
+              voiceNumber: voices[vi].number,
+            );
           }
         }
       } else {
@@ -642,8 +711,8 @@ String? _tupletBracketAttribute(Tuplet tuplet) =>
 /// `show-number="both"` when the model asks for the full `3:2` ratio.
 String? _tupletShowNumberAttribute(Tuplet tuplet) =>
     tuplet.numberConfig != null && tuplet.numberConfig!.showAsRatio
-        ? 'both'
-        : null;
+    ? 'both'
+    : null;
 
 /// Emits the `<tuplet>` children of a `<notations>` block for [edge].
 void _buildTupletNotationXml(
@@ -653,14 +722,17 @@ void _buildTupletNotationXml(
   String? showNumber,
 }) {
   void one(String type) {
-    builder.element('tuplet', nest: () {
-      builder.attribute('type', type);
-      builder.attribute('number', '1');
-      if (type == 'start') {
-        if (bracket != null) builder.attribute('bracket', bracket);
-        if (showNumber != null) builder.attribute('show-number', showNumber);
-      }
-    });
+    builder.element(
+      'tuplet',
+      nest: () {
+        builder.attribute('type', type);
+        builder.attribute('number', '1');
+        if (type == 'start') {
+          if (bracket != null) builder.attribute('bracket', bracket);
+          if (showNumber != null) builder.attribute('show-number', showNumber);
+        }
+      },
+    );
   }
 
   switch (edge) {
@@ -681,8 +753,11 @@ void _buildTupletNotationXml(
 
 /// Dispatches one measure element to its MusicXML builder, tagging notes with
 /// [voiceNumber] when set (multi-voice).
-void _buildMeasureElement(XmlBuilder builder, MusicalElement element,
-    {int? voiceNumber}) {
+void _buildMeasureElement(
+  XmlBuilder builder,
+  MusicalElement element, {
+  int? voiceNumber,
+}) {
   if (element is Note) {
     _buildStandaloneNoteXml(builder, element, voiceNumber: voiceNumber);
   } else if (element is Rest) {
@@ -773,32 +848,41 @@ void _buildTupletXml(XmlBuilder builder, Tuplet tuplet, {int? voiceNumber}) {
     final position = leaves.length == 1
         ? _TupletEdge.single
         : i == 0
-            ? _TupletEdge.start
-            : i == leaves.length - 1
-                ? _TupletEdge.stop
-                : _TupletEdge.inner;
+        ? _TupletEdge.start
+        : i == leaves.length - 1
+        ? _TupletEdge.stop
+        : _TupletEdge.inner;
     final inner = leaf.element;
     if (inner is Note) {
-      _buildStandaloneNoteXml(builder, inner,
-          tuplet: leaf.ratio,
-          voiceNumber: voiceNumber,
-          tupletEdge: position,
-          tupletBracket: bracket,
-          tupletShowNumber: showNumber);
+      _buildStandaloneNoteXml(
+        builder,
+        inner,
+        tuplet: leaf.ratio,
+        voiceNumber: voiceNumber,
+        tupletEdge: position,
+        tupletBracket: bracket,
+        tupletShowNumber: showNumber,
+      );
     } else if (inner is Rest) {
-      _buildRestXml(builder, inner,
-          tuplet: leaf.ratio,
-          voiceNumber: voiceNumber,
-          tupletEdge: position,
-          tupletBracket: bracket,
-          tupletShowNumber: showNumber);
+      _buildRestXml(
+        builder,
+        inner,
+        tuplet: leaf.ratio,
+        voiceNumber: voiceNumber,
+        tupletEdge: position,
+        tupletBracket: bracket,
+        tupletShowNumber: showNumber,
+      );
     } else if (inner is Chord) {
-      _buildChordXml(builder, inner,
-          tuplet: leaf.ratio,
-          voiceNumber: voiceNumber,
-          tupletEdge: position,
-          tupletBracket: bracket,
-          tupletShowNumber: showNumber);
+      _buildChordXml(
+        builder,
+        inner,
+        tuplet: leaf.ratio,
+        voiceNumber: voiceNumber,
+        tupletEdge: position,
+        tupletBracket: bracket,
+        tupletShowNumber: showNumber,
+      );
     }
   }
 }
@@ -848,8 +932,7 @@ void _buildBarlineXml(XmlBuilder builder, Barline barline) {
     BarlineType.final_ ||
     BarlineType.lightHeavy ||
     BarlineType.repeatBackward ||
-    BarlineType.repeatBoth =>
-      'light-heavy',
+    BarlineType.repeatBoth => 'light-heavy',
     BarlineType.repeatForward || BarlineType.heavyLight => 'heavy-light',
     BarlineType.heavyHeavy => 'heavy-heavy',
     BarlineType.dashed => 'dashed',
@@ -877,21 +960,27 @@ void _buildBarlineXml(XmlBuilder builder, Barline barline) {
 /// Emits a note that is not part of a [Chord], preceded by the `<direction>`
 /// carrying its own [Note.dynamicElement] (MusicXML puts dynamics *before* the
 /// note they apply to).
-void _buildStandaloneNoteXml(XmlBuilder builder, Note note,
-    {TupletRatio? tuplet,
-    int? voiceNumber,
-    _TupletEdge? tupletEdge,
-    String? tupletBracket,
-    String? tupletShowNumber}) {
+void _buildStandaloneNoteXml(
+  XmlBuilder builder,
+  Note note, {
+  TupletRatio? tuplet,
+  int? voiceNumber,
+  _TupletEdge? tupletEdge,
+  String? tupletBracket,
+  String? tupletShowNumber,
+}) {
   if (note.dynamicElement != null) {
     _buildDynamicXml(builder, note.dynamicElement!);
   }
-  _buildNoteXml(builder, note,
-      tuplet: tuplet,
-      voiceNumber: voiceNumber ?? note.voice,
-      tupletEdge: tupletEdge,
-      tupletBracket: tupletBracket,
-      tupletShowNumber: tupletShowNumber);
+  _buildNoteXml(
+    builder,
+    note,
+    tuplet: tuplet,
+    voiceNumber: voiceNumber ?? note.voice,
+    tupletEdge: tupletEdge,
+    tupletBracket: tupletBracket,
+    tupletShowNumber: tupletShowNumber,
+  );
 }
 
 /// Emits a [Chord] as `<note>` + `<note><chord/>`…, hanging the chord-level
@@ -909,12 +998,15 @@ void _buildStandaloneNoteXml(XmlBuilder builder, Note note,
 /// bar worth 0.375 came back as 0.25; a double-dotted half chord over inner
 /// halves went 0.875 -> 0.5, and a whole-note chord over inner eighths went
 /// 1.0 -> 0.125. Writing `chord.duration` makes all three exact.
-void _buildChordXml(XmlBuilder builder, Chord chord,
-    {TupletRatio? tuplet,
-    int? voiceNumber,
-    _TupletEdge? tupletEdge,
-    String? tupletBracket,
-    String? tupletShowNumber}) {
+void _buildChordXml(
+  XmlBuilder builder,
+  Chord chord, {
+  TupletRatio? tuplet,
+  int? voiceNumber,
+  _TupletEdge? tupletEdge,
+  String? tupletBracket,
+  String? tupletShowNumber,
+}) {
   if (chord.notes.isEmpty) return;
   final lead = chord.notes.first;
   final dynamicElement = chord.dynamic ?? lead.dynamicElement;
@@ -923,30 +1015,36 @@ void _buildChordXml(XmlBuilder builder, Chord chord,
   }
   final resolvedVoice = voiceNumber ?? chord.voice ?? lead.voice;
   for (int index = 0; index < chord.notes.length; index++) {
-    _buildNoteXml(builder, chord.notes[index],
-        isChordTone: index > 0,
-        durationOverride: chord.duration,
-        tuplet: tuplet,
-        voiceNumber: resolvedVoice,
-        // The tuplet bracket belongs to the chord, i.e. to its first note.
-        tupletEdge: index == 0 ? tupletEdge : null,
-        tupletBracket: tupletBracket,
-        tupletShowNumber: tupletShowNumber,
-        extraArticulations: index == 0 ? chord.articulations : const [],
-        extraOrnaments: index == 0 ? chord.ornaments : const []);
+    _buildNoteXml(
+      builder,
+      chord.notes[index],
+      isChordTone: index > 0,
+      durationOverride: chord.duration,
+      tuplet: tuplet,
+      voiceNumber: resolvedVoice,
+      // The tuplet bracket belongs to the chord, i.e. to its first note.
+      tupletEdge: index == 0 ? tupletEdge : null,
+      tupletBracket: tupletBracket,
+      tupletShowNumber: tupletShowNumber,
+      extraArticulations: index == 0 ? chord.articulations : const [],
+      extraOrnaments: index == 0 ? chord.ornaments : const [],
+    );
   }
 }
 
-void _buildNoteXml(XmlBuilder builder, Note note,
-    {bool isChordTone = false,
-    Duration? durationOverride,
-    TupletRatio? tuplet,
-    int? voiceNumber,
-    _TupletEdge? tupletEdge,
-    String? tupletBracket,
-    String? tupletShowNumber,
-    List<ArticulationType> extraArticulations = const [],
-    List<Ornament> extraOrnaments = const []}) {
+void _buildNoteXml(
+  XmlBuilder builder,
+  Note note, {
+  bool isChordTone = false,
+  Duration? durationOverride,
+  TupletRatio? tuplet,
+  int? voiceNumber,
+  _TupletEdge? tupletEdge,
+  String? tupletBracket,
+  String? tupletShowNumber,
+  List<ArticulationType> extraArticulations = const [],
+  List<Ornament> extraOrnaments = const [],
+}) {
   // The rhythmic value actually written out. A chord tone is emitted with the
   // Chord's own duration (see [_buildChordXml]); everything else uses its own.
   final effectiveDuration = durationOverride ?? note.duration;
@@ -971,9 +1069,10 @@ void _buildNoteXml(XmlBuilder builder, Note note,
       );
       // Grace notes carry no <duration> in MusicXML.
       if (!note.isGraceNote) {
-        builder.element('duration',
-            nest:
-                _durationDivisions(effectiveDuration, tuplet?.modifier ?? 1.0));
+        builder.element(
+          'duration',
+          nest: _durationDivisions(effectiveDuration, tuplet?.modifier ?? 1.0),
+        );
       }
       // <tie> belongs right after <duration> in the MusicXML content model.
       if (note.tie != null) {
@@ -992,7 +1091,9 @@ void _buildNoteXml(XmlBuilder builder, Note note,
         builder.element('voice', nest: resolvedVoice);
       }
       builder.element(
-          'type', nest: _durationTypeToString(effectiveDuration.type));
+        'type',
+        nest: _durationTypeToString(effectiveDuration.type),
+      );
       for (int index = 0; index < effectiveDuration.dots; index++) {
         builder.element('dot');
       }
@@ -1055,7 +1156,9 @@ void _buildNoteXml(XmlBuilder builder, Note note,
       };
       // Techniques already covered by an <articulations> child are skipped so
       // the same gesture is not written twice.
-      final articulationNames = articulations.map(_articulationToString).toSet();
+      final articulationNames = articulations
+          .map(_articulationToString)
+          .toSet();
       final technicalTechniques = <PlayingTechnique>[
         for (final t in note.techniques)
           if (!articulationNames.contains(_techniqueToString(t.type))) t,
@@ -1098,8 +1201,9 @@ void _buildNoteXml(XmlBuilder builder, Note note,
                   }
                   // 1–5 strokes; <tremolo> is an <ornaments> child in MusicXML.
                   if (hasTremolo) {
-                    final strokes =
-                        note.tremoloStrokes > 8 ? 8 : note.tremoloStrokes;
+                    final strokes = note.tremoloStrokes > 8
+                        ? 8
+                        : note.tremoloStrokes;
                     builder.element(
                       'tremolo',
                       nest: () {
@@ -1155,51 +1259,55 @@ void _buildNoteXml(XmlBuilder builder, Note note,
 }
 
 String? _ornamentToString(OrnamentType type) => switch (type) {
-      OrnamentType.trill ||
-      OrnamentType.trillNatural ||
-      OrnamentType.trillSharp ||
-      OrnamentType.trillFlat ||
-      OrnamentType.shortTrill ||
-      OrnamentType.pralltriller =>
-        'trill-mark',
-      OrnamentType.mordent => 'mordent',
-      OrnamentType.invertedMordent => 'inverted-mordent',
-      OrnamentType.turn => 'turn',
-      OrnamentType.turnInverted || OrnamentType.invertedTurn => 'inverted-turn',
-      OrnamentType.turnSlash => 'turn',
-      _ => null,
-    };
+  OrnamentType.trill ||
+  OrnamentType.trillNatural ||
+  OrnamentType.trillSharp ||
+  OrnamentType.trillFlat ||
+  OrnamentType.shortTrill ||
+  OrnamentType.pralltriller => 'trill-mark',
+  OrnamentType.mordent => 'mordent',
+  OrnamentType.invertedMordent => 'inverted-mordent',
+  OrnamentType.turn => 'turn',
+  OrnamentType.turnInverted || OrnamentType.invertedTurn => 'inverted-turn',
+  OrnamentType.turnSlash => 'turn',
+  _ => null,
+};
 
 /// MusicXML `<accidental>` name for a chromatic alteration in semitones.
 String? _accidentalNameFromAlter(double alter) => switch (alter) {
-      2.0 => 'double-sharp',
-      1.0 => 'sharp',
-      0.0 => 'natural',
-      -1.0 => 'flat',
-      -2.0 => 'flat-flat',
-      _ => null,
-    };
+  2.0 => 'double-sharp',
+  1.0 => 'sharp',
+  0.0 => 'natural',
+  -1.0 => 'flat',
+  -2.0 => 'flat-flat',
+  _ => null,
+};
 
 String _syllabicToString(SyllableType type) => switch (type) {
-      SyllableType.single => 'single',
-      SyllableType.initial => 'begin',
-      SyllableType.middle => 'middle',
-      SyllableType.hyphen => 'middle',
-      SyllableType.terminal => 'end',
-    };
+  SyllableType.single => 'single',
+  SyllableType.initial => 'begin',
+  SyllableType.middle => 'middle',
+  SyllableType.hyphen => 'middle',
+  SyllableType.terminal => 'end',
+};
 
-void _buildRestXml(XmlBuilder builder, Rest rest,
-    {TupletRatio? tuplet,
-    int? voiceNumber,
-    _TupletEdge? tupletEdge,
-    String? tupletBracket,
-    String? tupletShowNumber}) {
+void _buildRestXml(
+  XmlBuilder builder,
+  Rest rest, {
+  TupletRatio? tuplet,
+  int? voiceNumber,
+  _TupletEdge? tupletEdge,
+  String? tupletBracket,
+  String? tupletShowNumber,
+}) {
   builder.element(
     'note',
     nest: () {
       builder.element('rest');
-      builder.element('duration',
-          nest: _durationDivisions(rest.duration, tuplet?.modifier ?? 1.0));
+      builder.element(
+        'duration',
+        nest: _durationDivisions(rest.duration, tuplet?.modifier ?? 1.0),
+      );
       if (voiceNumber != null) {
         builder.element('voice', nest: voiceNumber);
       }
@@ -1258,8 +1366,10 @@ void _buildDynamicXml(XmlBuilder builder, Dynamic dynamic) {
               nest: () {
                 final name = _dynamicTypeToString(dynamic.type);
                 if (name == 'other-dynamics') {
-                  builder.element('other-dynamics',
-                      nest: dynamic.customText ?? dynamic.type.name);
+                  builder.element(
+                    'other-dynamics',
+                    nest: dynamic.customText ?? dynamic.type.name,
+                  );
                 } else {
                   builder.element(name);
                 }
@@ -1287,7 +1397,8 @@ bool _opensHairpin(MusicalElement element) {
     return d != null && _isHairpinDynamic(d);
   }
   if (element is Chord) {
-    final d = element.dynamic ??
+    final d =
+        element.dynamic ??
         (element.notes.isEmpty ? null : element.notes.first.dynamicElement);
     return d != null && _isHairpinDynamic(d);
   }
@@ -1435,44 +1546,38 @@ const Set<String> _kTechnicalElements = <String>{
 /// Canonical MusicXML-ish name for a [TechniqueType]. Also used to detect a
 /// technique already emitted as an `<articulations>` child (no duplicates).
 String _techniqueToString(TechniqueType type) => switch (type) {
-      TechniqueType.pizzicato => 'pizzicato',
-      TechniqueType.snapPizzicato => 'snap-pizzicato',
-      TechniqueType.colLegno => 'col-legno',
-      TechniqueType.bowOnBridge => 'bow-on-bridge',
-      TechniqueType.bowOnTailpiece => 'bow-on-tailpiece',
-      TechniqueType.sulTasto => 'sul-tasto',
-      TechniqueType.sulPonticello => 'sul-ponticello',
-      TechniqueType.martellato => 'martellato',
-      TechniqueType.ricochet => 'ricochet',
-      TechniqueType.jet => 'jet',
-      TechniqueType.vibrato => 'vibrato',
-      TechniqueType.naturalHarmonic => 'natural-harmonic',
-      TechniqueType.artificialHarmonic => 'artificial-harmonic',
-      TechniqueType.multiphonics => 'multiphonics',
-      TechniqueType.overblowing => 'overblowing',
-      TechniqueType.tongueram => 'tongue-ram',
-      TechniqueType.circularBreathing => 'circular-breathing',
-      TechniqueType.flutter => 'flutter',
-      TechniqueType.whistle => 'whistle',
-      TechniqueType.growl => 'growl',
-      TechniqueType.tremolo => 'tremolo',
-    };
+  TechniqueType.pizzicato => 'pizzicato',
+  TechniqueType.snapPizzicato => 'snap-pizzicato',
+  TechniqueType.colLegno => 'col-legno',
+  TechniqueType.bowOnBridge => 'bow-on-bridge',
+  TechniqueType.bowOnTailpiece => 'bow-on-tailpiece',
+  TechniqueType.sulTasto => 'sul-tasto',
+  TechniqueType.sulPonticello => 'sul-ponticello',
+  TechniqueType.martellato => 'martellato',
+  TechniqueType.ricochet => 'ricochet',
+  TechniqueType.jet => 'jet',
+  TechniqueType.vibrato => 'vibrato',
+  TechniqueType.naturalHarmonic => 'natural-harmonic',
+  TechniqueType.artificialHarmonic => 'artificial-harmonic',
+  TechniqueType.multiphonics => 'multiphonics',
+  TechniqueType.overblowing => 'overblowing',
+  TechniqueType.tongueram => 'tongue-ram',
+  TechniqueType.circularBreathing => 'circular-breathing',
+  TechniqueType.flutter => 'flutter',
+  TechniqueType.whistle => 'whistle',
+  TechniqueType.growl => 'growl',
+  TechniqueType.tremolo => 'tremolo',
+};
 
 /// Writes one `<technical>` child for [technique].
 void _buildTechnicalChild(XmlBuilder builder, PlayingTechnique technique) {
   final name = _techniqueToString(technique.type);
   switch (technique.type) {
     case TechniqueType.naturalHarmonic:
-      builder.element(
-        'harmonic',
-        nest: () => builder.element('natural'),
-      );
+      builder.element('harmonic', nest: () => builder.element('natural'));
       return;
     case TechniqueType.artificialHarmonic:
-      builder.element(
-        'harmonic',
-        nest: () => builder.element('artificial'),
-      );
+      builder.element('harmonic', nest: () => builder.element('artificial'));
       return;
     default:
       if (_kTechnicalElements.contains(name)) {
@@ -1481,8 +1586,10 @@ void _buildTechnicalChild(XmlBuilder builder, PlayingTechnique technique) {
         // No dedicated element exists: keep the name (and any free text) in
         // <other-technical> instead of dropping the technique.
         final text = technique.text;
-        builder.element('other-technical',
-            nest: text == null || text.isEmpty ? name : '$name: $text');
+        builder.element(
+          'other-technical',
+          nest: text == null || text.isEmpty ? name : '$name: $text',
+        );
       }
   }
 }

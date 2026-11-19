@@ -1,7 +1,7 @@
 // lib/core/tuplet_bracket.dart
 
 import 'musical_element.dart'; // BeamType
-import 'note.dart';  // ✅ Import needed for Note type
+import 'note.dart'; // ✅ Import needed for Note type
 
 /// Lado of the bracket de tuplet
 enum BracketSide {

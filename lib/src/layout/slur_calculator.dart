@@ -26,10 +26,8 @@ class SlurCalculator {
   final EngravingRules rules;
   final SkyBottomLineCalculator? skylineCalculator;
 
-  SlurCalculator({
-    EngravingRules? rules,
-    this.skylineCalculator,
-  }) : rules = rules ?? EngravingRules();
+  SlurCalculator({EngravingRules? rules, this.skylineCalculator})
+    : rules = rules ?? EngravingRules();
 
   /// Calculates a curva Bézier cúbica for a slur
   ///
@@ -377,15 +375,11 @@ class CubicBezierCurve {
     final ttt = tt * t;
 
     // B(t) = u³·P0 + 3u²t·P1 + 3ut²·P2 + t³·P3
-    final x = uuu * p0.dx +
-        3 * uu * t * p1.dx +
-        3 * u * tt * p2.dx +
-        ttt * p3.dx;
+    final x =
+        uuu * p0.dx + 3 * uu * t * p1.dx + 3 * u * tt * p2.dx + ttt * p3.dx;
 
-    final y = uuu * p0.dy +
-        3 * uu * t * p1.dy +
-        3 * u * tt * p2.dy +
-        ttt * p3.dy;
+    final y =
+        uuu * p0.dy + 3 * uu * t * p1.dy + 3 * u * tt * p2.dy + ttt * p3.dy;
 
     return Offset(x, y);
   }
@@ -397,11 +391,13 @@ class CubicBezierCurve {
     final tt = t * t;
 
     // B'(t) = 3u²(P1-P0) + 6ut(P2-P1) + 3t²(P3-P2)
-    final dx = 3 * uu * (p1.dx - p0.dx) +
+    final dx =
+        3 * uu * (p1.dx - p0.dx) +
         6 * u * t * (p2.dx - p1.dx) +
         3 * tt * (p3.dx - p2.dx);
 
-    final dy = 3 * uu * (p1.dy - p0.dy) +
+    final dy =
+        3 * uu * (p1.dy - p0.dy) +
         6 * u * t * (p2.dy - p1.dy) +
         3 * tt * (p3.dy - p2.dy);
 

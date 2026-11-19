@@ -34,9 +34,13 @@ void main() {
   test('the diatonic step is measured from the font, not guessed', () {
     final step = font.diatonicStepUnits();
     expect(step, greaterThan(150.0));
-    expect(step, lessThan(165.0),
-        reason: 'measured on the shipped greciliae.ttf: consecutive Pes '
-            'ambitus differ by ~158 font units. 2.6.0 assumed 147.');
+    expect(
+      step,
+      lessThan(165.0),
+      reason:
+          'measured on the shipped greciliae.ttf: consecutive Pes '
+          'ambitus differ by ~158 font units. 2.6.0 assumed 147.',
+    );
   });
 
   test('every Pes ambitus step matches the derived unit', () {
@@ -54,9 +58,13 @@ void main() {
       final lo = font.centerYUnits(family[i - 1]);
       final hi = font.centerYUnits(family[i]);
       // The bbox CENTRE rises by half a step for every extra ambitus unit.
-      expect((hi - lo - step / 2).abs(), lessThan(3.0),
-          reason: '${family[i]} drifts from the derived step of '
-              '${step.toStringAsFixed(1)} units');
+      expect(
+        (hi - lo - step / 2).abs(),
+        lessThan(3.0),
+        reason:
+            '${family[i]} drifts from the derived step of '
+            '${step.toStringAsFixed(1)} units',
+      );
     }
   });
 
@@ -67,7 +75,8 @@ void main() {
     final step = font.diatonicStepUnits();
     final fontScale = GreciliaeFont.unitsPerEm / (2 * step);
     const staffSpace = 26.0;
-    final lineGapPx = 2 * step * (staffSpace * fontScale / GreciliaeFont.unitsPerEm);
+    final lineGapPx =
+        2 * step * (staffSpace * fontScale / GreciliaeFont.unitsPerEm);
     expect(lineGapPx, closeTo(staffSpace, 1e-6));
   });
 

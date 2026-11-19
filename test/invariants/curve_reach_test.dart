@@ -24,26 +24,33 @@ void main() {
     metadata = SmuflMetadata();
     await metadata.load();
     final bytes = await File('assets/smufl/Bravura.otf').readAsBytes();
-    await (FontLoader('packages/flutter_notemus/Bravura')
-          ..addFont(Future.value(ByteData.view(bytes.buffer))))
-        .load();
+    await (FontLoader(
+      'packages/flutter_notemus/Bravura',
+    )..addFont(Future.value(ByteData.view(bytes.buffer)))).load();
   });
 
   test('a long slur no longer touches the canvas edge', () async {
     Note n(String s, int o, {SlurType? slur}) => Note(
-        pitch: Pitch(step: s, octave: o),
-        duration: const MusicDuration(DurationType.eighth),
-        slur: slur);
-    final staff = Staff(measures: [
-      Measure()
-        ..elements.addAll([
-          Clef(clefType: ClefType.treble),
-          TimeSignature(numerator: 4, denominator: 4),
-          n('B', 4, slur: SlurType.start),
-          n('D', 5), n('E', 5), n('G', 5), n('A', 5), n('C', 6),
-          n('E', 6, slur: SlurType.end),
-        ])
-    ]);
+      pitch: Pitch(step: s, octave: o),
+      duration: const MusicDuration(DurationType.eighth),
+      slur: slur,
+    );
+    final staff = Staff(
+      measures: [
+        Measure()
+          ..elements.addAll([
+            Clef(clefType: ClefType.treble),
+            TimeSignature(numerator: 4, denominator: 4),
+            n('B', 4, slur: SlurType.start),
+            n('D', 5),
+            n('E', 5),
+            n('G', 5),
+            n('A', 5),
+            n('C', 6),
+            n('E', 6, slur: SlurType.end),
+          ]),
+      ],
+    );
     final image = await rasterise(staff, metadata, width: 900, staffSpace: 12);
     var topRow = 0, bottomRow = 0, inkTop = image.height;
     for (var x = 0; x < image.width; x++) {
@@ -52,12 +59,17 @@ void main() {
     }
     for (var y = 0; y < image.height; y++) {
       for (var x = 0; x < image.width; x++) {
-        if (image.dark(x, y)) { if (y < inkTop) inkTop = y; break; }
+        if (image.dark(x, y)) {
+          if (y < inkTop) inkTop = y;
+          break;
+        }
       }
     }
     // ignore: avoid_print
-    print('canvas=${image.width}x${image.height} inkTop=$inkTop '
-        'topRowInk=$topRow bottomRowInk=$bottomRow');
+    print(
+      'canvas=${image.width}x${image.height} inkTop=$inkTop '
+      'topRowInk=$topRow bottomRowInk=$bottomRow',
+    );
     expect(topRow, 0, reason: 'ink on the first row means the arc was clipped');
     expect(bottomRow, 0);
     expect(inkTop, greaterThan(0));

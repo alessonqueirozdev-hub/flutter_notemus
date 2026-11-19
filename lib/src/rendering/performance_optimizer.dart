@@ -89,8 +89,9 @@ class PerformanceOptimizer {
   static final LruCache<String, TextPainter> _glyphPainters =
       LruCache<String, TextPainter>(glyphPainterCacheCapacity);
 
-  static final LruCache<String, Path> _pathCache =
-      LruCache<String, Path>(maxCacheSize);
+  static final LruCache<String, Path> _pathCache = LruCache<String, Path>(
+    maxCacheSize,
+  );
 
   static int _glyphCacheHits = 0;
   static int _glyphCacheMisses = 0;

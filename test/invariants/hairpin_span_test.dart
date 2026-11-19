@@ -26,19 +26,20 @@ void main() {
     metadata = SmuflMetadata();
     await metadata.load();
     final bytes = await File('assets/smufl/Bravura.otf').readAsBytes();
-    await (FontLoader('packages/flutter_notemus/Bravura')
-          ..addFont(Future.value(ByteData.view(bytes.buffer))))
-        .load();
+    await (FontLoader(
+      'packages/flutter_notemus/Bravura',
+    )..addFont(Future.value(ByteData.view(bytes.buffer)))).load();
   });
 
   Staff build({double? length}) {
     Measure bar(String step, DynamicType t) => Measure()
-      ..elements.add(Note(
-        pitch: Pitch(step: step, octave: 4),
-        duration: const MusicDuration(DurationType.whole),
-        dynamicElement:
-            Dynamic(type: t, isHairpin: true, length: length),
-      ));
+      ..elements.add(
+        Note(
+          pitch: Pitch(step: step, octave: 4),
+          duration: const MusicDuration(DurationType.whole),
+          dynamicElement: Dynamic(type: t, isHairpin: true, length: length),
+        ),
+      );
     final m1 = bar('C', DynamicType.crescendo)
       ..elements.insert(0, TimeSignature(numerator: 4, denominator: 4))
       ..elements.insert(0, Clef(clefType: ClefType.treble));
@@ -74,8 +75,12 @@ void main() {
   }
 
   List<double> barlineXs(Staff staff) {
-    final engine = LayoutEngine(staff,
-        availableWidth: 900, staffSpace: 12, metadata: metadata);
+    final engine = LayoutEngine(
+      staff,
+      availableWidth: 900,
+      staffSpace: 12,
+      metadata: metadata,
+    );
     return engine
         .layout()
         .where((e) => e.element is Barline)
@@ -83,33 +88,51 @@ void main() {
         .toList();
   }
 
-  test('a note-attached hairpin spans its bar and stops at the barline',
-      () async {
-    final fixed = await belowStaffExtent(build(length: 90.0));
-    final musical = await belowStaffExtent(build());
-    // ignore: avoid_print
-    print('explicit length 90px -> x ${fixed[0]}..${fixed[1]} '
-        '(${fixed[1] - fixed[0]} px wide, ${fixed[2]} px of ink)');
-    // ignore: avoid_print
-    print('no length (musical)  -> x ${musical[0]}..${musical[1]} '
-        '(${musical[1] - musical[0]} px wide, ${musical[2]} px of ink)');
-    final bars = barlineXs(build());
-    // ignore: avoid_print
-    print('barlines at $bars');
+  test(
+    'a note-attached hairpin spans its bar and stops at the barline',
+    () async {
+      final fixed = await belowStaffExtent(build(length: 90.0));
+      final musical = await belowStaffExtent(build());
+      // ignore: avoid_print
+      print(
+        'explicit length 90px -> x ${fixed[0]}..${fixed[1]} '
+        '(${fixed[1] - fixed[0]} px wide, ${fixed[2]} px of ink)',
+      );
+      // ignore: avoid_print
+      print(
+        'no length (musical)  -> x ${musical[0]}..${musical[1]} '
+        '(${musical[1] - musical[0]} px wide, ${musical[2]} px of ink)',
+      );
+      final bars = barlineXs(build());
+      // ignore: avoid_print
+      print('barlines at $bars');
 
-    final lastBar = bars.last;
-    expect(musical[1], lessThan(lastBar),
-        reason: 'a musical hairpin must stop before the final barline at '
-            '$lastBar; it reached ${musical[1]}');
-    expect(fixed[1].toDouble(), greaterThan(lastBar),
-        reason: 'the fixed 90px hairpin is expected to overshoot the barline, '
-            'which is the behaviour being replaced');
+      final lastBar = bars.last;
+      expect(
+        musical[1],
+        lessThan(lastBar),
+        reason:
+            'a musical hairpin must stop before the final barline at '
+            '$lastBar; it reached ${musical[1]}',
+      );
+      expect(
+        fixed[1].toDouble(),
+        greaterThan(lastBar),
+        reason:
+            'the fixed 90px hairpin is expected to overshoot the barline, '
+            'which is the behaviour being replaced',
+      );
 
-    // And it must REACH its barline rather than stub out at the old fixed
-    // `staffSpace * 6` = 72 px. The gap the renderer leaves before a barline is
-    // half a staff space, so 12 px of tolerance is generous.
-    expect(musical[1], closeTo(lastBar - 6, 12),
-        reason: 'the hairpin should finish just short of its barline at '
-            '$lastBar, not stub out; it ended at ${musical[1]}');
-  });
+      // And it must REACH its barline rather than stub out at the old fixed
+      // `staffSpace * 6` = 72 px. The gap the renderer leaves before a barline is
+      // half a staff space, so 12 px of tolerance is generous.
+      expect(
+        musical[1],
+        closeTo(lastBar - 6, 12),
+        reason:
+            'the hairpin should finish just short of its barline at '
+            '$lastBar, not stub out; it ended at ${musical[1]}',
+      );
+    },
+  );
 }

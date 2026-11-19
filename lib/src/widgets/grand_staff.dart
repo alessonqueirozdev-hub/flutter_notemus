@@ -125,8 +125,10 @@ class GrandStaff extends StatefulWidget {
     this.onNoteTap,
     this.onMeasureTap,
     this.playbackPosition,
-  }) : assert(group != null || groups != null,
-            'Provide either group or groups');
+  }) : assert(
+         group != null || groups != null,
+         'Provide either group or groups',
+       );
 
   List<StaffGroup> get _groups => groups ?? [group!];
 
@@ -174,7 +176,8 @@ class _GrandStaffState extends State<GrandStaff> {
                 painter: GrandStaffPlayheadPainter(
                   position: position,
                   layout: painter,
-                  color: widget.theme.playheadColor ??
+                  color:
+                      widget.theme.playheadColor ??
                       widget.theme.noteheadColor.withValues(alpha: 0.65),
                 ),
               ),
@@ -195,13 +198,17 @@ class _GrandStaffState extends State<GrandStaff> {
       behavior: HitTestBehavior.opaque,
       onTapUp: (details) {
         if (onMeasureTap != null) {
-          final bar = painter.measureTapAt(details.localPosition,
-              globalPosition: details.globalPosition);
+          final bar = painter.measureTapAt(
+            details.localPosition,
+            globalPosition: details.globalPosition,
+          );
           if (bar != null) onMeasureTap(bar);
         }
         if (onNoteTap != null) {
-          final note = painter.noteTapAt(details.localPosition,
-              globalPosition: details.globalPosition);
+          final note = painter.noteTapAt(
+            details.localPosition,
+            globalPosition: details.globalPosition,
+          );
           if (note != null) onNoteTap(note);
         }
       },
@@ -218,7 +225,9 @@ class _GrandStaffState extends State<GrandStaff> {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
-          return Center(child: Text('Failed to load metadata: ${snapshot.error}'));
+          return Center(
+            child: Text('Failed to load metadata: ${snapshot.error}'),
+          );
         }
         if (widget._groups.every((g) => g.staves.isEmpty)) {
           return const SizedBox.shrink();
@@ -226,7 +235,8 @@ class _GrandStaffState extends State<GrandStaff> {
 
         return LayoutBuilder(
           builder: (context, constraints) {
-            final width = constraints.hasBoundedWidth && constraints.maxWidth.isFinite
+            final width =
+                constraints.hasBoundedWidth && constraints.maxWidth.isFinite
                 ? constraints.maxWidth
                 : 800.0;
             // Build the painter first so we can size to its (multi-system) height.

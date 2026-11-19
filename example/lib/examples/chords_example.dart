@@ -203,4 +203,3 @@ class ChordsExample extends StatelessWidget {
     );
   }
 }
-

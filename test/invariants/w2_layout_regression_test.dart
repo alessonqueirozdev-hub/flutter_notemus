@@ -21,11 +21,11 @@ void main() {
   Staff staffOf(List<Measure> measures) => Staff()..measures.addAll(measures);
 
   LayoutEngine engineOf(Staff staff) => LayoutEngine(
-        staff,
-        availableWidth: 900,
-        staffSpace: 12,
-        metadata: metadata,
-      );
+    staff,
+    availableWidth: 900,
+    staffSpace: 12,
+    metadata: metadata,
+  );
 
   Note quarter(String step, int octave, {double alter = 0.0, int? voice}) =>
       Note(
@@ -34,8 +34,7 @@ void main() {
         voice: voice,
       );
 
-  group('D-2: an octave bracket is a property of the STAFF, not of a voice',
-      () {
+  group('D-2: an octave bracket is a property of the STAFF, not of a voice', () {
     // Measured before the fix, on a two-voice bar whose voices both hold a C5:
     //   mark in voice 1 -> voice 1 +1, voice 2 +1
     //   mark in voice 2 -> voice 1  0, voice 2 +1
@@ -44,8 +43,11 @@ void main() {
     // <staff> and MEI's <octave> applies to every layer when @layer is absent,
     // so the staff-wide reading is the correct one.
     ({int voice1, int voice2}) shiftsWithMarkIn(int voiceNumber) {
-      final mark =
-          OctaveMark(type: OctaveType.va8, startMeasure: 0, endMeasure: 0);
+      final mark = OctaveMark(
+        type: OctaveType.va8,
+        startMeasure: 0,
+        endMeasure: 0,
+      );
       final n1 = Note(
         pitch: const Pitch(step: 'C', octave: 5, alter: 0.0),
         duration: const Duration(DurationType.whole),
@@ -83,59 +85,69 @@ void main() {
       expect(fromVoice1, fromVoice2);
     });
 
-    test('a monophonic bar still activates the bracket where it is written',
-        () {
-      final before = quarter('C', 5);
-      final after = quarter('C', 5);
-      final measure = Measure()
-        ..elements.addAll([
+    test(
+      'a monophonic bar still activates the bracket where it is written',
+      () {
+        final before = quarter('C', 5);
+        final after = quarter('C', 5);
+        final measure = Measure()
+          ..elements.addAll([
+            Clef(clefType: ClefType.treble),
+            TimeSignature(numerator: 4, denominator: 4),
+            before,
+            OctaveMark(type: OctaveType.va8, startMeasure: 0, endMeasure: 0),
+            after,
+            quarter('C', 5),
+            quarter('C', 5),
+          ]);
+        final engine = engineOf(staffOf([measure]));
+        engine.layout();
+        expect(engine.noteOctaveShifts[before] ?? 0, 0);
+        expect(engine.noteOctaveShifts[after], 1);
+        // C5 is staff position 1 in treble; displaced down an octave it is -6.
+        expect(engine.noteStaffPositions[before], 1);
+        expect(engine.noteStaffPositions[after], -6);
+      },
+    );
+
+    test(
+      'a bracket opened mid-bar in voice 2 leaves voice 1 alone BEFORE it',
+      () {
+        final early = quarter('C', 5, voice: 1);
+        final late = quarter('C', 5, voice: 1);
+        final measure = MultiVoiceMeasure.twoVoices(
+          voice1Elements: [
+            early,
+            quarter('C', 5, voice: 1),
+            late,
+            quarter('C', 5, voice: 1),
+          ],
+          voice2Elements: [
+            quarter('E', 4, voice: 2),
+            quarter('E', 4, voice: 2),
+            OctaveMark(type: OctaveType.va8, startMeasure: 0, endMeasure: 0),
+            quarter('E', 4, voice: 2),
+            quarter('E', 4, voice: 2),
+          ],
+        );
+        measure.elements.addAll([
           Clef(clefType: ClefType.treble),
           TimeSignature(numerator: 4, denominator: 4),
-          before,
-          OctaveMark(type: OctaveType.va8, startMeasure: 0, endMeasure: 0),
-          after,
-          quarter('C', 5),
-          quarter('C', 5),
         ]);
-      final engine = engineOf(staffOf([measure]));
-      engine.layout();
-      expect(engine.noteOctaveShifts[before] ?? 0, 0);
-      expect(engine.noteOctaveShifts[after], 1);
-      // C5 is staff position 1 in treble; displaced down an octave it is -6.
-      expect(engine.noteStaffPositions[before], 1);
-      expect(engine.noteStaffPositions[after], -6);
-    });
-
-    test('a bracket opened mid-bar in voice 2 leaves voice 1 alone BEFORE it',
-        () {
-      final early = quarter('C', 5, voice: 1);
-      final late = quarter('C', 5, voice: 1);
-      final measure = MultiVoiceMeasure.twoVoices(
-        voice1Elements: [
-          early,
-          quarter('C', 5, voice: 1),
-          late,
-          quarter('C', 5, voice: 1),
-        ],
-        voice2Elements: [
-          quarter('E', 4, voice: 2),
-          quarter('E', 4, voice: 2),
-          OctaveMark(type: OctaveType.va8, startMeasure: 0, endMeasure: 0),
-          quarter('E', 4, voice: 2),
-          quarter('E', 4, voice: 2),
-        ],
-      );
-      measure.elements.addAll([
-        Clef(clefType: ClefType.treble),
-        TimeSignature(numerator: 4, denominator: 4),
-      ]);
-      final engine = engineOf(staffOf([measure]));
-      engine.layout();
-      expect(engine.noteOctaveShifts[early] ?? 0, 0,
-          reason: 'the third beat is where the bracket starts');
-      expect(engine.noteOctaveShifts[late], 1,
-          reason: 'voice 1 must follow a bracket written in voice 2');
-    });
+        final engine = engineOf(staffOf([measure]));
+        engine.layout();
+        expect(
+          engine.noteOctaveShifts[early] ?? 0,
+          0,
+          reason: 'the third beat is where the bracket starts',
+        );
+        expect(
+          engine.noteOctaveShifts[late],
+          1,
+          reason: 'voice 1 must follow a bracket written in voice 2',
+        );
+      },
+    );
   });
 
   group('M-04: a grace note consumes no musical time', () {
@@ -157,13 +169,13 @@ void main() {
     List<Note> fourQuarters() => [for (var i = 0; i < 4; i++) quarter('C', 4)];
 
     List<Note> twoGraces() => [
-          for (var i = 0; i < 2; i++)
-            Note(
-              pitch: const Pitch(step: 'D', octave: 4, alter: 0.0),
-              duration: const Duration(DurationType.eighth),
-              isGraceNote: true,
-            ),
-        ];
+      for (var i = 0; i < 2; i++)
+        Note(
+          pitch: const Pitch(step: 'D', octave: 4, alter: 0.0),
+          duration: const Duration(DurationType.eighth),
+          isGraceNote: true,
+        ),
+    ];
 
     test('Measure.currentMusicalValue ignores them (was 1.1875)', () {
       final measure = barWithGraceNotes(fourQuarters(), twoGraces());
@@ -171,17 +183,21 @@ void main() {
       expect(measure.isValidlyFilled, isTrue);
     });
 
-    test('the four real notes land on the beat (was 0/0.1875/0.4375/0.6875)',
-        () {
-      final real = fourQuarters();
-      final engine = engineOf(staffOf([barWithGraceNotes(real, twoGraces())]));
-      final positioned = engine.layout();
-      final onsets = [
-        for (final note in real)
-          positioned.firstWhere((p) => identical(p.element, note)).onset,
-      ];
-      expect(onsets, [0.0, 0.25, 0.5, 0.75]);
-    });
+    test(
+      'the four real notes land on the beat (was 0/0.1875/0.4375/0.6875)',
+      () {
+        final real = fourQuarters();
+        final engine = engineOf(
+          staffOf([barWithGraceNotes(real, twoGraces())]),
+        );
+        final positioned = engine.layout();
+        final onsets = [
+          for (final note in real)
+            positioned.firstWhere((p) => identical(p.element, note)).onset,
+        ];
+        expect(onsets, [0.0, 0.25, 0.5, 0.75]);
+      },
+    );
 
     test('a grace note shares the onset of the note it ornaments', () {
       final real = fourQuarters();
@@ -196,10 +212,11 @@ void main() {
 
     test('a grace note still occupies horizontal width', () {
       final grace = twoGraces().first;
-      final engine = engineOf(staffOf([
-        Measure()
-          ..elements.addAll([Clef(clefType: ClefType.treble), grace])
-      ]));
+      final engine = engineOf(
+        staffOf([
+          Measure()..elements.addAll([Clef(clefType: ClefType.treble), grace]),
+        ]),
+      );
       engine.layout();
       expect(engine.elementWidth(grace), greaterThan(0.0));
     });
@@ -210,11 +227,11 @@ void main() {
         final measure = withGrace
             ? barWithGraceNotes(real, twoGraces())
             : (Measure()
-              ..elements.addAll([
-                Clef(clefType: ClefType.treble),
-                TimeSignature(numerator: 4, denominator: 4),
-                ...real,
-              ]));
+                ..elements.addAll([
+                  Clef(clefType: ClefType.treble),
+                  TimeSignature(numerator: 4, denominator: 4),
+                  ...real,
+                ]));
         final positioned = engineOf(staffOf([measure])).layout();
         return [
           for (final note in real)
@@ -228,20 +245,22 @@ void main() {
 
   group('M-16/M-17: the layout reserves what ChordRenderer draws', () {
     Chord chordOf(List<(String, int)> pitches, {double alter = 0.0}) => Chord(
-          notes: [
-            for (final p in pitches)
-              Note(
-                pitch: Pitch(step: p.$1, octave: p.$2, alter: alter),
-                duration: const Duration(DurationType.quarter),
-              ),
-          ],
-          duration: const Duration(DurationType.quarter),
-        );
+      notes: [
+        for (final p in pitches)
+          Note(
+            pitch: Pitch(step: p.$1, octave: p.$2, alter: alter),
+            duration: const Duration(DurationType.quarter),
+          ),
+      ],
+      duration: const Duration(DurationType.quarter),
+    );
 
     double leftExtentOf(Chord chord) {
-      final engine = engineOf(staffOf([
-        Measure()..elements.addAll([Clef(clefType: ClefType.treble), chord])
-      ]));
+      final engine = engineOf(
+        staffOf([
+          Measure()..elements.addAll([Clef(clefType: ClefType.treble), chord]),
+        ]),
+      );
       engine.layout();
       return engine.elementLeftExtent(chord);
     }
@@ -250,22 +269,30 @@ void main() {
       // Measured before: 25.82 px for 2, 3, 4 AND 5 accidentals — one column,
       // whatever the renderer packed.
       final two = leftExtentOf(chordOf([('C', 4), ('E', 4)], alter: -1.0));
-      final three =
-          leftExtentOf(chordOf([('C', 4), ('E', 4), ('G', 4)], alter: -1.0));
+      final three = leftExtentOf(
+        chordOf([('C', 4), ('E', 4), ('G', 4)], alter: -1.0),
+      );
       expect(three, greaterThan(two));
       // Greedy first-fit reuses column 0 as soon as the vertical clearance
       // allows, so 4 and 5 flats in thirds still need only 3 columns.
       final four = leftExtentOf(
-          chordOf([('C', 4), ('E', 4), ('G', 4), ('B', 4)], alter: -1.0));
+        chordOf([('C', 4), ('E', 4), ('G', 4), ('B', 4)], alter: -1.0),
+      );
       expect(four, closeTo(three, 1e-6));
     });
 
     test('it is byte-for-byte the renderer geometry, not an approximation', () {
-      final chord =
-          chordOf([('C', 4), ('E', 4), ('G', 4), ('B', 4)], alter: -1.0);
-      final engine = engineOf(staffOf([
-        Measure()..elements.addAll([Clef(clefType: ClefType.treble), chord])
-      ]));
+      final chord = chordOf([
+        ('C', 4),
+        ('E', 4),
+        ('G', 4),
+        ('B', 4),
+      ], alter: -1.0);
+      final engine = engineOf(
+        staffOf([
+          Measure()..elements.addAll([Clef(clefType: ClefType.treble), chord]),
+        ]),
+      );
       engine.layout();
       final drawn = ChordRenderer.resolveGeometry(
         chord: chord,
@@ -284,173 +311,211 @@ void main() {
       final seconds = chordOf([('C', 5), ('D', 5), ('E', 5)]);
       final thirds = chordOf([('C', 5), ('E', 5), ('G', 5)]);
 
-      final withSeconds = engineOf(staffOf([
-        Measure()..elements.addAll([Clef(clefType: ClefType.treble), seconds])
-      ]));
+      final withSeconds = engineOf(
+        staffOf([
+          Measure()
+            ..elements.addAll([Clef(clefType: ClefType.treble), seconds]),
+        ]),
+      );
       withSeconds.layout();
-      final withThirds = engineOf(staffOf([
-        Measure()..elements.addAll([Clef(clefType: ClefType.treble), thirds])
-      ]));
+      final withThirds = engineOf(
+        staffOf([
+          Measure()..elements.addAll([Clef(clefType: ClefType.treble), thirds]),
+        ]),
+      );
       withThirds.layout();
 
       final secondXs = [
-        for (final n in seconds.notes) withSeconds.noteXPositions[n]!
+        for (final n in seconds.notes) withSeconds.noteXPositions[n]!,
       ];
       final thirdXs = [
-        for (final n in thirds.notes) withThirds.noteXPositions[n]!
+        for (final n in thirds.notes) withThirds.noteXPositions[n]!,
       ];
 
       expect(thirdXs.toSet().length, 1, reason: 'no seconds, no displacement');
       expect(secondXs.toSet().length, 2, reason: 'D5 is pushed off the column');
-      expect(withSeconds.elementLeftExtent(seconds),
-          greaterThan(withThirds.elementLeftExtent(thirds)));
-      expect(withSeconds.elementWidth(seconds),
-          greaterThan(withThirds.elementWidth(thirds)));
+      expect(
+        withSeconds.elementLeftExtent(seconds),
+        greaterThan(withThirds.elementLeftExtent(thirds)),
+      );
+      expect(
+        withSeconds.elementWidth(seconds),
+        greaterThan(withThirds.elementWidth(thirds)),
+      );
     });
   });
 
-  group('M-23: a tuplet bracket and its numeral are counted in the headroom',
-      () {
-    Tuplet tripletOn(String step, int octave) => Tuplet(
-          actualNotes: 3,
-          normalNotes: 2,
-          elements: [
-            for (var i = 0; i < 3; i++)
-              Note(
-                pitch: Pitch(step: step, octave: octave, alter: 0.0),
-                duration: const Duration(DurationType.eighth),
-              ),
-          ],
-        );
-
-    test('a stem-up bracket on the middle line overflows the default block',
-        () {
-      // Measured before: contentTopOverflow == 0.00 for ANY tuplet, so the
-      // bracket and the "3" were clipped out of the raster and the PDF.
-      final tuplet = tripletOn('B', 4);
-      final engine = engineOf(staffOf([
-        Measure()
-          ..elements.addAll([
-            Clef(clefType: ClefType.treble),
-            TimeSignature(numerator: 4, denominator: 4),
-            tuplet,
-          ])
-      ]));
-      final positioned = engine.layout();
-      expect(engine.contentTopOverflow(positioned), greaterThan(20.0));
-    });
-
-    test('a bracket that fits demands no headroom', () {
-      final tuplet = tripletOn('C', 4);
-      final engine = engineOf(staffOf([
-        Measure()
-          ..elements.addAll([
-            Clef(clefType: ClefType.treble),
-            TimeSignature(numerator: 4, denominator: 4),
-            tuplet,
-          ])
-      ]));
-      final positioned = engine.layout();
-      expect(engine.contentTopOverflow(positioned), 0.0);
-    });
-  });
-
-  group('M-37: a mid-measure clef breaks the rhythmic chain', () {
-    test('the note after the clef is not charged a phantom note-to-note gap',
-        () {
-      final before = quarter('C', 4);
-      final after = quarter('D', 4);
-      final engine = engineOf(staffOf([
-        Measure()
-          ..elements.addAll([
-            Clef(clefType: ClefType.treble),
-            before,
-            Clef(clefType: ClefType.bass),
-            after,
-          ])
-      ]));
-      final positioned = engine.layout();
-      double xOf(MusicalElement e) =>
-          positioned.firstWhere((p) => identical(p.element, e)).position.dx;
-      // Measured: 100.92 px before the fix, 58.92 px after — the 42.00 px
-      // removed was a duration-proportional gap charged against the note on
-      // the OTHER side of the clef.
-      expect(xOf(after) - xOf(before), closeTo(58.92, 0.5));
-    });
-  });
-
-  group('M-39: a tuplet reserves its first child accidental', () {
-    test('a triplet opening on a double flat is not flush against its left',
-        () {
-      final tuplet = Tuplet(
+  group(
+    'M-23: a tuplet bracket and its numeral are counted in the headroom',
+    () {
+      Tuplet tripletOn(String step, int octave) => Tuplet(
         actualNotes: 3,
         normalNotes: 2,
         elements: [
-          Note(
-            pitch: const Pitch(step: 'C', octave: 4, alter: -2.0),
-            duration: const Duration(DurationType.eighth),
-          ),
-          Note(
-            pitch: const Pitch(step: 'D', octave: 4, alter: 0.0),
-            duration: const Duration(DurationType.eighth),
-          ),
-          Note(
-            pitch: const Pitch(step: 'E', octave: 4, alter: 0.0),
-            duration: const Duration(DurationType.eighth),
-          ),
+          for (var i = 0; i < 3; i++)
+            Note(
+              pitch: Pitch(step: step, octave: octave, alter: 0.0),
+              duration: const Duration(DurationType.eighth),
+            ),
         ],
       );
-      final engine = engineOf(staffOf([
-        Measure()..elements.addAll([Clef(clefType: ClefType.treble), tuplet])
-      ]));
-      engine.layout();
-      // Measured before: 0.00. After: the same 23.42 px a bare note carrying
-      // `accidentalDoubleFlat` reserves.
-      expect(engine.elementLeftExtent(tuplet), closeTo(23.42, 0.05));
-      expect(
-        engine.elementLeftExtent(tuplet),
-        closeTo(engine.elementLeftExtent(tuplet.elements.first), 1e-9),
+
+      test(
+        'a stem-up bracket on the middle line overflows the default block',
+        () {
+          // Measured before: contentTopOverflow == 0.00 for ANY tuplet, so the
+          // bracket and the "3" were clipped out of the raster and the PDF.
+          final tuplet = tripletOn('B', 4);
+          final engine = engineOf(
+            staffOf([
+              Measure()
+                ..elements.addAll([
+                  Clef(clefType: ClefType.treble),
+                  TimeSignature(numerator: 4, denominator: 4),
+                  tuplet,
+                ]),
+            ]),
+          );
+          final positioned = engine.layout();
+          expect(engine.contentTopOverflow(positioned), greaterThan(20.0));
+        },
       );
-    });
+
+      test('a bracket that fits demands no headroom', () {
+        final tuplet = tripletOn('C', 4);
+        final engine = engineOf(
+          staffOf([
+            Measure()
+              ..elements.addAll([
+                Clef(clefType: ClefType.treble),
+                TimeSignature(numerator: 4, denominator: 4),
+                tuplet,
+              ]),
+          ]),
+        );
+        final positioned = engine.layout();
+        expect(engine.contentTopOverflow(positioned), 0.0);
+      });
+    },
+  );
+
+  group('M-37: a mid-measure clef breaks the rhythmic chain', () {
+    test(
+      'the note after the clef is not charged a phantom note-to-note gap',
+      () {
+        final before = quarter('C', 4);
+        final after = quarter('D', 4);
+        final engine = engineOf(
+          staffOf([
+            Measure()
+              ..elements.addAll([
+                Clef(clefType: ClefType.treble),
+                before,
+                Clef(clefType: ClefType.bass),
+                after,
+              ]),
+          ]),
+        );
+        final positioned = engine.layout();
+        double xOf(MusicalElement e) =>
+            positioned.firstWhere((p) => identical(p.element, e)).position.dx;
+        // Measured: 100.92 px before the fix, 58.92 px after — the 42.00 px
+        // removed was a duration-proportional gap charged against the note on
+        // the OTHER side of the clef.
+        expect(xOf(after) - xOf(before), closeTo(58.92, 0.5));
+      },
+    );
   });
 
-  group('M-34: contentWidth does not double-count a left-hanging accidental',
+  group('M-39: a tuplet reserves its first child accidental', () {
+    test(
+      'a triplet opening on a double flat is not flush against its left',
       () {
-    test('an accidental behind the last note is not reported in front of it',
-        () {
-      final last = quarter('C', 4, alter: -2.0);
-      final engine = engineOf(staffOf([
-        Measure()
-          ..elements.addAll([
-            Clef(clefType: ClefType.treble),
-            TimeSignature(numerator: 4, denominator: 4),
-            quarter('D', 4),
-            quarter('E', 4),
-            quarter('F', 4),
-            last,
-          ])
-      ]));
-      final positioned = engine.layout();
-      final upToLast = positioned.sublist(
-        0,
-        positioned.indexWhere((p) => identical(p.element, last)) + 1,
-      );
-      final noteX =
-          positioned.firstWhere((p) => identical(p.element, last)).position.dx;
-      final trueRight =
-          noteX + engine.elementWidth(last) - engine.elementLeftExtent(last);
-      // Measured: 356.20 px reported for a right edge of 332.77 px — the
-      // 23.42 px accidental counted twice, once behind and once in front.
-      expect(engine.contentWidth(upToLast), closeTo(trueRight + 6.0, 1e-6));
-    });
+        final tuplet = Tuplet(
+          actualNotes: 3,
+          normalNotes: 2,
+          elements: [
+            Note(
+              pitch: const Pitch(step: 'C', octave: 4, alter: -2.0),
+              duration: const Duration(DurationType.eighth),
+            ),
+            Note(
+              pitch: const Pitch(step: 'D', octave: 4, alter: 0.0),
+              duration: const Duration(DurationType.eighth),
+            ),
+            Note(
+              pitch: const Pitch(step: 'E', octave: 4, alter: 0.0),
+              duration: const Duration(DurationType.eighth),
+            ),
+          ],
+        );
+        final engine = engineOf(
+          staffOf([
+            Measure()
+              ..elements.addAll([Clef(clefType: ClefType.treble), tuplet]),
+          ]),
+        );
+        engine.layout();
+        // Measured before: 0.00. After: the same 23.42 px a bare note carrying
+        // `accidentalDoubleFlat` reserves.
+        expect(engine.elementLeftExtent(tuplet), closeTo(23.42, 0.05));
+        expect(
+          engine.elementLeftExtent(tuplet),
+          closeTo(engine.elementLeftExtent(tuplet.elements.first), 1e-9),
+        );
+      },
+    );
   });
+
+  group(
+    'M-34: contentWidth does not double-count a left-hanging accidental',
+    () {
+      test(
+        'an accidental behind the last note is not reported in front of it',
+        () {
+          final last = quarter('C', 4, alter: -2.0);
+          final engine = engineOf(
+            staffOf([
+              Measure()
+                ..elements.addAll([
+                  Clef(clefType: ClefType.treble),
+                  TimeSignature(numerator: 4, denominator: 4),
+                  quarter('D', 4),
+                  quarter('E', 4),
+                  quarter('F', 4),
+                  last,
+                ]),
+            ]),
+          );
+          final positioned = engine.layout();
+          final upToLast = positioned.sublist(
+            0,
+            positioned.indexWhere((p) => identical(p.element, last)) + 1,
+          );
+          final noteX = positioned
+              .firstWhere((p) => identical(p.element, last))
+              .position
+              .dx;
+          final trueRight =
+              noteX +
+              engine.elementWidth(last) -
+              engine.elementLeftExtent(last);
+          // Measured: 356.20 px reported for a right edge of 332.77 px — the
+          // 23.42 px accidental counted twice, once behind and once in front.
+          expect(engine.contentWidth(upToLast), closeTo(trueRight + 6.0, 1e-6));
+        },
+      );
+    },
+  );
 
   group('M-47: a rest reserves the advance of the glyph it draws', () {
     double widthOf(DurationType type) {
       final rest = Rest(duration: Duration(type));
-      final engine = engineOf(staffOf([
-        Measure()..elements.addAll([Clef(clefType: ClefType.treble), rest])
-      ]));
+      final engine = engineOf(
+        staffOf([
+          Measure()..elements.addAll([Clef(clefType: ClefType.treble), rest]),
+        ]),
+      );
       engine.layout();
       return engine.elementWidth(rest);
     }
@@ -479,9 +544,11 @@ void main() {
       final dotted = Rest(
         duration: const Duration(DurationType.quarter, dots: 1),
       );
-      final engine = engineOf(staffOf([
-        Measure()..elements.addAll([Clef(clefType: ClefType.treble), dotted])
-      ]));
+      final engine = engineOf(
+        staffOf([
+          Measure()..elements.addAll([Clef(clefType: ClefType.treble), dotted]),
+        ]),
+      );
       engine.layout();
       expect(engine.elementWidth(dotted), greaterThan(plain));
     });

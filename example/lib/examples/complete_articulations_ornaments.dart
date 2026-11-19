@@ -244,7 +244,8 @@ class CompleteArticulationsOrnamentsExample extends StatelessWidget {
 
     // Grupeto
     measure.add(Note(
-      pitch: Pitch.withAccidental(step: 'F', octave: 5, accidentalType: AccidentalType.sharp),
+      pitch: Pitch.withAccidental(
+          step: 'F', octave: 5, accidentalType: AccidentalType.sharp),
       duration: const Duration(DurationType.quarter),
       ornaments: [Ornament(type: OrnamentType.turn)],
     ));
@@ -385,7 +386,8 @@ class CompleteArticulationsOrnamentsExample extends StatelessWidget {
 
     // Note with tenuto + grupeto
     measure.add(Note(
-      pitch: Pitch.withAccidental(step: 'C', octave: 5, accidentalType: AccidentalType.sharp),
+      pitch: Pitch.withAccidental(
+          step: 'C', octave: 5, accidentalType: AccidentalType.sharp),
       duration: const Duration(DurationType.quarter),
       articulations: [ArticulationType.tenuto],
       ornaments: [Ornament(type: OrnamentType.turn)],

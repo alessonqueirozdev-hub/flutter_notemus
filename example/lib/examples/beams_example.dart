@@ -127,12 +127,14 @@ class BeamsExample extends StatelessWidget {
             ),
             _buildSection(
               title: 'Thirty-second Notes (3 Beams)',
-              description: 'A group of thirty-second notes connected by three beams.',
+              description:
+                  'A group of thirty-second notes connected by three beams.',
               elements: thirtySecondNoteBeams,
             ),
             _buildSection(
               title: 'Sixty-fourth Notes (4 Beams)',
-              description: 'Group of sixty-fourth notes connected by four beams.',
+              description:
+                  'Group of sixty-fourth notes connected by four beams.',
               elements: sixtyFourthNoteBeams,
             ),
             _buildSection(
@@ -195,4 +197,3 @@ class BeamsExample extends StatelessWidget {
     );
   }
 }
-

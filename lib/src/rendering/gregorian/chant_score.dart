@@ -72,8 +72,9 @@ class _ChantScoreState extends State<ChantScore> {
         }
         return LayoutBuilder(
           builder: (context, constraints) {
-            final maxWidth =
-                constraints.maxWidth.isFinite ? constraints.maxWidth : 600.0;
+            final maxWidth = constraints.maxWidth.isFinite
+                ? constraints.maxWidth
+                : 600.0;
             final layout = GregorianLayout.build(
               widget.elements,
               widget.clef,

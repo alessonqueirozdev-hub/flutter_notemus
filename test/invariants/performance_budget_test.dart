@@ -34,11 +34,15 @@ Staff buildStaff(int measures, {int notesPerMeasure = 4}) {
       m.elements.add(TimeSignature(numerator: 4, denominator: 4));
     }
     for (var j = 0; j < notesPerMeasure; j++) {
-      m.elements.add(Note(
-        pitch: Pitch(
-            step: 'CDEFGAB'[rnd.nextInt(7)], octave: 4 + rnd.nextInt(2)),
-        duration: const Duration(DurationType.quarter),
-      ));
+      m.elements.add(
+        Note(
+          pitch: Pitch(
+            step: 'CDEFGAB'[rnd.nextInt(7)],
+            octave: 4 + rnd.nextInt(2),
+          ),
+          duration: const Duration(DurationType.quarter),
+        ),
+      );
     }
     list.add(m);
   }
@@ -58,13 +62,19 @@ void main() {
     final staff = buildStaff(measures);
     // Warm up: the first run pays for JIT and for the lazily-built accidental
     // map, which would otherwise be charged to the smallest sample.
-    LayoutEngine(staff,
-            availableWidth: 1000, staffSpace: 12, metadata: metadata)
-        .layout();
+    LayoutEngine(
+      staff,
+      availableWidth: 1000,
+      staffSpace: 12,
+      metadata: metadata,
+    ).layout();
     final sw = Stopwatch()..start();
-    LayoutEngine(staff,
-            availableWidth: 1000, staffSpace: 12, metadata: metadata)
-        .layout();
+    LayoutEngine(
+      staff,
+      availableWidth: 1000,
+      staffSpace: 12,
+      metadata: metadata,
+    ).layout();
     sw.stop();
     return sw.elapsedMilliseconds;
   }
@@ -77,22 +87,31 @@ void main() {
     // the headroom absorbs timer noise on a small baseline. Quadratic would be
     // 64x and fails loudly.
     final budget = math.max(small, 1) * 24;
-    expect(large, lessThan(budget),
-        reason: '200 measures took ${small}ms, 1600 took ${large}ms. '
-            'A super-linear jump here means the dry-run measurement, the '
-            'justification pass or the note-position re-sync went quadratic.');
+    expect(
+      large,
+      lessThan(budget),
+      reason:
+          '200 measures took ${small}ms, 1600 took ${large}ms. '
+          'A super-linear jump here means the dry-run measurement, the '
+          'justification pass or the note-position re-sync went quadratic.',
+    );
   });
 
   test('a large score lays out in a usable time', () {
     final ms = layoutMillis(1000);
-    expect(ms, lessThan(4000),
-        reason: '1000 measures took ${ms}ms. The dry-run width measurement '
-            'roughly doubles the per-measure work; the widget compensates by '
-            'memoizing, but the raw engine must stay usable.');
+    expect(
+      ms,
+      lessThan(4000),
+      reason:
+          '1000 measures took ${ms}ms. The dry-run width measurement '
+          'roughly doubles the per-measure work; the widget compensates by '
+          'memoizing, but the raw engine must stay usable.',
+    );
   });
 
-  testWidgets('paint cost does not grow with score size (culling works)',
-      (tester) async {
+  testWidgets('paint cost does not grow with score size (culling works)', (
+    tester,
+  ) async {
     int paintMillis(int measures) {
       final engine = LayoutEngine(
         buildStaff(measures),
@@ -141,33 +160,41 @@ void main() {
     // handful of milliseconds, so a pure ratio would flake on timer noise,
     // while a 16x regression would land near 200ms and still fail loudly.
     final ceiling = math.max(math.max(small, 2) * 6, 60);
-    expect(large, lessThan(ceiling),
-        reason: '50 measures painted in ${small}ms, 800 in ${large}ms '
-            '(ceiling ${ceiling}ms). If these scale together, the per-frame '
-            'system grouping or the per-frame renderer construction came back.');
+    expect(
+      large,
+      lessThan(ceiling),
+      reason:
+          '50 measures painted in ${small}ms, 800 in ${large}ms '
+          '(ceiling ${ceiling}ms). If these scale together, the per-frame '
+          'system grouping or the per-frame renderer construction came back.',
+    );
   });
 
   testWidgets('rebuilding the widget reuses the cached layout', (tester) async {
     final staff = buildStaff(400);
     var buildCount = 0;
 
-    await tester.pumpWidget(MaterialApp(
-      home: Scaffold(
-        body: StatefulBuilder(builder: (context, setState) {
-          buildCount++;
-          return SizedBox(
-            width: 800,
-            height: 600,
-            child: MusicScore(
-              staff: staff,
-              staffSpace: 12,
-              enableResponsiveLayout: false,
-              preventVerticalOverflow: false,
-            ),
-          );
-        }),
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: StatefulBuilder(
+            builder: (context, setState) {
+              buildCount++;
+              return SizedBox(
+                width: 800,
+                height: 600,
+                child: MusicScore(
+                  staff: staff,
+                  staffSpace: 12,
+                  enableResponsiveLayout: false,
+                  preventVerticalOverflow: false,
+                ),
+              );
+            },
+          ),
+        ),
       ),
-    ));
+    );
     await tester.pumpAndSettle();
     expect(buildCount, greaterThan(0));
 
@@ -179,9 +206,13 @@ void main() {
     }
     sw.stop();
 
-    expect(sw.elapsedMilliseconds, lessThan(2000),
-        reason: 'five rebuilds took ${sw.elapsedMilliseconds}ms. The layout '
-            'used to run inside LayoutBuilder on every build (twice, with the '
-            'adaptive pass), at ~82ms per pass for 800 measures.');
+    expect(
+      sw.elapsedMilliseconds,
+      lessThan(2000),
+      reason:
+          'five rebuilds took ${sw.elapsedMilliseconds}ms. The layout '
+          'used to run inside LayoutBuilder on every build (twice, with the '
+          'adaptive pass), at ~82ms per pass for 800 measures.',
+    );
   });
 }

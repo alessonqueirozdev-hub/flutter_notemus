@@ -216,10 +216,7 @@ abstract class BaseGlyphRenderer {
 
       final correctedY = finalY + baselineCorrection;
 
-      textPainter.paint(
-        canvas,
-        Offset(finalX, correctedY),
-      );
+      textPainter.paint(canvas, Offset(finalX, correctedY));
     }
 
     // Register the drawn bounds with the collision system (when enabled).
@@ -308,7 +305,10 @@ abstract class BaseGlyphRenderer {
   int get cacheSize => PerformanceOptimizer.glyphCacheSize;
 
   /// Picks the collision category from the glyph name and the draw options.
-  CollisionCategory _getCategoryForGlyph(String glyphName, GlyphDrawOptions options) {
+  CollisionCategory _getCategoryForGlyph(
+    String glyphName,
+    GlyphDrawOptions options,
+  ) {
     // Map from the glyph name first.
     if (glyphName.startsWith('notehead')) return CollisionCategory.notehead;
     if (glyphName.startsWith('accidental')) return CollisionCategory.accidental;
@@ -396,7 +396,8 @@ class GlyphDrawOptions {
     this.scale = 1.0,
     this.fallbackGlyph,
     this.disableCache = false,
-    this.trackBounds = true, // CORREÇÃO: Ativado por padrão para collision detection
+    this.trackBounds =
+        true, // CORREÇÃO: Ativado por padrão para collision detection
     this.collisionPriority,
     this.disableBaselineCorrection = false,
   });
@@ -432,7 +433,8 @@ class GlyphDrawOptions {
       disableCache: disableCache ?? this.disableCache,
       trackBounds: trackBounds ?? this.trackBounds,
       collisionPriority: collisionPriority ?? this.collisionPriority,
-      disableBaselineCorrection: disableBaselineCorrection ?? this.disableBaselineCorrection,
+      disableBaselineCorrection:
+          disableBaselineCorrection ?? this.disableBaselineCorrection,
     );
   }
 

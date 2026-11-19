@@ -25,7 +25,7 @@ class Caesura extends MusicalElement {
   final BreathType type;
 
   Caesura({this.type = BreathType.caesura});
-  
+
   /// Returns o glyph name SMuFL apropriado
   String get glyphName {
     switch (type) {

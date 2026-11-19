@@ -80,8 +80,11 @@ void main() {
         );
 
         final resolved = engine.noteStaffPositions[note];
-        expect(resolved, staffPosition,
-            reason: 'the fixture must actually sit where the test says');
+        expect(
+          resolved,
+          staffPosition,
+          reason: 'the fixture must actually sit where the test says',
+        );
         final noteY = engine.noteYPositions[note]!;
         final noteX = engine.noteXPositions[note]!;
         final stemUp = staffPosition < 0;
@@ -92,15 +95,17 @@ void main() {
           stemUp: stemUp,
           staffSpace: staffSpace,
         );
-        final stemLengthPx = positioning.calculateStemLength(
+        final stemLengthPx =
+            positioning.calculateStemLength(
               staffPosition: staffPosition,
               stemUp: stemUp,
               beamCount: 0,
             ) *
             staffSpace;
         final stemStartY = noteY + attachment.dy;
-        final tipY =
-            stemUp ? stemStartY - stemLengthPx : stemStartY + stemLengthPx;
+        final tipY = stemUp
+            ? stemStartY - stemLengthPx
+            : stemStartY + stemLengthPx;
         final stemX = noteX + attachment.dx;
 
         final box = tester.boundsOf(
@@ -109,15 +114,19 @@ void main() {
 
         // Residual gap, positive when the tip is still outside the box.
         final gap = stemUp ? box.top - tipY : tipY - box.bottom;
-        expect(gap, lessThanOrEqualTo(0.0),
-            reason: 'tip $tipY is outside $box by $gap px');
-
-        expect(tester.hitTest(Offset(stemX, tipY))?.element, same(note),
-            reason: 'a click on the very tip of the stem must select the note');
         expect(
-          tester
-              .hitTest(Offset(stemX, stemUp ? tipY + 1 : tipY - 1))
-              ?.element,
+          gap,
+          lessThanOrEqualTo(0.0),
+          reason: 'tip $tipY is outside $box by $gap px',
+        );
+
+        expect(
+          tester.hitTest(Offset(stemX, tipY))?.element,
+          same(note),
+          reason: 'a click on the very tip of the stem must select the note',
+        );
+        expect(
+          tester.hitTest(Offset(stemX, stemUp ? tipY + 1 : tipY - 1))?.element,
           same(note),
           reason: 'one pixel inside the tip must select the note',
         );
@@ -157,24 +166,24 @@ void main() {
           engine: engine,
         );
 
-        final positions = [
-          for (final n in notes) engine.noteStaffPositions[n]!,
-        ]..sort((a, b) => b.compareTo(a)); // highest first, as ChordRenderer
+        final positions = [for (final n in notes) engine.noteStaffPositions[n]!]
+          ..sort((a, b) => b.compareTo(a)); // highest first, as ChordRenderer
 
         // `ChordRenderer.resolveStemDirection`: the note furthest from the
         // middle line decides.
-        final extreme =
-            positions.reduce((a, b) => a.abs() >= b.abs() ? a : b);
+        final extreme = positions.reduce((a, b) => a.abs() >= b.abs() ? a : b);
         final stemUp = extreme < 0;
         // `stemNoteIndex = stemUp ? positions.length - 1 : 0` over that list.
         final stemPosition = stemUp ? positions.last : positions.first;
-        final stemNote = notes
-            .firstWhere((n) => engine.noteStaffPositions[n] == stemPosition);
+        final stemNote = notes.firstWhere(
+          (n) => engine.noteStaffPositions[n] == stemPosition,
+        );
         final stemNoteY = engine.noteYPositions[stemNote]!;
-        final baseX = engine.noteXPositions[chord] ??
-            engine.noteXPositions[stemNote]!;
+        final baseX =
+            engine.noteXPositions[chord] ?? engine.noteXPositions[stemNote]!;
 
-        final stemLengthPx = positioning.calculateChordStemLength(
+        final stemLengthPx =
+            positioning.calculateChordStemLength(
               noteStaffPositions: positions,
               stemUp: stemUp,
               beamCount: 0,
@@ -186,9 +195,11 @@ void main() {
           stemUp: stemUp,
           staffSpace: staffSpace,
         );
-        final tipY =
-            stemUp ? stemStartY - stemLengthPx : stemStartY + stemLengthPx;
-        final stemX = baseX +
+        final tipY = stemUp
+            ? stemStartY - stemLengthPx
+            : stemStartY + stemLengthPx;
+        final stemX =
+            baseX +
             positioning
                 .calculateStemAttachmentOffset(
                   noteheadGlyphName: 'noteheadBlack',
@@ -201,10 +212,16 @@ void main() {
           laid.elements.firstWhere((e) => identical(e.element, chord)),
         );
         final gap = stemUp ? box.top - tipY : tipY - box.bottom;
-        expect(gap, lessThanOrEqualTo(0.0),
-            reason: 'chord tip $tipY is outside $box by $gap px');
-        expect(tester.hitTest(Offset(stemX, tipY))?.element, same(chord),
-            reason: 'a click on the chord stem tip must select the chord');
+        expect(
+          gap,
+          lessThanOrEqualTo(0.0),
+          reason: 'chord tip $tipY is outside $box by $gap px',
+        );
+        expect(
+          tester.hitTest(Offset(stemX, tipY))?.element,
+          same(chord),
+          reason: 'a click on the chord stem tip must select the chord',
+        );
       });
     }
   });
@@ -231,7 +248,8 @@ void main() {
       stemUp: true,
       staffSpace: staffSpace,
     );
-    final tipY = noteY +
+    final tipY =
+        noteY +
         attachment.dy -
         positioning.calculateStemLength(
               staffPosition: -6,
@@ -242,7 +260,8 @@ void main() {
 
     // Where `FlagRenderer.render` puts `flag8thUp`.
     final anchor = positioning.getFlagAnchor('flag8thUp');
-    final flagX = noteX +
+    final flagX =
+        noteX +
         attachment.dx -
         anchor.dx * staffSpace -
         (positioning.stemThickness / 2) * staffSpace;
@@ -260,8 +279,11 @@ void main() {
       Offset((flagLeft + flagRight) / 2, flagTop + 1),
       Offset((flagLeft + flagRight) / 2, flagBottom - 1),
     ]) {
-      expect(tester.hitTest(point)?.element, same(note),
-          reason: 'a click on the flag at $point must select the note');
+      expect(
+        tester.hitTest(point)?.element,
+        same(note),
+        reason: 'a click on the flag at $point must select the note',
+      );
     }
   });
 
@@ -288,17 +310,16 @@ void main() {
       // Where `LedgerLineRenderer.render` draws them.
       final noteX = engine.noteXPositions[note]!;
       final head = metadata.getGlyphInfo('noteheadBlack')!.boundingBox!;
-      final centreX =
-          noteX + ((head.bBoxSwX + head.bBoxNeX) / 2) * staffSpace;
+      final centreX = noteX + ((head.bBoxSwX + head.bBoxNeX) / 2) * staffSpace;
       final extension =
           metadata.getEngravingDefault('legerLineExtension', 0.4) * staffSpace;
-      final half =
-          ((head.bBoxNeX - head.bBoxSwX) * staffSpace) / 2 + extension;
+      final half = ((head.bBoxNeX - head.bBoxSwX) * staffSpace) / 2 + extension;
 
       // MEASURED before the fix: the ledger lines ran 23.76 px wide against a
       // 18.90 px box, so 2.43 px of line at each end picked nothing.
-      for (final position
-          in StaffPositionCalculator.getLedgerLinePositions(staffPosition)) {
+      for (final position in StaffPositionCalculator.getLedgerLinePositions(
+        staffPosition,
+      )) {
         final y = StaffPositionCalculator.toPixelY(
           position,
           staffSpace,
@@ -307,8 +328,11 @@ void main() {
               .staffBaselineY,
         );
         for (final x in [centreX - half, centreX, centreX + half]) {
-          expect(tester.hitTest(Offset(x, y))?.element, same(note),
-              reason: 'ledger line at staff position $position, x $x');
+          expect(
+            tester.hitTest(Offset(x, y))?.element,
+            same(note),
+            reason: 'ledger line at staff position $position, x $x',
+          );
         }
       }
     });

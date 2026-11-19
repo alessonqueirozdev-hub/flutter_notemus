@@ -25,32 +25,40 @@ void main() {
   });
 
   BeamRenderer rendererAt(double staffSpace) => BeamRenderer(
-        theme: const MusicScoreTheme(),
-        staffSpace: staffSpace,
-        noteheadWidth: metadata.getGlyphWidth('noteheadBlack') * staffSpace,
-        positioningEngine: SMuFLPositioningEngine(metadataLoader: metadata),
-      );
+    theme: const MusicScoreTheme(),
+    staffSpace: staffSpace,
+    noteheadWidth: metadata.getGlyphWidth('noteheadBlack') * staffSpace,
+    positioningEngine: SMuFLPositioningEngine(metadataLoader: metadata),
+  );
 
   group('BeamRenderer geometry comes from engravingDefaults', () {
-    test('beam thickness and gap equal the font metadata, not old literals',
-        () {
-      // The bundled font is Bravura: beamThickness 0.5, beamSpacing 0.25.
-      final thicknessSpaces = metadata.getEngravingDefault('beamThickness', -1);
-      final spacingSpaces = metadata.getEngravingDefault('beamSpacing', -1);
-      expect(thicknessSpaces, 0.5,
-          reason: 'bravura_metadata.json is the source of truth');
-      expect(spacingSpaces, 0.25);
+    test(
+      'beam thickness and gap equal the font metadata, not old literals',
+      () {
+        // The bundled font is Bravura: beamThickness 0.5, beamSpacing 0.25.
+        final thicknessSpaces = metadata.getEngravingDefault(
+          'beamThickness',
+          -1,
+        );
+        final spacingSpaces = metadata.getEngravingDefault('beamSpacing', -1);
+        expect(
+          thicknessSpaces,
+          0.5,
+          reason: 'bravura_metadata.json is the source of truth',
+        );
+        expect(spacingSpaces, 0.25);
 
-      const double staffSpace = 40.0;
-      final r = rendererAt(staffSpace);
+        const double staffSpace = 40.0;
+        final r = rendererAt(staffSpace);
 
-      expect(r.beamThickness, closeTo(thicknessSpaces * staffSpace, 1e-9));
-      expect(r.beamGap, closeTo(spacingSpaces * staffSpace, 1e-9));
+        expect(r.beamThickness, closeTo(thicknessSpaces * staffSpace, 1e-9));
+        expect(r.beamGap, closeTo(spacingSpaces * staffSpace, 1e-9));
 
-      // The literals that used to be here, pinned so a re-hardcode is loud.
-      expect(r.beamThickness, isNot(closeTo(0.4 * staffSpace, 1e-9)));
-      expect(r.beamGap, isNot(closeTo(0.60 * staffSpace, 1e-9)));
-    });
+        // The literals that used to be here, pinned so a re-hardcode is loud.
+        expect(r.beamThickness, isNot(closeTo(0.4 * staffSpace, 1e-9)));
+        expect(r.beamGap, isNot(closeTo(0.60 * staffSpace, 1e-9)));
+      },
+    );
 
     test('stem thickness comes from engravingDefaults.stemThickness', () {
       const double staffSpace = 40.0;
@@ -59,22 +67,24 @@ void main() {
       expect(rendererAt(staffSpace).stemThickness, closeTo(expected, 1e-9));
     });
 
-    test('the stacked beam height follows the metadata at every beam count',
-        () {
-      // Measured at staffSpace = 40 px by counting dark pixel runs down a
-      // column in the middle of a rendered two-level group:
-      //   hardcoded (0.40/0.60): band 16 px, gap 24 px, stack 56 px = 1.40 SS
-      //   metadata  (0.50/0.25): band 20 px, gap 10 px, stack 50 px = 1.25 SS
-      // The conformant stack is SHORTER, not heavier, which is why no
-      // corrective scale factor is applied on top of the metadata.
-      const double staffSpace = 40.0;
-      final r = rendererAt(staffSpace);
+    test(
+      'the stacked beam height follows the metadata at every beam count',
+      () {
+        // Measured at staffSpace = 40 px by counting dark pixel runs down a
+        // column in the middle of a rendered two-level group:
+        //   hardcoded (0.40/0.60): band 16 px, gap 24 px, stack 56 px = 1.40 SS
+        //   metadata  (0.50/0.25): band 20 px, gap 10 px, stack 50 px = 1.25 SS
+        // The conformant stack is SHORTER, not heavier, which is why no
+        // corrective scale factor is applied on top of the metadata.
+        const double staffSpace = 40.0;
+        final r = rendererAt(staffSpace);
 
-      expect(r.calculateTotalBeamHeight(0), 0);
-      expect(r.calculateTotalBeamHeight(1), closeTo(20.0, 1e-9));
-      expect(r.calculateTotalBeamHeight(2), closeTo(50.0, 1e-9));
-      expect(r.calculateTotalBeamHeight(3), closeTo(80.0, 1e-9));
-    });
+        expect(r.calculateTotalBeamHeight(0), 0);
+        expect(r.calculateTotalBeamHeight(1), closeTo(20.0, 1e-9));
+        expect(r.calculateTotalBeamHeight(2), closeTo(50.0, 1e-9));
+        expect(r.calculateTotalBeamHeight(3), closeTo(80.0, 1e-9));
+      },
+    );
 
     test('geometry scales linearly with staffSpace', () {
       final small = rendererAt(10.0);

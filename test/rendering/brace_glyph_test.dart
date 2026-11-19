@@ -59,10 +59,7 @@ void main() {
         ),
         theme: const MusicScoreTheme(),
       );
-      final group = StaffGroup(
-        staves: [Staff()],
-        bracket: BracketType.brace,
-      );
+      final group = StaffGroup(staves: [Staff()], bracket: BracketType.brace);
 
       final recorder = ui.PictureRecorder();
       final canvas = ui.Canvas(recorder);

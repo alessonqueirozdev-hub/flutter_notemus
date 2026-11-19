@@ -386,9 +386,11 @@ class _MusicScoreState extends State<MusicScore> {
                   position: position,
                   elements: layout.result.elements,
                   staffSpace: staffSpace,
-                  topInset:
-                      layout.engine.contentTopOverflow(layout.result.elements),
-                  color: widget.theme.playheadColor ??
+                  topInset: layout.engine.contentTopOverflow(
+                    layout.result.elements,
+                  ),
+                  color:
+                      widget.theme.playheadColor ??
                       widget.theme.noteheadColor.withValues(alpha: 0.65),
                 ),
               ),
@@ -415,22 +417,27 @@ class _MusicScoreState extends State<MusicScore> {
       onTapUp: (details) {
         final elements = layout.result.elements;
         // The painter draws everything shifted down by the top inset.
-        final point = details.localPosition -
+        final point =
+            details.localPosition -
             Offset(0, layout.engine.contentTopOverflow(elements));
         if (onMeasureTap != null) {
           // Only the tapped system: wrapped systems share one x range.
           final system = systemAtY(elements, point.dy);
           final index = measureIndexAtX(
-              elements.where((e) => e.system == system), point.dx,
-              engine: layout.engine);
+            elements.where((e) => e.system == system),
+            point.dx,
+            engine: layout.engine,
+          );
           if (index != null) {
-            onMeasureTap(ScoreMeasureTap(
-              measureIndex: index,
-              measureNumber: layout.engine.measureNumbers[index] ?? index + 1,
-              staffIndex: 0,
-              localPosition: details.localPosition,
-              globalPosition: details.globalPosition,
-            ));
+            onMeasureTap(
+              ScoreMeasureTap(
+                measureIndex: index,
+                measureNumber: layout.engine.measureNumbers[index] ?? index + 1,
+                staffIndex: 0,
+                localPosition: details.localPosition,
+                globalPosition: details.globalPosition,
+              ),
+            );
           }
         }
         if (onNoteTap != null) {
@@ -443,16 +450,19 @@ class _MusicScoreState extends State<MusicScore> {
             );
           }
           final hit = _tester!.hitTest(point, tolerance: staffSpace);
-          final note =
-              hit == null ? null : noteForHit(hit, layout.engine, point);
+          final note = hit == null
+              ? null
+              : noteForHit(hit, layout.engine, point);
           if (hit != null && note != null) {
-            onNoteTap(ScoreNoteTap(
-              note: note,
-              measureIndex: hit.measureIndex,
-              staffIndex: 0,
-              localPosition: details.localPosition,
-              globalPosition: details.globalPosition,
-            ));
+            onNoteTap(
+              ScoreNoteTap(
+                note: note,
+                measureIndex: hit.measureIndex,
+                staffIndex: 0,
+                localPosition: details.localPosition,
+                globalPosition: details.globalPosition,
+              ),
+            );
           }
         }
       },
@@ -636,13 +646,15 @@ class _MusicScoreState extends State<MusicScore> {
                             size: Size(canvasWidth, totalHeight),
                             painter: MusicScorePainter(
                               positionedElements: layout.result.elements,
-                              positionedElementsSignature: layout.result.signature,
+                              positionedElementsSignature:
+                                  layout.result.signature,
                               metadata: _metadata,
                               theme: widget.theme,
                               staffSpace: effectiveStaffSpace,
                               layoutEngine: layout.engine,
-                              topInset: layout.engine
-                                  .contentTopOverflow(layout.result.elements),
+                              topInset: layout.engine.contentTopOverflow(
+                                layout.result.elements,
+                              ),
                               viewportSize: viewportSize,
                               horizontalController: _horizontalController,
                               verticalController: _verticalController,
