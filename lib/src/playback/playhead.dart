@@ -32,7 +32,8 @@ double? playheadX(
   final byOnset = <double, double>{};
   for (final positioned in elements) {
     final e = positioned.element;
-    final rhythmic = e is Note && !e.isGraceNote ||
+    final rhythmic =
+        e is Note && !e.isGraceNote ||
         e is Rest ||
         e is Chord ||
         e is Tuplet ||
@@ -52,7 +53,9 @@ double? playheadX(
     for (final onset in onsets) (at: onset - start, x: byOnset[onset]!),
   ];
   if (closingX != null && closingX > anchors.last.x) {
-    final end = measureLength > anchors.last.at ? measureLength : anchors.last.at;
+    final end = measureLength > anchors.last.at
+        ? measureLength
+        : anchors.last.at;
     anchors.add((at: end, x: closingX));
   }
 
@@ -80,7 +83,10 @@ double? playheadX(
 /// jumping. The next bar's opening barline closes this one; failing that,
 /// the next bar's first element — on the same system only, since a bar
 /// ending a line is not closed by anything on the line below.
-double? closingBarlineX(Iterable<PositionedElement> elements, int measureIndex) {
+double? closingBarlineX(
+  Iterable<PositionedElement> elements,
+  int measureIndex,
+) {
   double? close;
   int? system;
   for (final positioned in elements) {

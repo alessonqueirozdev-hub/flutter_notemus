@@ -44,24 +44,29 @@ void main() {
     List<Note> notesOf(Staff s) =>
         s.measures.expand((m) => m.elements).whereType<Note>().toList();
 
-    test('cautionary/parentheses -> parentheses; bracket/editorial -> brackets',
-        () {
-      final xml = score(
-        '<note><pitch><step>C</step><octave>5</octave><alter>1</alter></pitch>'
-        '<duration>1</duration><type>quarter</type>'
-        '<accidental cautionary="yes">sharp</accidental></note>'
-        '<note><pitch><step>A</step><octave>4</octave><alter>-1</alter></pitch>'
-        '<duration>1</duration><type>quarter</type>'
-        '<accidental bracket="yes">flat</accidental></note>'
-        '<note><pitch><step>G</step><octave>4</octave><alter>1</alter></pitch>'
-        '<duration>1</duration><type>quarter</type>'
-        '<accidental>sharp</accidental></note>',
-      );
-      final notes = notesOf(MusicXMLParser.parseMusicXML(xml));
-      expect(notes[0].accidentalParenthesis, AccidentalParenthesis.parentheses);
-      expect(notes[1].accidentalParenthesis, AccidentalParenthesis.brackets);
-      expect(notes[2].accidentalParenthesis, AccidentalParenthesis.none);
-    });
+    test(
+      'cautionary/parentheses -> parentheses; bracket/editorial -> brackets',
+      () {
+        final xml = score(
+          '<note><pitch><step>C</step><octave>5</octave><alter>1</alter></pitch>'
+          '<duration>1</duration><type>quarter</type>'
+          '<accidental cautionary="yes">sharp</accidental></note>'
+          '<note><pitch><step>A</step><octave>4</octave><alter>-1</alter></pitch>'
+          '<duration>1</duration><type>quarter</type>'
+          '<accidental bracket="yes">flat</accidental></note>'
+          '<note><pitch><step>G</step><octave>4</octave><alter>1</alter></pitch>'
+          '<duration>1</duration><type>quarter</type>'
+          '<accidental>sharp</accidental></note>',
+        );
+        final notes = notesOf(MusicXMLParser.parseMusicXML(xml));
+        expect(
+          notes[0].accidentalParenthesis,
+          AccidentalParenthesis.parentheses,
+        );
+        expect(notes[1].accidentalParenthesis, AccidentalParenthesis.brackets);
+        expect(notes[2].accidentalParenthesis, AccidentalParenthesis.none);
+      },
+    );
   });
 
   group('MusicXML multi-part / multi-staff import', () {
@@ -69,7 +74,8 @@ void main() {
         s.measures.expand((m) => m.elements).whereType<Note>().toList();
 
     test('each <part> becomes its own staff in the Score (SATB/ensemble)', () {
-      const xml = '<score-partwise version="4.0"><part-list>'
+      const xml =
+          '<score-partwise version="4.0"><part-list>'
           '<score-part id="P1"><part-name>Soprano</part-name></score-part>'
           '<score-part id="P2"><part-name>Bass</part-name></score-part>'
           '</part-list>'
@@ -87,7 +93,8 @@ void main() {
     });
 
     test('a 2-staff part (piano) splits by <staff> with per-staff clefs', () {
-      const xml = '<score-partwise version="4.0"><part-list>'
+      const xml =
+          '<score-partwise version="4.0"><part-list>'
           '<score-part id="P1"><part-name>Piano</part-name></score-part>'
           '</part-list><part id="P1"><measure number="1">'
           '<attributes><divisions>1</divisions><staves>2</staves>'
@@ -105,8 +112,7 @@ void main() {
       final s2 = score.allStaves[1];
       expect(staffNotes(s1).single.pitch.octave, 5);
       expect(staffNotes(s2).single.pitch.octave, 3);
-      Clef clefOf(Staff s) =>
-          s.measures.first.elements.whereType<Clef>().first;
+      Clef clefOf(Staff s) => s.measures.first.elements.whereType<Clef>().first;
       expect(clefOf(s1).actualClefType, ClefType.treble);
       expect(clefOf(s2).actualClefType, ClefType.bass);
       // The piano part is one braced StaffGroup (grand staff).
@@ -116,7 +122,8 @@ void main() {
     });
 
     test('separate parts become separate staff groups', () {
-      const xml = '<score-partwise version="4.0"><part-list>'
+      const xml =
+          '<score-partwise version="4.0"><part-list>'
           '<score-part id="P1"><part-name>Soprano</part-name></score-part>'
           '<score-part id="P2"><part-name>Bass</part-name></score-part>'
           '</part-list>'
@@ -137,7 +144,8 @@ void main() {
           '<note><pitch><step>$s</step><octave>$o</octave></pitch>'
           '<duration>1</duration><type>eighth</type><voice>1</voice>'
           '<beam number="1">$beam</beam><staff>$staff</staff></note>';
-      final xml = '<score-partwise version="4.0"><part-list>'
+      final xml =
+          '<score-partwise version="4.0"><part-list>'
           '<score-part id="P1"><part-name>Piano</part-name></score-part>'
           '</part-list><part id="P1"><measure number="1">'
           '<attributes><divisions>1</divisions><staves>2</staves>'
@@ -163,7 +171,8 @@ void main() {
     });
 
     test('a <part-group> brackets its member parts into one group', () {
-      const xml = '<score-partwise version="4.0"><part-list>'
+      const xml =
+          '<score-partwise version="4.0"><part-list>'
           '<part-group type="start" number="1">'
           '<group-symbol>bracket</group-symbol></part-group>'
           '<score-part id="P1"><part-name>Violin I</part-name></score-part>'

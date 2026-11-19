@@ -11,23 +11,23 @@ import '../src/music_model/bounding_box_support.dart';
 
 /// Define the articulation types that a note may have.
 enum ArticulationType {
-  staccato,         // Dot
-  staccatissimo,    // Triangular dot
-  accent,           // Accent
-  strongAccent,     // Strong accent
-  tenuto,           // Tenuto line
-  marcato,          // Combination of accent and tenuto
-  legato,           // Legato (usually as a slur)
-  portato,          // Combination of staccato and tenuto
-  upBow,            // Up bow (strings)
-  downBow,          // Down bow (strings)
-  harmonics,        // Harmonics
-  pizzicato,        // Pizzicato
-  snap,             // Snap pizzicato
-  thumb,            // Thumb fingering
-  stopped,          // Stopped notes (brass)
-  open,             // Open notes (brass)
-  halfStopped,      // Half-stopped (brass)
+  staccato, // Dot
+  staccatissimo, // Triangular dot
+  accent, // Accent
+  strongAccent, // Strong accent
+  tenuto, // Tenuto line
+  marcato, // Combination of accent and tenuto
+  legato, // Legato (usually as a slur)
+  portato, // Combination of staccato and tenuto
+  upBow, // Up bow (strings)
+  downBow, // Down bow (strings)
+  harmonics, // Harmonics
+  pizzicato, // Pizzicato
+  snap, // Snap pizzicato
+  thumb, // Thumb fingering
+  stopped, // Stopped notes (brass)
+  open, // Open notes (brass)
+  halfStopped, // Half-stopped (brass)
 }
 
 /// How a (cautionary/editorial) accidental is bracketed when displayed.

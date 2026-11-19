@@ -103,10 +103,13 @@ class SmuflMetadata {
     _glyphnames = json.decode(glyphnamesString);
 
     // Load metadata sections in a structured way
-    _glyphsWithAnchors = _metadata?['glyphsWithAnchors'] as Map<String, dynamic>?;
+    _glyphsWithAnchors =
+        _metadata?['glyphsWithAnchors'] as Map<String, dynamic>?;
     _glyphBBoxes = _metadata?['glyphBBoxes'] as Map<String, dynamic>?;
-    _glyphAdvanceWidths = _metadata?['glyphAdvanceWidths'] as Map<String, dynamic>?;
-    _engravingDefaults = _metadata?['engravingDefaults'] as Map<String, dynamic>?;
+    _glyphAdvanceWidths =
+        _metadata?['glyphAdvanceWidths'] as Map<String, dynamic>?;
+    _engravingDefaults =
+        _metadata?['engravingDefaults'] as Map<String, dynamic>?;
 
     _isLoaded = true;
     _loading = null;
@@ -187,7 +190,8 @@ class SmuflMetadata {
     // Gets anchors if disponível
     GlyphAnchors? anchors;
     if (_glyphsWithAnchors != null && _glyphsWithAnchors![glyphName] != null) {
-      final anchorsData = _glyphsWithAnchors![glyphName] as Map<String, dynamic>?;
+      final anchorsData =
+          _glyphsWithAnchors![glyphName] as Map<String, dynamic>?;
       if (anchorsData != null) {
         anchors = GlyphAnchors.fromMetadata(anchorsData);
       }

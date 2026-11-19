@@ -94,16 +94,17 @@ class BracketRenderer {
     final textPainter = TextPainter(
       text: TextSpan(
         text: name,
-        style: (theme.textStyle?.copyWith(
-                  fontSize: coordinates.staffSpace * 1.2,
-                  fontWeight: FontWeight.w500,
-                ) ??
-                TextStyle(
-                  fontSize: coordinates.staffSpace * 1.2,
-                  fontWeight: FontWeight.w500,
-                  color: theme.textColor,
-                ))
-            .withMusicTextFallback(),
+        style:
+            (theme.textStyle?.copyWith(
+                      fontSize: coordinates.staffSpace * 1.2,
+                      fontWeight: FontWeight.w500,
+                    ) ??
+                    TextStyle(
+                      fontSize: coordinates.staffSpace * 1.2,
+                      fontWeight: FontWeight.w500,
+                      color: theme.textColor,
+                    ))
+                .withMusicTextFallback(),
       ),
       textDirection: TextDirection.ltr,
     );
@@ -125,12 +126,7 @@ class BracketRenderer {
   /// Prefers the SMuFL `brace` glyph (U+E000), which is designed to be
   /// stretched vertically to span any number of staves. Falls back to a
   /// custom cubic path when SMuFL metadata or the glyph is unavailable.
-  void _renderBrace(
-    Canvas canvas,
-    double x,
-    double topY,
-    double height,
-  ) {
+  void _renderBrace(Canvas canvas, double x, double topY, double height) {
     if (_renderBraceGlyph(canvas, x, topY, height)) {
       return;
     }
@@ -143,12 +139,7 @@ class BracketRenderer {
   /// face the staves) and non-uniformly scaled on Y to span the group while
   /// keeping its designed horizontal thickness. Returns false when the glyph
   /// cannot be drawn so the caller can fall back.
-  bool _renderBraceGlyph(
-    Canvas canvas,
-    double x,
-    double topY,
-    double height,
-  ) {
+  bool _renderBraceGlyph(Canvas canvas, double x, double topY, double height) {
     final md = metadata;
     if (md == null || !md.hasGlyph('brace')) return false;
 
@@ -194,8 +185,9 @@ class BracketRenderer {
     // [topY, topY+height].
     final double bottomY = topY + height;
     final double baselineY = bottomY + (bbox.bBoxSwY * ss * scaleY);
-    final double baselineFromTop =
-        painter.computeDistanceToActualBaseline(TextBaseline.alphabetic);
+    final double baselineFromTop = painter.computeDistanceToActualBaseline(
+      TextBaseline.alphabetic,
+    );
 
     canvas.save();
     // Anchor the (scaled) glyph's right edge at x so the brace tips face the
@@ -323,8 +315,9 @@ class BracketRenderer {
       ),
       textDirection: TextDirection.ltr,
     )..layout();
-    final baselineFromTop =
-        painter.computeDistanceToActualBaseline(TextBaseline.alphabetic);
+    final baselineFromTop = painter.computeDistanceToActualBaseline(
+      TextBaseline.alphabetic,
+    );
     painter.paint(canvas, Offset(x, baselineY - baselineFromTop));
     return true;
   }
@@ -348,11 +341,7 @@ class BracketRenderer {
 
     final bottomY = topY + height;
 
-    canvas.drawLine(
-      Offset(x, topY),
-      Offset(x, bottomY),
-      paint,
-    );
+    canvas.drawLine(Offset(x, topY), Offset(x, bottomY), paint);
   }
 
   /// Get rendering Configurestion for bracket type
@@ -377,10 +366,7 @@ class ConnectedBarlineRenderer {
   final StaffCoordinateSystem coordinates;
   final MusicScoreTheme theme;
 
-  ConnectedBarlineRenderer({
-    required this.coordinates,
-    required this.theme,
-  });
+  ConnectedBarlineRenderer({required this.coordinates, required this.theme});
 
   /// Render connected barline spanning multiple staves
   ///
@@ -400,7 +386,8 @@ class ConnectedBarlineRenderer {
       ..color = theme.barlineColor
       ..style = PaintingStyle.stroke
       ..strokeWidth =
-          thickness ?? (coordinates.staffSpace * 0.16) // SMuFL standard
+          thickness ??
+          (coordinates.staffSpace * 0.16) // SMuFL standard
       ..strokeCap = StrokeCap.butt;
 
     // Draw vertical line from top staff to bottom staff

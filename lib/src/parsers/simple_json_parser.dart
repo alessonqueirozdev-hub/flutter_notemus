@@ -4,7 +4,7 @@ import 'dart:convert';
 import '../../core/core.dart';
 
 /// Parser for formato JSON simplificado with suporte a lyrics (lyrics)
-/// 
+///
 /// Formato aceito:
 /// ```json
 /// [
@@ -16,9 +16,8 @@ import '../../core/core.dart';
 /// ]
 /// ```
 class SimpleJsonParser {
-  
   /// Converts array JSON simplificado for Staff completo
-  /// 
+  ///
   /// Example:
   /// ```dart
   /// final jsonString = '''
@@ -27,10 +26,11 @@ class SimpleJsonParser {
   ///   {"note": "D4", "lyric": "Ré", "duration": "half"}
   /// ]
   /// ''';
-  /// 
+  ///
   /// final staff = SimpleJsonParser.parseSimpleNotes(jsonString);
   /// ```
-  static Staff parseSimpleNotes(String jsonString, {
+  static Staff parseSimpleNotes(
+    String jsonString, {
     ClefType clefType = ClefType.treble,
     int keySignatureFifths = 0,
     int timeSignatureNumerator = 4,
@@ -39,51 +39,53 @@ class SimpleJsonParser {
   }) {
     final List<dynamic> notesJson = jsonDecode(jsonString);
     final staff = Staff();
-    
+
     // criar first measure with atributos
     var currentMeasure = Measure();
     currentMeasure.add(Clef(clefType: clefType));
     currentMeasure.add(KeySignature(keySignatureFifths));
-    currentMeasure.add(TimeSignature(
-      numerator: timeSignatureNumerator,
-      denominator: timeSignatureDenominator,
-    ));
-    
+    currentMeasure.add(
+      TimeSignature(
+        numerator: timeSignatureNumerator,
+        denominator: timeSignatureDenominator,
+      ),
+    );
+
     double currentDuration = 0.0;
     final measureCapacity = timeSignatureNumerator / timeSignatureDenominator;
-    
+
     for (final noteJson in notesJson) {
       final note = _parseSimpleNote(noteJson);
       if (note == null) continue;
-      
+
       final noteDuration = note.duration.realValue;
-      
+
       // If a note not cabe no current measure, criar new measure
       if (currentDuration + noteDuration > measureCapacity) {
         if (autoBarlines) {
           currentMeasure.add(Barline(type: BarlineType.single));
         }
         staff.add(currentMeasure);
-        
+
         currentMeasure = Measure();
         currentDuration = 0.0;
       }
-      
+
       currentMeasure.add(note);
       currentDuration += noteDuration;
-      
+
       // If completou o measure exatamente, iniciar new
       if (currentDuration >= measureCapacity) {
         if (autoBarlines) {
           currentMeasure.add(Barline(type: BarlineType.single));
         }
         staff.add(currentMeasure);
-        
+
         currentMeasure = Measure();
         currentDuration = 0.0;
       }
     }
-    
+
     // add last measure if tiver notes
     if (currentMeasure.elements.isNotEmpty) {
       if (autoBarlines) {
@@ -91,29 +93,26 @@ class SimpleJsonParser {
       }
       staff.add(currentMeasure);
     }
-    
+
     return staff;
   }
-  
+
   /// Parse de a note no formato simplificado
   static Note? _parseSimpleNote(Map<String, dynamic> json) {
     final String? noteString = json['note'];
     if (noteString == null) return null;
-    
+
     final pitch = _parsePitchFromString(noteString);
     if (pitch == null) return null;
-    
+
     final String durationString = json['duration'] ?? 'quarter';
     final duration = _parseDuration(durationString);
-    
-    return Note(
-      pitch: pitch,
-      duration: duration,
-    );
+
+    return Note(pitch: pitch, duration: duration);
   }
-  
+
   /// Converts string de note for object Pitch
-  /// 
+  ///
   /// Formatos aceitos:
   /// - "C4" → Dó na 4ª oitava
   /// - "C#4" → Dó sharp na 4ª oitava
@@ -122,17 +121,17 @@ class SimpleJsonParser {
   /// - "Cbb4" → Dó dobrado flat
   static Pitch? _parsePitchFromString(String noteString) {
     if (noteString.isEmpty) return null;
-    
+
     // Extrair step (primeira lyric)
     final step = noteString[0].toUpperCase();
     if (!'ABCDEFG'.contains(step)) return null;
-    
+
     // Extrair alteração and oitava
     double alter = 0.0;
     int octave = 4; // Padrão
-    
+
     int index = 1;
-    
+
     // Parse de alterações (#, b)
     while (index < noteString.length) {
       if (noteString[index] == '#') {
@@ -145,23 +144,19 @@ class SimpleJsonParser {
         break;
       }
     }
-    
+
     // Parse de oitava (resto of the string)
     if (index < noteString.length) {
       octave = int.tryParse(noteString.substring(index)) ?? 4;
     }
-    
-    return Pitch(
-      step: step,
-      octave: octave,
-      alter: alter,
-    );
+
+    return Pitch(step: step, octave: octave, alter: alter);
   }
-  
+
   /// Converts string de duração for object Duration
   static Duration _parseDuration(String durationString) {
     DurationType type;
-    
+
     switch (durationString.toLowerCase()) {
       case 'whole':
       case 'semibreve':
@@ -194,12 +189,12 @@ class SimpleJsonParser {
       default:
         type = DurationType.quarter;
     }
-    
+
     return Duration(type);
   }
-  
+
   /// Renders Only a elemento isolado (ex: treble clef)
-  /// 
+  ///
   /// Example:
   /// ```dart
   /// final clefJson = '{"type": "clef", "clefType": "treble"}';
@@ -208,34 +203,34 @@ class SimpleJsonParser {
   static MusicalElement? parseSingleElement(String jsonString) {
     final Map<String, dynamic> json = jsonDecode(jsonString);
     final String type = json['type'] ?? '';
-    
+
     switch (type) {
       case 'clef':
         return _parseClef(json);
-        
+
       case 'keySignature':
         return _parseKeySignature(json);
-        
+
       case 'timeSignature':
         return _parseTimeSignature(json);
-        
+
       case 'note':
         return _parseSimpleNote(json);
-        
+
       case 'rest':
         return _parseRest(json);
-        
+
       case 'barline':
         return _parseBarline(json);
-        
+
       default:
         return null;
     }
   }
-  
+
   static Clef? _parseClef(Map<String, dynamic> json) {
     final String clefTypeString = json['clefType'] ?? 'treble';
-    
+
     ClefType type;
     switch (clefTypeString.toLowerCase()) {
       case 'treble':
@@ -269,30 +264,30 @@ class SimpleJsonParser {
       default:
         type = ClefType.treble;
     }
-    
+
     return Clef(clefType: type);
   }
-  
+
   static KeySignature? _parseKeySignature(Map<String, dynamic> json) {
     final int fifths = json['fifths'] ?? 0;
     return KeySignature(fifths);
   }
-  
+
   static TimeSignature? _parseTimeSignature(Map<String, dynamic> json) {
     final int numerator = json['numerator'] ?? 4;
     final int denominator = json['denominator'] ?? 4;
     return TimeSignature(numerator: numerator, denominator: denominator);
   }
-  
+
   static Rest? _parseRest(Map<String, dynamic> json) {
     final String durationString = json['duration'] ?? 'quarter';
     final duration = _parseDuration(durationString);
     return Rest(duration: duration);
   }
-  
+
   static Barline? _parseBarline(Map<String, dynamic> json) {
     final String typeString = json['barlineType'] ?? 'single';
-    
+
     BarlineType type;
     switch (typeString.toLowerCase()) {
       case 'single':
@@ -316,39 +311,39 @@ class SimpleJsonParser {
       default:
         type = BarlineType.single;
     }
-    
+
     return Barline(type: type);
   }
-  
+
   /// Converts array de notes simples for JSON
   static String notesToSimpleJson(List<Note> notes) {
     final List<Map<String, dynamic>> jsonArray = [];
-    
+
     for (final note in notes) {
       jsonArray.add({
         'note': _pitchToString(note.pitch),
         'duration': _durationToString(note.duration.type),
       });
     }
-    
+
     return jsonEncode(jsonArray);
   }
-  
+
   static String _pitchToString(Pitch pitch) {
     String result = pitch.step;
-    
+
     // add alterações
     if (pitch.alter > 0) {
       result += '#' * pitch.alter.toInt();
     } else if (pitch.alter < 0) {
       result += 'b' * (-pitch.alter).toInt();
     }
-    
+
     result += pitch.octave.toString();
-    
+
     return result;
   }
-  
+
   static String _durationToString(DurationType type) {
     switch (type) {
       case DurationType.whole:

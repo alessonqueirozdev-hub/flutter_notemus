@@ -64,9 +64,9 @@ class BeamGrouping {
           result.addAll(_createBeamGroup(beamableNotes));
           beamableNotes.clear();
         }
-        
+
         result.add(element);
-        
+
         // Atualizar position no measure
         if (element is Note) {
           currentBeatPosition += element.duration.realValue;
@@ -116,9 +116,9 @@ class BeamGrouping {
           result.addAll(_createBeamGroup(beamableNotes));
           beamableNotes.clear();
         }
-        
+
         result.add(element);
-        
+
         if (element is Note) {
           currentPosition += element.duration.realValue;
         } else if (element is Rest) {
@@ -141,7 +141,7 @@ class BeamGrouping {
     TimeSignature timeSignature,
   ) {
     final patterns = _getIrregularPattern(timeSignature);
-    
+
     final result = <MusicalElement>[];
     final beamableNotes = <Note>[];
     double currentPosition = 0.0;
@@ -151,12 +151,12 @@ class BeamGrouping {
     for (final element in elements) {
       if (element is Note && _isBeamable(element)) {
         final noteEnd = currentPosition + element.duration.realValue;
-        
+
         // Check if cruza default
         if (noteEnd > currentPatternEnd && beamableNotes.isNotEmpty) {
           result.addAll(_createBeamGroup(beamableNotes));
           beamableNotes.clear();
-          
+
           // Avançar for next default
           currentPatternIndex++;
           if (currentPatternIndex < patterns.length) {
@@ -171,9 +171,9 @@ class BeamGrouping {
           result.addAll(_createBeamGroup(beamableNotes));
           beamableNotes.clear();
         }
-        
+
         result.add(element);
-        
+
         if (element is Note) {
           currentPosition += element.duration.realValue;
         } else if (element is Rest) {
@@ -192,7 +192,7 @@ class BeamGrouping {
   /// Returns padrões de agrupamento for measures irregulares
   static List<double> _getIrregularPattern(TimeSignature timeSignature) {
     final key = '${timeSignature.numerator}/${timeSignature.denominator}';
-    
+
     switch (key) {
       case '5/8':
         return [0.375, 0.25]; // (3+2) ou [0.25, 0.375] para (2+3)
@@ -203,7 +203,8 @@ class BeamGrouping {
       default:
         // Default genérico: dividir igualmente
         final totalValue = timeSignature.measureValue;
-        final parts = (totalValue / 0.25).round(); // Dividir em tempos de semínima
+        final parts = (totalValue / 0.25)
+            .round(); // Dividir em tempos de semínima
         return List.filled(parts, 0.25);
     }
   }
@@ -211,9 +212,9 @@ class BeamGrouping {
   /// Checks if a note can be agrupada in beam
   static bool _isBeamable(Note note) {
     return note.duration.type == DurationType.eighth ||
-           note.duration.type == DurationType.sixteenth ||
-           note.duration.type == DurationType.thirtySecond ||
-           note.duration.type == DurationType.sixtyFourth;
+        note.duration.type == DurationType.sixteenth ||
+        note.duration.type == DurationType.thirtySecond ||
+        note.duration.type == DurationType.sixtyFourth;
   }
 
   /// Creates a grupo de beam with as notes fornecidas

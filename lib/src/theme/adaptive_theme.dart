@@ -42,82 +42,98 @@ class AdaptiveMusicScoreTheme extends MusicScoreTheme {
     this.minContrast = 4.5,
     this.preserveColorIdentity = true,
   }) : super(
-          // Basic elements
-          staffLineColor:
-              _adaptColor(Colors.black, backgroundColor, brightness),
-          noteheadColor:
-              _adaptColor(Colors.black, backgroundColor, brightness),
-          stemColor: _adaptColor(Colors.black, backgroundColor, brightness),
-          clefColor: _adaptColor(Colors.black, backgroundColor, brightness),
-          barlineColor: _adaptColor(Colors.black, backgroundColor, brightness),
-          timeSignatureColor:
-              _adaptColor(Colors.black, backgroundColor, brightness),
-          keySignatureColor:
-              _adaptColor(Colors.black, backgroundColor, brightness),
-          restColor: _adaptColor(Colors.black, backgroundColor, brightness),
-          articulationColor:
-              _adaptColor(Colors.black, backgroundColor, brightness),
+         // Basic elements
+         staffLineColor: _adaptColor(Colors.black, backgroundColor, brightness),
+         noteheadColor: _adaptColor(Colors.black, backgroundColor, brightness),
+         stemColor: _adaptColor(Colors.black, backgroundColor, brightness),
+         clefColor: _adaptColor(Colors.black, backgroundColor, brightness),
+         barlineColor: _adaptColor(Colors.black, backgroundColor, brightness),
+         timeSignatureColor: _adaptColor(
+           Colors.black,
+           backgroundColor,
+           brightness,
+         ),
+         keySignatureColor: _adaptColor(
+           Colors.black,
+           backgroundColor,
+           brightness,
+         ),
+         restColor: _adaptColor(Colors.black, backgroundColor, brightness),
+         articulationColor: _adaptColor(
+           Colors.black,
+           backgroundColor,
+           brightness,
+         ),
 
-          // Colored elements (preserve hue if enabled)
-          ornamentColor: _adaptColor(
-            const Color(0xFFE91E63), // Pink
-            backgroundColor,
-            brightness,
-            preserveHue: preserveColorIdentity,
-          ),
-          dynamicColor: _adaptColor(
-            const Color(0xFF388E3C), // Green
-            backgroundColor,
-            brightness,
-            preserveHue: preserveColorIdentity,
-          ),
-          tupletColor: _adaptColor(
-            const Color(0xFF7B1FA2), // Purple
-            backgroundColor,
-            brightness,
-            preserveHue: preserveColorIdentity,
-          ),
-          breathColor: _adaptColor(
-            const Color(0xFFFF5722), // Deep Orange
-            backgroundColor,
-            brightness,
-            preserveHue: preserveColorIdentity,
-          ),
-          slurColor: _adaptColor(Colors.black, backgroundColor, brightness),
-          tieColor: _adaptColor(Colors.black, backgroundColor, brightness),
-          beamColor: _adaptColor(Colors.black, backgroundColor, brightness),
-          accidentalColor:
-              _adaptColor(Colors.black, backgroundColor, brightness),
-          harmonicColor: _adaptColor(
-            const Color(0xFF2196F3), // Blue
-            backgroundColor,
-            brightness,
-            preserveHue: preserveColorIdentity,
-          ),
-          textColor: _adaptColor(Colors.black, backgroundColor, brightness),
-          repeatColor: _adaptColor(
-            const Color(0xFF9C27B0), // Purple
-            backgroundColor,
-            brightness,
-            preserveHue: preserveColorIdentity,
-          ),
-          octaveColor: _adaptColor(
-            const Color(0xFF00BCD4), // Cyan
-            backgroundColor,
-            brightness,
-            preserveHue: preserveColorIdentity,
-          ),
-          clusterColor: _adaptColor(
-            const Color(0xFFFF9800), // Orange
-            backgroundColor,
-            brightness,
-            preserveHue: preserveColorIdentity,
-          ),
-          caesuraColor:
-              _adaptColor(const Color(0xFFFF5722), backgroundColor, brightness),
-          metronomeColor: _adaptColor(
-              const Color(0xFF607D8B), backgroundColor, brightness),
-        );
+         // Colored elements (preserve hue if enabled)
+         ornamentColor: _adaptColor(
+           const Color(0xFFE91E63), // Pink
+           backgroundColor,
+           brightness,
+           preserveHue: preserveColorIdentity,
+         ),
+         dynamicColor: _adaptColor(
+           const Color(0xFF388E3C), // Green
+           backgroundColor,
+           brightness,
+           preserveHue: preserveColorIdentity,
+         ),
+         tupletColor: _adaptColor(
+           const Color(0xFF7B1FA2), // Purple
+           backgroundColor,
+           brightness,
+           preserveHue: preserveColorIdentity,
+         ),
+         breathColor: _adaptColor(
+           const Color(0xFFFF5722), // Deep Orange
+           backgroundColor,
+           brightness,
+           preserveHue: preserveColorIdentity,
+         ),
+         slurColor: _adaptColor(Colors.black, backgroundColor, brightness),
+         tieColor: _adaptColor(Colors.black, backgroundColor, brightness),
+         beamColor: _adaptColor(Colors.black, backgroundColor, brightness),
+         accidentalColor: _adaptColor(
+           Colors.black,
+           backgroundColor,
+           brightness,
+         ),
+         harmonicColor: _adaptColor(
+           const Color(0xFF2196F3), // Blue
+           backgroundColor,
+           brightness,
+           preserveHue: preserveColorIdentity,
+         ),
+         textColor: _adaptColor(Colors.black, backgroundColor, brightness),
+         repeatColor: _adaptColor(
+           const Color(0xFF9C27B0), // Purple
+           backgroundColor,
+           brightness,
+           preserveHue: preserveColorIdentity,
+         ),
+         octaveColor: _adaptColor(
+           const Color(0xFF00BCD4), // Cyan
+           backgroundColor,
+           brightness,
+           preserveHue: preserveColorIdentity,
+         ),
+         clusterColor: _adaptColor(
+           const Color(0xFFFF9800), // Orange
+           backgroundColor,
+           brightness,
+           preserveHue: preserveColorIdentity,
+         ),
+         caesuraColor: _adaptColor(
+           const Color(0xFFFF5722),
+           backgroundColor,
+           brightness,
+         ),
+         metronomeColor: _adaptColor(
+           const Color(0xFF607D8B),
+           backgroundColor,
+           brightness,
+         ),
+       );
 
   // ═══════════════════════════════════════════════════════════════════════
   // FACTORY CONSTRUCTORS
@@ -218,7 +234,8 @@ class AdaptiveMusicScoreTheme extends MusicScoreTheme {
     } else {
       // Simple black/white based on background luminance
       return background.computeLuminance() > 0.5
-          ? Colors.black87 // Dark foreground for light background
+          ? Colors
+                .black87 // Dark foreground for light background
           : const Color(0xDEFFFFFF); // Light foreground for dark background
     }
   }
@@ -243,14 +260,16 @@ class AdaptiveMusicScoreTheme extends MusicScoreTheme {
       return hsl
           .withLightness(0.7) // Increase lightness for visibility
           .withSaturation(
-              (hsl.saturation * 0.7).clamp(0.0, 1.0)) // Reduce saturation
+            (hsl.saturation * 0.7).clamp(0.0, 1.0),
+          ) // Reduce saturation
           .toColor();
     } else {
       // Light mode: darker and more saturated
       return hsl
           .withLightness(0.3) // Decrease lightness for contrast
           .withSaturation(
-              (hsl.saturation * 1.2).clamp(0.0, 1.0)) // Increase saturation
+            (hsl.saturation * 1.2).clamp(0.0, 1.0),
+          ) // Increase saturation
           .toColor();
     }
   }
@@ -304,10 +323,7 @@ class AdaptiveMusicScoreTheme extends MusicScoreTheme {
   /// final theme = AdaptiveMusicScoreTheme.fromContext(context);
   /// final adaptedRed = theme.adaptCustomColor(Colors.red);
   /// ```
-  Color adaptCustomColor(
-    Color color, {
-    bool preserveHue = true,
-  }) {
+  Color adaptCustomColor(Color color, {bool preserveHue = true}) {
     return _adaptColor(
       color,
       backgroundColor,
@@ -355,11 +371,7 @@ mixin ThemeAdapterMixin<T extends StatefulWidget> on State<T> {
     if (_adaptedTheme == null ||
         _lastBrightness != currentBrightness ||
         _lastBackgroundColor != currentBgColor) {
-      _adaptedTheme = _adaptTheme(
-        baseTheme,
-        currentBgColor,
-        currentBrightness,
-      );
+      _adaptedTheme = _adaptTheme(baseTheme, currentBgColor, currentBrightness);
 
       _lastBrightness = currentBrightness;
       _lastBackgroundColor = currentBgColor;

@@ -27,11 +27,31 @@ void main() {
     });
 
     test('Creates pitch with all accidental types', () {
-      final sharp = Pitch(step: 'C', octave: 4, accidentalType: AccidentalType.sharp);
-      final flat = Pitch(step: 'D', octave: 4, accidentalType: AccidentalType.flat);
-      final natural = Pitch(step: 'E', octave: 4, accidentalType: AccidentalType.natural);
-      final doubleSharp = Pitch(step: 'F', octave: 4, accidentalType: AccidentalType.doubleSharp);
-      final doubleFlat = Pitch(step: 'G', octave: 4, accidentalType: AccidentalType.doubleFlat);
+      final sharp = Pitch(
+        step: 'C',
+        octave: 4,
+        accidentalType: AccidentalType.sharp,
+      );
+      final flat = Pitch(
+        step: 'D',
+        octave: 4,
+        accidentalType: AccidentalType.flat,
+      );
+      final natural = Pitch(
+        step: 'E',
+        octave: 4,
+        accidentalType: AccidentalType.natural,
+      );
+      final doubleSharp = Pitch(
+        step: 'F',
+        octave: 4,
+        accidentalType: AccidentalType.doubleSharp,
+      );
+      final doubleFlat = Pitch(
+        step: 'G',
+        octave: 4,
+        accidentalType: AccidentalType.doubleFlat,
+      );
 
       expect(sharp.accidentalType, equals(AccidentalType.sharp));
       expect(flat.accidentalType, equals(AccidentalType.flat));
@@ -64,28 +84,44 @@ void main() {
 
     test('Sharps increase MIDI number by 1', () {
       final c4 = Pitch(step: 'C', octave: 4);
-      final cSharp4 = Pitch(step: 'C', octave: 4, accidentalType: AccidentalType.sharp);
+      final cSharp4 = Pitch(
+        step: 'C',
+        octave: 4,
+        accidentalType: AccidentalType.sharp,
+      );
 
       expect(cSharp4.midiNumber, equals(c4.midiNumber + 1));
     });
 
     test('Flats decrease MIDI number by 1', () {
       final d4 = Pitch(step: 'D', octave: 4);
-      final dFlat4 = Pitch(step: 'D', octave: 4, accidentalType: AccidentalType.flat);
+      final dFlat4 = Pitch(
+        step: 'D',
+        octave: 4,
+        accidentalType: AccidentalType.flat,
+      );
 
       expect(dFlat4.midiNumber, equals(d4.midiNumber - 1));
     });
 
     test('Double sharps increase MIDI number by 2', () {
       final c4 = Pitch(step: 'C', octave: 4);
-      final cDoubleSharp4 = Pitch(step: 'C', octave: 4, accidentalType: AccidentalType.doubleSharp);
+      final cDoubleSharp4 = Pitch(
+        step: 'C',
+        octave: 4,
+        accidentalType: AccidentalType.doubleSharp,
+      );
 
       expect(cDoubleSharp4.midiNumber, equals(c4.midiNumber + 2));
     });
 
     test('Double flats decrease MIDI number by 2', () {
       final d4 = Pitch(step: 'D', octave: 4);
-      final dDoubleFlat4 = Pitch(step: 'D', octave: 4, accidentalType: AccidentalType.doubleFlat);
+      final dDoubleFlat4 = Pitch(
+        step: 'D',
+        octave: 4,
+        accidentalType: AccidentalType.doubleFlat,
+      );
 
       expect(dDoubleFlat4.midiNumber, equals(d4.midiNumber - 2));
     });
@@ -108,36 +144,64 @@ void main() {
       ];
 
       for (int i = 1; i < scale.length; i++) {
-        expect(scale[i].midiNumber, equals(scale[i - 1].midiNumber + 1),
-          reason: '${scale[i].step}${scale[i].octave} should be 1 semitone above ${scale[i-1].step}${scale[i-1].octave}');
+        expect(
+          scale[i].midiNumber,
+          equals(scale[i - 1].midiNumber + 1),
+          reason:
+              '${scale[i].step}${scale[i].octave} should be 1 semitone above ${scale[i - 1].step}${scale[i - 1].octave}',
+        );
       }
     });
   });
 
   group('Pitch - Enharmonic Equivalents', () {
     test('C# and Db have same MIDI number', () {
-      final cSharp = Pitch(step: 'C', octave: 4, accidentalType: AccidentalType.sharp);
-      final dFlat = Pitch(step: 'D', octave: 4, accidentalType: AccidentalType.flat);
+      final cSharp = Pitch(
+        step: 'C',
+        octave: 4,
+        accidentalType: AccidentalType.sharp,
+      );
+      final dFlat = Pitch(
+        step: 'D',
+        octave: 4,
+        accidentalType: AccidentalType.flat,
+      );
 
       expect(cSharp.midiNumber, equals(dFlat.midiNumber));
     });
 
     test('F# and Gb have same MIDI number', () {
-      final fSharp = Pitch(step: 'F', octave: 4, accidentalType: AccidentalType.sharp);
-      final gFlat = Pitch(step: 'G', octave: 4, accidentalType: AccidentalType.flat);
+      final fSharp = Pitch(
+        step: 'F',
+        octave: 4,
+        accidentalType: AccidentalType.sharp,
+      );
+      final gFlat = Pitch(
+        step: 'G',
+        octave: 4,
+        accidentalType: AccidentalType.flat,
+      );
 
       expect(fSharp.midiNumber, equals(gFlat.midiNumber));
     });
 
     test('E# and F natural have same MIDI number', () {
-      final eSharp = Pitch(step: 'E', octave: 4, accidentalType: AccidentalType.sharp);
+      final eSharp = Pitch(
+        step: 'E',
+        octave: 4,
+        accidentalType: AccidentalType.sharp,
+      );
       final fNatural = Pitch(step: 'F', octave: 4);
 
       expect(eSharp.midiNumber, equals(fNatural.midiNumber));
     });
 
     test('Cb and B natural have same MIDI number', () {
-      final cFlat = Pitch(step: 'C', octave: 4, accidentalType: AccidentalType.flat);
+      final cFlat = Pitch(
+        step: 'C',
+        octave: 4,
+        accidentalType: AccidentalType.flat,
+      );
       final bNatural = Pitch(step: 'B', octave: 3);
 
       expect(cFlat.midiNumber, equals(bNatural.midiNumber));
@@ -146,27 +210,47 @@ void main() {
 
   group('Pitch - SMuFL Accidental Glyphs', () {
     test('Sharp returns correct glyph', () {
-      final pitch = Pitch(step: 'C', octave: 4, accidentalType: AccidentalType.sharp);
+      final pitch = Pitch(
+        step: 'C',
+        octave: 4,
+        accidentalType: AccidentalType.sharp,
+      );
       expect(pitch.accidentalGlyph, equals('accidentalSharp'));
     });
 
     test('Flat returns correct glyph', () {
-      final pitch = Pitch(step: 'D', octave: 4, accidentalType: AccidentalType.flat);
+      final pitch = Pitch(
+        step: 'D',
+        octave: 4,
+        accidentalType: AccidentalType.flat,
+      );
       expect(pitch.accidentalGlyph, equals('accidentalFlat'));
     });
 
     test('Natural returns correct glyph', () {
-      final pitch = Pitch(step: 'E', octave: 4, accidentalType: AccidentalType.natural);
+      final pitch = Pitch(
+        step: 'E',
+        octave: 4,
+        accidentalType: AccidentalType.natural,
+      );
       expect(pitch.accidentalGlyph, equals('accidentalNatural'));
     });
 
     test('Double sharp returns correct glyph', () {
-      final pitch = Pitch(step: 'F', octave: 4, accidentalType: AccidentalType.doubleSharp);
+      final pitch = Pitch(
+        step: 'F',
+        octave: 4,
+        accidentalType: AccidentalType.doubleSharp,
+      );
       expect(pitch.accidentalGlyph, equals('accidentalDoubleSharp'));
     });
 
     test('Double flat returns correct glyph', () {
-      final pitch = Pitch(step: 'G', octave: 4, accidentalType: AccidentalType.doubleFlat);
+      final pitch = Pitch(
+        step: 'G',
+        octave: 4,
+        accidentalType: AccidentalType.doubleFlat,
+      );
       expect(pitch.accidentalGlyph, equals('accidentalDoubleFlat'));
     });
 
@@ -229,7 +313,11 @@ void main() {
       final g4 = Pitch(step: 'G', octave: 4);
 
       final position = g4.staffPosition(trebleClef);
-      expect(position, equals(-2), reason: 'G4 is on second line of treble clef');
+      expect(
+        position,
+        equals(-2),
+        reason: 'G4 is on second line of treble clef',
+      );
     });
 
     test('needsLedgerLines extension works', () {
@@ -255,8 +343,16 @@ void main() {
 
     test('Natural accidental cancels previous accidental', () {
       // In musical notetion, natural cancels sharp or flat
-      final fSharp = Pitch(step: 'F', octave: 4, accidentalType: AccidentalType.sharp);
-      final fNatural = Pitch(step: 'F', octave: 4, accidentalType: AccidentalType.natural);
+      final fSharp = Pitch(
+        step: 'F',
+        octave: 4,
+        accidentalType: AccidentalType.sharp,
+      );
+      final fNatural = Pitch(
+        step: 'F',
+        octave: 4,
+        accidentalType: AccidentalType.natural,
+      );
       final fPlain = Pitch(step: 'F', octave: 4);
 
       // Natural and no accidental should have same MIDI number

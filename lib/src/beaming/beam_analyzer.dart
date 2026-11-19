@@ -178,7 +178,9 @@ class BeamAnalyzer {
     }
 
     if (noteYPositions == null || noteYPositions.isEmpty) {
-      throw ArgumentError('noteYPositions is required for beam geometry calculation');
+      throw ArgumentError(
+        'noteYPositions is required for beam geometry calculation',
+      );
     }
 
     final firstNote = group.notes.first;

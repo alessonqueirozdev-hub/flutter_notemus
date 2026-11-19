@@ -54,13 +54,16 @@ void main() {
     metadata = SmuflMetadata();
     await metadata.load();
     final bytes = await File('assets/smufl/Bravura.otf').readAsBytes();
-    await (FontLoader('packages/flutter_notemus/Bravura')
-          ..addFont(Future.value(ByteData.view(bytes.buffer))))
-        .load();
+    await (FontLoader(
+      'packages/flutter_notemus/Bravura',
+    )..addFont(Future.value(ByteData.view(bytes.buffer)))).load();
   });
 
   Note n(String step, int octave, {DurationType d = DurationType.eighth}) =>
-      Note(pitch: Pitch(step: step, octave: octave), duration: Duration(d));
+      Note(
+        pitch: Pitch(step: step, octave: octave),
+        duration: Duration(d),
+      );
 
   Staff staffOf(Tuplet tuplet) {
     final measure = Measure();
@@ -88,16 +91,16 @@ void main() {
   List<MusicalElement> beamedEighths() => [n('C', 5), n('E', 5), n('G', 5)];
 
   List<MusicalElement> withRest() => [
-        n('C', 5),
-        Rest(duration: Duration(DurationType.eighth)),
-        n('G', 5),
-      ];
+    n('C', 5),
+    Rest(duration: Duration(DurationType.eighth)),
+    n('G', 5),
+  ];
 
   List<MusicalElement> quarters() => [
-        n('C', 5, d: DurationType.quarter),
-        n('E', 5, d: DurationType.quarter),
-        n('G', 5, d: DurationType.quarter),
-      ];
+    n('C', 5, d: DurationType.quarter),
+    n('E', 5, d: DurationType.quarter),
+    n('G', 5, d: DurationType.quarter),
+  ];
 
   /// Ink for one figure under one bracket decision.
   ///
@@ -108,18 +111,20 @@ void main() {
     List<MusicalElement> Function() figure, {
     TupletBracket? config,
     bool suppress = false,
-  }) =>
-      inkOf(staffOf(Tuplet(
+  }) => inkOf(
+    staffOf(
+      Tuplet(
         actualNotes: 3,
         normalNotes: 2,
         elements: figure(),
         bracketConfig: config,
         // ignore: deprecated_member_use_from_same_package
         showBracket: !suppress,
-      )));
+      ),
+    ),
+  );
 
-  group('Behind Bars p.201: a beamed group shows its numeral, not a bracket',
-      () {
+  group('Behind Bars p.201: a beamed group shows its numeral, not a bracket', () {
     test('a triplet of three beamed eighths draws no bracket', () async {
       // The measurement that matters: the DEFAULT rendering of a fully beamed
       // triplet must land on exactly the same page as the same triplet with the
@@ -130,20 +135,30 @@ void main() {
       // is the bracket line and its two hooks.
       final byRule = await ink(beamedEighths);
       final suppressed = await ink(beamedEighths, suppress: true);
-      expect(byRule, suppressed,
-          reason: 'a beam already delimits the group, so the rule must decline '
-              'the bracket and match the explicitly-suppressed rendering. '
-              'byRule=$byRule suppressed=$suppressed');
+      expect(
+        byRule,
+        suppressed,
+        reason:
+            'a beam already delimits the group, so the rule must decline '
+            'the bracket and match the explicitly-suppressed rendering. '
+            'byRule=$byRule suppressed=$suppressed',
+      );
 
       // And it is genuinely absent rather than drawn somewhere invisible:
       // forcing it on adds ink to this very figure. Without this second half
       // the test above would also pass if the bracket had stopped drawing
       // altogether.
-      final forced = await ink(beamedEighths,
-          config: const TupletBracket(alwaysShow: true));
-      expect(forced, greaterThan(byRule),
-          reason: 'forcing the bracket must add ink; if it does not, the first '
-              'assertion is measuring nothing. forced=$forced byRule=$byRule');
+      final forced = await ink(
+        beamedEighths,
+        config: const TupletBracket(alwaysShow: true),
+      );
+      expect(
+        forced,
+        greaterThan(byRule),
+        reason:
+            'forcing the bracket must add ink; if it does not, the first '
+            'assertion is measuring nothing. forced=$forced byRule=$byRule',
+      );
     });
 
     test('a triplet containing a rest keeps its bracket', () async {
@@ -153,10 +168,14 @@ void main() {
       // and the two beamed notes look like a fully beamed group.
       final byRule = await ink(withRest);
       final suppressed = await ink(withRest, suppress: true);
-      expect(byRule, greaterThan(suppressed),
-          reason: 'the bracket must be drawn: a tuplet containing a rest has '
-              'nothing else to delimit the group. byRule=$byRule '
-              'suppressed=$suppressed');
+      expect(
+        byRule,
+        greaterThan(suppressed),
+        reason:
+            'the bracket must be drawn: a tuplet containing a rest has '
+            'nothing else to delimit the group. byRule=$byRule '
+            'suppressed=$suppressed',
+      );
     });
 
     test('a triplet of quarters keeps its bracket', () async {
@@ -164,9 +183,13 @@ void main() {
       // group but the bracket.
       final byRule = await ink(quarters);
       final suppressed = await ink(quarters, suppress: true);
-      expect(byRule, greaterThan(suppressed),
-          reason: 'quarters cannot be beamed, so the bracket is the only '
-              'delimiter. byRule=$byRule suppressed=$suppressed');
+      expect(
+        byRule,
+        greaterThan(suppressed),
+        reason:
+            'quarters cannot be beamed, so the bracket is the only '
+            'delimiter. byRule=$byRule suppressed=$suppressed',
+      );
     });
   });
 
@@ -177,13 +200,16 @@ void main() {
       // against a figure the RULE wants to bracket.
       final byRule = await ink(quarters);
       final suppressed = await ink(quarters, suppress: true);
-      expect(suppressed, lessThan(byRule),
-          reason: 'showBracket: false must remove the bracket the rule wanted. '
-              'suppressed=$suppressed byRule=$byRule');
+      expect(
+        suppressed,
+        lessThan(byRule),
+        reason:
+            'showBracket: false must remove the bracket the rule wanted. '
+            'suppressed=$suppressed byRule=$byRule',
+      );
     });
 
-    test('bracketConfig show: false suppresses — it used to be ignored',
-        () async {
+    test('bracketConfig show: false suppresses — it used to be ignored', () async {
       // Measured before this wave: IDENTICAL to the default in every case. The
       // documented configuration object had no effect on the drawing at all,
       // because the renderer never consulted it.
@@ -194,68 +220,95 @@ void main() {
       // the config has to overrule it.
       final byRule = await ink(quarters);
       final off = await ink(quarters, config: const TupletBracket(show: false));
-      expect(off, lessThan(byRule),
-          reason: 'bracketConfig(show: false) must overrule a rule that wants '
-              'the bracket. off=$off byRule=$byRule');
+      expect(
+        off,
+        lessThan(byRule),
+        reason:
+            'bracketConfig(show: false) must overrule a rule that wants '
+            'the bracket. off=$off byRule=$byRule',
+      );
 
       // And it must land on the same page as the deprecated override, not
       // merely somewhere smaller.
       final suppressed = await ink(quarters, suppress: true);
-      expect(off, suppressed,
-          reason: 'the two suppression routes must produce the same drawing. '
-              'off=$off suppressed=$suppressed');
+      expect(
+        off,
+        suppressed,
+        reason:
+            'the two suppression routes must produce the same drawing. '
+            'off=$off suppressed=$suppressed',
+      );
     });
 
-    test('bracketConfig alwaysShow: true forces the bracket over a beam',
-        () async {
-      final byRule = await ink(beamedEighths);
-      final forced = await ink(beamedEighths,
-          config: const TupletBracket(alwaysShow: true));
-      expect(forced, greaterThan(byRule),
-          reason: 'alwaysShow must beat the p.201 rule. forced=$forced '
-              'byRule=$byRule');
-    });
+    test(
+      'bracketConfig alwaysShow: true forces the bracket over a beam',
+      () async {
+        final byRule = await ink(beamedEighths);
+        final forced = await ink(
+          beamedEighths,
+          config: const TupletBracket(alwaysShow: true),
+        );
+        expect(
+          forced,
+          greaterThan(byRule),
+          reason:
+              'alwaysShow must beat the p.201 rule. forced=$forced '
+              'byRule=$byRule',
+        );
+      },
+    );
 
     test('BracketSide.notehead forces the bracket over a beam', () async {
       final byRule = await ink(beamedEighths);
-      final forced = await ink(beamedEighths,
-          config: const TupletBracket(side: BracketSide.notehead));
-      expect(forced, greaterThan(byRule),
-          reason: 'asking for the bracket on the notehead side is asking for a '
-              'bracket. forced=$forced byRule=$byRule');
+      final forced = await ink(
+        beamedEighths,
+        config: const TupletBracket(side: BracketSide.notehead),
+      );
+      expect(
+        forced,
+        greaterThan(byRule),
+        reason:
+            'asking for the bracket on the notehead side is asking for a '
+            'bracket. forced=$forced byRule=$byRule',
+      );
     });
   });
 
   group('the model-level rule agrees with the ink', () {
-    test('shouldShowBracket() is false for a beamed group, true without beams',
-        () {
-      final tuplet = Tuplet(
-        actualNotes: 3,
-        normalNotes: 2,
-        elements: beamedEighths(),
-      );
-      expect(
-        tuplet.shouldShowBracket(beamOf: (_) => BeamType.inner),
-        isFalse,
-        reason: 'a beam already delimits the group',
-      );
-      expect(
-        tuplet.shouldShowBracket(beamOf: (_) => null),
-        isTrue,
-        reason: 'nothing delimits the group',
-      );
-      expect(
-        tuplet.shouldShowBracket(),
-        isTrue,
-        reason: 'no decision given: fall back to the conservative answer',
-      );
-    });
+    test(
+      'shouldShowBracket() is false for a beamed group, true without beams',
+      () {
+        final tuplet = Tuplet(
+          actualNotes: 3,
+          normalNotes: 2,
+          elements: beamedEighths(),
+        );
+        expect(
+          tuplet.shouldShowBracket(beamOf: (_) => BeamType.inner),
+          isFalse,
+          reason: 'a beam already delimits the group',
+        );
+        expect(
+          tuplet.shouldShowBracket(beamOf: (_) => null),
+          isTrue,
+          reason: 'nothing delimits the group',
+        );
+        expect(
+          tuplet.shouldShowBracket(),
+          isTrue,
+          reason: 'no decision given: fall back to the conservative answer',
+        );
+      },
+    );
 
     test('a rest keeps the bracket even when every note is beamed', () {
       // The regression `elements` vs `notes` guards against: with the
       // pre-filtered note list this returns false.
-      final tuplet =
-          Tuplet(actualNotes: 3, normalNotes: 2, elements: withRest());
+      final tuplet = Tuplet(
+        actualNotes: 3,
+        normalNotes: 2,
+        elements: withRest(),
+      );
       expect(tuplet.shouldShowBracket(beamOf: (_) => BeamType.inner), isTrue);
       expect(
         const TupletBracket().shouldShow(

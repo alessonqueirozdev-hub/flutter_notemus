@@ -15,7 +15,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 
-String json(String notes) => '''
+String json(String notes) =>
+    '''
 {"measures":[{"elements":[
  {"type":"clef","clefType":"treble"},
  {"type":"timesignature","numerator":4,"denominator":4},
@@ -31,14 +32,20 @@ void main() {
     final m = Measure()
       ..elements.add(TimeSignature(numerator: 4, denominator: 4));
     for (var i = 0; i < 4; i++) {
-      m.add(Note(
+      m.add(
+        Note(
           pitch: const Pitch(step: 'C', octave: 5),
-          duration: const MusicDuration(DurationType.quarter)));
+          duration: const MusicDuration(DurationType.quarter),
+        ),
+      );
     }
     expect(
-      () => m.add(Note(
+      () => m.add(
+        Note(
           pitch: const Pitch(step: 'D', octave: 5),
-          duration: const MusicDuration(DurationType.quarter))),
+          duration: const MusicDuration(DurationType.quarter),
+        ),
+      ),
       throwsA(isA<MeasureCapacityException>()),
     );
   });
@@ -46,24 +53,30 @@ void main() {
   test('a full bar imports silently', () {
     final warnings = <String>[];
     JsonMusicParser.parseStaff(
-        json([for (var i = 0; i < 4; i++) _quarter].join(',')),
-        warnings: warnings);
+      json([for (var i = 0; i < 4; i++) _quarter].join(',')),
+      warnings: warnings,
+    );
     expect(warnings, isEmpty);
   });
 
   test('a SHORT bar is not reported — a pickup is legitimate', () {
     final warnings = <String>[];
     JsonMusicParser.parseStaff(json(_quarter), warnings: warnings);
-    expect(warnings, isEmpty,
-        reason: 'warning about short bars would train the reader to ignore '
-            'this channel, and an anacrusis is not an error');
+    expect(
+      warnings,
+      isEmpty,
+      reason:
+          'warning about short bars would train the reader to ignore '
+          'this channel, and an anacrusis is not an error',
+    );
   });
 
   test('an over-full bar is reported, with the excess measured', () {
     final warnings = <String>[];
     final staff = JsonMusicParser.parseStaff(
-        json([for (var i = 0; i < 5; i++) _quarter].join(',')),
-        warnings: warnings);
+      json([for (var i = 0; i < 5; i++) _quarter].join(',')),
+      warnings: warnings,
+    );
 
     expect(warnings, hasLength(1));
     expect(warnings.single, contains('Measure 1'));
@@ -74,8 +87,10 @@ void main() {
     // The music is imported as written. Nothing is dropped and nothing is
     // moved: re-barring is a separate feature, and silently restructuring
     // somebody's document would be worse than the defect this replaces.
-    final notes =
-        staff.measures.expand((m) => m.elements).whereType<Note>().length;
+    final notes = staff.measures
+        .expand((m) => m.elements)
+        .whereType<Note>()
+        .length;
     expect(notes, 5);
     expect(staff.measures, hasLength(1));
   });

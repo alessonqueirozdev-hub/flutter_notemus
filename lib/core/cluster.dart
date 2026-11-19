@@ -5,9 +5,9 @@ import 'pitch.dart';
 
 /// Tipos de cluster
 enum ClusterType {
-  chromatic,    // Cluster cromático
-  diatonic,     // Cluster diatônico
-  pentatonic,   // Cluster pentatônico
+  chromatic, // Cluster cromático
+  diatonic, // Cluster diatônico
+  pentatonic, // Cluster pentatônico
 }
 
 /// Representa a cluster (grupo de notes adjacentes tocadas simultaneamente)
@@ -28,8 +28,8 @@ class Cluster extends MusicalElement {
     this.type = ClusterType.chromatic,
     this.notation,
     this.showBracket = true,
-  })  : lowestNote = lowestNote ?? lowestPitch,
-        highestNote = highestNote ?? highestPitch;
+  }) : lowestNote = lowestNote ?? lowestPitch,
+       highestNote = highestNote ?? highestPitch;
 
   /// Returns o glifo SMuFL apropriado
   String get glyphName {

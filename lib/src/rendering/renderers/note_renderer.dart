@@ -330,7 +330,8 @@ class NoteRenderer extends BaseGlyphRenderer {
   void _renderSyllables(Canvas canvas, List<Syllable> syllables, double noteX) {
     final fontSize = coordinates.staffSpace * 0.85;
     final lineHeight = fontSize * 1.3;
-    final firstLineY = lyricFirstLineY ??
+    final firstLineY =
+        lyricFirstLineY ??
         LyricLayout.fallbackFirstLineY(
           staffBaselineY: coordinates.staffBaseline.dy,
           staffSpace: coordinates.staffSpace,
@@ -381,7 +382,9 @@ class NoteRenderer extends BaseGlyphRenderer {
 
     final painter = TextPainter(
       text: TextSpan(
-          text: displayText, style: textStyle.withMusicTextFallback()),
+        text: displayText,
+        style: textStyle.withMusicTextFallback(),
+      ),
       textDirection: TextDirection.ltr,
     )..layout();
 

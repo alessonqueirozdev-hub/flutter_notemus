@@ -99,8 +99,8 @@ class StaffGroup {
     bool? connectBarlines,
     this.customSpacing,
     this.showNameOnAllSystems = false,
-  })  : assert(staves.length > 0, 'StaffGroup must contain at least one staff'),
-        connectBarlines = connectBarlines ?? (bracket != BracketType.none);
+  }) : assert(staves.length > 0, 'StaffGroup must contain at least one staff'),
+       connectBarlines = connectBarlines ?? (bracket != BracketType.none);
 
   /// Number of staves in this group
   int get staffCount => staves.length;
@@ -166,12 +166,7 @@ class StaffGroup {
   }
 
   /// Factory: Create a choir SATB group
-  factory StaffGroup.choir(
-    Staff soprano,
-    Staff alto,
-    Staff tenor,
-    Staff bass,
-  ) {
+  factory StaffGroup.choir(Staff soprano, Staff alto, Staff tenor, Staff bass) {
     return StaffGroup(
       staves: [soprano, alto, tenor, bass],
       bracket: BracketType.bracket,
@@ -269,7 +264,8 @@ class BracketRenderConfig {
   /// Factory: Configurestion for bracket [ rendering
   factory BracketRenderConfig.bracket() {
     return const BracketRenderConfig(
-      thickness: 0.5, // bold vertical (orchestral/choral bracket), not a hairline
+      thickness:
+          0.5, // bold vertical (orchestral/choral bracket), not a hairline
       tipWidth: 0.5,
       horizontalOffset: 0.4,
     );

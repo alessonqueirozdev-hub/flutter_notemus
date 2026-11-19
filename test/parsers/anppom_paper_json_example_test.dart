@@ -45,9 +45,10 @@ void main() {
 
   setUp(() {
     warnings = <String>[];
-    bar = JsonMusicParser.parseStaff(paperExample, warnings: warnings)
-        .measures
-        .single;
+    bar = JsonMusicParser.parseStaff(
+      paperExample,
+      warnings: warnings,
+    ).measures.single;
   });
 
   test('the printed example parses without a single warning', () {

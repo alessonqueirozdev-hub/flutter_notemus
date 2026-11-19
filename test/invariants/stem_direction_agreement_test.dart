@@ -28,8 +28,11 @@ void main() {
     // Gould: a note ON the middle line takes a downward stem, so the test is
     // strict rather than inclusive.
     expect(StaffPositionCalculator.stemUpFor(-1), isTrue);
-    expect(StaffPositionCalculator.stemUpFor(0), isFalse,
-        reason: 'the middle line is stem DOWN');
+    expect(
+      StaffPositionCalculator.stemUpFor(0),
+      isFalse,
+      reason: 'the middle line is stem DOWN',
+    );
     expect(StaffPositionCalculator.stemUpFor(1), isFalse);
   });
 
@@ -39,8 +42,9 @@ void main() {
     for (final entity in Directory('lib').listSync(recursive: true)) {
       if (entity is! File || !entity.path.endsWith('.dart')) continue;
       // The one place the rule is allowed to exist.
-      if (entity.path.replaceAll(r'\', '/').endsWith(
-          'lib/src/rendering/staff_position_calculator.dart')) {
+      if (entity.path
+          .replaceAll(r'\', '/')
+          .endsWith('lib/src/rendering/staff_position_calculator.dart')) {
         continue;
       }
       final lines = entity.readAsLinesSync();
@@ -55,9 +59,13 @@ void main() {
         offenders.add('${entity.path}:${i + 1}: ${line.trim()}');
       }
     }
-    expect(offenders, isEmpty,
-        reason: 'stem direction is decided in ONE place, '
-            'StaffPositionCalculator.stemUpFor. These re-derive it:\n'
-            '${offenders.join('\n')}');
+    expect(
+      offenders,
+      isEmpty,
+      reason:
+          'stem direction is decided in ONE place, '
+          'StaffPositionCalculator.stemUpFor. These re-derive it:\n'
+          '${offenders.join('\n')}',
+    );
   });
 }

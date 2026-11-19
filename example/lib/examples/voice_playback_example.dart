@@ -117,12 +117,11 @@ class _VoicePlaybackPanelState extends State<_VoicePlaybackPanel> {
       }
 
       final voice2 = Voice.voice2(name: 'Counter-melody');
-      final counter = bar == 0
-          ? const <String>['C', 'B']
-          : const <String>['B', 'A'];
+      final counter =
+          bar == 0 ? const <String>['C', 'B'] : const <String>['B', 'A'];
       for (var i = 0; i < counter.length; i++) {
-        voice2.add(_note(counter[i], counter[i] == 'C' ? 5 : 4,
-            DurationType.half, 2));
+        voice2.add(
+            _note(counter[i], counter[i] == 'C' ? 5 : 4, DurationType.half, 2));
       }
 
       final voice3 = Voice(
@@ -193,8 +192,7 @@ class _VoicePlaybackPanelState extends State<_VoicePlaybackPanel> {
               CupertinoSwitch(
                 value: _separateTracks,
                 activeTrackColor: _accent,
-                onChanged: (value) =>
-                    setState(() => _separateTracks = value),
+                onChanged: (value) => setState(() => _separateTracks = value),
               ),
             ],
           ),

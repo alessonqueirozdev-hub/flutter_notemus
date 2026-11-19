@@ -10,61 +10,61 @@ import 'tuplet_number.dart';
 
 /// Razão de a tuplet
 class TupletRatio {
-  final int actualNotes;  // Numerador
-  final int normalNotes;  // Denominador
+  final int actualNotes; // Numerador
+  final int normalNotes; // Denominador
 
   const TupletRatio(this.actualNotes, this.normalNotes);
-  
+
   /// Modificador that será Applied às durações
   /// Fórmula: normalNotes / actualNotes
   double get modifier => normalNotes / actualNotes;
-  
+
   @override
   String toString() => '$actualNotes:$normalNotes';
 }
 
 /// Representa a tuplet (tercina, quintina, etc.)
-/// 
+///
 /// Implementation completa baseada in Behind Bars (Elaine Gould)
 class Tuplet extends MusicalElement {
   /// Numerator of the razão (number de notes na tuplet)
   final int actualNotes;
-  
+
   /// Denominator of the razão (number de notes normais that seriam tocadas)
   final int normalNotes;
-  
+
   /// Elementos within of the tuplet (notes, pausas)
   final List<MusicalElement> elements;
-  
+
   /// Only as notes (filtradas de elements)
   final List<Note> notes;
-  
+
   /// configuração of the bracket
   final TupletBracket? bracketConfig;
-  
+
   /// configuração of the number
   final TupletNumber? numberConfig;
-  
+
   /// Mostrar bracket (deprecated - use bracketConfig)
   @Deprecated('Use bracketConfig.show')
   final bool showBracket;
-  
+
   /// Mostrar number (deprecated - use numberConfig)
   @Deprecated('Use numberConfig')
   final bool showNumber;
-  
+
   /// Razão of the tuplet
   final TupletRatio ratio;
-  
+
   /// If is a tuplet aninhada (nested tuplet)
   final bool isNested;
-  
+
   /// Tuplet pai (for nested tuplets)
   final Tuplet? parentTuplet;
-  
+
   /// TimeSignature de context (for validação)
   final TimeSignature? timeSignature;
-  
+
   Tuplet({
     required this.actualNotes,
     required this.normalNotes,
@@ -80,21 +80,21 @@ class Tuplet extends MusicalElement {
     this.timeSignature,
   }) : notes = notes ?? elements.whereType<Note>().toList(),
        ratio = ratio ?? TupletRatio(actualNotes, normalNotes);
-  
+
   /// Calculates a duração modificada de a note within of the tuplet
-  /// 
+  ///
   /// If aninhada, applies modificadores recursivamente
   double getModifiedDuration(double baseDuration) {
     double modifiedDuration = baseDuration * ratio.modifier;
-    
+
     // If aninhada, aplicar modificador of the pai recursivamente
     if (isNested && parentTuplet != null) {
       return parentTuplet!.getModifiedDuration(modifiedDuration);
     }
-    
+
     return modifiedDuration;
   }
-  
+
   /// Real duração que a quiáltera ocupa no compasso, em semibreves.
   ///
   /// Soma a duração escrita de **cada** elemento e aplica a razão
@@ -146,7 +146,7 @@ class Tuplet extends MusicalElement {
 
     return written * ratio.modifier;
   }
-  
+
   /// Whether this group prints a bracket, under Behind Bars p.201.
   ///
   /// **Behaviour change (2.7.2), and it moves ink.** An UN-CONFIGURED tuplet no
@@ -202,29 +202,33 @@ class Tuplet extends MusicalElement {
     final config = bracketConfig ?? const TupletBracket();
     return config.shouldShow(elements, beamOf: beamOf);
   }
-  
+
   /// Checks if must mostrar a razão completa (ex: 3:2) vs only numerator (3)
   bool get shouldShowRatio {
     if (numberConfig != null) {
       return numberConfig!.showAsRatio;
     }
-    return TupletNumber.shouldShowRatio(actualNotes, normalNotes, timeSignature);
+    return TupletNumber.shouldShowRatio(
+      actualNotes,
+      normalNotes,
+      timeSignature,
+    );
   }
-  
+
   /// Text of the number a ser displayed
   String get numberText {
     if (numberConfig != null) {
       return numberConfig!.generateText(actualNotes, normalNotes);
     }
-    
+
     if (shouldShowRatio) {
       return '$actualNotes:$normalNotes';
     }
     return actualNotes.toString();
   }
-  
+
   /// Atalhos for criar tuplets comuns
-  
+
   /// Tercina (3:2)
   factory Tuplet.triplet({
     required List<MusicalElement> elements,
@@ -241,7 +245,7 @@ class Tuplet extends MusicalElement {
       timeSignature: timeSignature,
     );
   }
-  
+
   /// Quintina (5:4)
   factory Tuplet.quintuplet({
     required List<MusicalElement> elements,
@@ -258,7 +262,7 @@ class Tuplet extends MusicalElement {
       timeSignature: timeSignature,
     );
   }
-  
+
   /// Sextina (6:4)
   factory Tuplet.sextuplet({
     required List<MusicalElement> elements,
@@ -275,7 +279,7 @@ class Tuplet extends MusicalElement {
       timeSignature: timeSignature,
     );
   }
-  
+
   /// Septina (7:4)
   factory Tuplet.septuplet({
     required List<MusicalElement> elements,
@@ -292,7 +296,7 @@ class Tuplet extends MusicalElement {
       timeSignature: timeSignature,
     );
   }
-  
+
   /// Dupleto in tempo composto (2:3)
   factory Tuplet.duplet({
     required List<MusicalElement> elements,

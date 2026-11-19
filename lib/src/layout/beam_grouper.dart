@@ -52,6 +52,7 @@ class BeamGrouper {
   ///
   /// 0.75 = a dotted minim.
   static const double kMaximumCompoundBeatWholeNotes = 0.75;
+
   /// Groups notes into beams from a note-only timeline.
   ///
   /// This entry point is kept for compatibility. It now respects

@@ -121,7 +121,8 @@ class BoundingBoxAdapter {
     // Convertsr coordenadas SMuFL (staff spaces) for pixels
     bbox.borderLeft = glyphBBox.bBoxSwX * staffSpace;
     bbox.borderRight = glyphBBox.bBoxNeX * staffSpace;
-    bbox.borderTop = glyphBBox.bBoxNeY * staffSpace; // SMuFL: Y negativo = acima
+    bbox.borderTop =
+        glyphBBox.bBoxNeY * staffSpace; // SMuFL: Y negativo = acima
     bbox.borderBottom = glyphBBox.bBoxSwY * staffSpace;
 
     // Calculate size
@@ -202,7 +203,9 @@ class BoundingBoxAdapter {
   // ====================
 
   /// Converts string de type for enum CollisionCategory
-  static collision.CollisionCategory _stringToCollisionCategory(String elementType) {
+  static collision.CollisionCategory _stringToCollisionCategory(
+    String elementType,
+  ) {
     if (elementType.contains('notehead') || elementType.contains('note')) {
       return collision.CollisionCategory.notehead;
     }
@@ -235,7 +238,9 @@ class BoundingBoxAdapter {
   }
 
   /// Converts int de prioridade for enum CollisionPriority
-  static collision.CollisionPriority _stringToCollisionPriority(int priorityValue) {
+  static collision.CollisionPriority _stringToCollisionPriority(
+    int priorityValue,
+  ) {
     if (priorityValue <= 2) {
       return collision.CollisionPriority.veryHigh;
     } else if (priorityValue <= 4) {

@@ -37,14 +37,8 @@ void main() {
       expect(metadata.hasGlyph('repeatLeft'), isTrue);
       expect(metadata.getCodepoint('repeatRight'), isNotEmpty);
       expect(metadata.getCodepoint('repeatLeft'), isNotEmpty);
-      expect(
-        metadata.getGlyphAdvanceWidth('repeatRight'),
-        isNotNull,
-      );
-      expect(
-        metadata.getGlyphAdvanceWidth('repeatRight')!,
-        greaterThan(0),
-      );
+      expect(metadata.getGlyphAdvanceWidth('repeatRight'), isNotNull);
+      expect(metadata.getGlyphAdvanceWidth('repeatRight')!, greaterThan(0));
     });
   });
 

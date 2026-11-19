@@ -196,7 +196,7 @@ class Measure {
             'Total would be: $afterAdding units\n'
             'EXCESS: ${excess.toStringAsFixed(4)} units\n'
             'OPERATION BLOCKED — Remove elements from voice $voice, move the '
-            'element to another voice, or create a new measure!'
+            'element to another voice, or create a new measure!',
           );
         }
       }

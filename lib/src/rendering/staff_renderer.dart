@@ -394,9 +394,12 @@ class StaffRenderer {
         final beamElements = _skipNotes.isEmpty
             ? elements
             : elements
-                .where((pe) =>
-                    !(pe.element is Note && _skipNotes.contains(pe.element)))
-                .toList();
+                  .where(
+                    (pe) =>
+                        !(pe.element is Note &&
+                            _skipNotes.contains(pe.element)),
+                  )
+                  .toList();
         groupRenderer.renderBeams(
           canvas,
           beamElements,
@@ -496,8 +499,9 @@ class StaffRenderer {
       return base.copyWith(
         fontSize: base.fontSize ?? fontSize,
         color: base.color ?? color,
-        fontStyle:
-            italic ? FontStyle.italic : (base.fontStyle ?? FontStyle.normal),
+        fontStyle: italic
+            ? FontStyle.italic
+            : (base.fontStyle ?? FontStyle.normal),
         height: 1.0,
       );
     }
@@ -505,7 +509,9 @@ class StaffRenderer {
     double measure(String text, bool italic) {
       final tp = TextPainter(
         text: TextSpan(
-            text: text, style: styleFor(italic).withMusicTextFallback()),
+          text: text,
+          style: styleFor(italic).withMusicTextFallback(),
+        ),
         textDirection: TextDirection.ltr,
       )..layout();
       return tp.width;
@@ -523,14 +529,16 @@ class StaffRenderer {
           final prevSyl = prev.note.syllables![verse];
           if (prevSyl.type == SyllableType.initial ||
               prevSyl.type == SyllableType.middle) {
-            final prevRight = prev.x + measure(prevSyl.text, prevSyl.italic) / 2;
+            final prevRight =
+                prev.x + measure(prevSyl.text, prevSyl.italic) / 2;
             final curLeft = ln.x - measure(syl.text, syl.italic) / 2;
             final midX = (prevRight + curLeft) / 2;
             final lyricY = firstLineY + verse * lineHeight;
             final hp = TextPainter(
               text: TextSpan(
-                  text: '-',
-                  style: styleFor(prevSyl.italic).withMusicTextFallback()),
+                text: '-',
+                style: styleFor(prevSyl.italic).withMusicTextFallback(),
+              ),
               textDirection: TextDirection.ltr,
             )..layout();
             hp.paint(
@@ -620,13 +628,16 @@ class StaffRenderer {
         if (el is Note) {
           final syls = el.syllables;
           final hasSyl =
-              syls != null && verse < syls.length && syls[verse].text.isNotEmpty;
+              syls != null &&
+              verse < syls.length &&
+              syls[verse].text.isNotEmpty;
           if (hasSyl) {
             flush();
             final syl = syls[verse];
             if (syl.type == SyllableType.single ||
                 syl.type == SyllableType.terminal) {
-              startX = pe.position.dx +
+              startX =
+                  pe.position.dx +
                   measure(syl.text, syl.italic) / 2 +
                   coordinates.staffSpace * 0.35;
               endX = null;
@@ -740,7 +751,9 @@ class StaffRenderer {
             );
         final label = TextPainter(
           text: TextSpan(
-              text: 'gliss.', style: labelStyle.withMusicTextFallback()),
+            text: 'gliss.',
+            style: labelStyle.withMusicTextFallback(),
+          ),
           textDirection: TextDirection.ltr,
         )..layout();
 
@@ -996,8 +1009,7 @@ class StaffRenderer {
       // A system that ENDS on its barline stops there. Padding the content
       // edge by 0.8 spaces was only hidden by a final barline's width: a
       // wrapped system ending on a single barline had its lines run past it.
-      final endsOnBarline =
-          barlineX != null && barlineX >= bounds.endX - 0.5;
+      final endsOnBarline = barlineX != null && barlineX >= bounds.endX - 0.5;
       final endX = endsOnBarline
           ? barlineEndX
           : math.max(contentEndX, barlineEndX);
@@ -1018,7 +1030,6 @@ class StaffRenderer {
       }
     }
   }
-
 
   /// How far a hairpin with no explicit length should reach, or null.
   ///
@@ -1233,8 +1244,7 @@ class StaffRenderer {
         canvas,
         element,
         basePosition,
-        levelOffset:
-            (_aboveStaffLevels[element] ?? 0) * _aboveStaffLevelHeight,
+        levelOffset: (_aboveStaffLevels[element] ?? 0) * _aboveStaffLevelHeight,
       );
     } else if (element is Breath) {
       breathRenderer.render(canvas, element, basePosition);

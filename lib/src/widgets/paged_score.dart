@@ -54,14 +54,12 @@ class PagedScoreController extends ChangeNotifier {
       });
 
   /// Zoom of the page on screen, 1.0 when it fits.
-  double get currentScale =>
-      transformationFor(_page).value.getMaxScaleOnAxis();
+  double get currentScale => transformationFor(_page).value.getMaxScaleOnAxis();
 
   /// Multiplies the current page's zoom by [factor], within 1x to 4x.
   void zoomBy(double factor) {
     final next = (currentScale * factor).clamp(1.0, 4.0).toDouble();
-    transformationFor(_page).value =
-        Matrix4.diagonal3Values(next, next, 1.0);
+    transformationFor(_page).value = Matrix4.diagonal3Values(next, next, 1.0);
     notifyListeners();
   }
 
@@ -160,8 +158,8 @@ class PagedScoreView extends StatefulWidget {
     this.playbackPosition,
     this.followPlayback = true,
     this.controller,
-  })  : assert(pageMargin >= 0),
-        assert(staffSpace > 0);
+  }) : assert(pageMargin >= 0),
+       assert(staffSpace > 0);
 
   @override
   State<PagedScoreView> createState() => _PagedScoreViewState();
@@ -205,9 +203,10 @@ class _PagedScoreViewState extends State<PagedScoreView> {
         if (!mounted) return;
         _controller._setPageCount(count);
         _controller._setPage(
-            _controller.pageController.hasClients
-                ? (_controller.pageController.page ?? 0).round()
-                : 0);
+          _controller.pageController.hasClients
+              ? (_controller.pageController.page ?? 0).round()
+              : 0,
+        );
         _followCursor();
       });
     }
@@ -239,9 +238,11 @@ class _PagedScoreViewState extends State<PagedScoreView> {
 
   double get _headerHeight {
     final s = widget.score;
-    final lines = [s.title, s.subtitle, s.composer]
-        .where((t) => t != null && t.trim().isNotEmpty)
-        .length;
+    final lines = [
+      s.title,
+      s.subtitle,
+      s.composer,
+    ].where((t) => t != null && t.trim().isNotEmpty).length;
     return lines == 0 ? 0.0 : widget.staffSpace * (3.5 + 2.2 * lines);
   }
 
@@ -308,7 +309,8 @@ class _PagedScoreViewState extends State<PagedScoreView> {
         }
         if (snapshot.hasError) {
           return Center(
-              child: Text('Failed to load metadata: ${snapshot.error}'));
+            child: Text('Failed to load metadata: ${snapshot.error}'),
+          );
         }
         if (widget.score.staffGroups.every((g) => g.staves.isEmpty)) {
           // No pages now: drop the old layout and tell the controller, which
@@ -323,62 +325,65 @@ class _PagedScoreViewState extends State<PagedScoreView> {
           return const SizedBox.shrink();
         }
         _ensureLayout();
-        return LayoutBuilder(builder: (context, constraints) {
-          final page = widget.pageSize;
-          // Unbounded (a Column child without Expanded, a scroll view): one
-          // page and its gutter. The PageView is held to this size below; it
-          // used to get the unbounded constraint itself and fail layout.
-          final width = constraints.hasBoundedWidth
-              ? constraints.maxWidth
-              : page.width + 24;
-          final height = constraints.hasBoundedHeight
-              ? constraints.maxHeight
-              : page.height + 24;
-          final scale = math.max(
-            0.01,
-            math.min((width - 24) / page.width, (height - 24) / page.height),
-          );
-          return SizedBox(
-            width: width,
-            height: height,
-            child: AnimatedBuilder(
-              animation: _controller,
-              builder: (context, _) => PageView.builder(
-                controller: _controller.pageController,
-                itemCount: _pages.length,
-                // Zoomed in, a drag pans the page instead of turning it.
-                physics: _controller.currentScale > 1.01
-                    ? const NeverScrollableScrollPhysics()
-                    : const PageScrollPhysics(),
-                onPageChanged: _controller._setPage,
-                itemBuilder: (context, index) => Center(
-                  child: SizedBox(
-                    width: page.width * scale,
-                    height: page.height * scale,
-                    child: InteractiveViewer(
-                      transformationController:
-                          _controller.transformationFor(index),
-                      minScale: 1.0,
-                      maxScale: 4.0,
-                      panEnabled: _controller.currentScale > 1.01,
-                      clipBehavior: Clip.hardEdge,
-                      child: FittedBox(
-                        fit: BoxFit.contain,
-                        child: _PageSheet(
-                          key: ValueKey(index),
-                          view: widget,
-                          painter: _painter!,
-                          page: _pages[index],
-                          headerHeight: index == 0 ? _headerHeight : 0.0,
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final page = widget.pageSize;
+            // Unbounded (a Column child without Expanded, a scroll view): one
+            // page and its gutter. The PageView is held to this size below; it
+            // used to get the unbounded constraint itself and fail layout.
+            final width = constraints.hasBoundedWidth
+                ? constraints.maxWidth
+                : page.width + 24;
+            final height = constraints.hasBoundedHeight
+                ? constraints.maxHeight
+                : page.height + 24;
+            final scale = math.max(
+              0.01,
+              math.min((width - 24) / page.width, (height - 24) / page.height),
+            );
+            return SizedBox(
+              width: width,
+              height: height,
+              child: AnimatedBuilder(
+                animation: _controller,
+                builder: (context, _) => PageView.builder(
+                  controller: _controller.pageController,
+                  itemCount: _pages.length,
+                  // Zoomed in, a drag pans the page instead of turning it.
+                  physics: _controller.currentScale > 1.01
+                      ? const NeverScrollableScrollPhysics()
+                      : const PageScrollPhysics(),
+                  onPageChanged: _controller._setPage,
+                  itemBuilder: (context, index) => Center(
+                    child: SizedBox(
+                      width: page.width * scale,
+                      height: page.height * scale,
+                      child: InteractiveViewer(
+                        transformationController: _controller.transformationFor(
+                          index,
+                        ),
+                        minScale: 1.0,
+                        maxScale: 4.0,
+                        panEnabled: _controller.currentScale > 1.01,
+                        clipBehavior: Clip.hardEdge,
+                        child: FittedBox(
+                          fit: BoxFit.contain,
+                          child: _PageSheet(
+                            key: ValueKey(index),
+                            view: widget,
+                            painter: _painter!,
+                            page: _pages[index],
+                            headerHeight: index == 0 ? _headerHeight : 0.0,
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
-          );
-        });
+            );
+          },
+        );
       },
     );
   }
@@ -447,7 +452,8 @@ class _PageSheet extends StatelessWidget {
                         painter: GrandStaffPlayheadPainter(
                           position: view.playbackPosition!,
                           layout: painter,
-                          color: view.theme.playheadColor ??
+                          color:
+                              view.theme.playheadColor ??
                               view.theme.noteheadColor.withValues(alpha: 0.65),
                         ),
                       ),
@@ -468,13 +474,17 @@ class _PageSheet extends StatelessWidget {
         onTapUp: (details) {
           final point = details.localPosition - shift;
           if (onMeasureTap != null) {
-            final bar = painter.measureTapAt(point,
-                globalPosition: details.globalPosition);
+            final bar = painter.measureTapAt(
+              point,
+              globalPosition: details.globalPosition,
+            );
             if (bar != null) onMeasureTap(bar);
           }
           if (onNoteTap != null) {
-            final note = painter.noteTapAt(point,
-                globalPosition: details.globalPosition);
+            final note = painter.noteTapAt(
+              point,
+              globalPosition: details.globalPosition,
+            );
             if (note != null) onNoteTap(note);
           }
         },
@@ -539,18 +549,26 @@ class _TitleBlock extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (title != null)
-          Text(title,
-              textAlign: TextAlign.center,
-              style: base.copyWith(
-                  fontSize: staffSpace * 2.4, fontWeight: FontWeight.w600)),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: base.copyWith(
+              fontSize: staffSpace * 2.4,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         if (subtitle != null)
-          Text(subtitle,
-              textAlign: TextAlign.center,
-              style: base.copyWith(fontSize: staffSpace * 1.5)),
+          Text(
+            subtitle,
+            textAlign: TextAlign.center,
+            style: base.copyWith(fontSize: staffSpace * 1.5),
+          ),
         if (composer != null)
-          Text(composer,
-              textAlign: TextAlign.right,
-              style: base.copyWith(fontSize: staffSpace * 1.4)),
+          Text(
+            composer,
+            textAlign: TextAlign.right,
+            style: base.copyWith(fontSize: staffSpace * 1.4),
+          ),
       ],
     );
   }

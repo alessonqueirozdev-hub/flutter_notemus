@@ -20,9 +20,9 @@ void main() {
   });
 
   Note eighth() => Note(
-        pitch: const Pitch(step: 'A', octave: 4),
-        duration: const MusicDuration(DurationType.eighth),
-      );
+    pitch: const Pitch(step: 'A', octave: 4),
+    duration: const MusicDuration(DurationType.eighth),
+  );
 
   /// One bar per entry of [eighthsPerBar]; [meters] maps a bar index to the
   /// meter that bar declares. Every other bar declares none.
@@ -43,8 +43,12 @@ void main() {
 
   /// Beam group sizes per bar, as the engine resolved them.
   List<List<int>> groupsPerBar(Staff staff) {
-    final engine = LayoutEngine(staff,
-        availableWidth: 4000, staffSpace: 12, metadata: metadata);
+    final engine = LayoutEngine(
+      staff,
+      availableWidth: 4000,
+      staffSpace: 12,
+      metadata: metadata,
+    );
     engine.layout();
     return [
       for (final m in staff.measures)
@@ -91,14 +95,11 @@ void main() {
   });
 
   test('a meter change mid-staff is inherited from the new meter', () {
-    expect(
-      groupsPerBar(build([6, 6, 6, 6], {0: ts(6, 8), 2: ts(3, 4)})),
-      [
-        [3, 3],
-        [3, 3],
-        [2, 2, 2],
-        [2, 2, 2],
-      ],
-    );
+    expect(groupsPerBar(build([6, 6, 6, 6], {0: ts(6, 8), 2: ts(3, 4)})), [
+      [3, 3],
+      [3, 3],
+      [2, 2, 2],
+      [2, 2, 2],
+    ]);
   });
 }

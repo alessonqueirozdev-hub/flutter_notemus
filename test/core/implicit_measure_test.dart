@@ -59,22 +59,31 @@ List<int> _noteOnTicks(MidiSequence sequence) => sequence.tracks
     .map((e) => e.tick)
     .toList();
 
-Staff _handBuiltPickup() => Staff(measures: [
-      Measure(isImplicit: true)
-        ..add(Clef(clefType: ClefType.treble))
-        ..add(TimeSignature(numerator: 4, denominator: 4))
-        ..add(Note(
-            pitch: const Pitch(step: 'C', octave: 4),
-            duration: const MusicDuration(DurationType.quarter))),
-      Measure()
-        ..add(Note(
-            pitch: const Pitch(step: 'D', octave: 4),
-            duration: const MusicDuration(DurationType.whole))),
-      Measure()
-        ..add(Note(
-            pitch: const Pitch(step: 'E', octave: 4),
-            duration: const MusicDuration(DurationType.whole))),
-    ]);
+Staff _handBuiltPickup() => Staff(
+  measures: [
+    Measure(isImplicit: true)
+      ..add(Clef(clefType: ClefType.treble))
+      ..add(TimeSignature(numerator: 4, denominator: 4))
+      ..add(
+        Note(
+          pitch: const Pitch(step: 'C', octave: 4),
+          duration: const MusicDuration(DurationType.quarter),
+        ),
+      ),
+    Measure()..add(
+      Note(
+        pitch: const Pitch(step: 'D', octave: 4),
+        duration: const MusicDuration(DurationType.whole),
+      ),
+    ),
+    Measure()..add(
+      Note(
+        pitch: const Pitch(step: 'E', octave: 4),
+        duration: const MusicDuration(DurationType.whole),
+      ),
+    ),
+  ],
+);
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -88,7 +97,8 @@ void main() {
 
     test('a non-numeric measure number is left to the engine', () {
       final staff = MusicXMLParser.parseMusicXML(
-          _pickupXml.replaceFirst('number="1"', 'number="X1"'));
+        _pickupXml.replaceFirst('number="1"', 'number="X1"'),
+      );
       expect(staff.measures[1].number, isNull);
     });
   });
@@ -102,35 +112,46 @@ void main() {
     });
 
     test('a hand-built implicit bar does the same', () {
-      expect(_noteOnTicks(MidiMapper.fromStaff(_handBuiltPickup())),
-          [0, 960, 4800]);
+      expect(_noteOnTicks(MidiMapper.fromStaff(_handBuiltPickup())), [
+        0,
+        960,
+        4800,
+      ]);
     });
 
     test('an ordinary short bar still occupies its full meter', () {
       final staff = _handBuiltPickup();
-      final plain = Staff(measures: [
-        Measure()..elements.addAll(staff.measures.first.elements),
-        ...staff.measures.skip(1),
-      ]);
+      final plain = Staff(
+        measures: [
+          Measure()..elements.addAll(staff.measures.first.elements),
+          ...staff.measures.skip(1),
+        ],
+      );
       expect(_noteOnTicks(MidiMapper.fromStaff(plain)), [0, 3840, 7680]);
     });
 
     // MIDI used to skip `Space` outright: it advanced no time while playing
     // and added none to an implicit bar's length.
     test('a <forward> gap delays the note after it', () {
-      final staff = MusicXMLParser.parseMusicXML(_pickupXml.replaceFirst(
+      final staff = MusicXMLParser.parseMusicXML(
+        _pickupXml.replaceFirst(
           RegExp(r'<note>\s*<pitch><step>D</step>'),
           '<forward><duration>8</duration></forward>'
-              '<note><pitch><step>D</step>'));
+          '<note><pitch><step>D</step>',
+        ),
+      );
       // Bar 1's D now enters on beat 3 (a half note of forward at 960/qtr).
       expect(_noteOnTicks(MidiMapper.fromStaff(staff))[1], 960 + 1920);
     });
 
     test('a <forward> gap counts toward an implicit bar', () {
-      final staff = MusicXMLParser.parseMusicXML(_pickupXml.replaceFirst(
+      final staff = MusicXMLParser.parseMusicXML(
+        _pickupXml.replaceFirst(
           RegExp(r'<note>\s*<pitch><step>C</step>'),
           '<forward><duration>4</duration></forward>'
-              '<note><pitch><step>C</step>'));
+          '<note><pitch><step>C</step>',
+        ),
+      );
       // Pickup = one quarter of forward + one quarter: C at 960, bar 1 at
       // 1920, bar 2 at 1920 + 3840.
       expect(_noteOnTicks(MidiMapper.fromStaff(staff)), [960, 1920, 5760]);
@@ -139,11 +160,13 @@ void main() {
     test('a grace note does not lengthen an implicit bar', () {
       final staff = _handBuiltPickup();
       staff.measures.first.elements.insert(
-          2,
-          Note(
-              pitch: const Pitch(step: 'B', octave: 3),
-              duration: const MusicDuration(DurationType.eighth),
-              isGraceNote: true));
+        2,
+        Note(
+          pitch: const Pitch(step: 'B', octave: 3),
+          duration: const MusicDuration(DurationType.eighth),
+          isGraceNote: true,
+        ),
+      );
       final ticks = _noteOnTicks(MidiMapper.fromStaff(staff));
       expect(ticks.sublist(ticks.length - 2), [960, 4800]);
     });
@@ -157,31 +180,51 @@ void main() {
     });
 
     test('an implicit bar is not counted', () {
-      final engine = LayoutEngine(_handBuiltPickup(),
-          availableWidth: 900, staffSpace: 12, metadata: metadata);
+      final engine = LayoutEngine(
+        _handBuiltPickup(),
+        availableWidth: 900,
+        staffSpace: 12,
+        metadata: metadata,
+      );
       engine.layout();
       expect(engine.measureNumbers, {0: 0, 1: 1, 2: 2});
     });
 
     test('an implicit bar mid-piece shares the previous number', () {
       final staff = _handBuiltPickup();
-      staff.measures.add(Measure(isImplicit: true)
-        ..add(Note(
+      staff.measures.add(
+        Measure(isImplicit: true)..add(
+          Note(
             pitch: const Pitch(step: 'F', octave: 4),
-            duration: const MusicDuration(DurationType.half))));
-      staff.measures.add(Measure()
-        ..add(Note(
+            duration: const MusicDuration(DurationType.half),
+          ),
+        ),
+      );
+      staff.measures.add(
+        Measure()..add(
+          Note(
             pitch: const Pitch(step: 'G', octave: 4),
-            duration: const MusicDuration(DurationType.whole))));
-      final engine = LayoutEngine(staff,
-          availableWidth: 2000, staffSpace: 12, metadata: metadata);
+            duration: const MusicDuration(DurationType.whole),
+          ),
+        ),
+      );
+      final engine = LayoutEngine(
+        staff,
+        availableWidth: 2000,
+        staffSpace: 12,
+        metadata: metadata,
+      );
       expect(engine.measureNumbers, {0: 0, 1: 1, 2: 2, 3: 2, 4: 3});
     });
 
     test('a pickup imported from MusicXML lays out without errors', () {
       final staff = MusicXMLParser.parseMusicXML(_pickupXml);
-      final engine = LayoutEngine(staff,
-          availableWidth: 900, staffSpace: 12, metadata: metadata);
+      final engine = LayoutEngine(
+        staff,
+        availableWidth: 900,
+        staffSpace: 12,
+        metadata: metadata,
+      );
       engine.layout();
       expect(engine.measureNumbers, {0: 0, 1: 1, 2: 2});
     });
@@ -195,8 +238,11 @@ void main() {
       final xml = MusicXMLParser.staffToMusicXML(_handBuiltPickup());
       expect(xml, contains('<measure number="0" implicit="yes">'));
       final back = MusicXMLParser.parseMusicXML(xml);
-      expect(LayoutEngine.displayMeasureNumbers(back.measures),
-          {0: 0, 1: 1, 2: 2});
+      expect(LayoutEngine.displayMeasureNumbers(back.measures), {
+        0: 0,
+        1: 1,
+        2: 2,
+      });
     });
 
     test('MusicXML export writes implicit="yes" and reads it back', () {
@@ -248,9 +294,10 @@ void main() {
     // `@metcon="false"` only says the content does not fill the meter. A
     // mid-piece irregular bar still counts; marking it implicit made the
     // next auto-numbered bar repeat its number.
-    test('MEI metcon="false" mid-piece is an irregular bar that still counts',
-        () {
-      const mei = '''
+    test(
+      'MEI metcon="false" mid-piece is an irregular bar that still counts',
+      () {
+        const mei = '''
 <mei xmlns="http://www.music-encoding.org/ns/mei" meiversion="5.0">
   <music><body><mdiv><score>
     <scoreDef meter.count="4" meter.unit="4">
@@ -270,15 +317,19 @@ void main() {
   </score></mdiv></body></music>
 </mei>
 ''';
-      final staff = MEIParser.parseMEI(mei);
-      expect(staff.measures.map((m) => m.isImplicit), [false, false, false]);
-      expect(staff.measures.map((m) => m.isIrregular), [false, true, false]);
-      expect(LayoutEngine.displayMeasureNumbers(staff.measures),
-          {0: 1, 1: 2, 2: 3});
-      // ...and it still lasts only its half note: bar 3 enters at
-      // 3840 + 1920, not after two beats of silence at 7680.
-      expect(_noteOnTicks(MidiMapper.fromStaff(staff)), [0, 3840, 5760]);
-    });
+        final staff = MEIParser.parseMEI(mei);
+        expect(staff.measures.map((m) => m.isImplicit), [false, false, false]);
+        expect(staff.measures.map((m) => m.isIrregular), [false, true, false]);
+        expect(LayoutEngine.displayMeasureNumbers(staff.measures), {
+          0: 1,
+          1: 2,
+          2: 3,
+        });
+        // ...and it still lasts only its half note: bar 3 enters at
+        // 3840 + 1920, not after two beats of silence at 7680.
+        expect(_noteOnTicks(MidiMapper.fromStaff(staff)), [0, 3840, 5760]);
+      },
+    );
   });
 
   group('Space in the rhythmic clock', () {
@@ -286,20 +337,29 @@ void main() {
     // the gap are drawn earlier than they sound.
     test('Measure.musicalValueOf counts a Space', () {
       expect(
-          Measure.musicalValueOf(
-              Space(duration: const MusicDuration(DurationType.half))),
-          0.5);
+        Measure.musicalValueOf(
+          Space(duration: const MusicDuration(DurationType.half)),
+        ),
+        0.5,
+      );
     });
 
     test('a note after a forward gap is laid out at its real onset', () async {
       final metadata = SmuflMetadata();
       await metadata.load();
-      final staff = MusicXMLParser.parseMusicXML(_pickupXml.replaceFirst(
+      final staff = MusicXMLParser.parseMusicXML(
+        _pickupXml.replaceFirst(
           RegExp(r'<note>\s*<pitch><step>D</step>'),
           '<forward><duration>8</duration></forward>'
-              '<note><pitch><step>D</step>'));
-      final engine = LayoutEngine(staff,
-          availableWidth: 2000, staffSpace: 12, metadata: metadata);
+          '<note><pitch><step>D</step>',
+        ),
+      );
+      final engine = LayoutEngine(
+        staff,
+        availableWidth: 2000,
+        staffSpace: 12,
+        metadata: metadata,
+      );
       final onsets = {
         for (final p in engine.layout())
           if (p.element is Note) (p.element as Note).pitch.step: p.onset,
@@ -315,20 +375,26 @@ void main() {
     // needs the gap, so one ENDING an implicit bar left no trace and the next
     // bar started early by the gap.
     test('a pickup ending in a forward lasts until the forward ends', () {
-      final staff = MusicXMLParser.parseMusicXML(_pickupXml.replaceFirst(
+      final staff = MusicXMLParser.parseMusicXML(
+        _pickupXml.replaceFirst(
           RegExp(r'<type>quarter</type>\s*</note>'),
           '<type>quarter</type></note>'
-              '<forward><duration>4</duration><voice>1</voice></forward>'));
+          '<forward><duration>4</duration><voice>1</voice></forward>',
+        ),
+      );
       // C (one quarter) + one quarter of forward: bar 1 at 1920.
       expect(_noteOnTicks(MidiMapper.fromStaff(staff)), [0, 1920, 5760]);
     });
 
     test('a forward-only voice does not become a second voice', () {
-      final staff = MusicXMLParser.parseMusicXML(_pickupXml.replaceFirst(
+      final staff = MusicXMLParser.parseMusicXML(
+        _pickupXml.replaceFirst(
           RegExp(r'<type>quarter</type>\s*</note>'),
           '<type>quarter</type></note>'
-              '<backup><duration>4</duration></backup>'
-              '<forward><duration>4</duration><voice>2</voice></forward>'));
+          '<backup><duration>4</duration></backup>'
+          '<forward><duration>4</duration><voice>2</voice></forward>',
+        ),
+      );
       expect(staff.measures.first, isNot(isA<MultiVoiceMeasure>()));
     });
   });

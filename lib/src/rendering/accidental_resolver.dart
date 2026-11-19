@@ -140,8 +140,9 @@ class AccidentalResolver {
     // Rule 1: cautionary/editorial accidentals are never suppressed.
     if (note.accidentalParenthesis != AccidentalParenthesis.none) {
       state[key] = alter;
-      out[note] =
-          alter == 0 ? AccidentalDisplay.natural : AccidentalDisplay.show;
+      out[note] = alter == 0
+          ? AccidentalDisplay.natural
+          : AccidentalDisplay.show;
       return;
     }
 
@@ -158,8 +159,7 @@ class AccidentalResolver {
       return;
     }
     state[key] = alter;
-    out[note] =
-        alter == 0 ? AccidentalDisplay.natural : AccidentalDisplay.show;
+    out[note] = alter == 0 ? AccidentalDisplay.natural : AccidentalDisplay.show;
   }
 
   /// Alteration a key signature of [keyCount] (>0 sharps, <0 flats) applies to

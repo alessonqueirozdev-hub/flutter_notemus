@@ -10,10 +10,13 @@ import 'duration.dart';
 enum MensuralHeadShape {
   /// Cabeça oblonga (longa, breve mensural)
   oblique,
+
   /// Cabeça romboide (semibreve, mínima)
   diamond,
+
   /// Cabeça redonda (style tardio)
   round,
+
   /// Cabeça quadrada (neuma tardio / ars antiqua)
   square,
 }
@@ -25,18 +28,25 @@ enum PlicaDirection { up, down }
 enum MensuralDuration {
   /// Maxima (Mx)
   maxima,
+
   /// Longa (L)
   longa,
+
   /// Breve (B)
   breve,
+
   /// Semibreve (Sb)
   semibreve,
+
   /// Mínima (Mn)
   minima,
+
   /// Semimínima (Sm)
   semiminima,
+
   /// FUses (Fu)
   fusa,
+
   /// SemifUses (Sf)
   semifusa,
 }
@@ -97,8 +107,10 @@ class MensuralNote extends MusicalElement {
 enum MensuralNoteQuality {
   /// Perfeita: divisão ternária (valem 3 unidades smalleres)
   perfecta,
+
   /// Imperfeita: divisão binária (valem 2 unidades smalleres)
   imperfecta,
+
   /// Alterada: dobra o value by alteração mensural (only breve and semibreve)
   alterata,
 }
@@ -139,10 +151,13 @@ class Ligature extends MusicalElement {
 enum LigatureForm {
   /// Cum proprietate, cum perfectione (forma default)
   cumpropriete,
+
   /// Sine proprietate (sem property)
   sinepropriete,
+
   /// Cum opposita proprietate (with property oposta — indicates semibreves)
   cumoppositapropriete,
+
   /// Sine perfectione
   sineperfectione,
 }
@@ -196,10 +211,13 @@ class Mensur extends MusicalElement {
 enum MensurSign {
   /// Circle (tempus perfectum)
   circle,
+
   /// Semicírculo (tempus imperfectum)
   semicircle,
+
   /// Semicírculo cortado (alla breve / cut time mensural)
   cut,
+
   /// Symbol C with point
   cWithDot,
 }
@@ -228,27 +246,25 @@ class ProportMark extends MusicalElement {
 
 /// Converts a duração mensural for value relativo to the semibreve.
 /// Only indicativo; o value real depende of the mensura ativa.
-double mensuralDurationToValue(MensuralDuration duration) =>
-    switch (duration) {
-      MensuralDuration.maxima     => 8.0,
-      MensuralDuration.longa      => 4.0,
-      MensuralDuration.breve      => 2.0,
-      MensuralDuration.semibreve  => 1.0,
-      MensuralDuration.minima     => 0.5,
-      MensuralDuration.semiminima => 0.25,
-      MensuralDuration.fusa       => 0.125,
-      MensuralDuration.semifusa   => 0.0625,
-    };
+double mensuralDurationToValue(MensuralDuration duration) => switch (duration) {
+  MensuralDuration.maxima => 8.0,
+  MensuralDuration.longa => 4.0,
+  MensuralDuration.breve => 2.0,
+  MensuralDuration.semibreve => 1.0,
+  MensuralDuration.minima => 0.5,
+  MensuralDuration.semiminima => 0.25,
+  MensuralDuration.fusa => 0.125,
+  MensuralDuration.semifusa => 0.0625,
+};
 
 /// Returns o [DurationType] moderno more next de a [MensuralDuration].
-DurationType mensuralToModernDuration(MensuralDuration d) =>
-    switch (d) {
-      MensuralDuration.maxima     => DurationType.maxima,
-      MensuralDuration.longa      => DurationType.long,
-      MensuralDuration.breve      => DurationType.breve,
-      MensuralDuration.semibreve  => DurationType.whole,
-      MensuralDuration.minima     => DurationType.half,
-      MensuralDuration.semiminima => DurationType.quarter,
-      MensuralDuration.fusa       => DurationType.eighth,
-      MensuralDuration.semifusa   => DurationType.sixteenth,
-    };
+DurationType mensuralToModernDuration(MensuralDuration d) => switch (d) {
+  MensuralDuration.maxima => DurationType.maxima,
+  MensuralDuration.longa => DurationType.long,
+  MensuralDuration.breve => DurationType.breve,
+  MensuralDuration.semibreve => DurationType.whole,
+  MensuralDuration.minima => DurationType.half,
+  MensuralDuration.semiminima => DurationType.quarter,
+  MensuralDuration.fusa => DurationType.eighth,
+  MensuralDuration.semifusa => DurationType.sixteenth,
+};

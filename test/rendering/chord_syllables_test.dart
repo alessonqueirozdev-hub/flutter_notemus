@@ -64,9 +64,7 @@ void main() {
           Note(
             pitch: const Pitch(step: 'E', octave: 4),
             duration: const Duration(DurationType.quarter),
-            syllables: const [
-              Syllable(text: 'sol', type: SyllableType.single),
-            ],
+            syllables: const [Syllable(text: 'sol', type: SyllableType.single)],
           ),
         ],
         duration: const Duration(DurationType.quarter),

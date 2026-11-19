@@ -79,16 +79,22 @@ void main() {
     test('Odd-numbered voices have stems up', () {
       for (int i = 1; i <= 9; i += 2) {
         final voice = Voice(number: i);
-        expect(voice.getStemDirection(), equals(StemDirection.up),
-          reason: 'Voice $i should have stems up');
+        expect(
+          voice.getStemDirection(),
+          equals(StemDirection.up),
+          reason: 'Voice $i should have stems up',
+        );
       }
     });
 
     test('Even-numbered voices have stems down', () {
       for (int i = 2; i <= 10; i += 2) {
         final voice = Voice(number: i);
-        expect(voice.getStemDirection(), equals(StemDirection.down),
-          reason: 'Voice $i should have stems down');
+        expect(
+          voice.getStemDirection(),
+          equals(StemDirection.down),
+          reason: 'Voice $i should have stems down',
+        );
       }
     });
   });
@@ -135,8 +141,11 @@ void main() {
         final offset = voice.getHorizontalOffset(staffSpace);
         final expectedOffset = i.isEven ? 0.6 * staffSpace : 0.0;
 
-        expect(offset, equals(expectedOffset),
-          reason: 'Voice $i should have offset ${expectedOffset}px');
+        expect(
+          offset,
+          equals(expectedOffset),
+          reason: 'Voice $i should have offset ${expectedOffset}px',
+        );
       }
     });
   });
@@ -164,9 +173,18 @@ void main() {
     test('Add multiple notes to voice', () {
       final voice = Voice.voice1();
       final notes = [
-        Note(pitch: Pitch(step: 'C', octave: 4), duration: Duration(DurationType.quarter)),
-        Note(pitch: Pitch(step: 'D', octave: 4), duration: Duration(DurationType.quarter)),
-        Note(pitch: Pitch(step: 'E', octave: 4), duration: Duration(DurationType.quarter)),
+        Note(
+          pitch: Pitch(step: 'C', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
+        Note(
+          pitch: Pitch(step: 'D', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
+        Note(
+          pitch: Pitch(step: 'E', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
       ];
 
       for (final note in notes) {
@@ -180,8 +198,14 @@ void main() {
       final voice = Voice.voice1();
       final chord = Chord(
         notes: [
-          Note(pitch: Pitch(step: 'C', octave: 4), duration: Duration(DurationType.quarter)),
-          Note(pitch: Pitch(step: 'E', octave: 4), duration: Duration(DurationType.quarter)),
+          Note(
+            pitch: Pitch(step: 'C', octave: 4),
+            duration: Duration(DurationType.quarter),
+          ),
+          Note(
+            pitch: Pitch(step: 'E', octave: 4),
+            duration: Duration(DurationType.quarter),
+          ),
         ],
         duration: Duration(DurationType.quarter),
       );
@@ -204,10 +228,18 @@ void main() {
 
     test('Notes getter returns only notes', () {
       final voice = Voice.voice1();
-      final note = Note(pitch: Pitch(step: 'C', octave: 4), duration: Duration(DurationType.quarter));
+      final note = Note(
+        pitch: Pitch(step: 'C', octave: 4),
+        duration: Duration(DurationType.quarter),
+      );
       final rest = Rest(duration: Duration(DurationType.quarter));
       final chord = Chord(
-        notes: [Note(pitch: Pitch(step: 'E', octave: 4), duration: Duration(DurationType.quarter))],
+        notes: [
+          Note(
+            pitch: Pitch(step: 'E', octave: 4),
+            duration: Duration(DurationType.quarter),
+          ),
+        ],
         duration: Duration(DurationType.quarter),
       );
 
@@ -232,10 +264,12 @@ void main() {
     test('Add voice to measure', () {
       final measure = MultiVoiceMeasure();
       final voice = Voice.voice1();
-      voice.add(Note(
-        pitch: Pitch(step: 'C', octave: 4),
-        duration: Duration(DurationType.quarter),
-      ));
+      voice.add(
+        Note(
+          pitch: Pitch(step: 'C', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
+      );
 
       measure.addVoice(voice);
 
@@ -245,10 +279,16 @@ void main() {
 
     test('Two voices factory creates polyphonic measure', () {
       final voice1Elements = [
-        Note(pitch: Pitch(step: 'C', octave: 5), duration: Duration(DurationType.quarter)),
+        Note(
+          pitch: Pitch(step: 'C', octave: 5),
+          duration: Duration(DurationType.quarter),
+        ),
       ];
       final voice2Elements = [
-        Note(pitch: Pitch(step: 'C', octave: 4), duration: Duration(DurationType.quarter)),
+        Note(
+          pitch: Pitch(step: 'C', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
       ];
 
       final measure = MultiVoiceMeasure.twoVoices(
@@ -261,9 +301,24 @@ void main() {
     });
 
     test('Three voices factory', () {
-      final elements1 = [Note(pitch: Pitch(step: 'C', octave: 5), duration: Duration(DurationType.quarter))];
-      final elements2 = [Note(pitch: Pitch(step: 'E', octave: 4), duration: Duration(DurationType.quarter))];
-      final elements3 = [Note(pitch: Pitch(step: 'G', octave: 3), duration: Duration(DurationType.quarter))];
+      final elements1 = [
+        Note(
+          pitch: Pitch(step: 'C', octave: 5),
+          duration: Duration(DurationType.quarter),
+        ),
+      ];
+      final elements2 = [
+        Note(
+          pitch: Pitch(step: 'E', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
+      ];
+      final elements3 = [
+        Note(
+          pitch: Pitch(step: 'G', octave: 3),
+          duration: Duration(DurationType.quarter),
+        ),
+      ];
 
       final measure = MultiVoiceMeasure.threeVoices(
         voice1Elements: elements1,
@@ -280,7 +335,12 @@ void main() {
     test('Single voice is not polyphonic', () {
       final measure = MultiVoiceMeasure();
       final voice = Voice.voice1();
-      voice.add(Note(pitch: Pitch(step: 'C', octave: 4), duration: Duration(DurationType.quarter)));
+      voice.add(
+        Note(
+          pitch: Pitch(step: 'C', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
+      );
 
       measure.addVoice(voice);
 
@@ -292,8 +352,18 @@ void main() {
       final voice1 = Voice.voice1();
       final voice2 = Voice.voice2();
 
-      voice1.add(Note(pitch: Pitch(step: 'C', octave: 5), duration: Duration(DurationType.quarter)));
-      voice2.add(Note(pitch: Pitch(step: 'C', octave: 4), duration: Duration(DurationType.quarter)));
+      voice1.add(
+        Note(
+          pitch: Pitch(step: 'C', octave: 5),
+          duration: Duration(DurationType.quarter),
+        ),
+      );
+      voice2.add(
+        Note(
+          pitch: Pitch(step: 'C', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
+      );
 
       measure.addVoice(voice1);
       measure.addVoice(voice2);
@@ -305,7 +375,12 @@ void main() {
       final measure = MultiVoiceMeasure();
       for (int i = 1; i <= 3; i++) {
         final voice = Voice(number: i);
-        voice.add(Note(pitch: Pitch(step: 'C', octave: 4), duration: Duration(DurationType.quarter)));
+        voice.add(
+          Note(
+            pitch: Pitch(step: 'C', octave: 4),
+            duration: Duration(DurationType.quarter),
+          ),
+        );
         measure.addVoice(voice);
       }
 
@@ -356,16 +431,56 @@ void main() {
       final measure = MultiVoiceMeasure();
 
       final upperVoice = Voice.voice1(name: 'Upper');
-      upperVoice.add(Note(pitch: Pitch(step: 'G', octave: 4), duration: Duration(DurationType.quarter)));
-      upperVoice.add(Note(pitch: Pitch(step: 'A', octave: 4), duration: Duration(DurationType.quarter)));
-      upperVoice.add(Note(pitch: Pitch(step: 'B', octave: 4), duration: Duration(DurationType.quarter)));
-      upperVoice.add(Note(pitch: Pitch(step: 'C', octave: 5), duration: Duration(DurationType.quarter)));
+      upperVoice.add(
+        Note(
+          pitch: Pitch(step: 'G', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
+      );
+      upperVoice.add(
+        Note(
+          pitch: Pitch(step: 'A', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
+      );
+      upperVoice.add(
+        Note(
+          pitch: Pitch(step: 'B', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
+      );
+      upperVoice.add(
+        Note(
+          pitch: Pitch(step: 'C', octave: 5),
+          duration: Duration(DurationType.quarter),
+        ),
+      );
 
       final lowerVoice = Voice.voice2(name: 'Lower');
-      lowerVoice.add(Note(pitch: Pitch(step: 'C', octave: 4), duration: Duration(DurationType.quarter)));
-      lowerVoice.add(Note(pitch: Pitch(step: 'B', octave: 3), duration: Duration(DurationType.quarter)));
-      lowerVoice.add(Note(pitch: Pitch(step: 'A', octave: 3), duration: Duration(DurationType.quarter)));
-      lowerVoice.add(Note(pitch: Pitch(step: 'G', octave: 3), duration: Duration(DurationType.quarter)));
+      lowerVoice.add(
+        Note(
+          pitch: Pitch(step: 'C', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
+      );
+      lowerVoice.add(
+        Note(
+          pitch: Pitch(step: 'B', octave: 3),
+          duration: Duration(DurationType.quarter),
+        ),
+      );
+      lowerVoice.add(
+        Note(
+          pitch: Pitch(step: 'A', octave: 3),
+          duration: Duration(DurationType.quarter),
+        ),
+      );
+      lowerVoice.add(
+        Note(
+          pitch: Pitch(step: 'G', octave: 3),
+          duration: Duration(DurationType.quarter),
+        ),
+      );
 
       measure.addVoice(upperVoice);
       measure.addVoice(lowerVoice);
@@ -380,18 +495,39 @@ void main() {
       final measure = MultiVoiceMeasure();
 
       final melody = Voice.voice1(name: 'Melody');
-      melody.add(Note(pitch: Pitch(step: 'E', octave: 5), duration: Duration(DurationType.quarter)));
-      melody.add(Note(pitch: Pitch(step: 'D', octave: 5), duration: Duration(DurationType.quarter)));
+      melody.add(
+        Note(
+          pitch: Pitch(step: 'E', octave: 5),
+          duration: Duration(DurationType.quarter),
+        ),
+      );
+      melody.add(
+        Note(
+          pitch: Pitch(step: 'D', octave: 5),
+          duration: Duration(DurationType.quarter),
+        ),
+      );
 
       final chords = Voice.voice2(name: 'Chords');
-      chords.add(Chord(
-        notes: [
-          Note(pitch: Pitch(step: 'C', octave: 4), duration: Duration(DurationType.half)),
-          Note(pitch: Pitch(step: 'E', octave: 4), duration: Duration(DurationType.half)),
-          Note(pitch: Pitch(step: 'G', octave: 4), duration: Duration(DurationType.half)),
-        ],
-        duration: Duration(DurationType.half),
-      ));
+      chords.add(
+        Chord(
+          notes: [
+            Note(
+              pitch: Pitch(step: 'C', octave: 4),
+              duration: Duration(DurationType.half),
+            ),
+            Note(
+              pitch: Pitch(step: 'E', octave: 4),
+              duration: Duration(DurationType.half),
+            ),
+            Note(
+              pitch: Pitch(step: 'G', octave: 4),
+              duration: Duration(DurationType.half),
+            ),
+          ],
+          duration: Duration(DurationType.half),
+        ),
+      );
 
       measure.addVoice(melody);
       measure.addVoice(chords);
@@ -406,14 +542,21 @@ void main() {
 
       final treble = Voice.voice1(name: 'Melody');
       for (int i = 0; i < 4; i++) {
-        treble.add(Note(
-          pitch: Pitch(step: 'E', octave: 4),
-          duration: Duration(DurationType.eighth),
-        ));
+        treble.add(
+          Note(
+            pitch: Pitch(step: 'E', octave: 4),
+            duration: Duration(DurationType.eighth),
+          ),
+        );
       }
 
       final bass = Voice.voice2(name: 'Bass');
-      bass.add(Note(pitch: Pitch(step: 'C', octave: 3), duration: Duration(DurationType.half)));
+      bass.add(
+        Note(
+          pitch: Pitch(step: 'C', octave: 3),
+          duration: Duration(DurationType.half),
+        ),
+      );
 
       measure.addVoice(treble);
       measure.addVoice(bass);

@@ -58,115 +58,119 @@ class JsonOdeExample extends StatelessWidget {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 📋 Header
-            const Text(
-              'Ode to Joy',
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: Colors.deepPurple,
-              ),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 📋 Header
+          const Text(
+            'Ode to Joy',
+            style: TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+              color: Colors.deepPurple,
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Ludwig van Beethoven - Rendered from JSON',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[700],
-              ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Ludwig van Beethoven - Rendered from JSON',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey[700],
             ),
-            const Divider(height: 32),
+          ),
+          const Divider(height: 32),
 
-            // 📊 Info Card
-            Card(
-              elevation: 3,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.music_note, color: Colors.deepPurple, size: 32),
-                        const SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Piece Information',
-                              style: TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                              ),
+          // 📊 Info Card
+          Card(
+            elevation: 3,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.music_note,
+                          color: Colors.deepPurple, size: 32),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Piece Information',
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
                             ),
-                            Text(
-                              'Created from full JSON',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey[600],
-                              ),
+                          ),
+                          Text(
+                            'Created from full JSON',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[600],
                             ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const Divider(height: 24),
-                    _buildInfoRow('Key:', 'D major (2 sharps)'),
-                    _buildInfoRow('Compass:', '4/4'),
-                    _buildInfoRow('Compasses:', '${staff.measures.length}'),
-                    _buildInfoRow('Format:', 'Complete JSON (compatible with MusicXML)'),
-                  ],
-                ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 24),
+                  _buildInfoRow('Key:', 'D major (2 sharps)'),
+                  _buildInfoRow('Compass:', '4/4'),
+                  _buildInfoRow('Compasses:', '${staff.measures.length}'),
+                  _buildInfoRow(
+                      'Format:', 'Complete JSON (compatible with MusicXML)'),
+                ],
               ),
             ),
+          ),
 
-            const SizedBox(height: 24),
+          const SizedBox(height: 24),
 
-            // 🎼SCORE
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Score',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
+          // 🎼SCORE
+          Card(
+            elevation: 2,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Score',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
                     ),
-                    const SizedBox(height: 20),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.grey[300]!),
-                      ),
-                      padding: const EdgeInsets.all(24),
-                      child: MusicScore(
-                        staff: staff,
-                        theme: const MusicScoreTheme(
-                          noteheadColor: Colors.black,
-                          stemColor: Colors.black,
-                          staffLineColor: Colors.black87,
-                          barlineColor: Colors.black,
-                        ),
-                        staffSpace: 14.0,
-                      ),
+                  ),
+                  const SizedBox(height: 20),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey[300]!),
                     ),
-                  ],
-                ),
+                    padding: const EdgeInsets.all(24),
+                    child: MusicScore(
+                      staff: staff,
+                      theme: const MusicScoreTheme(
+                        noteheadColor: Colors.black,
+                        stemColor: Colors.black,
+                        staffLineColor: Colors.black87,
+                        barlineColor: Colors.black,
+                      ),
+                      staffSpace: 14.0,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
-      );
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildInfoRow(String label, String value) {

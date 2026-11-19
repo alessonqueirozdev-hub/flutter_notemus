@@ -25,10 +25,5 @@ class MetronomeMark extends MusicalElement {
   final int? bpm;
   final String? text;
 
-  MetronomeMark({
-    this.beatUnit,
-    this.secondBeatUnit,
-    this.bpm,
-    this.text,
-  });
+  MetronomeMark({this.beatUnit, this.secondBeatUnit, this.bpm, this.text});
 }

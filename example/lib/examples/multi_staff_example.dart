@@ -241,8 +241,8 @@ class MultiStaffExampleWidget extends StatelessWidget {
               final index = entry.key;
               final group = entry.value;
               return Card(
-                margin: const EdgeInsets.symmetric(
-                    horizontal: 16.0, vertical: 8.0),
+                margin:
+                    const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(

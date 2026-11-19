@@ -1,5 +1,5 @@
 /// System de detecção de colisões between symbols musicais
-/// 
+///
 /// Implementa algoritmos eficientes for detectar sobrepositions
 /// and Calculate separações mínimas between elementos.
 library;
@@ -38,7 +38,7 @@ class CollisionDetector {
   }
 
   /// Calculates a separação mínima required between dois retângulos
-  /// 
+  ///
   /// Returns 0 if already are separate suficientemente
   double calculateMinimumSeparation(Rect leftBox, Rect rightBox) {
     // If not há sobreposition vertical, not need ser separate
@@ -68,10 +68,12 @@ class CollisionDetector {
     for (final leftPoint in leftPoints) {
       for (final rightPoint in rightPoints) {
         final gap = rightPoint.position.dx - leftPoint.position.dx;
-        
+
         // Considerar only if há sobreposition vertical
-        final verticalDistance = (rightPoint.position.dy - leftPoint.position.dy).abs();
-        if (verticalDistance < 10.0) { // Threshold vertical
+        final verticalDistance =
+            (rightPoint.position.dy - leftPoint.position.dy).abs();
+        if (verticalDistance < 10.0) {
+          // Threshold vertical
           minGap = min(minGap, gap);
         }
       }
@@ -85,7 +87,7 @@ class CollisionDetector {
   }
 
   /// Detecta all as colisões in a list of retângulos
-  /// 
+  ///
   /// Returns list of pares de indexs that colidem
   List<CollisionPair> detectAllCollisions(List<Rect> boxes) {
     final List<CollisionPair> collisions = [];
@@ -93,7 +95,9 @@ class CollisionDetector {
     for (int i = 0; i < boxes.length - 1; i++) {
       for (int j = i + 1; j < boxes.length; j++) {
         if (checkCollision(boxes[i], boxes[j])) {
-          collisions.add(CollisionPair(i, j, calculateOverlap(boxes[i], boxes[j])));
+          collisions.add(
+            CollisionPair(i, j, calculateOverlap(boxes[i], boxes[j])),
+          );
         }
       }
     }
@@ -109,11 +113,11 @@ class CollisionDetector {
   }
 
   /// Algoritmo de sweep line for detecção eficiente
-  /// 
+  ///
   /// Complexidade: O(n log n) to the invés de O(n²)
   List<CollisionPair> detectCollisionsSweepLine(List<SymbolBounds> symbols) {
     final List<CollisionPair> collisions = [];
-    
+
     // Ordenar by coordenada X initial
     final sorted = List<SymbolBounds>.from(symbols);
     sorted.sort((a, b) => a.bounds.left.compareTo(b.bounds.left));
@@ -130,11 +134,13 @@ class CollisionDetector {
       // Check colisão with symbols ativos
       for (final activeSymbol in active) {
         if (checkCollision(current.bounds, activeSymbol.bounds)) {
-          collisions.add(CollisionPair(
-            current.index,
-            activeSymbol.index,
-            calculateOverlap(current.bounds, activeSymbol.bounds),
-          ));
+          collisions.add(
+            CollisionPair(
+              current.index,
+              activeSymbol.index,
+              calculateOverlap(current.bounds, activeSymbol.bounds),
+            ),
+          );
         }
       }
 

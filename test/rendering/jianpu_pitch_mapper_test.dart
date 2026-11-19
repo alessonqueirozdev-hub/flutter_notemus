@@ -64,8 +64,7 @@ void main() {
       final mapper = JianpuPitchMapper.fromKeySignature(KeySignature(1));
       expect(mapper.tonicName, 'G');
       // F# is diatonic in G (leading tone, degree 7, no accidental).
-      final fSharp =
-          mapper.map(const Pitch(step: 'F', octave: 4, alter: 1.0));
+      final fSharp = mapper.map(const Pitch(step: 'F', octave: 4, alter: 1.0));
       expect(fSharp.numeral, '7');
       expect(fSharp.accidental, '');
       // F natural lowers the leading tone → natural sign on degree 7.

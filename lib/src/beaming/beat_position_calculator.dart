@@ -10,10 +10,7 @@ class BeatPositionInfo {
   /// Position within the beat (0.0 = start, 1.0 = end).
   final double positionWithinBeat;
 
-  BeatPositionInfo({
-    required this.beatIndex,
-    required this.positionWithinBeat,
-  });
+  BeatPositionInfo({required this.beatIndex, required this.positionWithinBeat});
 
   @override
   String toString() =>
@@ -29,10 +26,7 @@ class NoteEvent {
   /// Duration in whole notes (1.0 = whole, 0.5 = half, etc.).
   final double duration;
 
-  NoteEvent({
-    required this.positionInBar,
-    required this.duration,
-  });
+  NoteEvent({required this.positionInBar, required this.duration});
 
   @override
   String toString() =>
@@ -53,15 +47,12 @@ class NoteEvent {
 /// - Agrupamentos customizados
 class BeatPositionCalculator {
   final TimeSignature timeSignature;
-  
+
   /// Agrupamentos customizados for measures irregulares
   /// Example: 7/8 can be [2, 2, 3] or [3, 2, 2]
   final List<int>? customBeatGrouping;
 
-  BeatPositionCalculator(
-    this.timeSignature, {
-    this.customBeatGrouping,
-  });
+  BeatPositionCalculator(this.timeSignature, {this.customBeatGrouping});
 
   /// Checks if o measure is composto (numerator divisível by 3, denominator 8)
   /// Examples: 6/8, 9/8, 12/8
@@ -103,7 +94,7 @@ class BeatPositionCalculator {
     final double beatLen = beatLength;
     final int beatIndex = (positionInBar / beatLen).floor();
     final double positionWithinBeat = (positionInBar % beatLen) / beatLen;
-    
+
     return BeatPositionInfo(
       beatIndex: beatIndex,
       positionWithinBeat: positionWithinBeat,
@@ -244,10 +235,7 @@ class BeatPositionCalculator {
     final double normalizedPosition = positionInMeasure / barLen;
     final double duration = note.duration.realValue;
 
-    return NoteEvent(
-      positionInBar: normalizedPosition,
-      duration: duration,
-    );
+    return NoteEvent(positionInBar: normalizedPosition, duration: duration);
   }
 
   @override

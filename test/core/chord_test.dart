@@ -8,9 +8,18 @@ void main() {
   group('Chord - Basic Construction', () {
     test('Creates chord with multiple notes', () {
       final notes = [
-        Note(pitch: Pitch(step: 'C', octave: 4), duration: Duration(DurationType.quarter)),
-        Note(pitch: Pitch(step: 'E', octave: 4), duration: Duration(DurationType.quarter)),
-        Note(pitch: Pitch(step: 'G', octave: 4), duration: Duration(DurationType.quarter)),
+        Note(
+          pitch: Pitch(step: 'C', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
+        Note(
+          pitch: Pitch(step: 'E', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
+        Note(
+          pitch: Pitch(step: 'G', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
       ];
 
       final chord = Chord(
@@ -31,24 +40,39 @@ void main() {
 
     test('Creates chord with two notes (dyad)', () {
       final notes = [
-        Note(pitch: Pitch(step: 'C', octave: 4), duration: Duration(DurationType.half)),
-        Note(pitch: Pitch(step: 'G', octave: 4), duration: Duration(DurationType.half)),
+        Note(
+          pitch: Pitch(step: 'C', octave: 4),
+          duration: Duration(DurationType.half),
+        ),
+        Note(
+          pitch: Pitch(step: 'G', octave: 4),
+          duration: Duration(DurationType.half),
+        ),
       ];
 
-      final chord = Chord(
-        notes: notes,
-        duration: Duration(DurationType.half),
-      );
+      final chord = Chord(notes: notes, duration: Duration(DurationType.half));
 
       expect(chord.notes, hasLength(2));
     });
 
     test('Creates chord with four notes', () {
       final notes = [
-        Note(pitch: Pitch(step: 'C', octave: 4), duration: Duration(DurationType.quarter)),
-        Note(pitch: Pitch(step: 'E', octave: 4), duration: Duration(DurationType.quarter)),
-        Note(pitch: Pitch(step: 'G', octave: 4), duration: Duration(DurationType.quarter)),
-        Note(pitch: Pitch(step: 'B', octave: 4), duration: Duration(DurationType.quarter)),
+        Note(
+          pitch: Pitch(step: 'C', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
+        Note(
+          pitch: Pitch(step: 'E', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
+        Note(
+          pitch: Pitch(step: 'G', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
+        Note(
+          pitch: Pitch(step: 'B', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
       ];
 
       final chord = Chord(
@@ -61,9 +85,18 @@ void main() {
 
     test('Creates chord with articulations', () {
       final notes = [
-        Note(pitch: Pitch(step: 'D', octave: 4), duration: Duration(DurationType.quarter)),
-        Note(pitch: Pitch(step: 'F', octave: 4), duration: Duration(DurationType.quarter)),
-        Note(pitch: Pitch(step: 'A', octave: 4), duration: Duration(DurationType.quarter)),
+        Note(
+          pitch: Pitch(step: 'D', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
+        Note(
+          pitch: Pitch(step: 'F', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
+        Note(
+          pitch: Pitch(step: 'A', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
       ];
 
       final chord = Chord(
@@ -79,9 +112,18 @@ void main() {
 
     test('Creates chord with dynamic', () {
       final notes = [
-        Note(pitch: Pitch(step: 'E', octave: 4), duration: Duration(DurationType.quarter)),
-        Note(pitch: Pitch(step: 'G', octave: 4), duration: Duration(DurationType.quarter)),
-        Note(pitch: Pitch(step: 'B', octave: 4), duration: Duration(DurationType.quarter)),
+        Note(
+          pitch: Pitch(step: 'E', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
+        Note(
+          pitch: Pitch(step: 'G', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
+        Note(
+          pitch: Pitch(step: 'B', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
       ];
 
       final chord = Chord(
@@ -96,9 +138,18 @@ void main() {
 
     test('Creates chord with voice number', () {
       final notes = [
-        Note(pitch: Pitch(step: 'F', octave: 4), duration: Duration(DurationType.quarter)),
-        Note(pitch: Pitch(step: 'A', octave: 4), duration: Duration(DurationType.quarter)),
-        Note(pitch: Pitch(step: 'C', octave: 5), duration: Duration(DurationType.quarter)),
+        Note(
+          pitch: Pitch(step: 'F', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
+        Note(
+          pitch: Pitch(step: 'A', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
+        Note(
+          pitch: Pitch(step: 'C', octave: 5),
+          duration: Duration(DurationType.quarter),
+        ),
       ];
 
       final chord = Chord(
@@ -114,12 +165,24 @@ void main() {
   group('Chord - Common Musical Chords', () {
     test('C major triad', () {
       final notes = [
-        Note(pitch: Pitch(step: 'C', octave: 4), duration: Duration(DurationType.quarter)),
-        Note(pitch: Pitch(step: 'E', octave: 4), duration: Duration(DurationType.quarter)),
-        Note(pitch: Pitch(step: 'G', octave: 4), duration: Duration(DurationType.quarter)),
+        Note(
+          pitch: Pitch(step: 'C', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
+        Note(
+          pitch: Pitch(step: 'E', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
+        Note(
+          pitch: Pitch(step: 'G', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
       ];
 
-      final chord = Chord(notes: notes, duration: Duration(DurationType.quarter));
+      final chord = Chord(
+        notes: notes,
+        duration: Duration(DurationType.quarter),
+      );
 
       // C major = C, And, G (MIDI 60, 64, 67)
       expect(chord.notes[0].pitch.midiNumber, equals(60)); // C4
@@ -129,12 +192,24 @@ void main() {
 
     test('D minor triad', () {
       final notes = [
-        Note(pitch: Pitch(step: 'D', octave: 4), duration: Duration(DurationType.quarter)),
-        Note(pitch: Pitch(step: 'F', octave: 4), duration: Duration(DurationType.quarter)),
-        Note(pitch: Pitch(step: 'A', octave: 4), duration: Duration(DurationType.quarter)),
+        Note(
+          pitch: Pitch(step: 'D', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
+        Note(
+          pitch: Pitch(step: 'F', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
+        Note(
+          pitch: Pitch(step: 'A', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
       ];
 
-      final chord = Chord(notes: notes, duration: Duration(DurationType.quarter));
+      final chord = Chord(
+        notes: notes,
+        duration: Duration(DurationType.quarter),
+      );
 
       // D minor = D, F, A (MIDI 62, 65, 69)
       expect(chord.notes[0].pitch.midiNumber, equals(62)); // D4
@@ -144,13 +219,28 @@ void main() {
 
     test('G7 chord (dominant seventh)', () {
       final notes = [
-        Note(pitch: Pitch(step: 'G', octave: 3), duration: Duration(DurationType.quarter)),
-        Note(pitch: Pitch(step: 'B', octave: 3), duration: Duration(DurationType.quarter)),
-        Note(pitch: Pitch(step: 'D', octave: 4), duration: Duration(DurationType.quarter)),
-        Note(pitch: Pitch(step: 'F', octave: 4), duration: Duration(DurationType.quarter)),
+        Note(
+          pitch: Pitch(step: 'G', octave: 3),
+          duration: Duration(DurationType.quarter),
+        ),
+        Note(
+          pitch: Pitch(step: 'B', octave: 3),
+          duration: Duration(DurationType.quarter),
+        ),
+        Note(
+          pitch: Pitch(step: 'D', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
+        Note(
+          pitch: Pitch(step: 'F', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
       ];
 
-      final chord = Chord(notes: notes, duration: Duration(DurationType.quarter));
+      final chord = Chord(
+        notes: notes,
+        duration: Duration(DurationType.quarter),
+      );
 
       expect(chord.notes, hasLength(4));
       expect(chord.notes[0].pitch.step, equals('G'));
@@ -161,15 +251,22 @@ void main() {
 
     test('Power chord (dyad)', () {
       final notes = [
-        Note(pitch: Pitch(step: 'A', octave: 3), duration: Duration(DurationType.half)),
-        Note(pitch: Pitch(step: 'E', octave: 4), duration: Duration(DurationType.half)),
+        Note(
+          pitch: Pitch(step: 'A', octave: 3),
+          duration: Duration(DurationType.half),
+        ),
+        Note(
+          pitch: Pitch(step: 'E', octave: 4),
+          duration: Duration(DurationType.half),
+        ),
       ];
 
       final chord = Chord(notes: notes, duration: Duration(DurationType.half));
 
       expect(chord.notes, hasLength(2));
       // Perfect fifth interval = 7 semitones
-      final interval = chord.notes[1].pitch.midiNumber - chord.notes[0].pitch.midiNumber;
+      final interval =
+          chord.notes[1].pitch.midiNumber - chord.notes[0].pitch.midiNumber;
       expect(interval, equals(7));
     });
   });
@@ -177,13 +274,28 @@ void main() {
   group('Chord - Highest and Lowest Notes', () {
     test('highestNote returns correct note', () {
       final notes = [
-        Note(pitch: Pitch(step: 'C', octave: 4), duration: Duration(DurationType.quarter)),
-        Note(pitch: Pitch(step: 'E', octave: 4), duration: Duration(DurationType.quarter)),
-        Note(pitch: Pitch(step: 'G', octave: 4), duration: Duration(DurationType.quarter)),
-        Note(pitch: Pitch(step: 'C', octave: 5), duration: Duration(DurationType.quarter)),
+        Note(
+          pitch: Pitch(step: 'C', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
+        Note(
+          pitch: Pitch(step: 'E', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
+        Note(
+          pitch: Pitch(step: 'G', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
+        Note(
+          pitch: Pitch(step: 'C', octave: 5),
+          duration: Duration(DurationType.quarter),
+        ),
       ];
 
-      final chord = Chord(notes: notes, duration: Duration(DurationType.quarter));
+      final chord = Chord(
+        notes: notes,
+        duration: Duration(DurationType.quarter),
+      );
 
       expect(chord.highestNote.pitch.step, equals('C'));
       expect(chord.highestNote.pitch.octave, equals(5));
@@ -192,12 +304,24 @@ void main() {
 
     test('lowestNote returns correct note', () {
       final notes = [
-        Note(pitch: Pitch(step: 'C', octave: 3), duration: Duration(DurationType.quarter)),
-        Note(pitch: Pitch(step: 'G', octave: 4), duration: Duration(DurationType.quarter)),
-        Note(pitch: Pitch(step: 'E', octave: 4), duration: Duration(DurationType.quarter)),
+        Note(
+          pitch: Pitch(step: 'C', octave: 3),
+          duration: Duration(DurationType.quarter),
+        ),
+        Note(
+          pitch: Pitch(step: 'G', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
+        Note(
+          pitch: Pitch(step: 'E', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
       ];
 
-      final chord = Chord(notes: notes, duration: Duration(DurationType.quarter));
+      final chord = Chord(
+        notes: notes,
+        duration: Duration(DurationType.quarter),
+      );
 
       expect(chord.lowestNote.pitch.step, equals('C'));
       expect(chord.lowestNote.pitch.octave, equals(3));
@@ -206,11 +330,20 @@ void main() {
 
     test('highestNote and lowestNote work with two notes', () {
       final notes = [
-        Note(pitch: Pitch(step: 'D', octave: 4), duration: Duration(DurationType.quarter)),
-        Note(pitch: Pitch(step: 'A', octave: 4), duration: Duration(DurationType.quarter)),
+        Note(
+          pitch: Pitch(step: 'D', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
+        Note(
+          pitch: Pitch(step: 'A', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
       ];
 
-      final chord = Chord(notes: notes, duration: Duration(DurationType.quarter));
+      final chord = Chord(
+        notes: notes,
+        duration: Duration(DurationType.quarter),
+      );
 
       expect(chord.lowestNote.pitch.step, equals('D'));
       expect(chord.highestNote.pitch.step, equals('A'));
@@ -218,13 +351,24 @@ void main() {
 
     test('Chord span calculation', () {
       final notes = [
-        Note(pitch: Pitch(step: 'C', octave: 3), duration: Duration(DurationType.quarter)),
-        Note(pitch: Pitch(step: 'C', octave: 5), duration: Duration(DurationType.quarter)),
+        Note(
+          pitch: Pitch(step: 'C', octave: 3),
+          duration: Duration(DurationType.quarter),
+        ),
+        Note(
+          pitch: Pitch(step: 'C', octave: 5),
+          duration: Duration(DurationType.quarter),
+        ),
       ];
 
-      final chord = Chord(notes: notes, duration: Duration(DurationType.quarter));
+      final chord = Chord(
+        notes: notes,
+        duration: Duration(DurationType.quarter),
+      );
 
-      final span = chord.highestNote.pitch.midiNumber - chord.lowestNote.pitch.midiNumber;
+      final span =
+          chord.highestNote.pitch.midiNumber -
+          chord.lowestNote.pitch.midiNumber;
       expect(span, equals(24)); // 2 octaves = 24 semitones
     });
   });
@@ -233,20 +377,35 @@ void main() {
     test('Chord with sharps', () {
       final notes = [
         Note(
-          pitch: Pitch(step: 'F', octave: 4, accidentalType: AccidentalType.sharp),
+          pitch: Pitch(
+            step: 'F',
+            octave: 4,
+            accidentalType: AccidentalType.sharp,
+          ),
           duration: Duration(DurationType.quarter),
         ),
         Note(
-          pitch: Pitch(step: 'A', octave: 4, accidentalType: AccidentalType.sharp),
+          pitch: Pitch(
+            step: 'A',
+            octave: 4,
+            accidentalType: AccidentalType.sharp,
+          ),
           duration: Duration(DurationType.quarter),
         ),
         Note(
-          pitch: Pitch(step: 'C', octave: 5, accidentalType: AccidentalType.sharp),
+          pitch: Pitch(
+            step: 'C',
+            octave: 5,
+            accidentalType: AccidentalType.sharp,
+          ),
           duration: Duration(DurationType.quarter),
         ),
       ];
 
-      final chord = Chord(notes: notes, duration: Duration(DurationType.quarter));
+      final chord = Chord(
+        notes: notes,
+        duration: Duration(DurationType.quarter),
+      );
 
       expect(chord.notes[0].pitch.accidentalType, equals(AccidentalType.sharp));
       expect(chord.notes[1].pitch.accidentalType, equals(AccidentalType.sharp));
@@ -256,7 +415,11 @@ void main() {
     test('Chord with mixed accidentals', () {
       final notes = [
         Note(
-          pitch: Pitch(step: 'E', octave: 4, accidentalType: AccidentalType.flat),
+          pitch: Pitch(
+            step: 'E',
+            octave: 4,
+            accidentalType: AccidentalType.flat,
+          ),
           duration: Duration(DurationType.quarter),
         ),
         Note(
@@ -264,12 +427,19 @@ void main() {
           duration: Duration(DurationType.quarter),
         ),
         Note(
-          pitch: Pitch(step: 'B', octave: 4, accidentalType: AccidentalType.flat),
+          pitch: Pitch(
+            step: 'B',
+            octave: 4,
+            accidentalType: AccidentalType.flat,
+          ),
           duration: Duration(DurationType.quarter),
         ),
       ];
 
-      final chord = Chord(notes: notes, duration: Duration(DurationType.quarter));
+      final chord = Chord(
+        notes: notes,
+        duration: Duration(DurationType.quarter),
+      );
 
       expect(chord.notes[0].pitch.accidentalType, equals(AccidentalType.flat));
       expect(chord.notes[1].pitch.accidentalType, isNull);
@@ -280,9 +450,18 @@ void main() {
   group('Chord - Duration and Rhythm', () {
     test('Whole note chord', () {
       final notes = [
-        Note(pitch: Pitch(step: 'C', octave: 4), duration: Duration(DurationType.whole)),
-        Note(pitch: Pitch(step: 'E', octave: 4), duration: Duration(DurationType.whole)),
-        Note(pitch: Pitch(step: 'G', octave: 4), duration: Duration(DurationType.whole)),
+        Note(
+          pitch: Pitch(step: 'C', octave: 4),
+          duration: Duration(DurationType.whole),
+        ),
+        Note(
+          pitch: Pitch(step: 'E', octave: 4),
+          duration: Duration(DurationType.whole),
+        ),
+        Note(
+          pitch: Pitch(step: 'G', octave: 4),
+          duration: Duration(DurationType.whole),
+        ),
       ];
 
       final chord = Chord(notes: notes, duration: Duration(DurationType.whole));
@@ -293,12 +472,24 @@ void main() {
 
     test('Dotted half note chord', () {
       final notes = [
-        Note(pitch: Pitch(step: 'D', octave: 4), duration: Duration(DurationType.half, dots: 1)),
-        Note(pitch: Pitch(step: 'F', octave: 4), duration: Duration(DurationType.half, dots: 1)),
-        Note(pitch: Pitch(step: 'A', octave: 4), duration: Duration(DurationType.half, dots: 1)),
+        Note(
+          pitch: Pitch(step: 'D', octave: 4),
+          duration: Duration(DurationType.half, dots: 1),
+        ),
+        Note(
+          pitch: Pitch(step: 'F', octave: 4),
+          duration: Duration(DurationType.half, dots: 1),
+        ),
+        Note(
+          pitch: Pitch(step: 'A', octave: 4),
+          duration: Duration(DurationType.half, dots: 1),
+        ),
       ];
 
-      final chord = Chord(notes: notes, duration: Duration(DurationType.half, dots: 1));
+      final chord = Chord(
+        notes: notes,
+        duration: Duration(DurationType.half, dots: 1),
+      );
 
       expect(chord.duration.dots, equals(1));
       expect(chord.duration.absoluteValue, equals(0.75));
@@ -306,11 +497,20 @@ void main() {
 
     test('Eighth note chord', () {
       final notes = [
-        Note(pitch: Pitch(step: 'E', octave: 4), duration: Duration(DurationType.eighth)),
-        Note(pitch: Pitch(step: 'G', octave: 4), duration: Duration(DurationType.eighth)),
+        Note(
+          pitch: Pitch(step: 'E', octave: 4),
+          duration: Duration(DurationType.eighth),
+        ),
+        Note(
+          pitch: Pitch(step: 'G', octave: 4),
+          duration: Duration(DurationType.eighth),
+        ),
       ];
 
-      final chord = Chord(notes: notes, duration: Duration(DurationType.eighth));
+      final chord = Chord(
+        notes: notes,
+        duration: Duration(DurationType.eighth),
+      );
 
       expect(chord.duration.type, equals(DurationType.eighth));
       expect(chord.duration.type.needsFlag, isTrue);
@@ -320,9 +520,18 @@ void main() {
   group('Chord - Beaming', () {
     test('Beamed chord', () {
       final notes = [
-        Note(pitch: Pitch(step: 'C', octave: 4), duration: Duration(DurationType.eighth)),
-        Note(pitch: Pitch(step: 'E', octave: 4), duration: Duration(DurationType.eighth)),
-        Note(pitch: Pitch(step: 'G', octave: 4), duration: Duration(DurationType.eighth)),
+        Note(
+          pitch: Pitch(step: 'C', octave: 4),
+          duration: Duration(DurationType.eighth),
+        ),
+        Note(
+          pitch: Pitch(step: 'E', octave: 4),
+          duration: Duration(DurationType.eighth),
+        ),
+        Note(
+          pitch: Pitch(step: 'G', octave: 4),
+          duration: Duration(DurationType.eighth),
+        ),
       ];
 
       final chord = Chord(
@@ -336,13 +545,25 @@ void main() {
 
     test('Multiple beamed chords form group', () {
       final notes1 = [
-        Note(pitch: Pitch(step: 'C', octave: 4), duration: Duration(DurationType.eighth)),
-        Note(pitch: Pitch(step: 'E', octave: 4), duration: Duration(DurationType.eighth)),
+        Note(
+          pitch: Pitch(step: 'C', octave: 4),
+          duration: Duration(DurationType.eighth),
+        ),
+        Note(
+          pitch: Pitch(step: 'E', octave: 4),
+          duration: Duration(DurationType.eighth),
+        ),
       ];
 
       final notes2 = [
-        Note(pitch: Pitch(step: 'D', octave: 4), duration: Duration(DurationType.eighth)),
-        Note(pitch: Pitch(step: 'F', octave: 4), duration: Duration(DurationType.eighth)),
+        Note(
+          pitch: Pitch(step: 'D', octave: 4),
+          duration: Duration(DurationType.eighth),
+        ),
+        Note(
+          pitch: Pitch(step: 'F', octave: 4),
+          duration: Duration(DurationType.eighth),
+        ),
       ];
 
       final chord1 = Chord(
@@ -365,9 +586,18 @@ void main() {
   group('Chord - Ties', () {
     test('Tied chord', () {
       final notes = [
-        Note(pitch: Pitch(step: 'G', octave: 4), duration: Duration(DurationType.half)),
-        Note(pitch: Pitch(step: 'B', octave: 4), duration: Duration(DurationType.half)),
-        Note(pitch: Pitch(step: 'D', octave: 5), duration: Duration(DurationType.half)),
+        Note(
+          pitch: Pitch(step: 'G', octave: 4),
+          duration: Duration(DurationType.half),
+        ),
+        Note(
+          pitch: Pitch(step: 'B', octave: 4),
+          duration: Duration(DurationType.half),
+        ),
+        Note(
+          pitch: Pitch(step: 'D', octave: 5),
+          duration: Duration(DurationType.half),
+        ),
       ];
 
       final chord = Chord(
@@ -383,8 +613,14 @@ void main() {
   group('Chord - Slurs', () {
     test('Slurred chord', () {
       final notes = [
-        Note(pitch: Pitch(step: 'A', octave: 4), duration: Duration(DurationType.quarter)),
-        Note(pitch: Pitch(step: 'C', octave: 5), duration: Duration(DurationType.quarter)),
+        Note(
+          pitch: Pitch(step: 'A', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
+        Note(
+          pitch: Pitch(step: 'C', octave: 5),
+          duration: Duration(DurationType.quarter),
+        ),
       ];
 
       final chord = Chord(
@@ -400,9 +636,18 @@ void main() {
   group('Chord - Ornaments', () {
     test('Chord with arpeggio', () {
       final notes = [
-        Note(pitch: Pitch(step: 'C', octave: 4), duration: Duration(DurationType.quarter)),
-        Note(pitch: Pitch(step: 'E', octave: 4), duration: Duration(DurationType.quarter)),
-        Note(pitch: Pitch(step: 'G', octave: 4), duration: Duration(DurationType.quarter)),
+        Note(
+          pitch: Pitch(step: 'C', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
+        Note(
+          pitch: Pitch(step: 'E', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
+        Note(
+          pitch: Pitch(step: 'G', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
       ];
 
       final chord = Chord(
@@ -417,9 +662,18 @@ void main() {
 
     test('Chord with fermata', () {
       final notes = [
-        Note(pitch: Pitch(step: 'D', octave: 4), duration: Duration(DurationType.whole)),
-        Note(pitch: Pitch(step: 'F', octave: 4), duration: Duration(DurationType.whole)),
-        Note(pitch: Pitch(step: 'A', octave: 4), duration: Duration(DurationType.whole)),
+        Note(
+          pitch: Pitch(step: 'D', octave: 4),
+          duration: Duration(DurationType.whole),
+        ),
+        Note(
+          pitch: Pitch(step: 'F', octave: 4),
+          duration: Duration(DurationType.whole),
+        ),
+        Note(
+          pitch: Pitch(step: 'A', octave: 4),
+          duration: Duration(DurationType.whole),
+        ),
       ];
 
       final chord = Chord(
@@ -435,8 +689,14 @@ void main() {
   group('Chord - Polyphonic (Voices)', () {
     test('Chord in voice 1', () {
       final notes = [
-        Note(pitch: Pitch(step: 'C', octave: 5), duration: Duration(DurationType.quarter)),
-        Note(pitch: Pitch(step: 'E', octave: 5), duration: Duration(DurationType.quarter)),
+        Note(
+          pitch: Pitch(step: 'C', octave: 5),
+          duration: Duration(DurationType.quarter),
+        ),
+        Note(
+          pitch: Pitch(step: 'E', octave: 5),
+          duration: Duration(DurationType.quarter),
+        ),
       ];
 
       final chord = Chord(
@@ -450,8 +710,14 @@ void main() {
 
     test('Chord in voice 2', () {
       final notes = [
-        Note(pitch: Pitch(step: 'C', octave: 3), duration: Duration(DurationType.half)),
-        Note(pitch: Pitch(step: 'G', octave: 3), duration: Duration(DurationType.half)),
+        Note(
+          pitch: Pitch(step: 'C', octave: 3),
+          duration: Duration(DurationType.half),
+        ),
+        Note(
+          pitch: Pitch(step: 'G', octave: 3),
+          duration: Duration(DurationType.half),
+        ),
       ];
 
       final chord = Chord(
@@ -467,44 +733,84 @@ void main() {
   group('Chord - Complex Scenarios', () {
     test('Dense cluster chord', () {
       final notes = [
-        Note(pitch: Pitch(step: 'C', octave: 4), duration: Duration(DurationType.quarter)),
-        Note(pitch: Pitch(step: 'D', octave: 4), duration: Duration(DurationType.quarter)),
-        Note(pitch: Pitch(step: 'E', octave: 4), duration: Duration(DurationType.quarter)),
-        Note(pitch: Pitch(step: 'F', octave: 4), duration: Duration(DurationType.quarter)),
+        Note(
+          pitch: Pitch(step: 'C', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
+        Note(
+          pitch: Pitch(step: 'D', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
+        Note(
+          pitch: Pitch(step: 'E', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
+        Note(
+          pitch: Pitch(step: 'F', octave: 4),
+          duration: Duration(DurationType.quarter),
+        ),
       ];
 
-      final chord = Chord(notes: notes, duration: Duration(DurationType.quarter));
+      final chord = Chord(
+        notes: notes,
+        duration: Duration(DurationType.quarter),
+      );
 
       // All notes within one major third span
-      final span = chord.highestNote.pitch.midiNumber - chord.lowestNote.pitch.midiNumber;
+      final span =
+          chord.highestNote.pitch.midiNumber -
+          chord.lowestNote.pitch.midiNumber;
       expect(span, equals(5)); // F4 - C4 = 5 semitones
     });
 
     test('Wide spread chord', () {
       final notes = [
-        Note(pitch: Pitch(step: 'C', octave: 2), duration: Duration(DurationType.whole)),
-        Note(pitch: Pitch(step: 'G', octave: 4), duration: Duration(DurationType.whole)),
-        Note(pitch: Pitch(step: 'C', octave: 6), duration: Duration(DurationType.whole)),
+        Note(
+          pitch: Pitch(step: 'C', octave: 2),
+          duration: Duration(DurationType.whole),
+        ),
+        Note(
+          pitch: Pitch(step: 'G', octave: 4),
+          duration: Duration(DurationType.whole),
+        ),
+        Note(
+          pitch: Pitch(step: 'C', octave: 6),
+          duration: Duration(DurationType.whole),
+        ),
       ];
 
       final chord = Chord(notes: notes, duration: Duration(DurationType.whole));
 
-      final span = chord.highestNote.pitch.midiNumber - chord.lowestNote.pitch.midiNumber;
+      final span =
+          chord.highestNote.pitch.midiNumber -
+          chord.lowestNote.pitch.midiNumber;
       expect(span, greaterThan(36)); // More than 3 octaves
     });
 
     test('Chord with all properties', () {
       final notes = [
         Note(
-          pitch: Pitch(step: 'F', octave: 4, accidentalType: AccidentalType.sharp),
+          pitch: Pitch(
+            step: 'F',
+            octave: 4,
+            accidentalType: AccidentalType.sharp,
+          ),
           duration: Duration(DurationType.eighth),
         ),
         Note(
-          pitch: Pitch(step: 'A', octave: 4, accidentalType: AccidentalType.sharp),
+          pitch: Pitch(
+            step: 'A',
+            octave: 4,
+            accidentalType: AccidentalType.sharp,
+          ),
           duration: Duration(DurationType.eighth),
         ),
         Note(
-          pitch: Pitch(step: 'C', octave: 5, accidentalType: AccidentalType.sharp),
+          pitch: Pitch(
+            step: 'C',
+            octave: 5,
+            accidentalType: AccidentalType.sharp,
+          ),
           duration: Duration(DurationType.eighth),
         ),
       ];

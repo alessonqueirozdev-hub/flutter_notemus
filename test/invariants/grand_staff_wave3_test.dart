@@ -24,15 +24,14 @@ Note _n(
   int crossStaffMove = 0,
   bool isGraceNote = false,
   BeamType? beam,
-}) =>
-    Note(
-      pitch: Pitch(step: step, octave: octave, alter: 0.0),
-      duration: Duration(type),
-      voice: voice,
-      crossStaffMove: crossStaffMove,
-      isGraceNote: isGraceNote,
-      beam: beam,
-    );
+}) => Note(
+  pitch: Pitch(step: step, octave: octave, alter: 0.0),
+  duration: Duration(type),
+  voice: voice,
+  crossStaffMove: crossStaffMove,
+  isGraceNote: isGraceNote,
+  beam: beam,
+);
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -46,22 +45,21 @@ void main() {
   GrandStaffPainter painterFor(
     List<Staff> staves, {
     double availableWidth = 600,
-  }) =>
-      GrandStaffPainter(
-        staffGroup: StaffGroup(staves: staves, bracket: BracketType.brace),
-        staffSpace: 12,
-        metadata: metadata,
-        theme: const MusicScoreTheme(),
-        availableWidth: availableWidth,
-      );
+  }) => GrandStaffPainter(
+    staffGroup: StaffGroup(staves: staves, bracket: BracketType.brace),
+    staffSpace: 12,
+    metadata: metadata,
+    theme: const MusicScoreTheme(),
+    availableWidth: availableWidth,
+  );
 
   /// Every clef printed on staff [staffIndex] of system [system], as
   /// `type@x`, in the order the reader meets them.
   List<String> clefsOf(GrandStaffPainter p, int system, int staffIndex) => [
-        for (final pe in p.alignedSystem(system)[staffIndex])
-          if (pe.element case final Clef clef)
-            '${clef.clefType.name}@${pe.position.dx.round()}',
-      ];
+    for (final pe in p.alignedSystem(system)[staffIndex])
+      if (pe.element case final Clef clef)
+        '${clef.clefType.name}@${pe.position.dx.round()}',
+  ];
 
   group('M-01 mid-voice clef change drives the system restatement', () {
     // Ten polyphonic bars, one per system at 400 px, with a bass clef written
@@ -83,7 +81,10 @@ void main() {
           ],
         );
         if (i == 0) {
-          measure.elements.insert(0, TimeSignature(numerator: 4, denominator: 4));
+          measure.elements.insert(
+            0,
+            TimeSignature(numerator: 4, denominator: 4),
+          );
           measure.elements.insert(0, Clef(clefType: ClefType.treble));
         }
         measure.elements.add(Barline());
@@ -122,8 +123,11 @@ void main() {
       // fix: 'treble@30' on systems 3..9 — a twelfth of silent error on every
       // note of those bars.
       for (var system = 3; system < painter.systemCount; system++) {
-        expect(clefsOf(painter, system, 0), ['bass@30'],
-            reason: 'system $system restated the wrong clef');
+        expect(
+          clefsOf(painter, system, 0),
+          ['bass@30'],
+          reason: 'system $system restated the wrong clef',
+        );
       }
     });
   });
@@ -146,10 +150,10 @@ void main() {
       measure.elements.add(Barline());
       measures.add(measure);
     }
-    final painter = painterFor(
-      [
-        Staff(measures: measures),
-        Staff(measures: [
+    final painter = painterFor([
+      Staff(measures: measures),
+      Staff(
+        measures: [
           for (var i = 0; i < 4; i++)
             Measure()
               ..elements.addAll(<MusicalElement>[
@@ -157,10 +161,9 @@ void main() {
                 _n('C', 3, DurationType.whole),
                 Barline(),
               ]),
-        ]),
-      ],
-      availableWidth: 320,
-    );
+        ],
+      ),
+    ], availableWidth: 320);
 
     // Systems that begin after the mid-voice key change must restate it.
     var sawRestatedKey = false;
@@ -174,20 +177,25 @@ void main() {
         }
       }
     }
-    expect(sawRestatedKey, isTrue,
-        reason: 'no wrapped system restated the mid-voice key signature');
+    expect(
+      sawRestatedKey,
+      isTrue,
+      reason: 'no wrapped system restated the mid-voice key signature',
+    );
   });
 
   group('M-22 crossStaffMove', () {
-    Staff bottomWhole() => Staff(measures: [
-          Measure()
-            ..elements.addAll(<MusicalElement>[
-              Clef(clefType: ClefType.bass),
-              TimeSignature(numerator: 4, denominator: 4),
-              _n('C', 3, DurationType.whole),
-              Barline(),
-            ]),
-        ]);
+    Staff bottomWhole() => Staff(
+      measures: [
+        Measure()
+          ..elements.addAll(<MusicalElement>[
+            Clef(clefType: ClefType.bass),
+            TimeSignature(numerator: 4, denominator: 4),
+            _n('C', 3, DurationType.whole),
+            Barline(),
+          ]),
+      ],
+    );
 
     ({int staff, Offset at})? findCross(GrandStaffPainter p) {
       final system = p.alignedSystem(0);
@@ -202,18 +210,20 @@ void main() {
     }
 
     test('an UNBEAMED cross-staff note lands on the destination staff', () {
-      final top = Staff(measures: [
-        Measure()
-          ..elements.addAll(<MusicalElement>[
-            Clef(clefType: ClefType.treble),
-            TimeSignature(numerator: 4, denominator: 4),
-            _n('C', 5, DurationType.quarter),
-            _n('D', 4, DurationType.quarter, crossStaffMove: 1),
-            _n('E', 5, DurationType.quarter),
-            _n('F', 5, DurationType.quarter),
-            Barline(),
-          ]),
-      ]);
+      final top = Staff(
+        measures: [
+          Measure()
+            ..elements.addAll(<MusicalElement>[
+              Clef(clefType: ClefType.treble),
+              TimeSignature(numerator: 4, denominator: 4),
+              _n('C', 5, DurationType.quarter),
+              _n('D', 4, DurationType.quarter, crossStaffMove: 1),
+              _n('E', 5, DurationType.quarter),
+              _n('F', 5, DurationType.quarter),
+              Barline(),
+            ]),
+        ],
+      );
       final found = findCross(painterFor([top, bottomWhole()]));
       expect(found, isNotNull);
       // Measured before the fix: staff 0 at dy 90.0 — the note stayed on its
@@ -225,19 +235,26 @@ void main() {
     });
 
     test('a BEAMED cross-staff note is reported on the destination staff', () {
-      final top = Staff(measures: [
-        Measure(autoBeaming: false)
-          ..elements.addAll(<MusicalElement>[
-            Clef(clefType: ClefType.treble),
-            TimeSignature(numerator: 4, denominator: 4),
-            _n('C', 5, DurationType.eighth, beam: BeamType.start),
-            _n('D', 4, DurationType.eighth,
-                crossStaffMove: 1, beam: BeamType.end),
-            _n('E', 5, DurationType.half),
-            _n('F', 5, DurationType.quarter),
-            Barline(),
-          ]),
-      ]);
+      final top = Staff(
+        measures: [
+          Measure(autoBeaming: false)
+            ..elements.addAll(<MusicalElement>[
+              Clef(clefType: ClefType.treble),
+              TimeSignature(numerator: 4, denominator: 4),
+              _n('C', 5, DurationType.eighth, beam: BeamType.start),
+              _n(
+                'D',
+                4,
+                DurationType.eighth,
+                crossStaffMove: 1,
+                beam: BeamType.end,
+              ),
+              _n('E', 5, DurationType.half),
+              _n('F', 5, DurationType.quarter),
+              Barline(),
+            ]),
+        ],
+      );
       final found = findCross(painterFor([top, bottomWhole()]));
       expect(found, isNotNull);
       // The paint pass always drew this one on staff 1; `alignedSystem` — and
@@ -247,36 +264,41 @@ void main() {
     });
 
     test('the destination clef is the one in force AT THAT POINT', () {
-      final top = Staff(measures: [
-        Measure()
-          ..elements.addAll(<MusicalElement>[
-            Clef(clefType: ClefType.treble),
-            TimeSignature(numerator: 4, denominator: 4),
-            _n('C', 5, DurationType.quarter),
-            _n('C', 4, DurationType.quarter, crossStaffMove: 1),
-            _n('C', 4, DurationType.quarter, crossStaffMove: 1),
-            _n('C', 5, DurationType.quarter),
-            Barline(),
-          ]),
-      ]);
-      final bottom = Staff(measures: [
-        Measure()
-          ..elements.addAll(<MusicalElement>[
-            Clef(clefType: ClefType.bass),
-            TimeSignature(numerator: 4, denominator: 4),
-            _n('C', 3, DurationType.quarter),
-            _n('C', 3, DurationType.quarter),
-            Clef(clefType: ClefType.treble),
-            _n('C', 4, DurationType.quarter),
-            _n('C', 4, DurationType.quarter),
-            Barline(),
-          ]),
-      ]);
+      final top = Staff(
+        measures: [
+          Measure()
+            ..elements.addAll(<MusicalElement>[
+              Clef(clefType: ClefType.treble),
+              TimeSignature(numerator: 4, denominator: 4),
+              _n('C', 5, DurationType.quarter),
+              _n('C', 4, DurationType.quarter, crossStaffMove: 1),
+              _n('C', 4, DurationType.quarter, crossStaffMove: 1),
+              _n('C', 5, DurationType.quarter),
+              Barline(),
+            ]),
+        ],
+      );
+      final bottom = Staff(
+        measures: [
+          Measure()
+            ..elements.addAll(<MusicalElement>[
+              Clef(clefType: ClefType.bass),
+              TimeSignature(numerator: 4, denominator: 4),
+              _n('C', 3, DurationType.quarter),
+              _n('C', 3, DurationType.quarter),
+              Clef(clefType: ClefType.treble),
+              _n('C', 4, DurationType.quarter),
+              _n('C', 4, DurationType.quarter),
+              Barline(),
+            ]),
+        ],
+      );
 
       final system = painterFor([top, bottom]).alignedSystem(0);
       final clefChangeX = [
         for (final pe in system[1])
-          if (pe.element case final Clef clef when clef.clefType == ClefType.treble)
+          if (pe.element case final Clef clef
+              when clef.clefType == ClefType.treble)
             pe.position.dx,
       ].single;
 
@@ -292,44 +314,55 @@ void main() {
         // 6 positions BELOW the treble middle line (dy 60 + 36 = 96). The old
         // `_clefOf` returned the destination staff's FIRST clef, so both notes
         // came out at 24.
-        expect(pe.position.dy, closeTo(beforeChange ? 24.0 : 96.0, 0.01),
-            reason: 'cross-staff note at x=${pe.position.dx} read the wrong '
-                'destination clef (change at x=$clefChangeX)');
+        expect(
+          pe.position.dy,
+          closeTo(beforeChange ? 24.0 : 96.0, 0.01),
+          reason:
+              'cross-staff note at x=${pe.position.dx} read the wrong '
+              'destination clef (change at x=$clefChangeX)',
+        );
       }
     });
   });
 
   test('F2 a grace note does not drag the shared onset anchor', () {
-    final top = Staff(measures: [
-      Measure()
-        ..elements.addAll(<MusicalElement>[
-          Clef(clefType: ClefType.treble),
-          TimeSignature(numerator: 4, denominator: 4),
-          _n('C', 5, DurationType.quarter),
-          _n('B', 4, DurationType.eighth, isGraceNote: true),
-          _n('D', 5, DurationType.quarter),
-          _n('E', 5, DurationType.quarter),
-          _n('F', 5, DurationType.quarter),
-          Barline(),
-        ]),
-    ]);
-    final bottom = Staff(measures: [
-      Measure()
-        ..elements.addAll(<MusicalElement>[
-          Clef(clefType: ClefType.bass),
-          TimeSignature(numerator: 4, denominator: 4),
-          for (final step in ['C', 'D', 'E', 'F'])
-            _n(step, 3, DurationType.quarter),
-          Barline(),
-        ]),
-    ]);
+    final top = Staff(
+      measures: [
+        Measure()
+          ..elements.addAll(<MusicalElement>[
+            Clef(clefType: ClefType.treble),
+            TimeSignature(numerator: 4, denominator: 4),
+            _n('C', 5, DurationType.quarter),
+            _n('B', 4, DurationType.eighth, isGraceNote: true),
+            _n('D', 5, DurationType.quarter),
+            _n('E', 5, DurationType.quarter),
+            _n('F', 5, DurationType.quarter),
+            Barline(),
+          ]),
+      ],
+    );
+    final bottom = Staff(
+      measures: [
+        Measure()
+          ..elements.addAll(<MusicalElement>[
+            Clef(clefType: ClefType.bass),
+            TimeSignature(numerator: 4, denominator: 4),
+            for (final step in ['C', 'D', 'E', 'F'])
+              _n(step, 3, DurationType.quarter),
+            Barline(),
+          ]),
+      ],
+    );
 
     final system = painterFor([top, bottom]).alignedSystem(0);
     Map<String, double> realNoteX(List<PositionedElement> elements) {
       final byOnset = <String, double>{};
       for (final pe in elements) {
         if (pe.element case final Note note when !note.isGraceNote) {
-          byOnset.putIfAbsent(pe.onset.toStringAsFixed(3), () => pe.position.dx);
+          byOnset.putIfAbsent(
+            pe.onset.toStringAsFixed(3),
+            () => pe.position.dx,
+          );
         }
       }
       return byOnset;
@@ -342,9 +375,16 @@ void main() {
       // Measured before the fix: onset 0.250 sat at 216.31 on the ornamented
       // staff against 172.99 on the plain one — 43.32 px apart, because the
       // grace note (same onset, printed to the left) became the anchor.
-      expect(top0[onset], isNotNull, reason: 'onset $onset missing on top staff');
-      expect((top0[onset]! - bottom0[onset]!).abs(), lessThan(0.5),
-          reason: 'onset $onset is not aligned across the staves');
+      expect(
+        top0[onset],
+        isNotNull,
+        reason: 'onset $onset missing on top staff',
+      );
+      expect(
+        (top0[onset]! - bottom0[onset]!).abs(),
+        lessThan(0.5),
+        reason: 'onset $onset is not aligned across the staves',
+      );
     }
   });
 
@@ -358,20 +398,22 @@ void main() {
       return Staff(measures: [Measure()..elements.addAll(elements)]);
     }
 
-    Staff shortStaff() => Staff(measures: [
-          Measure()
-            ..elements.addAll(<MusicalElement>[
-              Clef(clefType: ClefType.bass),
-              _n('C', 3, DurationType.whole),
-              Barline(),
-            ]),
-        ]);
+    Staff shortStaff() => Staff(
+      measures: [
+        Measure()
+          ..elements.addAll(<MusicalElement>[
+            Clef(clefType: ClefType.bass),
+            _n('C', 3, DurationType.whole),
+            Barline(),
+          ]),
+      ],
+    );
 
     test('contentWidth reaches the rightmost element the painter draws', () {
-      final painter = painterFor(
-        [wideStaff(200), shortStaff()],
-        availableWidth: 300,
-      );
+      final painter = painterFor([
+        wideStaff(200),
+        shortStaff(),
+      ], availableWidth: 300);
       var rightmost = 0.0;
       for (var system = 0; system < painter.systemCount; system++) {
         for (final staff in painter.alignedSystem(system)) {
@@ -385,20 +427,22 @@ void main() {
     });
 
     testWidgets('GrandStaff scrolls to the whole system', (tester) async {
-      await tester.pumpWidget(MaterialApp(
-        home: Center(
-          child: SizedBox(
-            width: 300,
-            height: 400,
-            child: GrandStaff(
-              group: StaffGroup(
-                staves: [wideStaff(200), shortStaff()],
-                bracket: BracketType.brace,
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Center(
+            child: SizedBox(
+              width: 300,
+              height: 400,
+              child: GrandStaff(
+                group: StaffGroup(
+                  staves: [wideStaff(200), shortStaff()],
+                  bracket: BracketType.brace,
+                ),
               ),
             ),
           ),
         ),
-      ));
+      );
       await tester.pumpAndSettle();
 
       // Measured before the fix: ZERO scrollables, a `CustomPaint` pinned at
@@ -409,10 +453,15 @@ void main() {
       expect(position.axis, Axis.horizontal);
 
       final canvas = tester.widget<CustomPaint>(
-        find.descendant(of: scrollables, matching: find.byType(CustomPaint)).first,
+        find
+            .descendant(of: scrollables, matching: find.byType(CustomPaint))
+            .first,
       );
       // The last pixel of music must be scrollable into the 300 px viewport.
-      expect(position.maxScrollExtent + 300.0, greaterThanOrEqualTo(canvas.size.width - 0.5));
+      expect(
+        position.maxScrollExtent + 300.0,
+        greaterThanOrEqualTo(canvas.size.width - 0.5),
+      );
       expect(position.maxScrollExtent, greaterThan(1000));
     });
   });

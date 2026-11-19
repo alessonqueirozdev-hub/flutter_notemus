@@ -56,10 +56,10 @@ class LedgerLineRenderer extends BaseGlyphRenderer {
     final centerOffsetSS = bbox != null
         ? (bbox.bBoxSwX + bbox.bBoxNeX) / 2
         : 1.18 / 2; // Fallback: noteheadBlack tem largura ~1.18
-    
+
     // Fix: Convert for pixels CORRETAMENTE
     final centerOffsetPixels = centerOffsetSS * coordinates.staffSpace;
-    
+
     // X position of the centre of the note
     final noteCenterX = notePosition + centerOffsetPixels;
 
@@ -91,11 +91,7 @@ class LedgerLineRenderer extends BaseGlyphRenderer {
       final lineStartX = noteCenterX - (totalWidth / 2);
       final lineEndX = noteCenterX + (totalWidth / 2);
 
-      canvas.drawLine(
-        Offset(lineStartX, y),
-        Offset(lineEndX, y),
-        paint,
-      );
+      canvas.drawLine(Offset(lineStartX, y), Offset(lineEndX, y), paint);
     }
   }
 }

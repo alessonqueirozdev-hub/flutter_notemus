@@ -57,7 +57,8 @@ class ScoreHit {
   });
 
   @override
-  String toString() => 'ScoreHit(${element.runtimeType} '
+  String toString() =>
+      'ScoreHit(${element.runtimeType} '
       'bar $measureIndex, onset $onset, d=${distance.toStringAsFixed(1)})';
 }
 
@@ -331,8 +332,7 @@ class ScoreHitTester {
   /// `LayoutEngine.beamOf` already falls back to the author's hint when the
   /// engine made no decision, so the two branches differ only in whether an
   /// engine was supplied at all.
-  bool _noteIsBeamed(Note note) =>
-      (engine?.beamOf(note) ?? note.beam) != null;
+  bool _noteIsBeamed(Note note) => (engine?.beamOf(note) ?? note.beam) != null;
 
   /// Whether [chord] is beamed.
   ///
@@ -365,7 +365,8 @@ class ScoreHitTester {
     // selection box that stops at the stem leaves the flag unclickable.
     // Measured at staffSpace 48: a stem-up eighth paints 0.93 staff spaces past
     // its advance.
-    final right = engine?.elementPaintedRightExtent(element) ??
+    final right =
+        engine?.elementPaintedRightExtent(element) ??
         ((staffSpace * 1.2) - left);
     return (left: x - left - air, right: x + right + air);
   }
@@ -406,12 +407,12 @@ class ScoreHitTester {
   /// at the 64th, so anything shorter is treated as beamless by the renderer
   /// and therefore gets no per-beam stem extension here either.
   static int _beamCount(DurationType duration) => switch (duration) {
-        DurationType.eighth => 1,
-        DurationType.sixteenth => 2,
-        DurationType.thirtySecond => 3,
-        DurationType.sixtyFourth => 4,
-        _ => 0,
-      };
+    DurationType.eighth => 1,
+    DurationType.sixteenth => 2,
+    DurationType.thirtySecond => 3,
+    DurationType.sixtyFourth => 4,
+    _ => 0,
+  };
 
   /// How far, in pixels, the drawn stem reaches past the notehead it attaches
   /// to.
@@ -576,7 +577,8 @@ class ScoreHitTester {
     final headCentrePx = ((headLeftSpaces + headRightSpaces) / 2) * staffSpace;
 
     if (staffPositions.any(StaffPositionCalculator.needsLedgerLines)) {
-      final extension = (metadata?.getEngravingDefault(
+      final extension =
+          (metadata?.getEngravingDefault(
                 'legerLineExtension',
                 _fallbackLegerLineExtensionSpaces,
               ) ??
@@ -603,7 +605,8 @@ class ScoreHitTester {
       if (positioning != null && flagBox != null) {
         // Reproduces `FlagRenderer.render`: the glyph is drawn at the stem end
         // shifted back by its own stem anchor and half the stem thickness.
-        final stemX = x +
+        final stemX =
+            x +
             positioning
                 .calculateStemAttachmentOffset(
                   noteheadGlyphName: noteheadGlyph,
@@ -612,7 +615,8 @@ class ScoreHitTester {
                 )
                 .dx;
         final anchor = positioning.getFlagAnchor(flagGlyph);
-        final flagX = stemX -
+        final flagX =
+            stemX -
             anchor.dx * staffSpace -
             (positioning.stemThickness / 2) * staffSpace;
         final flagLeft = flagX + flagBox.bBoxSwX * staffSpace - air;
@@ -681,8 +685,8 @@ class ScoreHitTester {
   }
 
   /// Everything in one measure.
-  List<ScoreHit> selectMeasure(int measureIndex) => _select(
-      (p) => p.measureIndex == measureIndex);
+  List<ScoreHit> selectMeasure(int measureIndex) =>
+      _select((p) => p.measureIndex == measureIndex);
 
   /// Everything on one wrapped system.
   List<ScoreHit> selectSystem(int system) => _select((p) => p.system == system);

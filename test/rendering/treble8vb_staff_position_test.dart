@@ -28,7 +28,8 @@ void main() {
         expect(
           StaffPositionCalculator.calculate(pitch, treble8vb),
           StaffPositionCalculator.calculate(pitch, treble) + 7,
-          reason: 'a clef that SOUNDS an octave lower must PRINT a given '
+          reason:
+              'a clef that SOUNDS an octave lower must PRINT a given '
               'sounding pitch an octave higher (7 half-space positions)',
         );
       }
@@ -50,16 +51,18 @@ void main() {
     test('15ma / 15mb shift by two octaves', () {
       expect(
         StaffPositionCalculator.calculate(
-            Pitch(step: 'C', octave: 5), Clef(clefType: ClefType.treble15mb)),
-        StaffPositionCalculator.calculate(
-                Pitch(step: 'C', octave: 5), treble) +
+          Pitch(step: 'C', octave: 5),
+          Clef(clefType: ClefType.treble15mb),
+        ),
+        StaffPositionCalculator.calculate(Pitch(step: 'C', octave: 5), treble) +
             14,
       );
       expect(
         StaffPositionCalculator.calculate(
-            Pitch(step: 'C', octave: 5), Clef(clefType: ClefType.treble15ma)),
-        StaffPositionCalculator.calculate(
-                Pitch(step: 'C', octave: 5), treble) -
+          Pitch(step: 'C', octave: 5),
+          Clef(clefType: ClefType.treble15ma),
+        ),
+        StaffPositionCalculator.calculate(Pitch(step: 'C', octave: 5), treble) -
             14,
       );
     });
@@ -68,13 +71,17 @@ void main() {
       final treble8vb = Clef(clefType: ClefType.treble8vb);
       expect(
         StaffPositionCalculator.calculate(
-            Pitch(step: 'E', octave: 4), treble8vb),
+          Pitch(step: 'E', octave: 4),
+          treble8vb,
+        ),
         StaffPositionCalculator.calculate(Pitch(step: 'E', octave: 5), treble),
       );
       // E4 is the bottom line on a plain treble staff; an octave up is +7.
       expect(
         StaffPositionCalculator.calculate(
-            Pitch(step: 'E', octave: 4), treble8vb),
+          Pitch(step: 'E', octave: 4),
+          treble8vb,
+        ),
         3,
       );
     });
@@ -93,7 +100,8 @@ void main() {
       expect(
         StaffPositionCalculator.calculate(Pitch(step: 'C', octave: 3), c8vb),
         StaffPositionCalculator.calculate(Pitch(step: 'C', octave: 4), tenor),
-        reason: 'c8vb sounds an octave below the tenor C clef it shares a line '
+        reason:
+            'c8vb sounds an octave below the tenor C clef it shares a line '
             'with',
       );
     });
@@ -129,8 +137,7 @@ void main() {
               duration: Duration(DurationType.whole),
             ),
           ]);
-        final notes = MidiMapper.fromStaff(Staff(measures: [measure]))
-            .tracks
+        final notes = MidiMapper.fromStaff(Staff(measures: [measure])).tracks
             .expand((t) => t.events)
             .where((e) => e.type == MidiEventType.noteOn)
             .map((e) => e.note)

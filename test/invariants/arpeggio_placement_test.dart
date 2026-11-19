@@ -36,34 +36,47 @@ void main() {
     metadata = SmuflMetadata();
     await metadata.load();
     final bytes = await File('assets/smufl/Bravura.otf').readAsBytes();
-    await (FontLoader('packages/flutter_notemus/Bravura')
-          ..addFont(Future.value(ByteData.view(bytes.buffer))))
-        .load();
+    await (FontLoader(
+      'packages/flutter_notemus/Bravura',
+    )..addFont(Future.value(ByteData.view(bytes.buffer)))).load();
   });
 
   Staff build({required bool arp}) {
     Note n(String s, int o) => Note(
-        pitch: Pitch(step: s, octave: o),
-        duration: const MusicDuration(DurationType.half));
-    return Staff(measures: [
-      Measure()
-        ..elements.addAll([
-          Clef(clefType: ClefType.treble),
-          TimeSignature(numerator: 4, denominator: 4),
-          Chord(
-            notes: [n('C', 5), n('E', 5), n('G', 5)],
-            duration: const MusicDuration(DurationType.half),
-            ornaments: arp ? [Ornament(type: OrnamentType.arpeggio)] : const [],
-          ),
-        ])
-    ]);
+      pitch: Pitch(step: s, octave: o),
+      duration: const MusicDuration(DurationType.half),
+    );
+    return Staff(
+      measures: [
+        Measure()
+          ..elements.addAll([
+            Clef(clefType: ClefType.treble),
+            TimeSignature(numerator: 4, denominator: 4),
+            Chord(
+              notes: [n('C', 5), n('E', 5), n('G', 5)],
+              duration: const MusicDuration(DurationType.half),
+              ornaments: arp
+                  ? [Ornament(type: OrnamentType.arpeggio)]
+                  : const [],
+            ),
+          ]),
+      ],
+    );
   }
 
   test('the arpeggio sign clears the noteheads', () async {
-    final withArp = await rasterise(build(arp: true), metadata,
-        width: 500, staffSpace: 26);
-    final without = await rasterise(build(arp: false), metadata,
-        width: 500, staffSpace: 26);
+    final withArp = await rasterise(
+      build(arp: true),
+      metadata,
+      width: 500,
+      staffSpace: 26,
+    );
+    final without = await rasterise(
+      build(arp: false),
+      metadata,
+      width: 500,
+      staffSpace: 26,
+    );
 
     // Columns where only the arpeggio version has ink = the sign.
     final signCols = <int>[];
@@ -82,13 +95,21 @@ void main() {
     // Restrict the "chord" columns to the notehead band (right of the meter).
     final heads = chordCols.where((x) => x > 200).toList();
     // ignore: avoid_print
-    print('sign columns  ${signCols.isEmpty ? "none" : "${signCols.first}..${signCols.last}"}');
+    print(
+      'sign columns  ${signCols.isEmpty ? "none" : "${signCols.first}..${signCols.last}"}',
+    );
     // ignore: avoid_print
-    print('chord columns ${heads.isEmpty ? "none" : "${heads.first}..${heads.last}"}');
+    print(
+      'chord columns ${heads.isEmpty ? "none" : "${heads.first}..${heads.last}"}',
+    );
     expect(signCols, isNotEmpty);
-    expect(signCols.last, lessThan(heads.first),
-        reason: 'the arpeggio sign must finish before the leftmost notehead '
-            'ink starts; sign ends at ${signCols.last}, chord starts at '
-            '${heads.first}');
+    expect(
+      signCols.last,
+      lessThan(heads.first),
+      reason:
+          'the arpeggio sign must finish before the leftmost notehead '
+          'ink starts; sign ends at ${signCols.last}, chord starts at '
+          '${heads.first}',
+    );
   });
 }

@@ -194,7 +194,8 @@ class AccidentalRenderer extends BaseGlyphRenderer {
     // edge was, so the right-hand sign never intrudes on the notehead, and the
     // accidental ends up centered between the two signs. With no enclosure the
     // group width equals the glyph width, so nothing moves.
-    final bareWidth = glyphWidthSpaces(accidentalGlyph) * coordinates.staffSpace;
+    final bareWidth =
+        glyphWidthSpaces(accidentalGlyph) * coordinates.staffSpace;
     final groupWidth =
         decoratedWidthSpaces(accidentalGlyph, paren) * coordinates.staffSpace;
 

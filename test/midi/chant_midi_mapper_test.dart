@@ -5,27 +5,28 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('ChantMidiMapper', () {
-    NeumeComponent nc(String step, int octave,
-            {int morae = 0,
-            bool episema = false,
-            bool ictus = false,
-            bool liq = false}) =>
-        NeumeComponent(
-          pitchName: step,
-          octave: octave,
-          morae: morae,
-          episema: episema,
-          ictus: ictus,
-          isLiquescent: liq,
-        );
+    NeumeComponent nc(
+      String step,
+      int octave, {
+      int morae = 0,
+      bool episema = false,
+      bool ictus = false,
+      bool liq = false,
+    }) => NeumeComponent(
+      pitchName: step,
+      octave: octave,
+      morae: morae,
+      episema: episema,
+      ictus: ictus,
+      isLiquescent: liq,
+    );
 
     MidiTrack chantTrack(MidiSequence seq) =>
         seq.tracks.firstWhere((t) => t.name == 'Chant');
 
-    List<MidiEvent> noteOns(MidiSequence seq) => chantTrack(seq)
-        .events
-        .where((e) => e.type == MidiEventType.noteOn)
-        .toList();
+    List<MidiEvent> noteOns(MidiSequence seq) => chantTrack(
+      seq,
+    ).events.where((e) => e.type == MidiEventType.noteOn).toList();
 
     test('resolves natural diatonic pitches and pairs note on/off', () {
       final seq = ChantMidiMapper.fromChant([
@@ -40,10 +41,9 @@ void main() {
       // C4 = 60, D4 = 62, E4 = 64, G4 = 67.
       expect(ons.map((e) => e.note).toList(), [60, 62, 64, 67]);
 
-      final offs = chantTrack(seq)
-          .events
-          .where((e) => e.type == MidiEventType.noteOff)
-          .toList();
+      final offs = chantTrack(
+        seq,
+      ).events.where((e) => e.type == MidiEventType.noteOff).toList();
       expect(offs.length, ons.length);
     });
 
@@ -55,9 +55,12 @@ void main() {
       ], options: opts);
 
       final track = chantTrack(seq);
-      final on0 = track.events.firstWhere((e) => e.type == MidiEventType.noteOn);
-      final off0 =
-          track.events.firstWhere((e) => e.type == MidiEventType.noteOff);
+      final on0 = track.events.firstWhere(
+        (e) => e.type == MidiEventType.noteOn,
+      );
+      final off0 = track.events.firstWhere(
+        (e) => e.type == MidiEventType.noteOff,
+      );
       final on1 = track.events.lastWhere((e) => e.type == MidiEventType.noteOn);
       // Base note = 1 quarter = 960 ticks; second note starts where first ends.
       expect(on0.tick, 0);
@@ -72,8 +75,9 @@ void main() {
       ], options: opts);
       final track = chantTrack(seq);
       final on = track.events.firstWhere((e) => e.type == MidiEventType.noteOn);
-      final off =
-          track.events.firstWhere((e) => e.type == MidiEventType.noteOff);
+      final off = track.events.firstWhere(
+        (e) => e.type == MidiEventType.noteOff,
+      );
       // base (960) + 1 mora (960) = 1920.
       expect(off.tick - on.tick, 1920);
     });
@@ -81,12 +85,21 @@ void main() {
     test('flat sign lowers following same-position notes by a semitone', () {
       final seq = ChantMidiMapper.fromChant([
         // flat sign at B4 (standalone, no notehead)
-        Neume(type: NeumeType.custom, components: [
-          NeumeComponent(
-              pitchName: 'B', octave: 4, accidental: NeumeAccidental.flat),
-        ]),
+        Neume(
+          type: NeumeType.custom,
+          components: [
+            NeumeComponent(
+              pitchName: 'B',
+              octave: 4,
+              accidental: NeumeAccidental.flat,
+            ),
+          ],
+        ),
         Neume(type: NeumeType.punctum, components: [nc('B', 4)]),
-        Neume(type: NeumeType.punctum, components: [nc('B', 3)]), // other octave
+        Neume(
+          type: NeumeType.punctum,
+          components: [nc('B', 3)],
+        ), // other octave
       ]);
       final ons = noteOns(seq);
       // B4 natural = 71 -> flat = 70; B3 (different position) stays 59.
@@ -97,13 +110,25 @@ void main() {
 
     test('accidental resets at a divisio', () {
       final seq = ChantMidiMapper.fromChant([
-        Neume(type: NeumeType.custom, components: [
-          NeumeComponent(
-              pitchName: 'B', octave: 4, accidental: NeumeAccidental.flat),
-        ]),
-        Neume(type: NeumeType.punctum, components: [nc('B', 4)]), // flatted -> 70
+        Neume(
+          type: NeumeType.custom,
+          components: [
+            NeumeComponent(
+              pitchName: 'B',
+              octave: 4,
+              accidental: NeumeAccidental.flat,
+            ),
+          ],
+        ),
+        Neume(
+          type: NeumeType.punctum,
+          components: [nc('B', 4)],
+        ), // flatted -> 70
         NeumeDivision(type: NeumeDivisionType.maior),
-        Neume(type: NeumeType.punctum, components: [nc('B', 4)]), // natural -> 71
+        Neume(
+          type: NeumeType.punctum,
+          components: [nc('B', 4)],
+        ), // natural -> 71
       ]);
       final ons = noteOns(seq);
       expect(ons[0].note, 70);
@@ -112,7 +137,9 @@ void main() {
 
     test('divisio inserts a breath rest (gap between notes)', () {
       const opts = ChantPlaybackOptions(
-          ticksPerQuarter: 960, divisioMaiorQuarters: 2.0);
+        ticksPerQuarter: 960,
+        divisioMaiorQuarters: 2.0,
+      );
       final seq = ChantMidiMapper.fromChant([
         Neume(type: NeumeType.punctum, components: [nc('C', 4)]),
         NeumeDivision(type: NeumeDivisionType.maior),
@@ -132,20 +159,28 @@ void main() {
     });
 
     test('emits a program change and a tempo conductor track', () {
-      final seq = ChantMidiMapper.fromChant([
-        Neume(type: NeumeType.punctum, components: [nc('C', 4)]),
-      ], options: const ChantPlaybackOptions(
-        instrument: MidiInstrumentAssignment(
-            channel: 0, program: 19, velocity: 90),
-        bpm: 100,
-      ));
+      final seq = ChantMidiMapper.fromChant(
+        [
+          Neume(type: NeumeType.punctum, components: [nc('C', 4)]),
+        ],
+        options: const ChantPlaybackOptions(
+          instrument: MidiInstrumentAssignment(
+            channel: 0,
+            program: 19,
+            velocity: 90,
+          ),
+          bpm: 100,
+        ),
+      );
       final track = chantTrack(seq);
-      final pc = track.events
-          .firstWhere((e) => e.type == MidiEventType.programChange);
+      final pc = track.events.firstWhere(
+        (e) => e.type == MidiEventType.programChange,
+      );
       expect(pc.program, 19);
       final conductor = seq.tracks.firstWhere((t) => t.name == 'Conductor');
-      final tempo =
-          conductor.events.firstWhere((e) => e.type == MidiEventType.tempo);
+      final tempo = conductor.events.firstWhere(
+        (e) => e.type == MidiEventType.tempo,
+      );
       expect(tempo.bpm, 100);
     });
 
@@ -202,12 +237,18 @@ void main() {
       // A neume with [flat-sign-on-B, note B, note C]: the flat sign is not a
       // note; B sounds flat, C unaffected.
       final seq = ChantMidiMapper.fromChant([
-        Neume(type: NeumeType.custom, components: [
-          NeumeComponent(
-              pitchName: 'B', octave: 4, accidental: NeumeAccidental.flat),
-          nc('B', 4),
-          nc('C', 5),
-        ]),
+        Neume(
+          type: NeumeType.custom,
+          components: [
+            NeumeComponent(
+              pitchName: 'B',
+              octave: 4,
+              accidental: NeumeAccidental.flat,
+            ),
+            nc('B', 4),
+            nc('C', 5),
+          ],
+        ),
       ]);
       final ons = noteOns(seq);
       expect(ons.length, 2); // only B and C sound

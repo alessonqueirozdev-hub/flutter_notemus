@@ -99,12 +99,7 @@ const List<_Allowed> _allowList = <_Allowed>[
         'API and stays writable: ADR-005 narrows its meaning to "input hint", '
         'it does not remove it, because BeamingMode.manual rests on it.',
   ),
-  _Allowed(
-    'lib/core/chord.dart',
-    r'^this\.beam,$',
-    1,
-    'Ditto for Chord.',
-  ),
+  _Allowed('lib/core/chord.dart', r'^this\.beam,$', 1, 'Ditto for Chord.'),
 
   // --- 2. parsers and exporters -------------------------------------------
   _Allowed(
@@ -250,8 +245,7 @@ const List<String> _writeForbiddenDirs = <String>[
 
 void main() {
   group('ADR-005 guard - layout decisions are values, not model writes', () {
-    test('nothing in layout/ or rendering/ ASSIGNS to the model beam field',
-        () {
+    test('nothing in layout/ or rendering/ ASSIGNS to the model beam field', () {
       final offenders = <String>[];
       for (final file in _libDartFiles()) {
         if (!_writeForbiddenDirs.any(file.path.startsWith)) continue;
@@ -263,7 +257,8 @@ void main() {
       expect(
         offenders,
         isEmpty,
-        reason: 'ADR-005: a layout decision is a VALUE owned by the layout '
+        reason:
+            'ADR-005: a layout decision is a VALUE owned by the layout '
             'result, never a mutation of the model.\n'
             'These sites write the model from inside the layout/render path:\n'
             '${offenders.join('\n')}\n\n'
@@ -292,7 +287,8 @@ void main() {
       expect(
         offenders,
         isEmpty,
-        reason: 'ADR-005: Note.beam / Chord.beam carry the AUTHORS HINT and '
+        reason:
+            'ADR-005: Note.beam / Chord.beam carry the AUTHORS HINT and '
             'nothing else. Since 2.7.2 the engine no longer writes there, so a '
             'bare read returns null for every automatically beamed note and '
             'the code silently draws nothing.\n'
@@ -320,15 +316,18 @@ void main() {
         expect(
           source,
           isNotNull,
-          reason: 'allow-list entry points at a file that no longer exists: '
+          reason:
+              'allow-list entry points at a file that no longer exists: '
               '${entry.file}. Delete the entry.',
         );
-        final hits =
-            _beamMentions(source!).where((m) => entry.matches(m.code)).length;
+        final hits = _beamMentions(
+          source!,
+        ).where((m) => entry.matches(m.code)).length;
         expect(
           hits,
           entry.count == null ? greaterThanOrEqualTo(1) : equals(entry.count),
-          reason: 'allow-list drift in ${entry.file}: the sanctioned '
+          reason:
+              'allow-list drift in ${entry.file}: the sanctioned '
               'expression /${entry.pattern}/ was measured $hits time(s), '
               'recorded as ${entry.count ?? "one or more"}.\n'
               'Reason on file: ${entry.why}\n'
@@ -356,7 +355,10 @@ void main() {
     });
 
     test('an assignment is detected, and counts as a write', () {
-      for (final source in ['note.beam = BeamType.start;', 'note.beam ??= b;']) {
+      for (final source in [
+        'note.beam = BeamType.start;',
+        'note.beam ??= b;',
+      ]) {
         final mentions = _beamMentions(source);
         expect(mentions, hasLength(1), reason: source);
         expect(mentions.single.isWrite, isTrue, reason: source);
@@ -395,7 +397,8 @@ void f() {}
     });
 
     test('longer members that merely start with "beam" are not reads', () {
-      const source = 'x.beamCount + y.beams.length + z.beamingMode.index '
+      const source =
+          'x.beamCount + y.beams.length + z.beamingMode.index '
           '+ w.beamOf(n).hashCode + v.beamSegments.length;';
       expect(_beamMentions(source), isEmpty);
     });
@@ -454,13 +457,10 @@ class _SourceFile {
 }
 
 List<_SourceFile> _libDartFiles() => [
-      for (final entity in Directory('lib').listSync(recursive: true))
-        if (entity is File && entity.path.endsWith('.dart'))
-          _SourceFile(
-            entity.path.replaceAll(r'\', '/'),
-            entity.readAsStringSync(),
-          ),
-    ];
+  for (final entity in Directory('lib').listSync(recursive: true))
+    if (entity is File && entity.path.endsWith('.dart'))
+      _SourceFile(entity.path.replaceAll(r'\', '/'), entity.readAsStringSync()),
+];
 
 /// One mention of the model's beam field in real code.
 class _Mention {

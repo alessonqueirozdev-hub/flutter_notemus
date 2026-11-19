@@ -93,8 +93,11 @@ void main() {
         final plain = Duration(type);
         final dotted = Duration(type, dots: 1);
 
-        expect(dotted.absoluteValue, equals(plain.absoluteValue * 1.5),
-          reason: 'Dotted ${type.name} should be 1.5x plain value');
+        expect(
+          dotted.absoluteValue,
+          equals(plain.absoluteValue * 1.5),
+          reason: 'Dotted ${type.name} should be 1.5x plain value',
+        );
       }
     });
 
@@ -103,8 +106,11 @@ void main() {
         final plain = Duration(type);
         final doubleDotted = Duration(type, dots: 2);
 
-        expect(doubleDotted.absoluteValue, equals(plain.absoluteValue * 1.75),
-          reason: 'Double-dotted ${type.name} should be 1.75x plain value');
+        expect(
+          doubleDotted.absoluteValue,
+          equals(plain.absoluteValue * 1.75),
+          reason: 'Double-dotted ${type.name} should be 1.75x plain value',
+        );
       }
     });
   });
@@ -186,8 +192,11 @@ void main() {
 
       for (final type in types) {
         final duration = Duration(type);
-        expect(duration.type.needsStem, isTrue,
-          reason: '${type.name} should need a stem');
+        expect(
+          duration.type.needsStem,
+          isTrue,
+          reason: '${type.name} should need a stem',
+        );
       }
     });
   });
@@ -202,8 +211,11 @@ void main() {
 
       for (final type in types) {
         final duration = Duration(type);
-        expect(duration.type.needsFlag, isFalse,
-          reason: '${type.name} should not need a flag');
+        expect(
+          duration.type.needsFlag,
+          isFalse,
+          reason: '${type.name} should not need a flag',
+        );
       }
     });
 
@@ -217,8 +229,11 @@ void main() {
 
       for (final type in types) {
         final duration = Duration(type);
-        expect(duration.type.needsFlag, isTrue,
-          reason: '${type.name} should need a flag');
+        expect(
+          duration.type.needsFlag,
+          isTrue,
+          reason: '${type.name} should need a flag',
+        );
       }
     });
   });
@@ -243,8 +258,11 @@ void main() {
 
       for (final type in types) {
         final duration = Duration(type);
-        expect(duration.type.isFilled, isTrue,
-          reason: '${type.name} should be filled');
+        expect(
+          duration.type.isFilled,
+          isTrue,
+          reason: '${type.name} should be filled',
+        );
       }
     });
   });
@@ -330,8 +348,11 @@ void main() {
         final longer = Duration(types[i - 1]);
         final shorter = Duration(types[i]);
 
-        expect(shorter.absoluteValue, equals(longer.absoluteValue / 2),
-          reason: '${types[i].name} should be half of ${types[i-1].name}');
+        expect(
+          shorter.absoluteValue,
+          equals(longer.absoluteValue / 2),
+          reason: '${types[i].name} should be half of ${types[i - 1].name}',
+        );
       }
     });
   });

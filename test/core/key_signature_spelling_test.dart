@@ -27,25 +27,29 @@ void main() {
 
   test('a D-major phrase spelled in key prints no accidental at all', () {
     final key = KeySignature(2);
-    Staff build({required bool inKey}) => Staff(measures: [
-          Measure()
-            ..elements.addAll([
-              Clef(clefType: ClefType.treble),
-              KeySignature(2),
-              TimeSignature(numerator: 4, denominator: 4),
-              for (final s in ['F', 'G', 'A', 'C'])
-                Note(
-                  pitch: inKey
-                      ? key.pitch(s, 5)
-                      : Pitch(step: s, octave: 5),
-                  duration: const MusicDuration(DurationType.quarter),
-                ),
-            ])
-        ]);
+    Staff build({required bool inKey}) => Staff(
+      measures: [
+        Measure()
+          ..elements.addAll([
+            Clef(clefType: ClefType.treble),
+            KeySignature(2),
+            TimeSignature(numerator: 4, denominator: 4),
+            for (final s in ['F', 'G', 'A', 'C'])
+              Note(
+                pitch: inKey ? key.pitch(s, 5) : Pitch(step: s, octave: 5),
+                duration: const MusicDuration(DurationType.quarter),
+              ),
+          ]),
+      ],
+    );
 
     for (final inKey in [false, true]) {
-      final engine = LayoutEngine(build(inKey: inKey),
-          availableWidth: 900, staffSpace: 12, metadata: metadata);
+      final engine = LayoutEngine(
+        build(inKey: inKey),
+        availableWidth: 900,
+        staffSpace: 12,
+        metadata: metadata,
+      );
       final elements = engine.layout();
       final printed = <String>[];
       for (final e in elements) {
@@ -58,8 +62,10 @@ void main() {
         }
       }
       // ignore: avoid_print
-      print('inKey=$inKey  accidentals printed: '
-          '${printed.isEmpty ? "(none)" : printed.join(", ")}');
+      print(
+        'inKey=$inKey  accidentals printed: '
+        '${printed.isEmpty ? "(none)" : printed.join(", ")}',
+      );
     }
     expect(key.alterFor('F'), 1.0);
     expect(key.alterFor('C'), 1.0);

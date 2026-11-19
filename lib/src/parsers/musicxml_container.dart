@@ -59,10 +59,9 @@ String _extractScore(List<int> bytes) {
       ?.value;
   if (container != null) {
     try {
-      rootPath = XmlDocument.parse(_decodeText(container.content))
-          .findAllElements('rootfile')
-          .firstOrNull
-          ?.getAttribute('full-path');
+      rootPath = XmlDocument.parse(
+        _decodeText(container.content),
+      ).findAllElements('rootfile').firstOrNull?.getAttribute('full-path');
     } on Object catch (error) {
       throw FormatException('Invalid MXL container.xml: $error');
     }

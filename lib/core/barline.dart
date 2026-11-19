@@ -24,6 +24,6 @@ enum BarlineType {
 /// Representa a measure barline.
 class Barline extends MusicalElement {
   final BarlineType type;
-  
+
   Barline({this.type = BarlineType.single});
 }

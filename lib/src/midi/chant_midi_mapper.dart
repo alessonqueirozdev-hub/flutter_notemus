@@ -194,9 +194,12 @@ class ChantMidiMapper {
     ChantPlaybackOptions options = const ChantPlaybackOptions(),
     bool softB = false,
     String trackName = 'Chant',
-  }) =>
-      build(elements, options: options, softB: softB, trackName: trackName)
-          .sequence;
+  }) => build(
+    elements,
+    options: options,
+    softB: softB,
+    trackName: trackName,
+  ).sequence;
 
   /// Like [fromChant] but also returns the per-note [ChantPlayback.notes]
   /// timeline (for playback cursor / highlighting in an editor).
@@ -324,8 +327,9 @@ class ChantMidiMapper {
           unresolvedSigns++;
           continue;
         }
-        alter[keyOf(c.pitchName!, c.octave!)] =
-            _accidentalSemitones(c.accidental);
+        alter[keyOf(c.pitchName!, c.octave!)] = _accidentalSemitones(
+          c.accidental,
+        );
       }
 
       // Phase 2: sound the note components (skip accidental signs).
@@ -339,8 +343,7 @@ class ChantMidiMapper {
         }
 
         final durTicks = q2t(noteQuarters(c)).clamp(1, 1 << 30);
-        final natural =
-            Pitch(step: c.pitchName!, octave: c.octave!).midiNumber;
+        final natural = Pitch(step: c.pitchName!, octave: c.octave!).midiNumber;
         final raw = natural + effectiveAlter(c) + options.transpose;
         final midi = raw.clamp(0, 127);
         if (raw != midi) clamped++;
@@ -349,24 +352,30 @@ class ChantMidiMapper {
         if (c.ictus) vel = vel + options.ictusVelocityBoost;
         vel = vel.clamp(1, 127);
 
-        events.add(MidiEvent.noteOn(
-          tick: cursor,
-          channel: options.instrument.channel,
-          note: midi,
-          velocity: vel,
-        ));
-        events.add(MidiEvent.noteOff(
-          tick: cursor + durTicks,
-          channel: options.instrument.channel,
-          note: midi,
-        ));
-        timings.add(ChantNoteTiming(
-          neume: el,
-          component: c,
-          startTick: cursor,
-          endTick: cursor + durTicks,
-          midiNote: midi,
-        ));
+        events.add(
+          MidiEvent.noteOn(
+            tick: cursor,
+            channel: options.instrument.channel,
+            note: midi,
+            velocity: vel,
+          ),
+        );
+        events.add(
+          MidiEvent.noteOff(
+            tick: cursor + durTicks,
+            channel: options.instrument.channel,
+            note: midi,
+          ),
+        );
+        timings.add(
+          ChantNoteTiming(
+            neume: el,
+            component: c,
+            startTick: cursor,
+            endTick: cursor + durTicks,
+            midiNote: midi,
+          ),
+        );
         cursor += durTicks;
         sounded++;
       }
@@ -375,31 +384,36 @@ class ChantMidiMapper {
     if (sounded == 0) warnings.add('Chant produced no sounding notes.');
     if (unpitched > 0) {
       warnings.add(
-          '$unpitched neume component(s) had no resolvable pitch; inserted '
-          'silent pulse(s).');
+        '$unpitched neume component(s) had no resolvable pitch; inserted '
+        'silent pulse(s).',
+      );
     }
     if (clamped > 0) {
       warnings.add(
-          '$clamped note(s) clamped into the MIDI 0..127 range by transpose='
-          '${options.transpose}; adjust transpose to avoid folding pitches.');
+        '$clamped note(s) clamped into the MIDI 0..127 range by transpose='
+        '${options.transpose}; adjust transpose to avoid folding pitches.',
+      );
     }
     if (unresolvedSigns > 0) {
       warnings.add(
-          '$unresolvedSigns accidental sign(s) had no staff position and could '
-          'not be applied; they were ignored.');
+        '$unresolvedSigns accidental sign(s) had no staff position and could '
+        'not be applied; they were ignored.',
+      );
     }
     if (emptyNeumes > 0) {
       warnings.add('$emptyNeumes neume(s) had no components and were skipped.');
     }
     if (foreign > 0) {
       warnings.add(
-          '$foreign element(s) are not chant (Neume/NeumeDivision/'
-          'ChantClefChange) and were skipped.');
+        '$foreign element(s) are not chant (Neume/NeumeDivision/'
+        'ChantClefChange) and were skipped.',
+      );
     }
     if (clefChanges > 0 && sounded > 0) {
       warnings.add(
-          '$clefChanges mid-chant clef change(s) applied: sounding pitches '
-          'after each change follow the new clef (and its clef-flat).');
+        '$clefChanges mid-chant clef change(s) applied: sounding pitches '
+        'after each change follow the new clef (and its clef-flat).',
+      );
     }
 
     final sequence = MidiSequence(
@@ -422,14 +436,13 @@ class ChantMidiMapper {
   }
 
   static int _accidentalSemitones(NeumeAccidental a) => switch (a) {
-        NeumeAccidental.flat => -1,
-        NeumeAccidental.sharp => 1,
-        NeumeAccidental.natural => 0,
-        NeumeAccidental.none => 0,
-      };
+    NeumeAccidental.flat => -1,
+    NeumeAccidental.sharp => 1,
+    NeumeAccidental.natural => 0,
+    NeumeAccidental.none => 0,
+  };
 
-  static double _divisioQuarters(
-          NeumeDivisionType t, ChantPlaybackOptions o) =>
+  static double _divisioQuarters(NeumeDivisionType t, ChantPlaybackOptions o) =>
       switch (t) {
         NeumeDivisionType.minima => o.divisioMinimaQuarters,
         NeumeDivisionType.minor => o.divisioMinorQuarters,

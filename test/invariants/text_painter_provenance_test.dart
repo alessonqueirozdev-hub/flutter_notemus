@@ -71,9 +71,7 @@ class _Site {
 /// literally, so every glyph painter reads `<something>.font.fontFamily` off the
 /// metadata. Greciliae is the single documented exception (the chant renderer
 /// owns its font and says so).
-final RegExp _musicFont = RegExp(
-  r"font\.fontFamily|fontFamily:\s*'Greciliae'",
-);
+final RegExp _musicFont = RegExp(r"font\.fontFamily|fontFamily:\s*'Greciliae'");
 
 /// Extracts the balanced-parenthesis text starting at [open], which must be the
 /// index of the `(`.
@@ -97,8 +95,21 @@ final RegExp _member = RegExp(
 );
 
 const Set<String> _keywords = {
-  'if', 'for', 'while', 'switch', 'return', 'else', 'catch', 'do',
-  'class', 'enum', 'mixin', 'extension', 'typedef', 'import', 'export',
+  'if',
+  'for',
+  'while',
+  'switch',
+  'return',
+  'else',
+  'catch',
+  'do',
+  'class',
+  'enum',
+  'mixin',
+  'extension',
+  'typedef',
+  'import',
+  'export',
 };
 
 String _enclosingMember(List<String> lines, int lineIndex) {
@@ -236,8 +247,9 @@ int _positionalTextStyleIndex(String parameters, String name) {
     positional.add(buffer.toString().trim());
   }
   for (var i = 0; i < positional.length; i++) {
-    if (RegExp('TextStyle[?]?\\s+${RegExp.escape(name)}\$')
-        .hasMatch(positional[i])) {
+    if (RegExp(
+      'TextStyle[?]?\\s+${RegExp.escape(name)}\$',
+    ).hasMatch(positional[i])) {
       return i;
     }
   }
@@ -259,8 +271,9 @@ List<({String expression, String enclosing})> _argumentsFor(
   final declBody = _memberBody(source, member);
   final declStart = declBody == null ? -1 : source.indexOf(declBody);
   final declParenthesis = declStart < 0 ? -1 : source.indexOf('(', declStart);
-  for (final match
-      in RegExp('${RegExp.escape(member)}\\s*\\(').allMatches(source)) {
+  for (final match in RegExp(
+    '${RegExp.escape(member)}\\s*\\(',
+  ).allMatches(source)) {
     final open = match.end - 1;
     if (open == declParenthesis) continue; // the declaration, not a call
     final line = '\n'.allMatches(source.substring(0, open)).length;
@@ -320,8 +333,9 @@ bool _resolves(
     final index = _positionalTextStyleIndex(parameters, head);
     final arguments = _argumentsFor(source, lines, enclosing, head, index);
     if (arguments.isEmpty) return false;
-    return arguments.every((a) =>
-        _resolves(source, lines, a.expression, a.enclosing, depth + 1));
+    return arguments.every(
+      (a) => _resolves(source, lines, a.expression, a.enclosing, depth + 1),
+    );
   }
   return false;
 }
@@ -357,14 +371,19 @@ class _Fake {
 ''';
     final lines = source.split('\n');
     expect(_resolves(source, lines, 'style', 'drawGood', 0), isTrue);
-    expect(_resolves(source, lines, 'style', 'drawBad', 0), isFalse,
-        reason: 'a style built without withMusicTextFallback must be caught');
-    expect(_resolves(source, lines, 'style', 'passThrough', 0), isTrue,
-        reason: 'a pass-through helper is proven by its callers');
+    expect(
+      _resolves(source, lines, 'style', 'drawBad', 0),
+      isFalse,
+      reason: 'a style built without withMusicTextFallback must be caught',
+    );
+    expect(
+      _resolves(source, lines, 'style', 'passThrough', 0),
+      isTrue,
+      reason: 'a pass-through helper is proven by its callers',
+    );
   });
 
-  test(
-      'every TextPainter in lib/ is a SMuFL glyph painter or uses the '
+  test('every TextPainter in lib/ is a SMuFL glyph painter or uses the '
       'package text-font fallback chain', () {
     final root = Directory('lib');
     expect(root.existsSync(), isTrue, reason: 'run from the package root');
@@ -381,22 +400,28 @@ class _Fake {
       for (final match in RegExp(r'\bTextPainter\s*\(').allMatches(source)) {
         final open = match.end - 1;
         final line = '\n'.allMatches(source.substring(0, open)).length + 1;
-        sites.add(_Site(
-          entity.path,
-          line,
-          open,
-          _balanced(source, open),
-          _enclosingMember(lines, line - 1),
-        ));
+        sites.add(
+          _Site(
+            entity.path,
+            line,
+            open,
+            _balanced(source, open),
+            _enclosingMember(lines, line - 1),
+          ),
+        );
       }
     }
 
     // The sweep must actually find the sites; a refactor that renames the class
     // (or a glob that stops matching) would otherwise turn this into a no-op.
     // Measured on 2.7.1: 33 constructions across 14 files.
-    expect(sites.length, greaterThanOrEqualTo(25),
-        reason: 'only ${sites.length} TextPainter sites found — the sweep '
-            'stopped seeing lib/');
+    expect(
+      sites.length,
+      greaterThanOrEqualTo(25),
+      reason:
+          'only ${sites.length} TextPainter sites found — the sweep '
+          'stopped seeing lib/',
+    );
 
     final offenders = <String>[];
     var glyphPainters = 0;
@@ -420,26 +445,44 @@ class _Fake {
           glyphPainters++;
           continue;
         }
-        offenders.add('$site — no style argument, and no '
-            'withMusicTextFallback follows the construction');
+        offenders.add(
+          '$site — no style argument, and no '
+          'withMusicTextFallback follows the construction',
+        );
         continue;
       }
-      if (_resolves(source, sourceLines[site.path]!, style, site.enclosing, 0)) {
+      if (_resolves(
+        source,
+        sourceLines[site.path]!,
+        style,
+        site.enclosing,
+        0,
+      )) {
         continue;
       }
-      offenders.add('$site — style `$style` never passes through '
-          'MusicTextFallback.withMusicTextFallback');
+      offenders.add(
+        '$site — style `$style` never passes through '
+        'MusicTextFallback.withMusicTextFallback',
+      );
     }
 
-    expect(glyphPainters, greaterThan(0),
-        reason: 'no SMuFL glyph painter recognised — the music-font pattern '
-            'stopped matching, so the guard is now checking the wrong thing');
+    expect(
+      glyphPainters,
+      greaterThan(0),
+      reason:
+          'no SMuFL glyph painter recognised — the music-font pattern '
+          'stopped matching, so the guard is now checking the wrong thing',
+    );
 
-    expect(offenders, isEmpty,
-        reason: 'text_font.dart states the rule: every TextStyle handed to a '
-            'TextPainter must pass through withMusicTextFallback first, '
-            'because the headless export path has no Theme ancestor and the '
-            'text degrades to .notdef boxes.\n'
-            '${offenders.join('\n')}');
+    expect(
+      offenders,
+      isEmpty,
+      reason:
+          'text_font.dart states the rule: every TextStyle handed to a '
+          'TextPainter must pass through withMusicTextFallback first, '
+          'because the headless export path has no Theme ancestor and the '
+          'text degrades to .notdef boxes.\n'
+          '${offenders.join('\n')}',
+    );
   });
 }

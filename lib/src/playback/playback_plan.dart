@@ -54,7 +54,8 @@ class PlaybackPosition {
   });
 
   @override
-  String toString() => 'PlaybackPosition(bar index $measureIndex, pass '
+  String toString() =>
+      'PlaybackPosition(bar index $measureIndex, pass '
       '$repeatPass, +$offsetInMeasure, ${elapsed.inMilliseconds} ms)';
 }
 
@@ -88,8 +89,13 @@ class PlaybackPlan {
   /// Note spans sorted by start tick, for the lookups below.
   final List<MidiNoteSpan> _spans;
 
-  PlaybackPlan._(this.sequence, this.tempoChanges, this.totalTicks,
-      this.duration, this._spans);
+  PlaybackPlan._(
+    this.sequence,
+    this.tempoChanges,
+    this.totalTicks,
+    this.duration,
+    this._spans,
+  );
 
   /// Plans [staff] as `MidiMapper.fromStaff` plays it with [options].
   factory PlaybackPlan.fromStaff(
@@ -148,13 +154,23 @@ class PlaybackPlan {
     final spans = [...sequence.noteSpans]
       ..sort((a, b) => a.startTick.compareTo(b.startTick));
     final plan = PlaybackPlan._(
-        sequence, List.unmodifiable(changes), total, Duration.zero, spans);
-    return PlaybackPlan._(sequence, plan.tempoChanges, total,
-        plan.timeAtTick(total), spans);
+      sequence,
+      List.unmodifiable(changes),
+      total,
+      Duration.zero,
+      spans,
+    );
+    return PlaybackPlan._(
+      sequence,
+      plan.tempoChanges,
+      total,
+      plan.timeAtTick(total),
+      spans,
+    );
   }
 
-  static Duration _span(int ticks, int bpm, int tpq) => Duration(
-      microseconds: (ticks * 60000000 / (bpm * tpq)).round());
+  static Duration _span(int ticks, int bpm, int tpq) =>
+      Duration(microseconds: (ticks * 60000000 / (bpm * tpq)).round());
 
   int get _tpq => sequence.ticksPerQuarter;
 
@@ -172,11 +188,9 @@ class PlaybackPlan {
       if (c.at > elapsed) break;
       change = c;
     }
-    final ticks = ((elapsed - change.at).inMicroseconds *
-            change.bpm *
-            _tpq /
-            60000000)
-        .round();
+    final ticks =
+        ((elapsed - change.at).inMicroseconds * change.bpm * _tpq / 60000000)
+            .round();
     final tick = change.tick + ticks;
     return tick > totalTicks ? totalTicks : tick;
   }

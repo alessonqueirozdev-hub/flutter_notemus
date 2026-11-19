@@ -18,8 +18,7 @@ class TransposingAndTabExample extends StatelessWidget {
   Widget build(BuildContext context) {
     return ExampleShowcasePage(
       title: 'Transposing Instruments and Tablature',
-      subtitle:
-          'A clarinet part and a guitar tab, and what each one means as '
+      subtitle: 'A clarinet part and a guitar tab, and what each one means as '
           'opposed to what each one looks like.',
       accentColor: _accent,
       children: [

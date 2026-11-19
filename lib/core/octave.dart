@@ -4,12 +4,12 @@ import 'musical_element.dart';
 
 /// Tipos de marcações de oitava
 enum OctaveType {
-  va8,      // 8va (uma oitava acima)
-  vb8,      // 8vb (uma oitava abaixo)  
-  va15,     // 15ma (duas oitavas acima)
-  vb15,     // 15mb (duas oitavas abaixo)
-  va22,     // 22da (três oitavas acima)
-  vb22,     // 22db (três oitavas abaixo)
+  va8, // 8va (uma oitava acima)
+  vb8, // 8vb (uma oitava abaixo)
+  va15, // 15ma (duas oitavas acima)
+  vb15, // 15mb (duas oitavas abaixo)
+  va22, // 22da (três oitavas acima)
+  vb22, // 22db (três oitavas abaixo)
 }
 
 /// Marca de oitava (8va, 8vb, 15ma, etc.)
@@ -178,8 +178,7 @@ class OctaveSpanEvent {
   const OctaveSpanEvent(this.measureIndex, this.onset, this.mark);
 
   @override
-  String toString() =>
-      'OctaveSpanEvent(m$measureIndex @ $onset: ${mark.text})';
+  String toString() => 'OctaveSpanEvent(m$measureIndex @ $onset: ${mark.text})';
 }
 
 /// Resolves WHICH [OctaveMark] is in force at a given point of MUSICAL TIME on

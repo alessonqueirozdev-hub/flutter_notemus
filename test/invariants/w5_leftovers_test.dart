@@ -27,11 +27,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 import 'package:flutter_notemus/src/layout/tuplet_grid.dart';
 
-Note _n(
-  String step,
-  int octave, {
-  DurationType d = DurationType.quarter,
-}) =>
+Note _n(String step, int octave, {DurationType d = DurationType.quarter}) =>
     Note(
       pitch: Pitch(step: step, octave: octave),
       duration: Duration(d),
@@ -170,16 +166,16 @@ void main() {
     metadata = SmuflMetadata();
     await metadata.load();
     final bravura = await File('assets/smufl/Bravura.otf').readAsBytes();
-    await (FontLoader('packages/flutter_notemus/Bravura')
-          ..addFont(Future.value(ByteData.view(bravura.buffer))))
-        .load();
+    await (FontLoader(
+      'packages/flutter_notemus/Bravura',
+    )..addFont(Future.value(ByteData.view(bravura.buffer)))).load();
     for (final path in _textFontCandidates) {
       final file = File(path);
       if (!file.existsSync()) continue;
       final bytes = await file.readAsBytes();
-      await (FontLoader(_probeTextFamily)
-            ..addFont(Future.value(ByteData.view(bytes.buffer))))
-          .load();
+      await (FontLoader(
+        _probeTextFamily,
+      )..addFont(Future.value(ByteData.view(bytes.buffer)))).load();
       probeTextFontAvailable = true;
       break;
     }
@@ -197,119 +193,146 @@ void main() {
     // that a caller-supplied chain always wins — so the injection point was
     // unreachable by construction.
 
-    Staff prose() => Staff(measures: [
-          _bar([
-            Clef(clefType: ClefType.treble),
-            TimeSignature(numerator: 4, denominator: 4),
-            TempoMark(
-              text: 'Allegro con brio',
-              bpm: 132,
-              beatUnit: DurationType.quarter,
-            ),
-            MusicText(text: 'espressivo dolce', type: TextType.expression),
-            Dynamic(
-              type: DynamicType.crescendo,
-              customText: 'cresc. poco a poco',
-            ),
-            RepeatMark(type: RepeatType.dalSegnoAlFine),
-            _n('C', 5),
-            _n('D', 5),
-            _n('E', 5),
-            _n('F', 5),
-          ])
-        ]);
+    Staff prose() => Staff(
+      measures: [
+        _bar([
+          Clef(clefType: ClefType.treble),
+          TimeSignature(numerator: 4, denominator: 4),
+          TempoMark(
+            text: 'Allegro con brio',
+            bpm: 132,
+            beatUnit: DurationType.quarter,
+          ),
+          MusicText(text: 'espressivo dolce', type: TextType.expression),
+          Dynamic(
+            type: DynamicType.crescendo,
+            customText: 'cresc. poco a poco',
+          ),
+          RepeatMark(type: RepeatType.dalSegnoAlFine),
+          _n('C', 5),
+          _n('D', 5),
+          _n('E', 5),
+          _n('F', 5),
+        ]),
+      ],
+    );
 
     Future<_Ink> render({MusicScoreTheme? theme}) async => _Ink.of(
-          await ScoreRasterizer.renderStaffToImage(
-            staff: prose(),
-            metadata: metadata,
-            width: 900,
-            staffSpace: 12,
-            pixelRatio: 1.0,
-            theme: theme ?? const MusicScoreTheme(),
+      await ScoreRasterizer.renderStaffToImage(
+        staff: prose(),
+        metadata: metadata,
+        width: 900,
+        staffSpace: 12,
+        pixelRatio: 1.0,
+        theme: theme ?? const MusicScoreTheme(),
+      ),
+    );
+
+    test(
+      'an injected family changes the ink and clears the .notdef boxes',
+      () async {
+        if (!probeTextFontAvailable) {
+          markTestSkipped(
+            'no system text face to register as '
+            '$_probeTextFamily; the injection cannot be observed',
+          );
+          return;
+        }
+
+        MusicTextFont.use(null);
+        final without = await render();
+        MusicTextFont.use(_probeTextFamily);
+        final with_ = await render();
+        MusicTextFont.use(null);
+
+        // Measured after the fix at staffSpace 12, 900 px, pixelRatio 1:
+        // 14 942 px / 2 boxes without the injection, 6 886 px / 0 boxes with it.
+        expect(
+          with_.totalInk,
+          isNot(without.totalInk),
+          reason:
+              'the score rasterised to the SAME ${without.totalInk} px of '
+              'ink with and without MusicTextFont.use, which is exactly the '
+              'M-30 symptom (the audit measured 76 120 px both ways)',
+        );
+        expect(
+          without.notdefBoxes,
+          greaterThan(0),
+          reason:
+              'with no text face registered under any name the package '
+              'knows, this score is expected to draw .notdef boxes — if it no '
+              'longer does, the control below proves nothing',
+        );
+        expect(
+          with_.notdefBoxes,
+          0,
+          reason:
+              'an injected REAL face must resolve every prose glyph; '
+              '${with_.notdefBoxes} .notdef box(es) survived',
+        );
+      },
+      timeout: const Timeout.factor(30),
+    );
+
+    test(
+      'a theme that supplies its OWN chain still wins, and stays inert',
+      () async {
+        if (!probeTextFontAvailable) {
+          markTestSkipped(
+            'no system text face to register as '
+            '$_probeTextFamily',
+          );
+          return;
+        }
+
+        // This is the pre-fix behaviour, reproduced on demand: a caller that
+        // hands `withMusicTextFallback()` a chain of its own is making a
+        // deliberate choice, the extension leaves it alone, and the process-wide
+        // injection cannot override it. That contract is unchanged and correct —
+        // the bug was that the RENDERER was that caller.
+        const owned = MusicScoreTheme(
+          expressionTextStyle: TextStyle(
+            fontSize: 14,
+            fontFamilyFallback: kMusicTextFontFallback,
+          ),
+          tempoTextStyle: TextStyle(
+            fontSize: 16,
+            fontFamilyFallback: kMusicTextFontFallback,
+          ),
+          repeatTextStyle: TextStyle(
+            fontSize: 15,
+            fontFamilyFallback: kMusicTextFontFallback,
+          ),
+          dynamicTextStyle: TextStyle(
+            fontSize: 14,
+            fontFamilyFallback: kMusicTextFontFallback,
           ),
         );
 
-    test('an injected family changes the ink and clears the .notdef boxes',
-        () async {
-      if (!probeTextFontAvailable) {
-        markTestSkipped('no system text face to register as '
-            '$_probeTextFamily; the injection cannot be observed');
-        return;
-      }
+        MusicTextFont.use(null);
+        final without = await render(theme: owned);
+        MusicTextFont.use(_probeTextFamily);
+        final with_ = await render(theme: owned);
+        MusicTextFont.use(null);
 
-      MusicTextFont.use(null);
-      final without = await render();
-      MusicTextFont.use(_probeTextFamily);
-      final with_ = await render();
-      MusicTextFont.use(null);
-
-      // Measured after the fix at staffSpace 12, 900 px, pixelRatio 1:
-      // 14 942 px / 2 boxes without the injection, 6 886 px / 0 boxes with it.
-      expect(with_.totalInk, isNot(without.totalInk),
-          reason: 'the score rasterised to the SAME ${without.totalInk} px of '
-              'ink with and without MusicTextFont.use, which is exactly the '
-              'M-30 symptom (the audit measured 76 120 px both ways)');
-      expect(without.notdefBoxes, greaterThan(0),
-          reason: 'with no text face registered under any name the package '
-              'knows, this score is expected to draw .notdef boxes — if it no '
-              'longer does, the control below proves nothing');
-      expect(with_.notdefBoxes, 0,
-          reason: 'an injected REAL face must resolve every prose glyph; '
-              '${with_.notdefBoxes} .notdef box(es) survived');
-    }, timeout: const Timeout.factor(30));
-
-    test('a theme that supplies its OWN chain still wins, and stays inert',
-        () async {
-      if (!probeTextFontAvailable) {
-        markTestSkipped('no system text face to register as '
-            '$_probeTextFamily');
-        return;
-      }
-
-      // This is the pre-fix behaviour, reproduced on demand: a caller that
-      // hands `withMusicTextFallback()` a chain of its own is making a
-      // deliberate choice, the extension leaves it alone, and the process-wide
-      // injection cannot override it. That contract is unchanged and correct —
-      // the bug was that the RENDERER was that caller.
-      const owned = MusicScoreTheme(
-        expressionTextStyle: TextStyle(
-          fontSize: 14,
-          fontFamilyFallback: kMusicTextFontFallback,
-        ),
-        tempoTextStyle: TextStyle(
-          fontSize: 16,
-          fontFamilyFallback: kMusicTextFontFallback,
-        ),
-        repeatTextStyle: TextStyle(
-          fontSize: 15,
-          fontFamilyFallback: kMusicTextFontFallback,
-        ),
-        dynamicTextStyle: TextStyle(
-          fontSize: 14,
-          fontFamilyFallback: kMusicTextFontFallback,
-        ),
-      );
-
-      MusicTextFont.use(null);
-      final without = await render(theme: owned);
-      MusicTextFont.use(_probeTextFamily);
-      final with_ = await render(theme: owned);
-      MusicTextFont.use(null);
-
-      // Measured: 14 079 px / 5 boxes, both ways.
-      expect(with_.totalInk, without.totalInk,
-          reason: 'a caller-supplied chain must survive the injection');
-    }, timeout: const Timeout.factor(30));
+        // Measured: 14 079 px / 5 boxes, both ways.
+        expect(
+          with_.totalInk,
+          without.totalInk,
+          reason: 'a caller-supplied chain must survive the injection',
+        );
+      },
+      timeout: const Timeout.factor(30),
+    );
 
     test('no style built by SymbolAndTextRenderer pre-supplies the chain', () {
       // The structural half, and the one that fails FIRST if anyone puts the
       // shortcut back. `withMusicTextFallback()` is only reachable by a style
       // that names neither a family nor a chain of its own, so the ten sites
       // must not name one.
-      final source =
-          File('lib/src/rendering/renderers/symbol_and_text_renderer.dart')
-              .readAsStringSync();
+      final source = File(
+        'lib/src/rendering/renderers/symbol_and_text_renderer.dart',
+      ).readAsStringSync();
       final offenders = <int>[];
       final lines = source.split('\n');
       for (var i = 0; i < lines.length; i++) {
@@ -321,10 +344,14 @@ void main() {
         if (line.trimLeft().startsWith('//')) continue;
         offenders.add(i + 1);
       }
-      expect(offenders, isEmpty,
-          reason: 'symbol_and_text_renderer.dart sets fontFamilyFallback at '
-              'line(s) ${offenders.join(', ')}; a style that already carries a '
-              'chain makes MusicTextFont.use unreachable (M-30)');
+      expect(
+        offenders,
+        isEmpty,
+        reason:
+            'symbol_and_text_renderer.dart sets fontFamilyFallback at '
+            'line(s) ${offenders.join(', ')}; a style that already carries a '
+            'chain makes MusicTextFont.use unreachable (M-30)',
+      );
     });
   });
 
@@ -344,108 +371,138 @@ void main() {
     // `bandHeight * first - extraTop`, which is why the finding only ever
     // reproduced on the single-image path.
 
-    Staff tupletAt(int octave) => Staff(measures: [
-          _bar([
-            Clef(clefType: ClefType.treble),
-            TimeSignature(numerator: 4, denominator: 4),
-            Tuplet(
-              actualNotes: 5,
-              normalNotes: 4,
-              elements: [
-                for (final step in ['C', 'D', 'E', 'F', 'G'])
-                  _n(step, octave, d: DurationType.eighth),
-              ],
-            ),
-          ])
-        ]);
+    Staff tupletAt(int octave) => Staff(
+      measures: [
+        _bar([
+          Clef(clefType: ClefType.treble),
+          TimeSignature(numerator: 4, denominator: 4),
+          Tuplet(
+            actualNotes: 5,
+            normalNotes: 4,
+            elements: [
+              for (final step in ['C', 'D', 'E', 'F', 'G'])
+                _n(step, octave, d: DurationType.eighth),
+            ],
+          ),
+        ]),
+      ],
+    );
 
     for (final octave in [6, 3]) {
-      test('5:4 on C$octave-G$octave clears both canvas edges', () async {
-        final ink = _Ink.of(
+      test(
+        '5:4 on C$octave-G$octave clears both canvas edges',
+        () async {
+          final ink = _Ink.of(
+            await ScoreRasterizer.renderStaffToImage(
+              staff: tupletAt(octave),
+              metadata: metadata,
+              width: 900,
+              staffSpace: 12,
+              pixelRatio: 1.0,
+            ),
+          );
+          final image = await ink;
+          expect(
+            image.rowInk(0),
+            0,
+            reason:
+                'row 0 carries ${image.rowInk(0)} px of ink, so the top of '
+                'the music is cut off (the audit measured 74 px here for '
+                'octave 6)',
+          );
+          expect(
+            image.rowInk(image.height - 1),
+            0,
+            reason:
+                'row ${image.height - 1} carries '
+                '${image.rowInk(image.height - 1)} px of ink, so the bottom of '
+                'the music is cut off',
+          );
+        },
+        timeout: const Timeout.factor(30),
+      );
+    }
+
+    test(
+      'the single-image path agrees with the paginated one',
+      () async {
+        // The two entry points must reserve the same headroom, or a score looks
+        // one way on screen and another in the PDF.
+        final staff = tupletAt(6);
+        final single = await _Ink.of(
           await ScoreRasterizer.renderStaffToImage(
-            staff: tupletAt(octave),
+            staff: staff,
             metadata: metadata,
             width: 900,
             staffSpace: 12,
             pixelRatio: 1.0,
           ),
         );
-        final image = await ink;
-        expect(image.rowInk(0), 0,
-            reason: 'row 0 carries ${image.rowInk(0)} px of ink, so the top of '
-                'the music is cut off (the audit measured 74 px here for '
-                'octave 6)');
-        expect(image.rowInk(image.height - 1), 0,
-            reason: 'row ${image.height - 1} carries '
-                '${image.rowInk(image.height - 1)} px of ink, so the bottom of '
-                'the music is cut off');
-      }, timeout: const Timeout.factor(30));
-    }
-
-    test('the single-image path agrees with the paginated one', () async {
-      // The two entry points must reserve the same headroom, or a score looks
-      // one way on screen and another in the PDF.
-      final staff = tupletAt(6);
-      final single = await _Ink.of(
-        await ScoreRasterizer.renderStaffToImage(
+        final png = await ScoreRasterizer.renderStaffToPng(
           staff: staff,
           metadata: metadata,
           width: 900,
           staffSpace: 12,
           pixelRatio: 1.0,
-        ),
-      );
-      final png = await ScoreRasterizer.renderStaffToPng(
-        staff: staff,
-        metadata: metadata,
-        width: 900,
-        staffSpace: 12,
-        pixelRatio: 1.0,
-      );
-      final codec = await ui.instantiateImageCodec(png!);
-      final paginated = await _Ink.of((await codec.getNextFrame()).image);
+        );
+        final codec = await ui.instantiateImageCodec(png!);
+        final paginated = await _Ink.of((await codec.getNextFrame()).image);
 
-      expect(single.rowInk(0), 0);
-      expect(paginated.rowInk(0), 0);
-      // Both paths must hold the SAME music: the ink totals agree even though
-      // the single-image canvas is taller (it also carries the layout's top and
-      // bottom page margins).
-      expect(single.totalInk, paginated.totalInk,
-          reason: 'the two rasterisation paths drew different amounts of ink '
+        expect(single.rowInk(0), 0);
+        expect(paginated.rowInk(0), 0);
+        // Both paths must hold the SAME music: the ink totals agree even though
+        // the single-image canvas is taller (it also carries the layout's top and
+        // bottom page margins).
+        expect(
+          single.totalInk,
+          paginated.totalInk,
+          reason:
+              'the two rasterisation paths drew different amounts of ink '
               '(${single.totalInk} vs ${paginated.totalInk}), so one of them '
-              'is still clipping');
-    }, timeout: const Timeout.factor(30));
+              'is still clipping',
+        );
+      },
+      timeout: const Timeout.factor(30),
+    );
   });
 
   // ------------------------------------------------------------ M-08/M-31 --
   group('M-08/M-31 — the tuplet proportion holds BETWEEN groups too', () {
     Tuplet triplet(DurationType d, String step) => Tuplet(
-          actualNotes: 3,
-          normalNotes: 2,
-          elements: [for (var i = 0; i < 3; i++) _n(step, 5, d: d)],
-        );
+      actualNotes: 3,
+      normalNotes: 2,
+      elements: [for (var i = 0; i < 3; i++) _n(step, 5, d: d)],
+    );
 
     test('an eighth group is exactly sqrt(2) wider per note than a sixteenth '
         'group in the same bar', () {
       final eighths = triplet(DurationType.eighth, 'C');
       final sixteenths = triplet(DurationType.sixteenth, 'C');
-      final staff = Staff(measures: [
-        _bar([
-          Clef(clefType: ClefType.treble),
-          TimeSignature(numerator: 4, denominator: 4),
-          eighths,
-          sixteenths,
-        ])
-      ]);
+      final staff = Staff(
+        measures: [
+          _bar([
+            Clef(clefType: ClefType.treble),
+            TimeSignature(numerator: 4, denominator: 4),
+            eighths,
+            sixteenths,
+          ]),
+        ],
+      );
 
-      final engine = LayoutEngine(staff,
-          availableWidth: 900, staffSpace: 12, metadata: metadata);
+      final engine = LayoutEngine(
+        staff,
+        availableWidth: 900,
+        staffSpace: 12,
+        metadata: metadata,
+      );
       engine.layout();
       final xs = engine.noteXPositions;
 
       double slotSpaces(Tuplet tuplet) {
-        final positions =
-            tuplet.elements.whereType<Note>().map((n) => xs[n]!).toList();
+        final positions = tuplet.elements
+            .whereType<Note>()
+            .map((n) => xs[n]!)
+            .toList();
         return (positions.last - positions.first) /
             ((positions.length - 1) * 12.0);
       }
@@ -456,10 +513,14 @@ void main() {
       // Measured BEFORE: 1.9000 / 1.9000, ratio 1.0000 — the reader could not
       // tell an eighth triplet from a sixteenth triplet in the same bar.
       // Measured AFTER: 2.6870 / 1.9000, ratio 1.4142.
-      expect(eighthSlot, greaterThan(sixteenthSlot + 0.5),
-          reason: 'eighth slot ${eighthSlot.toStringAsFixed(4)} SS against '
-              'sixteenth ${sixteenthSlot.toStringAsFixed(4)} SS — the two '
-              'groups were flattened onto the same legibility floor again');
+      expect(
+        eighthSlot,
+        greaterThan(sixteenthSlot + 0.5),
+        reason:
+            'eighth slot ${eighthSlot.toStringAsFixed(4)} SS against '
+            'sixteenth ${sixteenthSlot.toStringAsFixed(4)} SS — the two '
+            'groups were flattened onto the same legibility floor again',
+      );
       expect(eighthSlot / sixteenthSlot, closeTo(1.4142, 0.01));
 
       // The floor still binds where it must: the NARROWEST group in the bar
@@ -473,94 +534,129 @@ void main() {
       // tuplet has a context equal to that tuplet, so the scale is byte-for-
       // byte the pre-existing one and no golden shifts.
       final lone = triplet(DurationType.sixteenth, 'C');
-      final staff = Staff(measures: [
-        _bar([
-          Clef(clefType: ClefType.treble),
-          TimeSignature(numerator: 4, denominator: 4),
-          lone,
-        ])
-      ]);
-      final engine = LayoutEngine(staff,
-          availableWidth: 900, staffSpace: 12, metadata: metadata);
+      final staff = Staff(
+        measures: [
+          _bar([
+            Clef(clefType: ClefType.treble),
+            TimeSignature(numerator: 4, denominator: 4),
+            lone,
+          ]),
+        ],
+      );
+      final engine = LayoutEngine(
+        staff,
+        availableWidth: 900,
+        staffSpace: 12,
+        metadata: metadata,
+      );
       engine.layout();
 
-      expect(engine.tupletContextFloorFor(lone),
-          TupletGrid.smallestRawLeafSpaces(lone));
       expect(
-        TupletGrid.slotWidths(lone, 12.0,
-            contextSmallestLeafSpaces: engine.tupletContextFloorFor(lone)),
+        engine.tupletContextFloorFor(lone),
+        TupletGrid.smallestRawLeafSpaces(lone),
+      );
+      expect(
+        TupletGrid.slotWidths(
+          lone,
+          12.0,
+          contextSmallestLeafSpaces: engine.tupletContextFloorFor(lone),
+        ),
         TupletGrid.slotWidths(lone, 12.0),
       );
     });
 
-    test('the rasterised ink gap inside each group stays above minGap',
-        () async {
-      // The floor exists for LEGIBILITY, so the acceptance is measured in ink,
-      // not in slot arithmetic. `SpacingPreferences.normal.minGap` is
-      // 0.25 staff spaces.
-      final eighths = triplet(DurationType.eighth, 'C');
-      final sixteenths = triplet(DurationType.sixteenth, 'C');
-      final staff = Staff(measures: [
-        _bar([
-          Clef(clefType: ClefType.treble),
-          TimeSignature(numerator: 4, denominator: 4),
-          eighths,
-          sixteenths,
-        ])
-      ]);
+    test(
+      'the rasterised ink gap inside each group stays above minGap',
+      () async {
+        // The floor exists for LEGIBILITY, so the acceptance is measured in ink,
+        // not in slot arithmetic. `SpacingPreferences.normal.minGap` is
+        // 0.25 staff spaces.
+        final eighths = triplet(DurationType.eighth, 'C');
+        final sixteenths = triplet(DurationType.sixteenth, 'C');
+        final staff = Staff(
+          measures: [
+            _bar([
+              Clef(clefType: ClefType.treble),
+              TimeSignature(numerator: 4, denominator: 4),
+              eighths,
+              sixteenths,
+            ]),
+          ],
+        );
 
-      final engine = LayoutEngine(staff,
-          availableWidth: 900, staffSpace: 12, metadata: metadata);
-      engine.layout();
-      final noteY = engine.noteYPositions[eighths.elements.first as Note]!;
-
-      final ink = await _Ink.of(
-        await ScoreRasterizer.renderStaffToImage(
-          staff: staff,
-          metadata: metadata,
-          width: 900,
+        final engine = LayoutEngine(
+          staff,
+          availableWidth: 900,
           staffSpace: 12,
-          pixelRatio: 1.0,
-          theme: const MusicScoreTheme(
-            staffLineColor: Color(0x00000000),
-            barlineColor: Color(0x00000000),
+          metadata: metadata,
+        );
+        engine.layout();
+        final noteY = engine.noteYPositions[eighths.elements.first as Note]!;
+
+        final ink = await _Ink.of(
+          await ScoreRasterizer.renderStaffToImage(
+            staff: staff,
+            metadata: metadata,
+            width: 900,
+            staffSpace: 12,
+            pixelRatio: 1.0,
+            theme: const MusicScoreTheme(
+              staffLineColor: Color(0x00000000),
+              barlineColor: Color(0x00000000),
+            ),
           ),
-        ),
-      );
+        );
 
-      // All six noteheads sit on one row (every note is a C5), so the last six
-      // runs of that row are the noteheads and the gaps between them are the
-      // white the reader has to see.
-      final runs = ink.runsInRow(noteY.round());
-      expect(runs.length, greaterThanOrEqualTo(6));
-      final heads = runs.sublist(runs.length - 6);
+        // All six noteheads sit on one row (every note is a C5), so the last six
+        // runs of that row are the noteheads and the gaps between them are the
+        // white the reader has to see.
+        final runs = ink.runsInRow(noteY.round());
+        expect(runs.length, greaterThanOrEqualTo(6));
+        final heads = runs.sublist(runs.length - 6);
 
-      // Within the eighth group (heads 0-2) and within the sixteenth group
-      // (heads 3-5). Measured: 19 px = 1.583 SS inside the eighths, 9 px =
-      // 0.750 SS and 10 px = 0.833 SS inside the sixteenths.
-      for (final pair in [[0, 1], [1, 2], [3, 4], [4, 5]]) {
-        final gap = heads[pair[1]].start - heads[pair[0]].end - 1;
-        expect(gap / 12.0, greaterThanOrEqualTo(0.25),
-            reason: 'noteheads ${pair[0]}->${pair[1]} are only $gap px apart '
+        // Within the eighth group (heads 0-2) and within the sixteenth group
+        // (heads 3-5). Measured: 19 px = 1.583 SS inside the eighths, 9 px =
+        // 0.750 SS and 10 px = 0.833 SS inside the sixteenths.
+        for (final pair in [
+          [0, 1],
+          [1, 2],
+          [3, 4],
+          [4, 5],
+        ]) {
+          final gap = heads[pair[1]].start - heads[pair[0]].end - 1;
+          expect(
+            gap / 12.0,
+            greaterThanOrEqualTo(0.25),
+            reason:
+                'noteheads ${pair[0]}->${pair[1]} are only $gap px apart '
                 '(${(gap / 12.0).toStringAsFixed(3)} SS), under the package\'s '
-                'own SpacingPreferences.normal.minGap of 0.25 SS');
-      }
-    }, timeout: const Timeout.factor(30));
+                'own SpacingPreferences.normal.minGap of 0.25 SS',
+          );
+        }
+      },
+      timeout: const Timeout.factor(30),
+    );
   });
 
   // ------------------------------------------------------------------ M-46 --
   group('M-46 — an over-full bar is reported, not silently overflowed', () {
-    Staff overFull() => Staff(measures: [
-          _bar([
-            Clef(clefType: ClefType.treble),
-            TimeSignature(numerator: 4, denominator: 4),
-            for (var i = 0; i < 40; i++) _n('C', 5, d: DurationType.whole),
-          ])
-        ]);
+    Staff overFull() => Staff(
+      measures: [
+        _bar([
+          Clef(clefType: ClefType.treble),
+          TimeSignature(numerator: 4, denominator: 4),
+          for (var i = 0; i < 40; i++) _n('C', 5, d: DurationType.whole),
+        ]),
+      ],
+    );
 
     test('the engine names the measure and quotes the overflow factor', () {
-      final engine = LayoutEngine(overFull(),
-          availableWidth: 900, staffSpace: 12, metadata: metadata);
+      final engine = LayoutEngine(
+        overFull(),
+        availableWidth: 900,
+        staffSpace: 12,
+        metadata: metadata,
+      );
       final elements = engine.layout();
 
       // The finding's own measurement: 43 elements on ONE system, reaching
@@ -584,45 +680,73 @@ void main() {
       // CORRECTION. What the warning has to prove is that it quotes a real,
       // large overflow — not that the engraving never improves.
       final factor = RegExp(r'\(([0-9.]+)x\)').firstMatch(warning);
-      expect(factor, isNotNull, reason: 'the warning must quote a factor: $warning');
-      expect(double.parse(factor!.group(1)!), greaterThan(2.0), reason: warning);
-    });
-
-    test('the list belongs to ONE pass and stays empty for music that fits',
-        () {
-      final engine = LayoutEngine(overFull(),
-          availableWidth: 900, staffSpace: 12, metadata: metadata);
-      engine.layout();
-      engine.layout();
-      engine.layout();
-      expect(engine.warnings, hasLength(1),
-          reason: 'warnings accumulated across layout passes; a widget rebuilds '
-              'many times a second and would grow the list without bound');
-
-      final ordinary = LayoutEngine(
-        Staff(measures: [
-          _bar([
-            Clef(clefType: ClefType.treble),
-            TimeSignature(numerator: 4, denominator: 4),
-            _n('C', 5, d: DurationType.whole),
-          ])
-        ]),
-        availableWidth: 900,
-        staffSpace: 12,
-        metadata: metadata,
+      expect(
+        factor,
+        isNotNull,
+        reason: 'the warning must quote a factor: $warning',
       );
-      ordinary.layout();
-      expect(ordinary.warnings, isEmpty);
+      expect(
+        double.parse(factor!.group(1)!),
+        greaterThan(2.0),
+        reason: warning,
+      );
     });
+
+    test(
+      'the list belongs to ONE pass and stays empty for music that fits',
+      () {
+        final engine = LayoutEngine(
+          overFull(),
+          availableWidth: 900,
+          staffSpace: 12,
+          metadata: metadata,
+        );
+        engine.layout();
+        engine.layout();
+        engine.layout();
+        expect(
+          engine.warnings,
+          hasLength(1),
+          reason:
+              'warnings accumulated across layout passes; a widget rebuilds '
+              'many times a second and would grow the list without bound',
+        );
+
+        final ordinary = LayoutEngine(
+          Staff(
+            measures: [
+              _bar([
+                Clef(clefType: ClefType.treble),
+                TimeSignature(numerator: 4, denominator: 4),
+                _n('C', 5, d: DurationType.whole),
+              ]),
+            ],
+          ),
+          availableWidth: 900,
+          staffSpace: 12,
+          metadata: metadata,
+        );
+        ordinary.layout();
+        expect(ordinary.warnings, isEmpty);
+      },
+    );
 
     test('the diagnostic does not change the layout', () {
       // M-46 is explicitly a report, not a fix: the geometry must be identical
       // to what it was before the warning existed, or the "no behaviour change"
       // claim in the CHANGELOG is false.
-      final quiet = LayoutEngine(overFull(),
-          availableWidth: 900, staffSpace: 12, metadata: metadata);
-      final loud = LayoutEngine(overFull(),
-          availableWidth: 900, staffSpace: 12, metadata: metadata);
+      final quiet = LayoutEngine(
+        overFull(),
+        availableWidth: 900,
+        staffSpace: 12,
+        metadata: metadata,
+      );
+      final loud = LayoutEngine(
+        overFull(),
+        availableWidth: 900,
+        staffSpace: 12,
+        metadata: metadata,
+      );
       final a = quiet.layoutWithSignature();
       final b = loud.layoutWithSignature();
       expect(a.signature, b.signature);

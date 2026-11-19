@@ -122,20 +122,20 @@ class Pitch {
     this.alter = 0.0,
     this.accidentalType,
     this.customAccidentalGlyph,
-  })  : assert(
-          step == 'C' ||
-              step == 'D' ||
-              step == 'E' ||
-              step == 'F' ||
-              step == 'G' ||
-              step == 'A' ||
-              step == 'B',
-          'Invalid pitch step (expected one of C D E F G A B)',
-        ),
-        assert(
-          octave >= -1 && octave <= 10,
-          'Octave out of range (expected -1..10)',
-        );
+  }) : assert(
+         step == 'C' ||
+             step == 'D' ||
+             step == 'E' ||
+             step == 'F' ||
+             step == 'G' ||
+             step == 'A' ||
+             step == 'B',
+         'Invalid pitch step (expected one of C D E F G A B)',
+       ),
+       assert(
+         octave >= -1 && octave <= 10,
+         'Octave out of range (expected -1..10)',
+       );
 
   /// Creates a pitch after validating and normalizing its [step].
   ///
@@ -309,10 +309,18 @@ class Pitch {
     if (effectiveAlter == 0.0) return null; // No accidental
     if (effectiveAlter == 1.0) return accidentalToGlyph[AccidentalType.sharp];
     if (effectiveAlter == -1.0) return accidentalToGlyph[AccidentalType.flat];
-    if (effectiveAlter == 2.0) return accidentalToGlyph[AccidentalType.doubleSharp];
-    if (effectiveAlter == -2.0) return accidentalToGlyph[AccidentalType.doubleFlat];
-    if (effectiveAlter == 0.5) return accidentalToGlyph[AccidentalType.quarterToneSharp];
-    if (effectiveAlter == -0.5) return accidentalToGlyph[AccidentalType.quarterToneFlat];
+    if (effectiveAlter == 2.0) {
+      return accidentalToGlyph[AccidentalType.doubleSharp];
+    }
+    if (effectiveAlter == -2.0) {
+      return accidentalToGlyph[AccidentalType.doubleFlat];
+    }
+    if (effectiveAlter == 0.5) {
+      return accidentalToGlyph[AccidentalType.quarterToneSharp];
+    }
+    if (effectiveAlter == -0.5) {
+      return accidentalToGlyph[AccidentalType.quarterToneFlat];
+    }
 
     return null; // For unmapped values
   }
@@ -351,14 +359,22 @@ class Pitch {
     AccidentalType? accidentalType,
   }) {
     const solmToStep = {
-      'do': 'C', 're': 'D', 'mi': 'E', 'fa': 'F',
-      'sol': 'G', 'la': 'A', 'si': 'B', 'ti': 'B',
+      'do': 'C',
+      're': 'D',
+      'mi': 'E',
+      'fa': 'F',
+      'sol': 'G',
+      'la': 'A',
+      'si': 'B',
+      'ti': 'B',
     };
     final normalized = syllable.toLowerCase();
     final step = solmToStep[normalized];
     if (step == null) {
-      throw ArgumentError('Invalid solmization syllable: $syllable. '
-          'Use: do, re, mi, fa, sol, la, si');
+      throw ArgumentError(
+        'Invalid solmization syllable: $syllable. '
+        'Use: do, re, mi, fa, sol, la, si',
+      );
     }
     return Pitch(
       step: step,
@@ -407,11 +423,23 @@ class Pitch {
 
 /// Mapping from note name to solmization index (fixed-do).
 const Map<String, int> _stepToSolmIndex = {
-  'C': 0, 'D': 1, 'E': 2, 'F': 3, 'G': 4, 'A': 5, 'B': 6,
+  'C': 0,
+  'D': 1,
+  'E': 2,
+  'F': 3,
+  'G': 4,
+  'A': 5,
+  'B': 6,
 };
 
 const List<String> _solmizationNames = [
-  'do', 're', 'mi', 'fa', 'sol', 'la', 'si',
+  'do',
+  're',
+  'mi',
+  'fa',
+  'sol',
+  'la',
+  'si',
 ];
 
 /// Utility class for pitch operations.

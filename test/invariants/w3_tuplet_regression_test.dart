@@ -25,9 +25,9 @@ void main() {
     metadata = SmuflMetadata();
     await metadata.load();
     final bytes = await File('assets/smufl/Bravura.otf').readAsBytes();
-    await (FontLoader('packages/flutter_notemus/Bravura')
-          ..addFont(Future.value(ByteData.view(bytes.buffer))))
-        .load();
+    await (FontLoader(
+      'packages/flutter_notemus/Bravura',
+    )..addFont(Future.value(ByteData.view(bytes.buffer)))).load();
   });
 
   Staff staffOf(List<Measure> measures) => Staff()..measures.addAll(measures);
@@ -36,22 +36,27 @@ void main() {
       Measure()..elements.addAll(elements);
 
   LayoutEngine engineOf(Staff staff, {double width = 900}) => LayoutEngine(
-        staff,
-        availableWidth: width,
-        staffSpace: 12,
-        metadata: metadata,
-      );
+    staff,
+    availableWidth: width,
+    staffSpace: 12,
+    metadata: metadata,
+  );
 
-  Note note(String step, int octave,
-          {DurationType d = DurationType.eighth, double alter = 0.0}) =>
-      Note(
-        pitch: Pitch(step: step, octave: octave, alter: alter),
-        duration: Duration(d),
-      );
+  Note note(
+    String step,
+    int octave, {
+    DurationType d = DurationType.eighth,
+    double alter = 0.0,
+  }) => Note(
+    pitch: Pitch(step: step, octave: octave, alter: alter),
+    duration: Duration(d),
+  );
 
-  Tuplet tupletOf(List<MusicalElement> elements,
-          {int actual = 3, int normal = 2}) =>
-      Tuplet(actualNotes: actual, normalNotes: normal, elements: elements);
+  Tuplet tupletOf(
+    List<MusicalElement> elements, {
+    int actual = 3,
+    int normal = 2,
+  }) => Tuplet(actualNotes: actual, normalNotes: normal, elements: elements);
 
   // ------------------------------------------------------------- M-08/M-31 --
   group('M-08 / M-31: the tuplet grid is proportional and legible', () {
@@ -67,11 +72,11 @@ void main() {
         [DurationType.sixtyFourth, DurationType.oneHundredTwentyEighth],
         [
           DurationType.oneHundredTwentyEighth,
-          DurationType.twoHundredFiftySixth
+          DurationType.twoHundredFiftySixth,
         ],
         [
           DurationType.thousandTwentyFourth,
-          DurationType.twoThousandFortyEighth
+          DurationType.twoThousandFortyEighth,
         ],
       ];
       for (final pair in pairs) {
@@ -79,9 +84,13 @@ void main() {
           tupletOf([note('C', 5, d: pair[0]), note('D', 5, d: pair[1])]),
           12.0,
         );
-        expect(slots[0] / slots[1], closeTo(1.4142, 1e-3),
-            reason: '${pair[0].name} : ${pair[1].name} must keep the exact '
-                'square-root ratio at every depth of the duration ladder.');
+        expect(
+          slots[0] / slots[1],
+          closeTo(1.4142, 1e-3),
+          reason:
+              '${pair[0].name} : ${pair[1].name} must keep the exact '
+              'square-root ratio at every depth of the duration ladder.',
+        );
       }
     });
 
@@ -102,10 +111,14 @@ void main() {
         expect(slot, closeTo(22.8, 1e-6));
       }
       final head = metadata.getGlyphAdvanceWidth('noteheadBlack')! * 12.0;
-      expect((slots.first - head) / 12.0, greaterThan(0.25),
-          reason: 'the geometric gap must beat the package minimum of 0.25 SS; '
-              'it used to be 0.220 SS of nominal slack and 0.167 SS of real '
-              'white.');
+      expect(
+        (slots.first - head) / 12.0,
+        greaterThan(0.25),
+        reason:
+            'the geometric gap must beat the package minimum of 0.25 SS; '
+            'it used to be 0.220 SS of nominal slack and 0.167 SS of real '
+            'white.',
+      );
     });
 
     test('a quarter inside a tuplet keeps its historical 2.5 staff spaces', () {
@@ -138,24 +151,32 @@ void main() {
         final middle = note('D', 5, alter: entry.$1);
         final tuplet = tupletOf([first, middle, note('E', 5)]);
         final engine = engineOf(
-            staffOf([bar([Clef(clefType: ClefType.treble), tuplet])]));
+          staffOf([
+            bar([Clef(clefType: ClefType.treble), tuplet]),
+          ]),
+        );
         engine.layout();
 
         final head = metadata.getGlyphAdvanceWidth('noteheadBlack')! * 12.0;
-        final accidental =
-            metadata.getGlyphAdvanceWidth(entry.$2)! * 12.0;
+        final accidental = metadata.getGlyphAdvanceWidth(entry.$2)! * 12.0;
         // The accidental is drawn 0.3 staff spaces in front of its notehead
         // (SMuFL guidance), which is what `_leftExtent` reserves.
-        final accidentalLeft = engine.noteXPositions[middle]! -
-            accidental -
-            (0.3 * 12.0);
+        final accidentalLeft =
+            engine.noteXPositions[middle]! - accidental - (0.3 * 12.0);
         final clearance =
             accidentalLeft - (engine.noteXPositions[first]! + head);
-        expect(clearance, greaterThanOrEqualTo(0.0),
-            reason: '${entry.$2} drove ${(-clearance).toStringAsFixed(2)} '
-                'px into the previous notehead.');
-        expect(clearance / 12.0, closeTo(0.25, 1e-6),
-            reason: 'the grid gives exactly the package own minGap of air.');
+        expect(
+          clearance,
+          greaterThanOrEqualTo(0.0),
+          reason:
+              '${entry.$2} drove ${(-clearance).toStringAsFixed(2)} '
+              'px into the previous notehead.',
+        );
+        expect(
+          clearance / 12.0,
+          closeTo(0.25, 1e-6),
+          reason: 'the grid gives exactly the package own minGap of air.',
+        );
       });
     }
   });
@@ -167,9 +188,7 @@ void main() {
     // (an accidental holds for the rest of the bar) and the tuplet printed
     // THREE SHARPS, because TupletRenderer called NoteRenderer with the
     // default AccidentalDisplay.show.
-    final inner = [
-      for (var i = 0; i < 3; i++) note('C', 4, alter: 1.0),
-    ];
+    final inner = [for (var i = 0; i < 3; i++) note('C', 4, alter: 1.0)];
     final tuplet = tupletOf(inner);
     final staff = staffOf([
       bar([
@@ -179,7 +198,7 @@ void main() {
           duration: const Duration(DurationType.quarter),
         ),
         tuplet,
-      ])
+      ]),
     ]);
     final engine = engineOf(staff);
     engine.layout();
@@ -214,9 +233,13 @@ void main() {
       }
     }
     // Only the four staff lines (2 px each) may cross that strip.
-    expect(ink, lessThan(15 * 12),
-        reason: 'a sharp glyph occupies far more ink than the staff lines '
-            'crossing this strip; three of them printed here before the fix.');
+    expect(
+      ink,
+      lessThan(15 * 12),
+      reason:
+          'a sharp glyph occupies far more ink than the staff lines '
+          'crossing this strip; three of them printed here before the fix.',
+    );
   });
 
   // ------------------------------------------------------------------ M-26 --
@@ -232,7 +255,7 @@ void main() {
         Clef(clefType: ClefType.treble),
         TimeSignature(numerator: 4, denominator: 4),
         tupletOf([note('C', 5), note('D', 5), note('E', 5)]),
-      ])
+      ]),
     ]);
 
     final xmlBefore = MusicXMLParser.staffToMusicXML(staff);
@@ -245,10 +268,16 @@ void main() {
     );
     expect(png, isNotNull);
 
-    expect(MusicXMLParser.staffToMusicXML(staff), xmlBefore,
-        reason: 'the PAINT pass wrote Note.beam into the model.');
-    expect(JsonMusicExporter.staffToJson(staff), jsonBefore,
-        reason: 'the PAINT pass wrote Note.beam into the model.');
+    expect(
+      MusicXMLParser.staffToMusicXML(staff),
+      xmlBefore,
+      reason: 'the PAINT pass wrote Note.beam into the model.',
+    );
+    expect(
+      JsonMusicExporter.staffToJson(staff),
+      jsonBefore,
+      reason: 'the PAINT pass wrote Note.beam into the model.',
+    );
   });
 
   // ------------------------------------------------------------------ M-38 --
@@ -266,8 +295,13 @@ void main() {
         note('E', 5),
         note('F', 5),
       ]);
-      expect(plan.beams,
-          [BeamType.start, BeamType.end, null, BeamType.start, BeamType.end]);
+      expect(plan.beams, [
+        BeamType.start,
+        BeamType.end,
+        null,
+        BeamType.start,
+        BeamType.end,
+      ]);
       expect(plan.beamCount, 1);
     });
 
@@ -313,23 +347,25 @@ void main() {
       expect(plan.beams, [BeamType.start, BeamType.inner, BeamType.end]);
     });
 
-    test('an unbeamable child ends the run instead of cancelling the tuplet',
-        () {
-      final plan = TupletBeamPlan.of([
-        note('C', 5),
-        note('D', 5),
-        note('E', 5, d: DurationType.quarter),
-        note('F', 5),
-        note('G', 5),
-      ]);
-      expect(plan.beams, [
-        BeamType.start,
-        BeamType.end,
-        null,
-        BeamType.start,
-        BeamType.end,
-      ]);
-    });
+    test(
+      'an unbeamable child ends the run instead of cancelling the tuplet',
+      () {
+        final plan = TupletBeamPlan.of([
+          note('C', 5),
+          note('D', 5),
+          note('E', 5, d: DurationType.quarter),
+          note('F', 5),
+          note('G', 5),
+        ]);
+        expect(plan.beams, [
+          BeamType.start,
+          BeamType.end,
+          null,
+          BeamType.start,
+          BeamType.end,
+        ]);
+      },
+    );
   });
 
   // ------------------------------------------------------------------ M-23 --
@@ -341,10 +377,12 @@ void main() {
       bar([
         Clef(clefType: ClefType.treble),
         TimeSignature(numerator: 4, denominator: 4),
-        tupletOf([
-          for (var i = 0; i < 5; i++) note('B', 4, d: DurationType.sixteenth)
-        ], actual: 5, normal: 4),
-      ])
+        tupletOf(
+          [for (var i = 0; i < 5; i++) note('B', 4, d: DurationType.sixteenth)],
+          actual: 5,
+          normal: 4,
+        ),
+      ]),
     ]);
     final engine = engineOf(staff);
     final positioned = engine.layout();
@@ -352,8 +390,10 @@ void main() {
     // The reserved headroom must cover the beam stack a sixteenth tuplet
     // actually draws: the reach used to be derived from a private copy of the
     // beam-count rule that could disagree with the renderer.
-    expect(engine.calculateTotalHeight(positioned),
-        greaterThan(engine.contentTopOverflow(positioned)));
+    expect(
+      engine.calculateTotalHeight(positioned),
+      greaterThan(engine.contentTopOverflow(positioned)),
+    );
   });
 
   // -------------------------------------------------------------------- F3 --
@@ -367,10 +407,10 @@ void main() {
     MusicalElement clone(MusicalElement Function() make) => make();
 
     final directions = <String, MusicalElement Function()>{
-      'OctaveMark': () => OctaveMark(type: OctaveType.va8, startMeasure: 0, endMeasure: 0),
+      'OctaveMark': () =>
+          OctaveMark(type: OctaveType.va8, startMeasure: 0, endMeasure: 0),
       'Dynamic': () => Dynamic(type: DynamicType.mf),
-      'MusicText': () =>
-          MusicText(text: 'dolce', type: TextType.expression),
+      'MusicText': () => MusicText(text: 'dolce', type: TextType.expression),
     };
 
     for (final entry in directions.entries) {
@@ -380,14 +420,8 @@ void main() {
           final otherNote = note('C', 4, d: DurationType.quarter);
           final direction = clone(entry.value);
           final measure = MultiVoiceMeasure.twoVoices(
-            voice1Elements: [
-              if (inLead) direction,
-              leadNote,
-            ],
-            voice2Elements: [
-              if (!inLead) direction,
-              otherNote,
-            ],
+            voice1Elements: [if (inLead) direction, leadNote],
+            voice2Elements: [if (!inLead) direction, otherNote],
           );
           measure.elements.addAll([
             Clef(clefType: ClefType.treble),
@@ -398,9 +432,13 @@ void main() {
           return engine.noteXPositions[inLead ? leadNote : otherNote]!;
         }
 
-        expect(firstNoteX(inLead: true), closeTo(firstNoteX(inLead: false), 0.01),
-            reason: 'the same direction must reserve the same advance in '
-                'either voice.');
+        expect(
+          firstNoteX(inLead: true),
+          closeTo(firstNoteX(inLead: false), 0.01),
+          reason:
+              'the same direction must reserve the same advance in '
+              'either voice.',
+        );
       });
     }
   });
@@ -416,9 +454,12 @@ void main() {
     );
     final tuplet = tupletOf([note('C', 5), grace, note('E', 5)]);
     expect(tuplet.totalDuration, closeTo(0.25 * 2 / 3, 1e-9));
-    expect(tuplet.totalDuration,
-        closeTo(Measure.musicalValueOf(tuplet), 1e-9),
-        reason: 'totalDuration and musicalValueOf must agree, or the ADR-002 '
-            'shared onset grid splits between the two staves of a system.');
+    expect(
+      tuplet.totalDuration,
+      closeTo(Measure.musicalValueOf(tuplet), 1e-9),
+      reason:
+          'totalDuration and musicalValueOf must agree, or the ADR-002 '
+          'shared onset grid splits between the two staves of a system.',
+    );
   });
 }

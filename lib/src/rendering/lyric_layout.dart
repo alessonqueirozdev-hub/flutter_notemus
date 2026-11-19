@@ -20,8 +20,7 @@ class LyricLayout {
   static double fallbackFirstLineY({
     required double staffBaselineY,
     required double staffSpace,
-  }) =>
-      staffBaselineY + 2 * staffSpace + staffSpace * 1.5;
+  }) => staffBaselineY + 2 * staffSpace + staffSpace * 1.5;
 
   /// The first lyric line for [system], measured against what is actually in
   /// it.

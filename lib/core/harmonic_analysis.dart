@@ -7,8 +7,10 @@ import 'musical_element.dart';
 enum MelodicIntervalType {
   /// Código de Parsons: repetição (R), ascendente (U), descendente (D)
   parsonsCode,
+
   /// Noteção diatônica (M2, m3, P5, etc.)
   diatonic,
+
   /// Number de semitons (inteiro)
   semitones,
 }
@@ -18,22 +20,31 @@ enum MelodicIntervalType {
 enum MelodicFunction {
   /// Tom de chord (chord tone)
   chordTone,
+
   /// Note de passagem (passing tone)
   passingTone,
+
   /// Note de vizinhança / bordadura (neighbor tone)
   neighborTone,
+
   /// Escapada (escape tone)
   escapeTone,
+
   /// Appoggiatura
   appoggiatura,
+
   /// Note de antecipação
   anticipation,
+
   /// Suspensão
   suspension,
+
   /// Retardo
   retardation,
+
   /// Pedal
   pedal,
+
   /// Other / indefinido
   other,
 }
@@ -73,9 +84,9 @@ class ScaleDegree {
 /// ```
 class MelodicInterval {
   final MelodicIntervalType type;
-  final String? diatonicValue;    // ex.: "M2", "m3", "P5", "A4"
-  final int? semitonesValue;      // ex.: 2, 3, 7
-  final String? parsonsValue;     // "R", "U", "D"
+  final String? diatonicValue; // ex.: "M2", "m3", "P5", "A4"
+  final int? semitonesValue; // ex.: 2, 3, 7
+  final String? parsonsValue; // "R", "U", "D"
 
   const MelodicInterval._({
     required this.type,
@@ -85,17 +96,23 @@ class MelodicInterval {
   });
 
   /// Intervalo diatônico (e.g., 'M2', 'm3', 'P4', 'P5', 'M6', 'm7', 'P8').
-  factory MelodicInterval.diatonic(String value) =>
-      MelodicInterval._(type: MelodicIntervalType.diatonic, diatonicValue: value);
+  factory MelodicInterval.diatonic(String value) => MelodicInterval._(
+    type: MelodicIntervalType.diatonic,
+    diatonicValue: value,
+  );
 
   /// Intervalo in semitons (positivo = ascendente, negativo = descendente).
-  factory MelodicInterval.semitones(int value) =>
-      MelodicInterval._(type: MelodicIntervalType.semitones, semitonesValue: value);
+  factory MelodicInterval.semitones(int value) => MelodicInterval._(
+    type: MelodicIntervalType.semitones,
+    semitonesValue: value,
+  );
 
   /// Código de Parsons: 'R' (repetição), 'U' (ascendente), 'D' (descendente).
   factory MelodicInterval.parsons(String code) {
-    assert(['R', 'U', 'D'].contains(code.toUpperCase()),
-        'Código de Parsons inválido: $code. Use R, U ou D.');
+    assert(
+      ['R', 'U', 'D'].contains(code.toUpperCase()),
+      'Código de Parsons inválido: $code. Use R, U ou D.',
+    );
     return MelodicInterval._(
       type: MelodicIntervalType.parsonsCode,
       parsonsValue: code.toUpperCase(),
@@ -103,7 +120,8 @@ class MelodicInterval {
   }
 
   @override
-  String toString() => diatonicValue ?? semitonesValue?.toString() ?? parsonsValue ?? '';
+  String toString() =>
+      diatonicValue ?? semitonesValue?.toString() ?? parsonsValue ?? '';
 }
 
 /// Intervalo harmônico between duas notes simultâneas (MEI `@inth`).

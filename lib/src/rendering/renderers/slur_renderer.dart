@@ -434,7 +434,9 @@ class SlurRenderer {
         final known = musicLeft[system];
         musicLeft[system] = known == null ? x : math.min(known, x);
       }
-      if (element is Clef || element is KeySignature || element is TimeSignature) {
+      if (element is Clef ||
+          element is KeySignature ||
+          element is TimeSignature) {
         final known = headerRight[system];
         headerRight[system] = known == null ? x : math.max(known, x);
       }

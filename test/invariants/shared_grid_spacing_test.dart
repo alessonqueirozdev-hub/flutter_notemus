@@ -27,17 +27,21 @@ void main() {
     await metadata.load();
   });
 
-  Note n(String s, int o, {DurationType d = DurationType.quarter}) =>
-      Note(pitch: Pitch(step: s, octave: o), duration: MusicDuration(d));
+  Note n(String s, int o, {DurationType d = DurationType.quarter}) => Note(
+    pitch: Pitch(step: s, octave: o),
+    duration: MusicDuration(d),
+  );
 
-  Staff line(ClefType clef, List<MusicalElement> body) => Staff(measures: [
-        Measure()
-          ..elements.addAll([
-            Clef(clefType: clef),
-            TimeSignature(numerator: 4, denominator: 4),
-            ...body,
-          ])
-      ]);
+  Staff line(ClefType clef, List<MusicalElement> body) => Staff(
+    measures: [
+      Measure()
+        ..elements.addAll([
+          Clef(clefType: clef),
+          TimeSignature(numerator: 4, denominator: 4),
+          ...body,
+        ]),
+    ],
+  );
 
   void report(String label, List<StaffGroup> groups) {
     final painter = GrandStaffPainter(
@@ -63,23 +67,36 @@ void main() {
   }
 
   test('a dense passage on one staff does not squeeze the others', () {
-    final satb = StaffGroup(bracket: BracketType.bracket, staves: [
-      line(ClefType.treble, [n('G', 5), n('F', 5), n('E', 5), n('D', 5)]),
-      line(ClefType.treble, [n('C', 5), n('C', 5), n('B', 4), n('B', 4)]),
-    ]);
+    final satb = StaffGroup(
+      bracket: BracketType.bracket,
+      staves: [
+        line(ClefType.treble, [n('G', 5), n('F', 5), n('E', 5), n('D', 5)]),
+        line(ClefType.treble, [n('C', 5), n('C', 5), n('B', 4), n('B', 4)]),
+      ],
+    );
     report('choir only ', [satb]);
 
-    final piano = StaffGroup(bracket: BracketType.brace, staves: [
-      line(ClefType.treble, [
-        Tuplet(actualNotes: 3, normalNotes: 2, elements: [
-          n('C', 5, d: DurationType.eighth),
-          n('E', 5, d: DurationType.eighth),
-          n('G', 5, d: DurationType.eighth),
+    final piano = StaffGroup(
+      bracket: BracketType.brace,
+      staves: [
+        line(ClefType.treble, [
+          Tuplet(
+            actualNotes: 3,
+            normalNotes: 2,
+            elements: [
+              n('C', 5, d: DurationType.eighth),
+              n('E', 5, d: DurationType.eighth),
+              n('G', 5, d: DurationType.eighth),
+            ],
+          ),
+          n('C', 6, d: DurationType.half),
         ]),
-        n('C', 6, d: DurationType.half),
-      ]),
-      line(ClefType.bass, [n('C', 3, d: DurationType.half), n('G', 2, d: DurationType.half)]),
-    ]);
+        line(ClefType.bass, [
+          n('C', 3, d: DurationType.half),
+          n('G', 2, d: DurationType.half),
+        ]),
+      ],
+    );
     // The measurement that matters: the choir's own beats keep the spacing
     // they have when nothing else is on the page. Only the interval that has
     // to hold the triplet is allowed to grow.
@@ -88,13 +105,20 @@ void main() {
     report('choir+piano', [satb, piano]);
 
     expect(alone.length, withPiano.length);
-    expect(withPiano.first, greaterThan(alone.first),
-        reason: 'the interval carrying the triplet must WIDEN, not stay put');
+    expect(
+      withPiano.first,
+      greaterThan(alone.first),
+      reason: 'the interval carrying the triplet must WIDEN, not stay put',
+    );
     for (var i = 1; i < alone.length; i++) {
-      expect(withPiano[i], closeTo(alone[i], 2.0),
-          reason: 'beat ${i + 1} was squeezed from ${alone[i]} to '
-              '${withPiano[i]} px to make room for a passage on another '
-              'staff. alone=$alone withPiano=$withPiano');
+      expect(
+        withPiano[i],
+        closeTo(alone[i], 2.0),
+        reason:
+            'beat ${i + 1} was squeezed from ${alone[i]} to '
+            '${withPiano[i]} px to make room for a passage on another '
+            'staff. alone=$alone withPiano=$withPiano',
+      );
     }
   });
 }

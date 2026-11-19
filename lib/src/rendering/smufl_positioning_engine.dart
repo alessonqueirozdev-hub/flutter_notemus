@@ -86,6 +86,7 @@ class SMuFLPositioningEngine {
   // Previously were hardcoded static constants, now loaded from engravingDefaults
   late final double standardStemLength;
   late final double minimumStemLength;
+
   /// Extra stem length, in staff spaces, that each beam level BEYOND THE FIRST
   /// costs.
   ///
@@ -191,7 +192,10 @@ class SMuFLPositioningEngine {
 
     // Slurs - loaded from engravingDefaults
     slurEndpointThickness = _loadEngravingDefault('slurEndpointThickness', 0.1);
-    slurMidpointThickness = _loadEngravingDefault('slurMidpointThickness', 0.22);
+    slurMidpointThickness = _loadEngravingDefault(
+      'slurMidpointThickness',
+      0.22,
+    );
     slurHeightFactor = 0.25;
 
     // Grace notes
@@ -306,9 +310,7 @@ class SMuFLPositioningEngine {
     );
     final overlapPx = (stemThickness * staffSpace) * 0.5;
 
-    return noteY +
-        attachmentOffset.dy +
-        (stemUp ? overlapPx : -overlapPx);
+    return noteY + attachmentOffset.dy + (stemUp ? overlapPx : -overlapPx);
   }
 
   /// Returns the anchor point for flags (eighth notes, sixteenth notes, etc.)
@@ -505,8 +507,9 @@ class SMuFLPositioningEngine {
 
     // A pair carries the same slant as any other group of the same interval;
     // Behind Bars gives two-note beams no separate table.
-    final ceiling =
-        noteStaffPositions.length == 2 ? twoNoteBeamMaxSlant : maximumBeamSlant;
+    final ceiling = noteStaffPositions.length == 2
+        ? twoNoteBeamMaxSlant
+        : maximumBeamSlant;
     slant = slant.clamp(minimumBeamSlant, ceiling);
 
     return stemUp

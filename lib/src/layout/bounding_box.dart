@@ -10,9 +10,7 @@ class PointF2D {
 
   PointF2D(this.x, this.y);
 
-  PointF2D.zero()
-      : x = 0.0,
-        y = 0.0;
+  PointF2D.zero() : x = 0.0, y = 0.0;
 
   /// Creates cópia of the point
   PointF2D copy() => PointF2D(x, y);
@@ -64,9 +62,7 @@ class SizeF2D {
 
   SizeF2D(this.width, this.height);
 
-  SizeF2D.zero()
-      : width = 0.0,
-        height = 0.0;
+  SizeF2D.zero() : width = 0.0, height = 0.0;
 
   /// Creates cópia of the size
   SizeF2D copy() => SizeF2D(width, height);
@@ -413,10 +409,8 @@ class BoundingBox {
   double get centerY => (borderTop + borderBottom) / 2;
 
   /// Centre absoluto
-  PointF2D get absoluteCenter => PointF2D(
-        absolutePosition.x + centerX,
-        absolutePosition.y + centerY,
-      );
+  PointF2D get absoluteCenter =>
+      PointF2D(absolutePosition.x + centerX, absolutePosition.y + centerY);
 
   /// Converts for Rect (absoluto)
   Rect toRect() {

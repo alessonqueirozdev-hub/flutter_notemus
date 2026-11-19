@@ -10,7 +10,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 
 /// Wraps [body] as the single measure of a one-part `score-partwise` document.
-String _partwise(String body, {String parts = ''}) => '''<?xml version="1.0"?>
+String _partwise(String body, {String parts = ''}) =>
+    '''<?xml version="1.0"?>
 <score-partwise version="4.0">
   <part-list>
     <score-part id="P1"><part-name>Music</part-name></score-part>$parts
@@ -28,10 +29,10 @@ String _timeModifiedNote(String step, int duration, String type) =>
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  group('M-03 <time-modification> opens the tuplet, not <notations><tuplet>',
-      () {
+  group('M-03 <time-modification> opens the tuplet, not <notations><tuplet>', () {
     // divisions=6 -> a quarter is 6 ticks, a triplet quarter 4.
-    const body = '<attributes><divisions>6</divisions>'
+    const body =
+        '<attributes><divisions>6</divisions>'
         '<time><beats>4</beats><beat-type>4</beat-type></time></attributes>'
         '${''}';
 
@@ -78,7 +79,8 @@ void main() {
 
     test('two adjacent triplets with no <notations> stay two groups', () {
       // divisions=6, eighth = 3 ticks, triplet eighth = 2.
-      final bar = '<attributes><divisions>6</divisions>'
+      final bar =
+          '<attributes><divisions>6</divisions>'
           '<time><beats>2</beats><beat-type>4</beat-type></time></attributes>'
           '${_timeModifiedNote('C', 2, 'eighth')}'
           '${_timeModifiedNote('D', 2, 'eighth')}'
@@ -87,8 +89,9 @@ void main() {
           '${_timeModifiedNote('G', 2, 'eighth')}'
           '${_timeModifiedNote('A', 2, 'eighth')}';
       final staff = MusicXMLParser.parseMusicXML(_partwise(bar));
-      final tuplets =
-          staff.measures.single.elements.whereType<Tuplet>().toList();
+      final tuplets = staff.measures.single.elements
+          .whereType<Tuplet>()
+          .toList();
 
       // Grouping "consecutive notes that share the ratio" alone would give ONE
       // six-note triplet; the ratio's own arithmetic closes each group at 3/8.
@@ -99,7 +102,8 @@ void main() {
     });
 
     test('a 1:1 <time-modification> does not open a tuplet', () {
-      final bar = '<attributes><divisions>4</divisions></attributes>'
+      final bar =
+          '<attributes><divisions>4</divisions></attributes>'
           '<note><pitch><step>C</step><octave>4</octave></pitch>'
           '<duration>4</duration><type>quarter</type>'
           '<time-modification><actual-notes>2</actual-notes>'
@@ -110,7 +114,8 @@ void main() {
     });
 
     test('<notations><tuplet> still supplies bracket/number display', () {
-      final bar = '<attributes><divisions>6</divisions></attributes>'
+      final bar =
+          '<attributes><divisions>6</divisions></attributes>'
           '<note><pitch><step>C</step><octave>4</octave></pitch>'
           '<duration>4</duration><type>quarter</type>'
           '<time-modification><actual-notes>3</actual-notes>'
@@ -123,13 +128,9 @@ void main() {
           '<time-modification><actual-notes>3</actual-notes>'
           '<normal-notes>2</normal-notes></time-modification>'
           '<notations><tuplet type="stop" number="1"/></notations></note>';
-      final tuplet =
-          MusicXMLParser.parseMusicXML(_partwise(bar))
-              .measures
-              .single
-              .elements
-              .whereType<Tuplet>()
-              .single;
+      final tuplet = MusicXMLParser.parseMusicXML(
+        _partwise(bar),
+      ).measures.single.elements.whereType<Tuplet>().single;
 
       expect(tuplet.elements, hasLength(3));
       expect(tuplet.bracketConfig?.show, isFalse);
@@ -156,36 +157,47 @@ void main() {
         Clef(clefType: ClefType.treble),
         KeySignature(-3),
         TimeSignature(numerator: 4, denominator: 4),
-        Tuplet(actualNotes: 3, normalNotes: 2, elements: <MusicalElement>[
-          Note(
+        Tuplet(
+          actualNotes: 3,
+          normalNotes: 2,
+          elements: <MusicalElement>[
+            Note(
               pitch: Pitch(step: 'C', octave: 4),
-              duration: Duration(DurationType.eighth)),
-          Note(
+              duration: Duration(DurationType.eighth),
+            ),
+            Note(
               pitch: Pitch(step: 'D', octave: 4),
-              duration: Duration(DurationType.eighth)),
-          Note(
+              duration: Duration(DurationType.eighth),
+            ),
+            Note(
               pitch: Pitch(step: 'E', octave: 4),
-              duration: Duration(DurationType.eighth)),
-        ]),
+              duration: Duration(DurationType.eighth),
+            ),
+          ],
+        ),
         Chord(
           notes: <Note>[
             Note(
-                pitch: Pitch(step: 'C', octave: 4),
-                duration: Duration(DurationType.eighth)),
+              pitch: Pitch(step: 'C', octave: 4),
+              duration: Duration(DurationType.eighth),
+            ),
             Note(
-                pitch: Pitch(step: 'E', octave: 4),
-                duration: Duration(DurationType.eighth)),
+              pitch: Pitch(step: 'E', octave: 4),
+              duration: Duration(DurationType.eighth),
+            ),
           ],
           duration: Duration(DurationType.quarter, dots: 1),
         ),
         Note(
-            pitch: Pitch(step: 'G', octave: 4),
-            duration: Duration(DurationType.eighth),
-            tie: TieType.start),
+          pitch: Pitch(step: 'G', octave: 4),
+          duration: Duration(DurationType.eighth),
+          tie: TieType.start,
+        ),
         Note(
-            pitch: Pitch(step: 'G', octave: 4),
-            duration: Duration(DurationType.quarter),
-            tie: TieType.end),
+          pitch: Pitch(step: 'G', octave: 4),
+          duration: Duration(DurationType.quarter),
+          tie: TieType.end,
+        ),
       ]);
       staff.add(measure);
       return staff;
@@ -196,17 +208,23 @@ void main() {
 
       // Measured before the fix: three <time-modification> blocks and ZERO
       // <tuplet> elements.
-      expect(RegExp(r'<tuplet\b[^>]*type="start"').allMatches(xml), hasLength(1));
-      expect(RegExp(r'<tuplet\b[^>]*type="stop"').allMatches(xml), hasLength(1));
+      expect(
+        RegExp(r'<tuplet\b[^>]*type="start"').allMatches(xml),
+        hasLength(1),
+      );
+      expect(
+        RegExp(r'<tuplet\b[^>]*type="stop"').allMatches(xml),
+        hasLength(1),
+      );
       expect(xml, contains('time-modification'));
     });
 
-    test(
-        'INVARIANT parse(staffToMusicXML(s)).currentMusicalValue == '
+    test('INVARIANT parse(staffToMusicXML(s)).currentMusicalValue == '
         's.currentMusicalValue', () {
       final staff = sourceStaff();
-      final back =
-          MusicXMLParser.parseMusicXML(MusicXMLParser.staffToMusicXML(staff));
+      final back = MusicXMLParser.parseMusicXML(
+        MusicXMLParser.staffToMusicXML(staff),
+      );
 
       for (var i = 0; i < staff.measures.length; i++) {
         expect(
@@ -219,8 +237,7 @@ void main() {
       expect(back.measures.single.elements.whereType<Tuplet>(), hasLength(1));
     });
 
-    test(
-        'INVARIANT the bar value survives the round trip for every rhythmic '
+    test('INVARIANT the bar value survives the round trip for every rhythmic '
         'shape the model can build', () {
       // One fixture proves nothing about a shape it does not contain: the
       // dotted-chord defect (F1) sat under the single-bar invariant above for
@@ -232,7 +249,10 @@ void main() {
           Measure()..elements.addAll(elements);
 
       Note n(String step, Duration d, {TieType? tie}) => Note(
-          pitch: Pitch(step: step, octave: 4), duration: d, tie: tie);
+        pitch: Pitch(step: step, octave: 4),
+        duration: d,
+        tie: tie,
+      );
 
       final shapes = <String, Measure>{
         'plain quarters': bar(<MusicalElement>[
@@ -262,40 +282,57 @@ void main() {
         // disagree with it on purpose. Measured before the fix: 0.375 -> 0.25.
         'a dotted chord over undotted inner notes': bar(<MusicalElement>[
           TimeSignature(numerator: 4, denominator: 4),
-          Chord(notes: <Note>[
-            n('C', Duration(DurationType.quarter)),
-            n('E', Duration(DurationType.quarter)),
-          ], duration: Duration(DurationType.quarter, dots: 1)),
+          Chord(
+            notes: <Note>[
+              n('C', Duration(DurationType.quarter)),
+              n('E', Duration(DurationType.quarter)),
+            ],
+            duration: Duration(DurationType.quarter, dots: 1),
+          ),
           Rest(duration: Duration(DurationType.eighth)),
           n('G', Duration(DurationType.half)),
         ]),
         // Measured before the fix: 0.875 -> 0.5.
         'a double-dotted chord': bar(<MusicalElement>[
           TimeSignature(numerator: 4, denominator: 4),
-          Chord(notes: <Note>[
-            n('C', Duration(DurationType.half)),
-            n('G', Duration(DurationType.half)),
-          ], duration: Duration(DurationType.half, dots: 2)),
+          Chord(
+            notes: <Note>[
+              n('C', Duration(DurationType.half)),
+              n('G', Duration(DurationType.half)),
+            ],
+            duration: Duration(DurationType.half, dots: 2),
+          ),
           n('A', Duration(DurationType.eighth)),
         ]),
         'a triplet': bar(<MusicalElement>[
           TimeSignature(numerator: 2, denominator: 4),
-          Tuplet(actualNotes: 3, normalNotes: 2, elements: <MusicalElement>[
-            for (final step in ['C', 'D', 'E'])
-              n(step, Duration(DurationType.eighth)),
-          ]),
+          Tuplet(
+            actualNotes: 3,
+            normalNotes: 2,
+            elements: <MusicalElement>[
+              for (final step in ['C', 'D', 'E'])
+                n(step, Duration(DurationType.eighth)),
+            ],
+          ),
           n('F', Duration(DurationType.quarter)),
         ]),
         'a tuplet holding a chord and a rest': bar(<MusicalElement>[
           TimeSignature(numerator: 4, denominator: 4),
-          Tuplet(actualNotes: 3, normalNotes: 2, elements: <MusicalElement>[
-            Chord(notes: <Note>[
-              n('C', Duration(DurationType.sixteenth)),
-              n('E', Duration(DurationType.sixteenth)),
-            ], duration: Duration(DurationType.quarter)),
-            n('D', Duration(DurationType.quarter)),
-            Rest(duration: Duration(DurationType.quarter)),
-          ]),
+          Tuplet(
+            actualNotes: 3,
+            normalNotes: 2,
+            elements: <MusicalElement>[
+              Chord(
+                notes: <Note>[
+                  n('C', Duration(DurationType.sixteenth)),
+                  n('E', Duration(DurationType.sixteenth)),
+                ],
+                duration: Duration(DurationType.quarter),
+              ),
+              n('D', Duration(DurationType.quarter)),
+              Rest(duration: Duration(DurationType.quarter)),
+            ],
+          ),
           n('B', Duration(DurationType.half)),
         ]),
         // Nested tuplets flatten to the PRODUCT ratio on export (see
@@ -304,22 +341,31 @@ void main() {
         // inner group was dropped outright and the bar went 0.5 -> 0.3333.
         'a nested tuplet': bar(<MusicalElement>[
           TimeSignature(numerator: 4, denominator: 4),
-          Tuplet(actualNotes: 3, normalNotes: 2, elements: <MusicalElement>[
-            n('C', Duration(DurationType.quarter)),
-            n('D', Duration(DurationType.quarter)),
-            Tuplet(actualNotes: 3, normalNotes: 2, elements: <MusicalElement>[
-              for (final step in ['E', 'F', 'G'])
-                n(step, Duration(DurationType.eighth)),
-            ]),
-          ]),
+          Tuplet(
+            actualNotes: 3,
+            normalNotes: 2,
+            elements: <MusicalElement>[
+              n('C', Duration(DurationType.quarter)),
+              n('D', Duration(DurationType.quarter)),
+              Tuplet(
+                actualNotes: 3,
+                normalNotes: 2,
+                elements: <MusicalElement>[
+                  for (final step in ['E', 'F', 'G'])
+                    n(step, Duration(DurationType.eighth)),
+                ],
+              ),
+            ],
+          ),
           n('A', Duration(DurationType.half)),
         ]),
       };
 
       shapes.forEach((name, measure) {
         final staff = Staff(name: 'Piano', abbreviation: 'Pno.')..add(measure);
-        final back =
-            MusicXMLParser.parseMusicXML(MusicXMLParser.staffToMusicXML(staff));
+        final back = MusicXMLParser.parseMusicXML(
+          MusicXMLParser.staffToMusicXML(staff),
+        );
         expect(
           back.measures.single.currentMusicalValue,
           closeTo(measure.currentMusicalValue, 1e-9),
@@ -328,24 +374,30 @@ void main() {
       });
     });
 
-    test('the exporter writes <dot/> from Chord.duration, not from its notes',
-        () {
+    test('the exporter writes <dot/> from Chord.duration, not from its notes', () {
       // F1, at the XML level. Measured before the fix, this chord exported
       // `<duration>480</duration>` twice, `<type>quarter</type>` twice and ZERO
       // `<dot/>`; the dotted half of the value was simply not in the file.
       final staff = Staff(name: 'Piano', abbreviation: 'Pno.')
-        ..add(Measure()
-          ..elements.addAll(<MusicalElement>[
-            TimeSignature(numerator: 4, denominator: 4),
-            Chord(notes: <Note>[
-              Note(
-                  pitch: Pitch(step: 'C', octave: 4),
-                  duration: Duration(DurationType.quarter)),
-              Note(
-                  pitch: Pitch(step: 'E', octave: 4),
-                  duration: Duration(DurationType.quarter)),
-            ], duration: Duration(DurationType.quarter, dots: 1)),
-          ]));
+        ..add(
+          Measure()
+            ..elements.addAll(<MusicalElement>[
+              TimeSignature(numerator: 4, denominator: 4),
+              Chord(
+                notes: <Note>[
+                  Note(
+                    pitch: Pitch(step: 'C', octave: 4),
+                    duration: Duration(DurationType.quarter),
+                  ),
+                  Note(
+                    pitch: Pitch(step: 'E', octave: 4),
+                    duration: Duration(DurationType.quarter),
+                  ),
+                ],
+                duration: Duration(DurationType.quarter, dots: 1),
+              ),
+            ]),
+        );
       final xml = MusicXMLParser.staffToMusicXML(staff);
 
       // <divisions>480, so a dotted quarter is 720 ticks — one per chord tone.
@@ -364,11 +416,15 @@ void main() {
       final measure = Measure();
       measure.elements.addAll(<MusicalElement>[
         TimeSignature(numerator: 2, denominator: 4),
-        Tuplet(actualNotes: 3, normalNotes: 2, elements: <MusicalElement>[
-          Rest(duration: Duration(DurationType.eighth)),
-          Rest(duration: Duration(DurationType.eighth)),
-          Rest(duration: Duration(DurationType.eighth)),
-        ]),
+        Tuplet(
+          actualNotes: 3,
+          normalNotes: 2,
+          elements: <MusicalElement>[
+            Rest(duration: Duration(DurationType.eighth)),
+            Rest(duration: Duration(DurationType.eighth)),
+            Rest(duration: Duration(DurationType.eighth)),
+          ],
+        ),
       ]);
       staff.add(measure);
       final xml = MusicXMLParser.staffToMusicXML(staff);
@@ -384,7 +440,8 @@ void main() {
   });
 
   group('M-06 MEI never drops a malformed note in silence', () {
-    String mei(String layerBody) => '''<?xml version="1.0"?>
+    String mei(String layerBody) =>
+        '''<?xml version="1.0"?>
 <mei xmlns="http://www.music-encoding.org/ns/mei"><music><body><mdiv><score>
   <scoreDef><staffGrp>
     <staffDef n="1" lines="5" clef.shape="G" clef.line="2"/>
@@ -397,19 +454,26 @@ void main() {
       // warning, while the MusicXML equivalent threw.
       expect(
         () => MEIParser.parseMEI(mei('<note pname="c" dur="4"/>')),
-        throwsA(isA<FormatException>().having(
-          (e) => e.message,
-          'message',
-          allOf(contains('@oct'), contains('MEI <note>')),
-        )),
+        throwsA(
+          isA<FormatException>().having(
+            (e) => e.message,
+            'message',
+            allOf(contains('@oct'), contains('MEI <note>')),
+          ),
+        ),
       );
     });
 
     test('a CMN <note> with no @pname throws FormatException', () {
       expect(
         () => MEIParser.parseMEI(mei('<note oct="4" dur="4"/>')),
-        throwsA(isA<FormatException>()
-            .having((e) => e.message, 'message', contains('@pname'))),
+        throwsA(
+          isA<FormatException>().having(
+            (e) => e.message,
+            'message',
+            contains('@pname'),
+          ),
+        ),
       );
     });
 
@@ -441,12 +505,15 @@ void main() {
     /// Imports [body] and returns the warnings it produced.
     ({Staff staff, List<String> warnings}) importWith(String body) {
       final warnings = <String>[];
-      final staff =
-          MusicXMLParser.parseMusicXML(_partwise(body), warnings: warnings);
+      final staff = MusicXMLParser.parseMusicXML(
+        _partwise(body),
+        warnings: warnings,
+      );
       return (staff: staff, warnings: warnings);
     }
 
-    const quarterNote = '<note><pitch><step>C</step><octave>4</octave></pitch>'
+    const quarterNote =
+        '<note><pitch><step>C</step><octave>4</octave></pitch>'
         '<duration>4</duration></note>';
 
     test('a well-formed bar produces no warnings at all', () {
@@ -461,9 +528,10 @@ void main() {
     });
 
     test('<divisions>0</divisions> still imports but is reported', () {
-      final result =
-          importWith('<attributes><divisions>0</divisions></attributes>'
-              '$quarterNote');
+      final result = importWith(
+        '<attributes><divisions>0</divisions></attributes>'
+        '$quarterNote',
+      );
 
       // Fail-soft is deliberately unchanged: the quarter still becomes a whole
       // note because divisions falls back to 1. Only the silence is fixed.
@@ -476,16 +544,18 @@ void main() {
     });
 
     test('garbage <divisions> is reported', () {
-      final result =
-          importWith('<attributes><divisions>abc</divisions></attributes>'
-              '$quarterNote');
+      final result = importWith(
+        '<attributes><divisions>abc</divisions></attributes>'
+        '$quarterNote',
+      );
 
       expect(result.warnings.any((w) => w.contains('abc')), isTrue);
     });
 
     test('a part that never declares <divisions> is reported', () {
       final result = importWith(
-          '<attributes><key><fifths>0</fifths></key></attributes>$quarterNote');
+        '<attributes><key><fifths>0</fifths></key></attributes>$quarterNote',
+      );
 
       expect(
         result.warnings.any((w) => w.contains('never declared <divisions>')),
@@ -525,10 +595,7 @@ void main() {
         '<duration>16</duration><type>whole</type></note>',
       );
 
-      expect(
-        result.warnings.any((w) => w.contains('<backup>')),
-        isTrue,
-      );
+      expect(result.warnings.any((w) => w.contains('<backup>')), isTrue);
     });
 
     test('a <forward> longer than the bar is reported', () {
@@ -551,38 +618,41 @@ void main() {
       );
 
       expect(result.staff.measures.single.elements.whereType<Note>(), isEmpty);
-      expect(
-        result.warnings.any((w) => w.contains('neither <pitch>')),
-        isTrue,
-      );
+      expect(result.warnings.any((w) => w.contains('neither <pitch>')), isTrue);
     });
 
-    test('a bar whose model value disagrees with its <duration>s is reported',
-        () {
-      final result = importWith(
-        '<attributes><divisions>4</divisions>'
-        '<time><beats>4</beats><beat-type>4</beat-type></time></attributes>'
-        '<note><duration>16</duration><type>whole</type></note>',
-      );
+    test(
+      'a bar whose model value disagrees with its <duration>s is reported',
+      () {
+        final result = importWith(
+          '<attributes><divisions>4</divisions>'
+          '<time><beats>4</beats><beat-type>4</beat-type></time></attributes>'
+          '<note><duration>16</duration><type>whole</type></note>',
+        );
 
-      expect(
-        result.warnings.any((w) => w.contains('add up to')),
-        isTrue,
-        reason: 'the sum(<duration>)/divisions/4 cross-check must fire',
-      );
-    });
+        expect(
+          result.warnings.any((w) => w.contains('add up to')),
+          isTrue,
+          reason: 'the sum(<duration>)/divisions/4 cross-check must fire',
+        );
+      },
+    );
 
     test('warnings are append-only across a batch', () {
       final warnings = <String>[];
       MusicXMLParser.parseMusicXML(
-        _partwise('<attributes><divisions>0</divisions></attributes>'
-            '$quarterNote'),
+        _partwise(
+          '<attributes><divisions>0</divisions></attributes>'
+          '$quarterNote',
+        ),
         warnings: warnings,
       );
       final afterFirst = warnings.length;
       MusicXMLParser.parseMusicXML(
-        _partwise('<attributes><divisions>0</divisions></attributes>'
-            '$quarterNote'),
+        _partwise(
+          '<attributes><divisions>0</divisions></attributes>'
+          '$quarterNote',
+        ),
         warnings: warnings,
       );
 
@@ -601,13 +671,15 @@ void main() {
       final measure = MultiVoiceMeasure.twoVoices(
         voice1Elements: <MusicalElement>[
           Note(
-              pitch: Pitch(step: 'C', octave: 5),
-              duration: Duration(DurationType.quarter)),
+            pitch: Pitch(step: 'C', octave: 5),
+            duration: Duration(DurationType.quarter),
+          ),
         ],
         voice2Elements: <MusicalElement>[
           Note(
-              pitch: Pitch(step: 'E', octave: 3),
-              duration: Duration(DurationType.quarter)),
+            pitch: Pitch(step: 'E', octave: 3),
+            duration: Duration(DurationType.quarter),
+          ),
         ],
       );
       measure.elements.addAll(<MusicalElement>[
@@ -621,7 +693,9 @@ void main() {
 
     test('M-20 preserves name, abbreviation, lineCount and transposition', () {
       final staff = sourceStaff();
-      final back = JsonMusicParser.parseStaff(JsonMusicParser.staffToJson(staff));
+      final back = JsonMusicParser.parseStaff(
+        JsonMusicParser.staffToJson(staff),
+      );
 
       // Measured before the fix: all four came back null / 5.
       expect(back.name, 'Violin I');
@@ -632,9 +706,10 @@ void main() {
 
     test('M-21 does not duplicate the opening block into voice 1', () {
       final back =
-          JsonMusicParser.parseStaff(JsonMusicParser.staffToJson(sourceStaff()))
-              .measures
-              .single as MultiVoiceMeasure;
+          JsonMusicParser.parseStaff(
+                JsonMusicParser.staffToJson(sourceStaff()),
+              ).measures.single
+              as MultiVoiceMeasure;
 
       // Measured before the fix: measure.elements = [Clef, Key, Time] AND
       // voice1 = [Clef, Key, Time, Note, ...], so the layout drew two clefs,
@@ -651,8 +726,9 @@ void main() {
 
     test('the opening block keeps its element count', () {
       final staff = sourceStaff();
-      final back =
-          JsonMusicParser.parseStaff(JsonMusicParser.staffToJson(staff));
+      final back = JsonMusicParser.parseStaff(
+        JsonMusicParser.staffToJson(staff),
+      );
 
       expect(
         back.measures.single.elements.length,
@@ -667,29 +743,38 @@ void main() {
         Clef(clefType: ClefType.treble),
         TimeSignature(numerator: 4, denominator: 4),
         Note(
-            pitch: Pitch(step: 'C', octave: 4),
-            duration: Duration(DurationType.whole)),
+          pitch: Pitch(step: 'C', octave: 4),
+          duration: Duration(DurationType.whole),
+        ),
       ]);
       staff.add(measure);
-      final back =
-          JsonMusicParser.parseStaff(JsonMusicParser.staffToJson(staff));
+      final back = JsonMusicParser.parseStaff(
+        JsonMusicParser.staffToJson(staff),
+      );
 
       expect(back.measures.single.elements, hasLength(3));
-      expect(back.measures.single.currentMusicalValue,
-          closeTo(measure.currentMusicalValue, 1e-9));
+      expect(
+        back.measures.single.currentMusicalValue,
+        closeTo(measure.currentMusicalValue, 1e-9),
+      );
     });
   });
 
   group('M-25 score-level metadata', () {
     test('scoreToMusicXML emits <group-abbreviation>', () {
-      final score = Score(staffGroups: <StaffGroup>[
-        StaffGroup(
-          staves: <Staff>[Staff(name: 'A'), Staff(name: 'B')],
-          bracket: BracketType.bracket,
-          name: 'Strings',
-          abbreviation: 'Str.',
-        ),
-      ]);
+      final score = Score(
+        staffGroups: <StaffGroup>[
+          StaffGroup(
+            staves: <Staff>[
+              Staff(name: 'A'),
+              Staff(name: 'B'),
+            ],
+            bracket: BracketType.bracket,
+            name: 'Strings',
+            abbreviation: 'Str.',
+          ),
+        ],
+      );
 
       final xml = MusicXMLParser.scoreToMusicXML(score);
       expect(xml, contains('<group-abbreviation>Str.</group-abbreviation>'));
@@ -699,13 +784,18 @@ void main() {
     });
 
     test('BracketType.none survives instead of becoming a bracket', () {
-      final score = Score(staffGroups: <StaffGroup>[
-        StaffGroup(
-          staves: <Staff>[Staff(name: 'A'), Staff(name: 'B')],
-          bracket: BracketType.none,
-          name: 'Loose',
-        ),
-      ]);
+      final score = Score(
+        staffGroups: <StaffGroup>[
+          StaffGroup(
+            staves: <Staff>[
+              Staff(name: 'A'),
+              Staff(name: 'B'),
+            ],
+            bracket: BracketType.none,
+            name: 'Loose',
+          ),
+        ],
+      );
 
       final xml = MusicXMLParser.scoreToMusicXML(score);
       expect(xml, contains('<group-symbol>none</group-symbol>'));
@@ -718,13 +808,18 @@ void main() {
     });
 
     test('connectBarlines round-trips independently of the bracket', () {
-      final score = Score(staffGroups: <StaffGroup>[
-        StaffGroup(
-          staves: <Staff>[Staff(name: 'A'), Staff(name: 'B')],
-          bracket: BracketType.bracket,
-          connectBarlines: false,
-        ),
-      ]);
+      final score = Score(
+        staffGroups: <StaffGroup>[
+          StaffGroup(
+            staves: <Staff>[
+              Staff(name: 'A'),
+              Staff(name: 'B'),
+            ],
+            bracket: BracketType.bracket,
+            connectBarlines: false,
+          ),
+        ],
+      );
 
       final back = MusicXMLParser.scoreFromMusicXML(
         MusicXMLParser.scoreToMusicXML(score),
@@ -784,7 +879,8 @@ void main() {
   });
 
   group('M-18/M-19 MEI <staffDef> attributes ADR-003 depends on', () {
-    String mei(String staffDefAttributes) => '''<?xml version="1.0"?>
+    String mei(String staffDefAttributes) =>
+        '''<?xml version="1.0"?>
 <mei xmlns="http://www.music-encoding.org/ns/mei"><music><body><mdiv><score>
   <scoreDef><staffGrp>
     <staffDef n="1" lines="5" $staffDefAttributes/>
@@ -818,8 +914,10 @@ void main() {
 
     test('clef.dis=15 below is a treble-15mb clef', () {
       final staff = MEIParser.parseMEI(
-        mei('clef.shape="G" clef.line="2" clef.dis="15"'
-            ' clef.dis.place="below"'),
+        mei(
+          'clef.shape="G" clef.line="2" clef.dis="15"'
+          ' clef.dis.place="below"',
+        ),
       );
 
       expect(
@@ -842,12 +940,9 @@ void main() {
       final fromAttributes = MEIParser.parseMEI(
         mei('clef.shape="G" clef.line="2" clef.dis="8" clef.dis.place="below"'),
       ).measures.single.elements.whereType<Clef>().single;
-      final fromElement = MEIParser.parseMEI(meiElementForm)
-          .measures
-          .single
-          .elements
-          .whereType<Clef>()
-          .single;
+      final fromElement = MEIParser.parseMEI(
+        meiElementForm,
+      ).measures.single.elements.whereType<Clef>().single;
 
       expect(fromAttributes.clefType, fromElement.clefType);
     });
@@ -876,16 +971,17 @@ void main() {
 
   group('doubledAbove', () {
     String transposeXml(String doubleElement) => _partwise(
-          '<attributes><divisions>1</divisions>'
-          '<transpose><diatonic>-1</diatonic><chromatic>-2</chromatic>'
-          '$doubleElement</transpose></attributes>'
-          '<note><pitch><step>C</step><octave>4</octave></pitch>'
-          '<duration>4</duration><type>whole</type></note>',
-        );
+      '<attributes><divisions>1</divisions>'
+      '<transpose><diatonic>-1</diatonic><chromatic>-2</chromatic>'
+      '$doubleElement</transpose></attributes>'
+      '<note><pitch><step>C</step><octave>4</octave></pitch>'
+      '<duration>4</duration><type>whole</type></note>',
+    );
 
     test('<double above="yes"/> sets Transposition.doubledAbove', () {
-      final staff =
-          MusicXMLParser.parseMusicXML(transposeXml('<double above="yes"/>'));
+      final staff = MusicXMLParser.parseMusicXML(
+        transposeXml('<double above="yes"/>'),
+      );
 
       // Measured before the fix: doubledAbove false and semitones -14, a
       // 24-semitone error against the +10 the file declares.
@@ -912,9 +1008,12 @@ void main() {
         ),
       );
       final measure = Measure();
-      measure.elements.add(Note(
+      measure.elements.add(
+        Note(
           pitch: Pitch(step: 'C', octave: 4),
-          duration: Duration(DurationType.whole)));
+          duration: Duration(DurationType.whole),
+        ),
+      );
       staff.add(measure);
 
       final xml = MusicXMLParser.staffToMusicXML(staff);
@@ -936,8 +1035,9 @@ void main() {
       );
 
       expect(
-        JsonMusicParser.parseStaff(JsonMusicParser.staffToJson(staff))
-            .transposition,
+        JsonMusicParser.parseStaff(
+          JsonMusicParser.staffToJson(staff),
+        ).transposition,
         staff.transposition,
       );
     });

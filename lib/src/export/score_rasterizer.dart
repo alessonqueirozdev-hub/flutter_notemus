@@ -510,8 +510,7 @@ class ScoreRasterizer {
     GrandStaffPainter painter, {
     required double staffSpace,
     required SmuflMetadata metadata,
-  }) =>
-      painter.systemCount == 0 ? 0.0 : painter.contentWidth;
+  }) => painter.systemCount == 0 ? 0.0 : painter.contentWidth;
 
   /// Lays a multi-staff [group] out as a braced grand staff without
   /// rasterizing anything.

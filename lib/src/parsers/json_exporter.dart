@@ -39,19 +39,19 @@ class JsonMusicExporter {
   }
 
   static Map<String, dynamic> staffToMap(Staff staff) => <String, dynamic>{
-        'lineCount': staff.lineCount,
-        if (staff.name != null) 'name': staff.name,
-        if (staff.abbreviation != null) 'abbreviation': staff.abbreviation,
-        if (staff.transposition != null)
-          'transposition': <String, dynamic>{
-            'diatonic': staff.transposition!.diatonic,
-            'chromatic': staff.transposition!.chromatic,
-            'octaveChange': staff.transposition!.octaveChange,
-            'doubled': staff.transposition!.doubled,
-            if (staff.transposition!.doubledAbove) 'doubledAbove': true,
-          },
-        'measures': [for (final measure in staff.measures) _measure(measure)],
-      };
+    'lineCount': staff.lineCount,
+    if (staff.name != null) 'name': staff.name,
+    if (staff.abbreviation != null) 'abbreviation': staff.abbreviation,
+    if (staff.transposition != null)
+      'transposition': <String, dynamic>{
+        'diatonic': staff.transposition!.diatonic,
+        'chromatic': staff.transposition!.chromatic,
+        'octaveChange': staff.transposition!.octaveChange,
+        'doubled': staff.transposition!.doubled,
+        if (staff.transposition!.doubledAbove) 'doubledAbove': true,
+      },
+    'measures': [for (final measure in staff.measures) _measure(measure)],
+  };
 
   static Map<String, dynamic> _measure(Measure measure) {
     final map = <String, dynamic>{
@@ -148,37 +148,37 @@ class JsonMusicExporter {
   }
 
   static Map<String, dynamic> _note(Note note) => <String, dynamic>{
-        'type': 'note',
-        'pitch': <String, dynamic>{
-          'step': note.pitch.step,
-          'octave': note.pitch.octave,
-          if (note.pitch.alter != 0) 'alter': note.pitch.alter,
-        },
-        'duration': _duration(note.duration),
-        if (note.beam != null) 'beam': note.beam!.name,
-        if (note.articulations.isNotEmpty)
-          'articulations': [for (final a in note.articulations) a.name],
-        if (note.tie != null) 'tie': note.tie!.name,
-        if (note.slur != null) 'slur': note.slur!.name,
-        if (note.voice != null) 'voice': note.voice,
-        if (note.tremoloStrokes != 0) 'tremoloStrokes': note.tremoloStrokes,
-        if (note.isGraceNote) 'isGraceNote': true,
-        if (note.crossStaffMove != 0) 'crossStaffMove': note.crossStaffMove,
-        if (note.tabFret != null) 'tabFret': note.tabFret,
-        if (note.tabString != null) 'tabString': note.tabString,
-        if (note.syllables != null && note.syllables!.isNotEmpty)
-          'syllables': [
-            for (final syllable in note.syllables!)
-              <String, dynamic>{
-                'text': syllable.text,
-                'type': syllable.type.name,
-                if (syllable.italic) 'italic': true,
-              },
-          ],
-      };
+    'type': 'note',
+    'pitch': <String, dynamic>{
+      'step': note.pitch.step,
+      'octave': note.pitch.octave,
+      if (note.pitch.alter != 0) 'alter': note.pitch.alter,
+    },
+    'duration': _duration(note.duration),
+    if (note.beam != null) 'beam': note.beam!.name,
+    if (note.articulations.isNotEmpty)
+      'articulations': [for (final a in note.articulations) a.name],
+    if (note.tie != null) 'tie': note.tie!.name,
+    if (note.slur != null) 'slur': note.slur!.name,
+    if (note.voice != null) 'voice': note.voice,
+    if (note.tremoloStrokes != 0) 'tremoloStrokes': note.tremoloStrokes,
+    if (note.isGraceNote) 'isGraceNote': true,
+    if (note.crossStaffMove != 0) 'crossStaffMove': note.crossStaffMove,
+    if (note.tabFret != null) 'tabFret': note.tabFret,
+    if (note.tabString != null) 'tabString': note.tabString,
+    if (note.syllables != null && note.syllables!.isNotEmpty)
+      'syllables': [
+        for (final syllable in note.syllables!)
+          <String, dynamic>{
+            'text': syllable.text,
+            'type': syllable.type.name,
+            if (syllable.italic) 'italic': true,
+          },
+      ],
+  };
 
   static Map<String, dynamic> _duration(Duration duration) => <String, dynamic>{
-        'type': duration.type.name,
-        if (duration.dots != 0) 'dots': duration.dots,
-      };
+    'type': duration.type.name,
+    if (duration.dots != 0) 'dots': duration.dots,
+  };
 }

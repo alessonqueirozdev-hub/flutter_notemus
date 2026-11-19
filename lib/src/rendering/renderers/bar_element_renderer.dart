@@ -13,7 +13,8 @@ class BarElementRenderer {
   final SmuflMetadata metadata;
   final MusicScoreTheme theme;
   final double glyphSize;
-  final CollisionDetector? collisionDetector; // CORREÇÃO: Adicionar collision detector
+  final CollisionDetector?
+  collisionDetector; // CORREÇÃO: Adicionar collision detector
 
   BarElementRenderer({
     required this.coordinates,
@@ -238,10 +239,18 @@ class BarElementRenderer {
     final numW = _digitsWidth(numStr);
     final denW = _digitsWidth(denStr);
     final maxW = numW > denW ? numW : denW;
-    _drawDigits(canvas, numStr, basePosition.dx + (maxW - numW) / 2,
-        coordinates.getStaffLineY(4));
-    _drawDigits(canvas, denStr, basePosition.dx + (maxW - denW) / 2,
-        coordinates.getStaffLineY(2));
+    _drawDigits(
+      canvas,
+      numStr,
+      basePosition.dx + (maxW - numW) / 2,
+      coordinates.getStaffLineY(4),
+    );
+    _drawDigits(
+      canvas,
+      denStr,
+      basePosition.dx + (maxW - denW) / 2,
+      coordinates.getStaffLineY(2),
+    );
   }
 
   /// Renders an additive numerator (group digits joined by timeSigPlus) over

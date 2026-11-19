@@ -10,7 +10,9 @@ import 'package:flutter_notemus/flutter_notemus.dart';
 void main() {
   group('StaffPositionCalculator - C and F clef positions', () {
     int posC4(ClefType ct) => StaffPositionCalculator.calculate(
-        const Pitch(step: 'C', octave: 4), Clef(clefType: ct));
+      const Pitch(step: 'C', octave: 4),
+      Clef(clefType: ct),
+    );
 
     test('C-clefs put C4 on the clef line (soprano..baritone)', () {
       // line 1 = -4, line 2 = -2, line 3 = 0, line 4 = +2, line 5 = +4.
@@ -23,8 +25,9 @@ void main() {
 
     test('baritone F clef (bassThirdLine) puts F3 on the middle line', () {
       final pos = StaffPositionCalculator.calculate(
-          const Pitch(step: 'F', octave: 3),
-          Clef(clefType: ClefType.bassThirdLine));
+        const Pitch(step: 'F', octave: 3),
+        Clef(clefType: ClefType.bassThirdLine),
+      );
       expect(pos, 0);
     });
   });
@@ -110,35 +113,27 @@ void main() {
       },
     );
 
-    test(
-      'Notes on lower ledger lines should have staffPosition < -4',
-      () {
-        final pitch = Pitch(step: 'C', octave: 4); // C below the staff
-        final position = StaffPositionCalculator.calculate(pitch, trebleClef);
+    test('Notes on lower ledger lines should have staffPosition < -4', () {
+      final pitch = Pitch(step: 'C', octave: 4); // C below the staff
+      final position = StaffPositionCalculator.calculate(pitch, trebleClef);
 
-        expect(
-          position,
-          lessThan(-4),
-          reason:
-              'C4 is below the staff and requires ledger lines',
-        );
-      },
-    );
+      expect(
+        position,
+        lessThan(-4),
+        reason: 'C4 is below the staff and requires ledger lines',
+      );
+    });
 
-    test(
-      'Notes on upper ledger lines should have staffPosition > 4',
-      () {
-        final pitch = Pitch(step: 'A', octave: 5); // A above the staff
-        final position = StaffPositionCalculator.calculate(pitch, trebleClef);
+    test('Notes on upper ledger lines should have staffPosition > 4', () {
+      final pitch = Pitch(step: 'A', octave: 5); // A above the staff
+      final position = StaffPositionCalculator.calculate(pitch, trebleClef);
 
-        expect(
-          position,
-          greaterThan(4),
-          reason:
-              'A5 is above the staff and requires ledger lines',
-        );
-      },
-    );
+      expect(
+        position,
+        greaterThan(4),
+        reason: 'A5 is above the staff and requires ledger lines',
+      );
+    });
   });
 
   group('StaffPositionCalculator - Bass Clef', () {
@@ -209,65 +204,55 @@ void main() {
       expect(
         position,
         equals(0),
-        reason:
-            'C4 is the reference note of the alto clef, on the center line',
+        reason: 'C4 is the reference note of the alto clef, on the center line',
       );
     });
 
-    test(
-      'C4 on tenor clef should be on the 4th line (staffPosition = 2)',
-      () {
-        final tenorClef = Clef(clefType: ClefType.tenor);
-        final pitch = Pitch(step: 'C', octave: 4);
-        final position = StaffPositionCalculator.calculate(pitch, tenorClef);
+    test('C4 on tenor clef should be on the 4th line (staffPosition = 2)', () {
+      final tenorClef = Clef(clefType: ClefType.tenor);
+      final pitch = Pitch(step: 'C', octave: 4);
+      final position = StaffPositionCalculator.calculate(pitch, tenorClef);
 
-        expect(
-          position,
-          equals(2),
-          reason: 'C4 is the reference note of the tenor clef, on the 4th line',
-        );
-      },
-    );
+      expect(
+        position,
+        equals(2),
+        reason: 'C4 is the reference note of the tenor clef, on the 4th line',
+      );
+    });
   });
 
   group('StaffPositionCalculator - Ledger Lines', () {
-    test(
-      'needsLedgerLines should return false for notes within the staff',
-      () {
-        expect(StaffPositionCalculator.needsLedgerLines(0), isFalse);
-        expect(StaffPositionCalculator.needsLedgerLines(2), isFalse);
-        expect(StaffPositionCalculator.needsLedgerLines(-2), isFalse);
-        expect(StaffPositionCalculator.needsLedgerLines(4), isFalse);
-        expect(StaffPositionCalculator.needsLedgerLines(-4), isFalse);
-      },
-    );
+    test('needsLedgerLines should return false for notes within the staff', () {
+      expect(StaffPositionCalculator.needsLedgerLines(0), isFalse);
+      expect(StaffPositionCalculator.needsLedgerLines(2), isFalse);
+      expect(StaffPositionCalculator.needsLedgerLines(-2), isFalse);
+      expect(StaffPositionCalculator.needsLedgerLines(4), isFalse);
+      expect(StaffPositionCalculator.needsLedgerLines(-4), isFalse);
+    });
 
-    test(
-      'needsLedgerLines agrees with getLedgerLinePositions',
-      () {
-        // RE-BASELINED (M-48). This used to assert
-        // `needsLedgerLines(5) == true` and `needsLedgerLines(-5) == true`,
-        // pinning a predicate that disagreed with the function it gates:
-        // measured, `getLedgerLinePositions(5)` and `getLedgerLinePositions(-5)`
-        // both return `[]`. +-5 is the SPACE immediately outside the staff (the
-        // staff lines are the even positions -4..+4, and the first ledger line
-        // is at +-6), so a note there needs no ledger line at all. Both callers
-        // — `LedgerLineRenderer.render` and `ChordRenderer._drawLedgerLines` —
-        // used the predicate only as a gate in front of the position list, so
-        // no ink changes; the predicate simply stopped lying about its name.
-        for (var position = -12; position <= 12; position++) {
-          expect(
-            StaffPositionCalculator.needsLedgerLines(position),
-            StaffPositionCalculator.getLedgerLinePositions(position).isNotEmpty,
-            reason: 'staffPosition $position',
-          );
-        }
-        expect(StaffPositionCalculator.needsLedgerLines(5), isFalse);
-        expect(StaffPositionCalculator.needsLedgerLines(-5), isFalse);
-        expect(StaffPositionCalculator.needsLedgerLines(6), isTrue);
-        expect(StaffPositionCalculator.needsLedgerLines(-6), isTrue);
-      },
-    );
+    test('needsLedgerLines agrees with getLedgerLinePositions', () {
+      // RE-BASELINED (M-48). This used to assert
+      // `needsLedgerLines(5) == true` and `needsLedgerLines(-5) == true`,
+      // pinning a predicate that disagreed with the function it gates:
+      // measured, `getLedgerLinePositions(5)` and `getLedgerLinePositions(-5)`
+      // both return `[]`. +-5 is the SPACE immediately outside the staff (the
+      // staff lines are the even positions -4..+4, and the first ledger line
+      // is at +-6), so a note there needs no ledger line at all. Both callers
+      // — `LedgerLineRenderer.render` and `ChordRenderer._drawLedgerLines` —
+      // used the predicate only as a gate in front of the position list, so
+      // no ink changes; the predicate simply stopped lying about its name.
+      for (var position = -12; position <= 12; position++) {
+        expect(
+          StaffPositionCalculator.needsLedgerLines(position),
+          StaffPositionCalculator.getLedgerLinePositions(position).isNotEmpty,
+          reason: 'staffPosition $position',
+        );
+      }
+      expect(StaffPositionCalculator.needsLedgerLines(5), isFalse);
+      expect(StaffPositionCalculator.needsLedgerLines(-5), isFalse);
+      expect(StaffPositionCalculator.needsLedgerLines(6), isTrue);
+      expect(StaffPositionCalculator.needsLedgerLines(-6), isTrue);
+    });
 
     test('getLedgerLinePositions should correctly calculate lines above', () {
       final lines = StaffPositionCalculator.getLedgerLinePositions(8);
@@ -279,13 +264,10 @@ void main() {
       expect(lines, equals([-6, -8]));
     });
 
-    test(
-      'getLedgerLinePositions should include the note line if even',
-      () {
-        final lines = StaffPositionCalculator.getLedgerLinePositions(6);
-        expect(lines.contains(6), isTrue);
-      },
-    );
+    test('getLedgerLinePositions should include the note line if even', () {
+      final lines = StaffPositionCalculator.getLedgerLinePositions(6);
+      expect(lines.contains(6), isTrue);
+    });
 
     test(
       'getLedgerLinePositions should return empty for notes within the staff',
@@ -403,8 +385,7 @@ void main() {
         expect(
           e4Pos,
           lessThan(0),
-          reason:
-              'E4 must be below center (staffPosition < 0) = stem up',
+          reason: 'E4 must be below center (staffPosition < 0) = stem up',
         );
 
         // B4 occupies the center line in treble clef

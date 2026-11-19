@@ -8,8 +8,10 @@ enum DurationType {
   // === Durações longas (notação mensural / histórica) ===
   /// Maxima — 8 semibreves (MEI `dur="maxima"`)
   maxima(8.0, 'noteheadWhole'),
+
   /// Longa — 4 semibreves (MEI `dur="long"`)
   long(4.0, 'noteheadWhole'),
+
   /// Breve — 2 semibreves (MEI `dur="breve"`)
   breve(2.0, 'noteDoubleWhole'),
 
@@ -26,10 +28,13 @@ enum DurationType {
   // === Durações ultra-curtas (MEI `dur="256"` a `dur="2048"`) ===
   /// 1/256 de semibreve (MEI `dur="256"`)
   twoHundredFiftySixth(0.00390625, 'noteheadBlack'),
+
   /// 1/512 de semibreve (MEI `dur="512"`)
   fiveHundredTwelfth(0.001953125, 'noteheadBlack'),
+
   /// 1/1024 de semibreve (MEI `dur="1024"`)
   thousandTwentyFourth(0.0009765625, 'noteheadBlack'),
+
   /// 1/2048 de semibreve (MEI `dur="2048"`)
   twoThousandFortyEighth(0.00048828125, 'noteheadBlack');
 
@@ -96,21 +101,21 @@ enum DurationType {
   static DurationType fromMeiValue(String meiDur) {
     return switch (meiDur) {
       'maxima' => DurationType.maxima,
-      'long'   => DurationType.long,
-      'breve'  => DurationType.breve,
-      '1'      => DurationType.whole,
-      '2'      => DurationType.half,
-      '4'      => DurationType.quarter,
-      '8'      => DurationType.eighth,
-      '16'     => DurationType.sixteenth,
-      '32'     => DurationType.thirtySecond,
-      '64'     => DurationType.sixtyFourth,
-      '128'    => DurationType.oneHundredTwentyEighth,
-      '256'    => DurationType.twoHundredFiftySixth,
-      '512'    => DurationType.fiveHundredTwelfth,
-      '1024'   => DurationType.thousandTwentyFourth,
-      '2048'   => DurationType.twoThousandFortyEighth,
-      _        => throw ArgumentError('Valor MEI dur inválido: $meiDur'),
+      'long' => DurationType.long,
+      'breve' => DurationType.breve,
+      '1' => DurationType.whole,
+      '2' => DurationType.half,
+      '4' => DurationType.quarter,
+      '8' => DurationType.eighth,
+      '16' => DurationType.sixteenth,
+      '32' => DurationType.thirtySecond,
+      '64' => DurationType.sixtyFourth,
+      '128' => DurationType.oneHundredTwentyEighth,
+      '256' => DurationType.twoHundredFiftySixth,
+      '512' => DurationType.fiveHundredTwelfth,
+      '1024' => DurationType.thousandTwentyFourth,
+      '2048' => DurationType.twoThousandFortyEighth,
+      _ => throw ArgumentError('Valor MEI dur inválido: $meiDur'),
     };
   }
 }
@@ -186,9 +191,7 @@ class MusicDuration {
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is MusicDuration &&
-        other.type == type &&
-        other.dots == dots;
+    return other is MusicDuration && other.type == type && other.dots == dots;
   }
 
   @override

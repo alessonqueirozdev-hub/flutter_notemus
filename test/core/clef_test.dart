@@ -212,11 +212,17 @@ void main() {
       ];
 
       for (final clef in clefs) {
-        final positions = scale.map((p) => StaffPositionCalculator.calculate(p, clef)).toList();
+        final positions = scale
+            .map((p) => StaffPositionCalculator.calculate(p, clef))
+            .toList();
 
         for (int i = 1; i < positions.length; i++) {
-          expect(positions[i], greaterThan(positions[i - 1]),
-            reason: 'Ascending pitches should have ascending positions in ${clef.clefType}');
+          expect(
+            positions[i],
+            greaterThan(positions[i - 1]),
+            reason:
+                'Ascending pitches should have ascending positions in ${clef.clefType}',
+          );
         }
       }
     });
@@ -287,8 +293,11 @@ void main() {
       ];
 
       for (final clef in transposed) {
-        expect(clef.actualClefType, equals(ClefType.treble),
-          reason: '${clef.clefType} should have actualClefType = treble');
+        expect(
+          clef.actualClefType,
+          equals(ClefType.treble),
+          reason: '${clef.clefType} should have actualClefType = treble',
+        );
       }
     });
   });
@@ -305,7 +314,7 @@ void main() {
       final f5Pos = StaffPositionCalculator.calculate(f5, clef);
 
       expect(e4Pos, equals(-4)); // 1st line
-      expect(f5Pos, equals(4));  // 5th line
+      expect(f5Pos, equals(4)); // 5th line
     });
 
     test('Bass clef comfortable range', () {
@@ -319,7 +328,7 @@ void main() {
       final a3Pos = StaffPositionCalculator.calculate(a3, clef);
 
       expect(g2Pos, equals(-4)); // 1st line
-      expect(a3Pos, equals(4));  // 5th line
+      expect(a3Pos, equals(4)); // 5th line
     });
   });
 
@@ -334,7 +343,7 @@ void main() {
       final altoPos = StaffPositionCalculator.calculate(middleC, alto);
       final tenorPos = StaffPositionCalculator.calculate(middleC, tenor);
 
-      expect(altoPos, equals(0));  // Middle line (3rd line)
+      expect(altoPos, equals(0)); // Middle line (3rd line)
       expect(tenorPos, equals(2)); // 4th line
     });
   });

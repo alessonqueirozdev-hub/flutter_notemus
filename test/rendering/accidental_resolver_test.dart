@@ -4,9 +4,10 @@ import 'package:flutter_notemus/flutter_notemus.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  Note note(String step, int octave, double alter) =>
-      Note(pitch: Pitch(step: step, octave: octave, alter: alter),
-          duration: const Duration(DurationType.quarter));
+  Note note(String step, int octave, double alter) => Note(
+    pitch: Pitch(step: step, octave: octave, alter: alter),
+    duration: const Duration(DurationType.quarter),
+  );
 
   Measure measureOf(List<MusicalElement> els) {
     final m = Measure();
@@ -58,16 +59,19 @@ void main() {
       expect(r[c], AccidentalDisplay.hide);
     });
 
-    test('key signature: key-sharp note hides, reverting note gets natural', () {
-      // G major (1 sharp = F#).
-      final fSharp = note('F', 5, 1.0); // matches key -> no accidental
-      final fNat = note('F', 5, 0.0); // contradicts key -> natural
-      final r = AccidentalResolver.resolve([
-        measureOf([KeySignature(1), fSharp, fNat]),
-      ]);
-      expect(r[fSharp], AccidentalDisplay.hide);
-      expect(r[fNat], AccidentalDisplay.natural);
-    });
+    test(
+      'key signature: key-sharp note hides, reverting note gets natural',
+      () {
+        // G major (1 sharp = F#).
+        final fSharp = note('F', 5, 1.0); // matches key -> no accidental
+        final fNat = note('F', 5, 0.0); // contradicts key -> natural
+        final r = AccidentalResolver.resolve([
+          measureOf([KeySignature(1), fSharp, fNat]),
+        ]);
+        expect(r[fSharp], AccidentalDisplay.hide);
+        expect(r[fNat], AccidentalDisplay.natural);
+      },
+    );
 
     test('octave-specific: same letter different octave is independent', () {
       final f5 = note('F', 5, 1.0);
@@ -81,15 +85,17 @@ void main() {
 
     test('chord notes participate in measure state', () {
       final chordCs = Note(
-          pitch: const Pitch(step: 'C', octave: 5, alter: 1.0),
-          duration: const Duration(DurationType.quarter));
+        pitch: const Pitch(step: 'C', octave: 5, alter: 1.0),
+        duration: const Duration(DurationType.quarter),
+      );
       final laterCs = note('C', 5, 1.0);
       final chord = Chord(
         notes: [
           chordCs,
           Note(
-              pitch: const Pitch(step: 'E', octave: 5),
-              duration: const Duration(DurationType.quarter)),
+            pitch: const Pitch(step: 'E', octave: 5),
+            duration: const Duration(DurationType.quarter),
+          ),
         ],
         duration: const Duration(DurationType.quarter),
       );

@@ -14,7 +14,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 
 Note _n(String step, int octave, [DurationType d = DurationType.quarter]) =>
-    Note(pitch: Pitch(step: step, octave: octave), duration: Duration(d));
+    Note(
+      pitch: Pitch(step: step, octave: octave),
+      duration: Duration(d),
+    );
 
 Measure _bar(List<MusicalElement> elements) {
   final m = Measure();
@@ -28,7 +31,8 @@ Measure _bar(List<MusicalElement> elements) {
 double? _xAt(List<PositionedElement> elements, double onset) {
   double? x;
   for (final pe in elements) {
-    final isMusic = pe.element is Note ||
+    final isMusic =
+        pe.element is Note ||
         pe.element is Chord ||
         pe.element is Rest ||
         pe.element is Tuplet;
@@ -58,21 +62,28 @@ void main() {
       );
 
   test('four quarters against two halves agree on every beat', () {
-    final treble = Staff(measures: [
-      _bar([
-        Clef(clefType: ClefType.treble),
-        TimeSignature(numerator: 4, denominator: 4),
-        _n('C', 5), _n('D', 5), _n('E', 5), _n('F', 5),
-      ])
-    ]);
-    final bass = Staff(measures: [
-      _bar([
-        Clef(clefType: ClefType.bass),
-        TimeSignature(numerator: 4, denominator: 4),
-        _n('C', 3, DurationType.half),
-        _n('G', 3, DurationType.half),
-      ])
-    ]);
+    final treble = Staff(
+      measures: [
+        _bar([
+          Clef(clefType: ClefType.treble),
+          TimeSignature(numerator: 4, denominator: 4),
+          _n('C', 5),
+          _n('D', 5),
+          _n('E', 5),
+          _n('F', 5),
+        ]),
+      ],
+    );
+    final bass = Staff(
+      measures: [
+        _bar([
+          Clef(clefType: ClefType.bass),
+          TimeSignature(numerator: 4, denominator: 4),
+          _n('C', 3, DurationType.half),
+          _n('G', 3, DurationType.half),
+        ]),
+      ],
+    );
 
     final painter = painterFor([treble, bass]);
     final system = painter.alignedSystem(0);
@@ -84,28 +95,36 @@ void main() {
       final bottom = _xAt(system[1], onset);
       expect(top, isNotNull, reason: 'treble has an event at onset $onset');
       expect(bottom, isNotNull, reason: 'bass has an event at onset $onset');
-      expect((top! - bottom!).abs(), lessThan(0.5),
-          reason: 'onset $onset must be one vertical column across the system; '
-              'it used to drift by 38 px.');
+      expect(
+        (top! - bottom!).abs(),
+        lessThan(0.5),
+        reason:
+            'onset $onset must be one vertical column across the system; '
+            'it used to drift by 38 px.',
+      );
     }
   });
 
   test('eighths against a whole note keep the downbeat aligned', () {
-    final treble = Staff(measures: [
-      _bar([
-        Clef(clefType: ClefType.treble),
-        TimeSignature(numerator: 4, denominator: 4),
-        for (var i = 0; i < 8; i++)
-          _n('CDEFGAB'[i % 7], 5, DurationType.eighth),
-      ])
-    ]);
-    final bass = Staff(measures: [
-      _bar([
-        Clef(clefType: ClefType.bass),
-        TimeSignature(numerator: 4, denominator: 4),
-        _n('C', 3, DurationType.whole),
-      ])
-    ]);
+    final treble = Staff(
+      measures: [
+        _bar([
+          Clef(clefType: ClefType.treble),
+          TimeSignature(numerator: 4, denominator: 4),
+          for (var i = 0; i < 8; i++)
+            _n('CDEFGAB'[i % 7], 5, DurationType.eighth),
+        ]),
+      ],
+    );
+    final bass = Staff(
+      measures: [
+        _bar([
+          Clef(clefType: ClefType.bass),
+          TimeSignature(numerator: 4, denominator: 4),
+          _n('C', 3, DurationType.whole),
+        ]),
+      ],
+    );
 
     final system = painterFor([treble, bass]).alignedSystem(0);
     final top = _xAt(system[0], 0.0);
@@ -114,15 +133,21 @@ void main() {
   });
 
   test('three staves stay on one grid', () {
-    Staff line(String step, int octave, int count, DurationType d,
-            ClefType clef) =>
-        Staff(measures: [
-          _bar([
-            Clef(clefType: clef),
-            TimeSignature(numerator: 4, denominator: 4),
-            for (var i = 0; i < count; i++) _n(step, octave, d),
-          ])
-        ]);
+    Staff line(
+      String step,
+      int octave,
+      int count,
+      DurationType d,
+      ClefType clef,
+    ) => Staff(
+      measures: [
+        _bar([
+          Clef(clefType: clef),
+          TimeSignature(numerator: 4, denominator: 4),
+          for (var i = 0; i < count; i++) _n(step, octave, d),
+        ]),
+      ],
+    );
 
     final system = painterFor([
       line('C', 5, 4, DurationType.quarter, ClefType.treble),
@@ -137,38 +162,45 @@ void main() {
           if (_xAt(staff, onset) != null) _xAt(staff, onset)!,
       ];
       expect(xs.length, 3, reason: 'all three staves sound at onset $onset');
-      final spread = xs.reduce((a, b) => a > b ? a : b) -
+      final spread =
+          xs.reduce((a, b) => a > b ? a : b) -
           xs.reduce((a, b) => a < b ? a : b);
       expect(spread, lessThan(0.5));
     }
   });
 
   test('the grid never reorders a staff events', () {
-    final treble = Staff(measures: [
-      _bar([
-        Clef(clefType: ClefType.treble),
-        TimeSignature(numerator: 4, denominator: 4),
-        for (var i = 0; i < 8; i++)
-          _n('CDEFGAB'[i % 7], 5, DurationType.eighth),
-      ])
-    ]);
-    final bass = Staff(measures: [
-      _bar([
-        Clef(clefType: ClefType.bass),
-        TimeSignature(numerator: 4, denominator: 4),
-        _n('C', 3, DurationType.half),
-        _n('G', 3, DurationType.half),
-      ])
-    ]);
+    final treble = Staff(
+      measures: [
+        _bar([
+          Clef(clefType: ClefType.treble),
+          TimeSignature(numerator: 4, denominator: 4),
+          for (var i = 0; i < 8; i++)
+            _n('CDEFGAB'[i % 7], 5, DurationType.eighth),
+        ]),
+      ],
+    );
+    final bass = Staff(
+      measures: [
+        _bar([
+          Clef(clefType: ClefType.bass),
+          TimeSignature(numerator: 4, denominator: 4),
+          _n('C', 3, DurationType.half),
+          _n('G', 3, DurationType.half),
+        ]),
+      ],
+    );
 
     for (final staff in painterFor([treble, bass]).alignedSystem(0)) {
       final music = staff
           .where((p) => p.element is Note || p.element is Rest)
           .toList();
       for (var i = 1; i < music.length; i++) {
-        expect(music[i].position.dx,
-            greaterThanOrEqualTo(music[i - 1].position.dx - 1e-6),
-            reason: 'the piecewise remap must stay monotonic');
+        expect(
+          music[i].position.dx,
+          greaterThanOrEqualTo(music[i - 1].position.dx - 1e-6),
+          reason: 'the piecewise remap must stay monotonic',
+        );
       }
     }
   });

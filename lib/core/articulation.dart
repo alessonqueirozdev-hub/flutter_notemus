@@ -8,8 +8,5 @@ class Articulation extends MusicalElement {
   final ArticulationType type;
   final bool above;
 
-  Articulation({
-    required this.type,
-    this.above = true,
-  });
+  Articulation({required this.type, this.above = true});
 }

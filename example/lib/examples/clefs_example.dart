@@ -43,7 +43,7 @@ class ClefsExample extends StatelessWidget {
               ],
             ),
             _buildClefSection(
-            title: 'C Clef (Alto)',
+              title: 'C Clef (Alto)',
               description:
                   'The center of the C clef (C-clef) on the third line defines this as the position of middle C (C4). It is commonly used for the viola.',
               elements: [
@@ -141,4 +141,3 @@ class ClefsExample extends StatelessWidget {
     );
   }
 }
-

@@ -36,8 +36,7 @@ class TextRenderer extends BaseGlyphRenderer {
         : (theme.textStyle ?? const TextStyle());
 
     final textPainter = TextPainter(
-      text: TextSpan(
-          text: text.text, style: textStyle.withMusicTextFallback()),
+      text: TextSpan(text: text.text, style: textStyle.withMusicTextFallback()),
       textDirection: TextDirection.ltr,
     );
     textPainter.layout();

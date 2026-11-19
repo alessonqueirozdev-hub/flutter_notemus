@@ -48,42 +48,48 @@ class MeasureValidationResult {
   String getSummary() {
     final buffer = StringBuffer();
     buffer.writeln('═══════════════════════════════════════');
-    buffer.writeln('VALIDAÇÃO DE COMPASSO: ${isValid ? "✓ VÁLIDO" : "✗ INVÁLIDO"}');
+    buffer.writeln(
+      'VALIDAÇÃO DE COMPASSO: ${isValid ? "✓ VÁLIDO" : "✗ INVÁLIDO"}',
+    );
     buffer.writeln('Fórmula: $numerator/$denominator');
     buffer.writeln('Capacidade esperada: $expectedCapacity unidades');
     buffer.writeln('Duração atual: $actualDuration unidades');
-    
+
     if (!isValid) {
       if (actualDuration > expectedCapacity) {
-        buffer.writeln('⚠️ EXCESSO: +${difference.toStringAsFixed(4)} unidades');
+        buffer.writeln(
+          '⚠️ EXCESSO: +${difference.toStringAsFixed(4)} unidades',
+        );
         buffer.writeln('   Remova figuras ou use compasso maior.');
       } else {
-        buffer.writeln('⚠️ FALTA: -${difference.abs().toStringAsFixed(4)} unidades');
+        buffer.writeln(
+          '⚠️ FALTA: -${difference.abs().toStringAsFixed(4)} unidades',
+        );
         buffer.writeln('   Adicione pausas ou notas.');
       }
     }
-    
+
     if (elementBreakdown.isNotEmpty) {
       buffer.writeln('\nDetalhamento por elemento:');
       elementBreakdown.forEach((key, value) {
         buffer.writeln('  - $key: $value unidades');
       });
     }
-    
+
     if (warnings.isNotEmpty) {
       buffer.writeln('\nAvisos:');
       for (final warning in warnings) {
         buffer.writeln('  ⚠️ $warning');
       }
     }
-    
+
     if (errors.isNotEmpty) {
       buffer.writeln('\nErros:');
       for (final error in errors) {
         buffer.writeln('  ✗ $error');
       }
     }
-    
+
     buffer.writeln('═══════════════════════════════════════');
     return buffer.toString();
   }
@@ -124,7 +130,7 @@ class MeasureValidator {
   }) {
     // Encontrar time signature
     TimeSignature? timeSignature = _findTimeSignature(measure);
-    
+
     if (timeSignature == null) {
       return MeasureValidationResult(
         isValid: true,
@@ -165,9 +171,9 @@ class MeasureValidator {
   }
 
   /// Calculates a capacidade total of the measure based na fórmula
-  /// 
+  ///
   /// Fórmula: Capacidade = Numerator × (1 ÷ Denominator)
-  /// 
+  ///
   /// Examples:
   /// - 4/4: 4 × (1/4) = 1.0 semibreve
   /// - 3/8: 3 × (1/8) = 0.375 semibreve
@@ -177,7 +183,7 @@ class MeasureValidator {
   }
 
   /// Calculates o value base de a figure rhythmic
-  /// 
+  ///
   /// Hierarquia de Valores (base = semibreve = 1.0):
   /// - Semibreve: 1.0
   /// - Mínima: 0.5
@@ -284,16 +290,25 @@ class MeasureValidator {
     for (final element in tuplet.elements) {
       if (element is Note) {
         final baseValue = _calculateBaseValue(element.duration.type);
-        totalInternalDuration +=
-            _applyModifiers(baseValue, element.duration, warnings);
+        totalInternalDuration += _applyModifiers(
+          baseValue,
+          element.duration,
+          warnings,
+        );
       } else if (element is Rest) {
         final baseValue = _calculateBaseValue(element.duration.type);
-        totalInternalDuration +=
-            _applyModifiers(baseValue, element.duration, warnings);
+        totalInternalDuration += _applyModifiers(
+          baseValue,
+          element.duration,
+          warnings,
+        );
       } else if (element is Chord) {
         final baseValue = _calculateBaseValue(element.duration.type);
-        totalInternalDuration +=
-            _applyModifiers(baseValue, element.duration, warnings);
+        totalInternalDuration += _applyModifiers(
+          baseValue,
+          element.duration,
+          warnings,
+        );
       } else if (element is Tuplet) {
         // Nested tuplet: its inner ratio is applied by the recursive call.
         totalInternalDuration += _calculateTupletDuration(element, warnings);
@@ -339,9 +354,9 @@ class MeasureValidator {
         final duration = element is Note
             ? element.duration
             : element is Rest
-                ? element.duration
-                : (element as Chord).duration;
-        
+            ? element.duration
+            : (element as Chord).duration;
+
         if (duration.type == DurationType.sixteenth ||
             duration.type == DurationType.thirtySecond ||
             duration.type == DurationType.sixtyFourth) {
@@ -420,7 +435,7 @@ class MeasureValidator {
 
     return results;
   }
-  
+
   /// Validation: with TimeSignature explícito (útil for inheritance)
   ///
   /// This is the entry point used by `LayoutEngine`. It is voice aware: the
@@ -497,8 +512,10 @@ class MeasureValidator {
       );
     }
 
-    final expectedCapacity =
-        _calculateMeasureCapacity(ts.numerator, ts.denominator);
+    final expectedCapacity = _calculateMeasureCapacity(
+      ts.numerator,
+      ts.denominator,
+    );
     final scan = _scan(measure, ts);
     final prefix = number != null ? 'bar $number: ' : '';
     final meter = '${ts.numerator}/${ts.denominator}';
@@ -651,7 +668,8 @@ class MeasureValidator {
         // Critical: the actual:normal ratio has to be applied, otherwise every
         // bar containing a tuplet is reported as too long.
         duration = _calculateTupletDuration(element, scan.warnings);
-        label = 'Tuplet ${elementIndex + 1} '
+        label =
+            'Tuplet ${elementIndex + 1} '
             '(${element.actualNotes}:${element.normalNotes})';
         scan.tupletProblems.addAll(
           TupletValidator.describeProblems(
@@ -666,7 +684,8 @@ class MeasureValidator {
       }
 
       final voice = Measure.voiceNumberOf(element);
-      scan.voiceDurations[voice] = (scan.voiceDurations[voice] ?? 0.0) + duration;
+      scan.voiceDurations[voice] =
+          (scan.voiceDurations[voice] ?? 0.0) + duration;
       scan.elementBreakdown[polyphonic ? '$label [voz $voice]' : label] =
           duration;
       elementIndex++;
@@ -699,7 +718,7 @@ class MeasureValidator {
 
     for (int i = 0; i < results.length; i++) {
       final result = results[i];
-      
+
       if (result.isValid) {
         validCount++;
       } else {
@@ -712,9 +731,13 @@ class MeasureValidator {
     debugPrint('\n╔═══════════════════════════════════════════════════════╗');
     debugPrint('║ RESUMO FINAL                                          ║');
     debugPrint('╠═══════════════════════════════════════════════════════╣');
-    debugPrint('║ Total de compassos: ${results.length.toString().padLeft(31)} ║');
+    debugPrint(
+      '║ Total de compassos: ${results.length.toString().padLeft(31)} ║',
+    );
     debugPrint('║ Compassos válidos: ${validCount.toString().padLeft(32)} ║');
-    debugPrint('║ Compassos inválidos: ${invalidCount.toString().padLeft(30)} ║');
+    debugPrint(
+      '║ Compassos inválidos: ${invalidCount.toString().padLeft(30)} ║',
+    );
     debugPrint('╚═══════════════════════════════════════════════════════╝\n');
   }
 }

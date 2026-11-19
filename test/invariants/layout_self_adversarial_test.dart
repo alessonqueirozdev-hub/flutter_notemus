@@ -19,7 +19,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_notemus/flutter_notemus.dart';
 
 Note _n(String step, int octave, [DurationType d = DurationType.quarter]) =>
-    Note(pitch: Pitch(step: step, octave: octave), duration: Duration(d));
+    Note(
+      pitch: Pitch(step: step, octave: octave),
+      duration: Duration(d),
+    );
 
 Measure _bar(List<MusicalElement> elements) {
   final m = Measure();
@@ -38,21 +41,27 @@ void main() {
     await metadata.load();
   });
 
-  LayoutEngine engineFor(Staff s, {double width = 900}) =>
-      LayoutEngine(s, availableWidth: width, staffSpace: 12, metadata: metadata);
+  LayoutEngine engineFor(Staff s, {double width = 900}) => LayoutEngine(
+    s,
+    availableWidth: width,
+    staffSpace: 12,
+    metadata: metadata,
+  );
 
   group('ADR-001 risk — the layout mutates Note.beam', () {
     test('the mutation is idempotent across repeated layouts', () {
       final notes = [
         for (var i = 0; i < 6; i++) _n('C', 5, DurationType.eighth),
       ];
-      final staff = Staff(measures: [
-        _bar([
-          Clef(clefType: ClefType.treble),
-          TimeSignature(numerator: 6, denominator: 8),
-          ...notes,
-        ])
-      ]);
+      final staff = Staff(
+        measures: [
+          _bar([
+            Clef(clefType: ClefType.treble),
+            TimeSignature(numerator: 6, denominator: 8),
+            ...notes,
+          ]),
+        ],
+      );
 
       engineFor(staff).layout();
       final first = notes.map((n) => n.beam).toList();
@@ -65,20 +74,26 @@ void main() {
       final notes = [
         for (var i = 0; i < 8; i++) _n('C', 5, DurationType.eighth),
       ];
-      final staff = Staff(measures: [
-        _bar([
-          Clef(clefType: ClefType.treble),
-          TimeSignature(numerator: 4, denominator: 4),
-          ...notes,
-        ])
-      ]);
+      final staff = Staff(
+        measures: [
+          _bar([
+            Clef(clefType: ClefType.treble),
+            TimeSignature(numerator: 4, denominator: 4),
+            ...notes,
+          ]),
+        ],
+      );
       engineFor(staff, width: 2000).layout();
       final wide = notes.map((n) => n.beam).toList();
       engineFor(staff, width: 300).layout();
-      expect(notes.map((n) => n.beam).toList(), wide,
-          reason: 'beam grouping depends on the meter, not on the line width; '
-              'if it did not, sharing a Staff between two MusicScore widgets of '
-              'different widths would corrupt one of them.');
+      expect(
+        notes.map((n) => n.beam).toList(),
+        wide,
+        reason:
+            'beam grouping depends on the meter, not on the line width; '
+            'if it did not, sharing a Staff between two MusicScore widgets of '
+            'different widths would corrupt one of them.',
+      );
     });
 
     test('autoBeaming: false leaves the author beams untouched', () {
@@ -110,19 +125,26 @@ void main() {
       }
 
       engineFor(Staff(measures: [measure])).layout();
-      expect(notes.map((n) => n.beam).toList(),
-          [BeamType.start, BeamType.end, null, null],
-          reason: 'the engine must not overwrite explicit beams when the author '
-              'turned auto-beaming off.');
+      expect(
+        notes.map((n) => n.beam).toList(),
+        [BeamType.start, BeamType.end, null, null],
+        reason:
+            'the engine must not overwrite explicit beams when the author '
+            'turned auto-beaming off.',
+      );
     });
   });
 
   group('dry-run risk — measuring a measure must not leak', () {
     test('note positions are the real ones, not the probe ones', () {
       final notes = [for (var i = 0; i < 4; i++) _n('C', 5)];
-      final engine = engineFor(Staff(measures: [
-        _bar([Clef(clefType: ClefType.treble), ...notes])
-      ]));
+      final engine = engineFor(
+        Staff(
+          measures: [
+            _bar([Clef(clefType: ClefType.treble), ...notes]),
+          ],
+        ),
+      );
       final positioned = engine.layout();
 
       for (final note in notes) {
@@ -132,9 +154,13 @@ void main() {
             .position
             .dx;
         expect(mapped, isNotNull);
-        expect(mapped, closeTo(drawn, 1e-6),
-            reason: 'the throwaway measuring cursor starts at x=0; if its '
-                'writes survived, the map would hold probe coordinates.');
+        expect(
+          mapped,
+          closeTo(drawn, 1e-6),
+          reason:
+              'the throwaway measuring cursor starts at x=0; if its '
+              'writes survived, the map would hold probe coordinates.',
+        );
       }
     });
 
@@ -144,11 +170,14 @@ void main() {
         _n('D', 5, DurationType.eighth),
         _n('E', 5, DurationType.eighth),
       ];
-      final tuplet =
-          Tuplet(elements: inner, actualNotes: 3, normalNotes: 2);
-      final engine = engineFor(Staff(measures: [
-        _bar([Clef(clefType: ClefType.treble), tuplet])
-      ]));
+      final tuplet = Tuplet(elements: inner, actualNotes: 3, normalNotes: 2);
+      final engine = engineFor(
+        Staff(
+          measures: [
+            _bar([Clef(clefType: ClefType.treble), tuplet]),
+          ],
+        ),
+      );
       final positioned = engine.layout();
       final tupletX = positioned
           .firstWhere((p) => identical(p.element, tuplet))
@@ -162,12 +191,14 @@ void main() {
     });
 
     test('measuring twice gives the same answer', () {
-      final staff = Staff(measures: [
-        _bar([
-          Clef(clefType: ClefType.treble),
-          for (var i = 0; i < 5; i++) _n('C', 5, DurationType.eighth),
-        ])
-      ]);
+      final staff = Staff(
+        measures: [
+          _bar([
+            Clef(clefType: ClefType.treble),
+            for (var i = 0; i < 5; i++) _n('C', 5, DurationType.eighth),
+          ]),
+        ],
+      );
       final a = engineFor(staff).layout().map((p) => p.position.dx).toList();
       final b = engineFor(staff).layout().map((p) => p.position.dx).toList();
       expect(a, b);
@@ -175,27 +206,30 @@ void main() {
   });
 
   group('compression risk', () {
-    Measure dense(int n) => _bar([
-          for (var i = 0; i < n; i++) _n('C', 5, DurationType.sixteenth),
-        ]);
+    Measure dense(int n) =>
+        _bar([for (var i = 0; i < n; i++) _n('C', 5, DurationType.sixteenth)]);
 
     test('compression does not leak into the following bar', () {
       final normalBar = _bar([for (var i = 0; i < 4; i++) _n('G', 4)]);
-      final staff = Staff(measures: [
-        _bar([Clef(clefType: ClefType.treble), ...dense(24).elements]),
-        normalBar,
-      ]);
+      final staff = Staff(
+        measures: [
+          _bar([Clef(clefType: ClefType.treble), ...dense(24).elements]),
+          normalBar,
+        ],
+      );
       final engine = engineFor(staff, width: 420);
       final positioned = engine.layout();
 
       // Reference: the same normal bar laid out on its own, uncompressed.
-      final refStaff = Staff(measures: [
-        _bar([Clef(clefType: ClefType.treble), ...normalBar.elements]),
-      ]);
-      final ref = engineFor(refStaff, width: 100000)
-          .layout()
-          .where((p) => p.element is Note)
-          .toList();
+      final refStaff = Staff(
+        measures: [
+          _bar([Clef(clefType: ClefType.treble), ...normalBar.elements]),
+        ],
+      );
+      final ref = engineFor(
+        refStaff,
+        width: 100000,
+      ).layout().where((p) => p.element is Note).toList();
       final refGap = ref[1].position.dx - ref[0].position.dx;
 
       final bar2 = positioned
@@ -203,33 +237,42 @@ void main() {
           .toList();
       expect(bar2.length, 4);
       final gap = bar2[1].position.dx - bar2[0].position.dx;
-      expect(gap, closeTo(refGap, refGap * 0.35),
-          reason: 'the compression applied to bar 1 must be reset before bar 2.');
+      expect(
+        gap,
+        closeTo(refGap, refGap * 0.35),
+        reason: 'the compression applied to bar 1 must be reset before bar 2.',
+      );
     });
 
     test('the collision floor holds under maximum compression', () {
-      final staff = Staff(measures: [
-        _bar([Clef(clefType: ClefType.treble), ...dense(48).elements]),
-      ]);
-      final notes = engineFor(staff, width: 300)
-          .layout()
-          .where((p) => p.element is Note)
-          .toList();
+      final staff = Staff(
+        measures: [
+          _bar([Clef(clefType: ClefType.treble), ...dense(48).elements]),
+        ],
+      );
+      final notes = engineFor(
+        staff,
+        width: 300,
+      ).layout().where((p) => p.element is Note).toList();
       final head = metadata.getGlyphWidth('noteheadBlack') * 12.0;
       for (var i = 1; i < notes.length; i++) {
         final gap = notes[i].position.dx - notes[i - 1].position.dx;
-        expect(gap, greaterThan(head * 0.8),
-            reason: 'compression must stop before the noteheads merge.');
+        expect(
+          gap,
+          greaterThan(head * 0.8),
+          reason: 'compression must stop before the noteheads merge.',
+        );
       }
     });
 
-    test('justification never re-inflates a compressed system past the line',
-        () {
-      final staff = Staff(measures: [
-        _bar([Clef(clefType: ClefType.treble), ...dense(20).elements]),
-        _bar([for (var i = 0; i < 4; i++) _n('G', 4)]),
-        _bar([for (var i = 0; i < 4; i++) _n('A', 4)]),
-      ]);
+    test('justification never re-inflates a compressed system past the line', () {
+      final staff = Staff(
+        measures: [
+          _bar([Clef(clefType: ClefType.treble), ...dense(20).elements]),
+          _bar([for (var i = 0; i < 4; i++) _n('G', 4)]),
+          _bar([for (var i = 0; i < 4; i++) _n('A', 4)]),
+        ],
+      );
       const width = 520.0;
       final engine = engineFor(staff, width: width);
       final positioned = engine.layout();
@@ -269,14 +312,16 @@ void main() {
         actualNotes: 5,
         normalNotes: 4,
       );
-      final staff = Staff(measures: [
-        _bar([
-          Clef(clefType: ClefType.treble),
-          TimeSignature(numerator: 4, denominator: 4),
-          outer,
-          _n('C', 5),
-        ])
-      ]);
+      final staff = Staff(
+        measures: [
+          _bar([
+            Clef(clefType: ClefType.treble),
+            TimeSignature(numerator: 4, denominator: 4),
+            outer,
+            _n('C', 5),
+          ]),
+        ],
+      );
       final positioned = engineFor(staff, width: 1200).layout();
       final onsets = positioned
           .where((p) => p.element is Note || p.element is Tuplet)
@@ -298,9 +343,13 @@ void main() {
     test('a 1/2048 note still advances the onset', () {
       final a = _n('C', 5, DurationType.twoThousandFortyEighth);
       final b = _n('D', 5, DurationType.twoThousandFortyEighth);
-      final positioned = engineFor(Staff(measures: [
-        _bar([Clef(clefType: ClefType.treble), a, b])
-      ])).layout();
+      final positioned = engineFor(
+        Staff(
+          measures: [
+            _bar([Clef(clefType: ClefType.treble), a, b]),
+          ],
+        ),
+      ).layout();
       final onsets = positioned
           .where((p) => p.element is Note)
           .map((p) => p.onset)

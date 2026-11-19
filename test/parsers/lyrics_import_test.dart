@@ -31,8 +31,7 @@ void main() {
       expect(notes[1].syllables!.single.type, SyllableType.terminal);
     });
 
-    test('multiple verses produce one syllable per verse, ordered by number',
-        () {
+    test('multiple verses produce one syllable per verse, ordered by number', () {
       const xml =
           '<score-partwise version="4.0"><part-list><score-part id="P1">'
           '<part-name>Music</part-name></score-part></part-list><part id="P1">'
@@ -54,7 +53,10 @@ void main() {
           '<measure number="1"><note><pitch><step>C</step><octave>4</octave></pitch>'
           '<duration>1</duration><voice>1</voice><type>quarter</type></note>'
           '</measure></part></score-partwise>';
-      expect(notesOf(MusicXMLParser.parseMusicXML(xml)).single.syllables, isNull);
+      expect(
+        notesOf(MusicXMLParser.parseMusicXML(xml)).single.syllables,
+        isNull,
+      );
     });
   });
 
@@ -91,32 +93,40 @@ void main() {
 
   group('MusicXML lyric export round-trip', () {
     test('syllable text + syllabic type survive export and re-import', () {
-      final staff = Staff(measures: [
-        Measure()
-          ..add(Clef(clefType: ClefType.treble))
-          ..add(TimeSignature(numerator: 4, denominator: 4))
-          ..add(Note(
-            pitch: const Pitch(step: 'C', octave: 5),
-            duration: const Duration(DurationType.quarter),
-            syllables: const [
-              Syllable(text: 'Glo', type: SyllableType.initial),
-            ],
-          ))
-          ..add(Note(
-            pitch: const Pitch(step: 'D', octave: 5),
-            duration: const Duration(DurationType.quarter),
-            syllables: const [
-              Syllable(text: 'ri', type: SyllableType.middle),
-            ],
-          ))
-          ..add(Note(
-            pitch: const Pitch(step: 'E', octave: 5),
-            duration: const Duration(DurationType.quarter),
-            syllables: const [
-              Syllable(text: 'a', type: SyllableType.terminal),
-            ],
-          )),
-      ]);
+      final staff = Staff(
+        measures: [
+          Measure()
+            ..add(Clef(clefType: ClefType.treble))
+            ..add(TimeSignature(numerator: 4, denominator: 4))
+            ..add(
+              Note(
+                pitch: const Pitch(step: 'C', octave: 5),
+                duration: const Duration(DurationType.quarter),
+                syllables: const [
+                  Syllable(text: 'Glo', type: SyllableType.initial),
+                ],
+              ),
+            )
+            ..add(
+              Note(
+                pitch: const Pitch(step: 'D', octave: 5),
+                duration: const Duration(DurationType.quarter),
+                syllables: const [
+                  Syllable(text: 'ri', type: SyllableType.middle),
+                ],
+              ),
+            )
+            ..add(
+              Note(
+                pitch: const Pitch(step: 'E', octave: 5),
+                duration: const Duration(DurationType.quarter),
+                syllables: const [
+                  Syllable(text: 'a', type: SyllableType.terminal),
+                ],
+              ),
+            ),
+        ],
+      );
 
       final xml = MusicXMLParser.staffToMusicXML(staff);
       expect(xml.contains('<lyric'), isTrue);

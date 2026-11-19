@@ -816,7 +816,10 @@ void main() {
         targetWidth: 500.0,
       );
 
-      expect(combined.last.xPosition + combined.last.width, closeTo(500.0, 1e-6));
+      expect(
+        combined.last.xPosition + combined.last.width,
+        closeTo(500.0, 1e-6),
+      );
     });
   });
 }

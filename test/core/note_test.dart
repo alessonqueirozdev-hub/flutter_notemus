@@ -423,7 +423,11 @@ void main() {
   group('Note - Complex Combinations', () {
     test('Note can have all properties simultaneously', () {
       final note = Note(
-        pitch: Pitch(step: 'D', octave: 5, accidentalType: AccidentalType.sharp),
+        pitch: Pitch(
+          step: 'D',
+          octave: 5,
+          accidentalType: AccidentalType.sharp,
+        ),
         duration: Duration(DurationType.eighth, dots: 1),
         articulations: [ArticulationType.staccato, ArticulationType.accent],
         tie: TieType.start,

@@ -36,14 +36,28 @@ class JianpuExample extends StatelessWidget {
           accentColor: _accent,
           child: _frame(
             _staff(0, 4, 4, [
-              [_l('C', 4, 'q', 'Twin'), _l('C', 4, 'q', 'kle'),
-                _l('G', 4, 'q', 'twin'), _l('G', 4, 'q', 'kle')],
-              [_l('A', 4, 'q', 'lit'), _l('A', 4, 'q', 'tle'),
-                _l('G', 4, 'h', 'star')],
-              [_l('F', 4, 'q', 'How'), _l('F', 4, 'q', 'I'),
-                _l('E', 4, 'q', 'won'), _l('E', 4, 'q', 'der')],
-              [_l('D', 4, 'q', 'what'), _l('D', 4, 'q', 'you'),
-                _l('C', 4, 'h', 'are')],
+              [
+                _l('C', 4, 'q', 'Twin'),
+                _l('C', 4, 'q', 'kle'),
+                _l('G', 4, 'q', 'twin'),
+                _l('G', 4, 'q', 'kle')
+              ],
+              [
+                _l('A', 4, 'q', 'lit'),
+                _l('A', 4, 'q', 'tle'),
+                _l('G', 4, 'h', 'star')
+              ],
+              [
+                _l('F', 4, 'q', 'How'),
+                _l('F', 4, 'q', 'I'),
+                _l('E', 4, 'q', 'won'),
+                _l('E', 4, 'q', 'der')
+              ],
+              [
+                _l('D', 4, 'q', 'what'),
+                _l('D', 4, 'q', 'you'),
+                _l('C', 4, 'h', 'are')
+              ],
             ]),
           ),
         ),
@@ -60,8 +74,10 @@ class JianpuExample extends StatelessWidget {
                 Barline(type: BarlineType.repeatForward),
                 _n('G', 4, 'q', tie: TieType.start),
                 _n('G', 4, 'q', tie: TieType.end),
-                _n('A', 4, 'e'), _n('B', 4, 'e'),
-                _n('A', 4, 'e'), _n('G', 4, 'e'),
+                _n('A', 4, 'e'),
+                _n('B', 4, 'e'),
+                _n('A', 4, 'e'),
+                _n('G', 4, 'e'),
                 Barline(type: BarlineType.repeatBackward),
               ],
             ]),

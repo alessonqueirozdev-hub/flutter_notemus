@@ -6,45 +6,64 @@ import 'musical_element.dart';
 enum ClefType {
   /// Treble clef (G clef)
   treble,
+
   /// Treble clef, 8va (one octave above)
   treble8va,
+
   /// Treble clef, 8vb (one octave below)
   treble8vb,
+
   /// Treble clef, 15ma (two octaves above)
   treble15ma,
+
   /// Treble clef, 15mb (two octaves below)
   treble15mb,
+
   /// Bass clef (F clef) — 4th line (standard position)
   bass,
+
   /// Bass clef on the 3rd line
   bassThirdLine,
+
   /// Bass clef, 8va (one octave above)
   bass8va,
+
   /// Bass clef, 8vb (one octave below)
   bass8vb,
+
   /// Bass clef, 15ma (two octaves above)
   bass15ma,
+
   /// Bass clef, 15mb (two octaves below)
   bass15mb,
 
   /// C clef on the 1st line (soprano)
   soprano,
+
   /// C clef on the 2nd line (mezzo-soprano)
   mezzoSoprano,
+
   /// C clef on the 3rd line (alto/viola)
   alto,
+
   /// C clef on the 4th line (tenor)
   tenor,
+
   /// C clef on the 5th line (baritone — historical)
   baritone,
+
   /// C clef, 8vb (one octave below)
   c8vb,
+
   /// Percussion clef 1
   percussion,
+
   /// Percussion clef 2
   percussion2,
+
   /// 6-string tablature clef
   tab6,
+
   /// 4-string tablature clef
   tab4,
 }
@@ -64,11 +83,8 @@ class Clef extends MusicalElement {
   /// it is. One field now, resolved once in the initializer list.
   ClefType get clefType => _clefType;
 
-  Clef({
-    ClefType clefType = ClefType.treble,
-    this.staffPosition,
-    String? type,
-  }) : _clefType = type == null ? clefType : clefTypeFromName(type);
+  Clef({ClefType clefType = ClefType.treble, this.staffPosition, String? type})
+    : _clefType = type == null ? clefType : clefTypeFromName(type);
 
   /// Resolves the legacy string [name] to a [ClefType].
   ///
@@ -266,7 +282,9 @@ class Clef extends MusicalElement {
   }
 
   /// Backward compatibility - DEPRECATED: Use actualClefType instead
-  @Deprecated('Use actualClefType instead. This getter will be removed in future versions.')
+  @Deprecated(
+    'Use actualClefType instead. This getter will be removed in future versions.',
+  )
   String get type => _getCompatibilityType();
 
   String _getCompatibilityType() {

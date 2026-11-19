@@ -21,31 +21,31 @@ class TupletsProfessionalExample extends StatelessWidget {
         children: [
           _header(),
           const SizedBox(height: 24),
-          
           _categoryTitle('SIMPLE TIME (4/4)'),
           _categoryDesc('Numerator > denominator (contracting tuplets)'),
-          
-          _example(1, 'Triplet (3:2)', '3 eighth notes in the space of 2', _triplet()),
-          _example(2, 'Quintuplet (5:4)', '5 sixteenth notes in the space of 4', _quintuplet()),
-          _example(3, 'Sextuplet (6:4)', '6 sixteenth notes in the space of 4', _sextuplet()),
-          _example(4, 'Septuplet (7:4)', '7 sixteenth notes in the space of 4', _septuplet()),
-          
+          _example(1, 'Triplet (3:2)', '3 eighth notes in the space of 2',
+              _triplet()),
+          _example(2, 'Quintuplet (5:4)', '5 sixteenth notes in the space of 4',
+              _quintuplet()),
+          _example(3, 'Sextuplet (6:4)', '6 sixteenth notes in the space of 4',
+              _sextuplet()),
+          _example(4, 'Septuplet (7:4)', '7 sixteenth notes in the space of 4',
+              _septuplet()),
           const SizedBox(height: 32),
           _categoryTitle('COMPOUND TIME (6/8)'),
           _categoryDesc('Duplet (2:3) - expansive tuplet'),
-          
-          _example(5, 'Duplet (2:3)', '2 eighth notes in the space of 3', _duplet()),
+          _example(
+              5, 'Duplet (2:3)', '2 eighth notes in the space of 3', _duplet()),
           _example(6, 'Quadruplet (4:6)', '4 in the space of 6', _quadruplet()),
-          
           const SizedBox(height: 32),
           _categoryTitle('SPECIAL CASES'),
-          
-          _example(7, 'Irrational (7:5)', 'ALWAYS show full ratio!', _irrational(), true),
+          _example(7, 'Irrational (7:5)', 'ALWAYS show full ratio!',
+              _irrational(), true),
           _example(8, 'No Bracket', 'When notes are beamed', _noBracket()),
           _example(9, 'With Pauses', 'Bracket required', _withRests()),
           _example(10, 'Quarter Notes', 'Longer durations', _quarters()),
-          _example(11, 'Nonuplet (9:8)', '9 thirty-second notes in the space of 8', _nonuplet()),
-          
+          _example(11, 'Nonuplet (9:8)',
+              '9 thirty-second notes in the space of 8', _nonuplet()),
           const SizedBox(height: 24),
           _footer(),
         ],
@@ -63,11 +63,13 @@ class TupletsProfessionalExample extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Icons.music_note, color: Colors.deepPurple.shade700, size: 32),
+                Icon(Icons.music_note,
+                    color: Colors.deepPurple.shade700, size: 32),
                 const SizedBox(width: 12),
                 const Expanded(
-                  child: Text('Professional Tuplets', 
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                  child: Text('Professional Tuplets',
+                      style:
+                          TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
@@ -91,18 +93,22 @@ class TupletsProfessionalExample extends StatelessWidget {
         color: Colors.deepPurple.shade700,
         borderRadius: BorderRadius.circular(4),
       ),
-      child: Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+      child: Text(title,
+          style: const TextStyle(
+              color: Colors.white, fontWeight: FontWeight.bold)),
     );
   }
 
   Widget _categoryDesc(String desc) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16, left: 8),
-      child: Text(desc, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+      child: Text(desc,
+          style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
     );
   }
 
-  Widget _example(int num, String title, String desc, Staff staff, [bool highlight = false]) {
+  Widget _example(int num, String title, String desc, Staff staff,
+      [bool highlight = false]) {
     return Card(
       elevation: highlight ? 4 : 2,
       color: highlight ? Colors.amber.shade50 : null,
@@ -115,17 +121,23 @@ class TupletsProfessionalExample extends StatelessWidget {
             Row(
               children: [
                 CircleAvatar(
-                  backgroundColor: highlight ? Colors.amber.shade700 : Colors.deepPurple,
+                  backgroundColor:
+                      highlight ? Colors.amber.shade700 : Colors.deepPurple,
                   radius: 16,
-                  child: Text('$num', style: const TextStyle(color: Colors.white, fontSize: 14)),
+                  child: Text('$num',
+                      style:
+                          const TextStyle(color: Colors.white, fontSize: 14)),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-                      Text(desc, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                      Text(title,
+                          style: const TextStyle(fontWeight: FontWeight.bold)),
+                      Text(desc,
+                          style: TextStyle(
+                              fontSize: 12, color: Colors.grey.shade600)),
                     ],
                   ),
                 ),
@@ -169,9 +181,15 @@ class TupletsProfessionalExample extends StatelessWidget {
     measure.add(TimeSignature(numerator: 4, denominator: 4));
     measure.add(Tuplet.triplet(
       elements: [
-        Note(pitch: const Pitch(step: 'C', octave: 4), duration: const Duration(DurationType.eighth)),
-        Note(pitch: const Pitch(step: 'D', octave: 4), duration: const Duration(DurationType.eighth)),
-        Note(pitch: const Pitch(step: 'E', octave: 4), duration: const Duration(DurationType.eighth)),
+        Note(
+            pitch: const Pitch(step: 'C', octave: 4),
+            duration: const Duration(DurationType.eighth)),
+        Note(
+            pitch: const Pitch(step: 'D', octave: 4),
+            duration: const Duration(DurationType.eighth)),
+        Note(
+            pitch: const Pitch(step: 'E', octave: 4),
+            duration: const Duration(DurationType.eighth)),
       ],
       timeSignature: TimeSignature(numerator: 4, denominator: 4),
       bracketConfig: const TupletBracket(show: true, thickness: 0.125),
@@ -189,11 +207,21 @@ class TupletsProfessionalExample extends StatelessWidget {
     measure.add(TimeSignature(numerator: 4, denominator: 4));
     measure.add(Tuplet.quintuplet(
       elements: [
-        Note(pitch: const Pitch(step: 'F', octave: 4), duration: const Duration(DurationType.sixteenth)),
-        Note(pitch: const Pitch(step: 'G', octave: 4), duration: const Duration(DurationType.sixteenth)),
-        Note(pitch: const Pitch(step: 'A', octave: 4), duration: const Duration(DurationType.sixteenth)),
-        Note(pitch: const Pitch(step: 'B', octave: 4), duration: const Duration(DurationType.sixteenth)),
-        Note(pitch: const Pitch(step: 'C', octave: 5), duration: const Duration(DurationType.sixteenth)),
+        Note(
+            pitch: const Pitch(step: 'F', octave: 4),
+            duration: const Duration(DurationType.sixteenth)),
+        Note(
+            pitch: const Pitch(step: 'G', octave: 4),
+            duration: const Duration(DurationType.sixteenth)),
+        Note(
+            pitch: const Pitch(step: 'A', octave: 4),
+            duration: const Duration(DurationType.sixteenth)),
+        Note(
+            pitch: const Pitch(step: 'B', octave: 4),
+            duration: const Duration(DurationType.sixteenth)),
+        Note(
+            pitch: const Pitch(step: 'C', octave: 5),
+            duration: const Duration(DurationType.sixteenth)),
       ],
       timeSignature: TimeSignature(numerator: 4, denominator: 4),
     ));
@@ -209,12 +237,24 @@ class TupletsProfessionalExample extends StatelessWidget {
     measure.add(TimeSignature(numerator: 4, denominator: 4));
     measure.add(Tuplet.sextuplet(
       elements: [
-        Note(pitch: const Pitch(step: 'C', octave: 5), duration: const Duration(DurationType.sixteenth)),
-        Note(pitch: const Pitch(step: 'B', octave: 4), duration: const Duration(DurationType.sixteenth)),
-        Note(pitch: const Pitch(step: 'A', octave: 4), duration: const Duration(DurationType.sixteenth)),
-        Note(pitch: const Pitch(step: 'G', octave: 4), duration: const Duration(DurationType.sixteenth)),
-        Note(pitch: const Pitch(step: 'F', octave: 4), duration: const Duration(DurationType.sixteenth)),
-        Note(pitch: const Pitch(step: 'E', octave: 4), duration: const Duration(DurationType.sixteenth)),
+        Note(
+            pitch: const Pitch(step: 'C', octave: 5),
+            duration: const Duration(DurationType.sixteenth)),
+        Note(
+            pitch: const Pitch(step: 'B', octave: 4),
+            duration: const Duration(DurationType.sixteenth)),
+        Note(
+            pitch: const Pitch(step: 'A', octave: 4),
+            duration: const Duration(DurationType.sixteenth)),
+        Note(
+            pitch: const Pitch(step: 'G', octave: 4),
+            duration: const Duration(DurationType.sixteenth)),
+        Note(
+            pitch: const Pitch(step: 'F', octave: 4),
+            duration: const Duration(DurationType.sixteenth)),
+        Note(
+            pitch: const Pitch(step: 'E', octave: 4),
+            duration: const Duration(DurationType.sixteenth)),
       ],
       timeSignature: TimeSignature(numerator: 4, denominator: 4),
     ));
@@ -230,13 +270,27 @@ class TupletsProfessionalExample extends StatelessWidget {
     measure.add(TimeSignature(numerator: 4, denominator: 4));
     measure.add(Tuplet.septuplet(
       elements: [
-        Note(pitch: const Pitch(step: 'D', octave: 4), duration: const Duration(DurationType.sixteenth)),
-        Note(pitch: const Pitch(step: 'E', octave: 4), duration: const Duration(DurationType.sixteenth)),
-        Note(pitch: const Pitch(step: 'F', octave: 4), duration: const Duration(DurationType.sixteenth)),
-        Note(pitch: const Pitch(step: 'G', octave: 4), duration: const Duration(DurationType.sixteenth)),
-        Note(pitch: const Pitch(step: 'A', octave: 4), duration: const Duration(DurationType.sixteenth)),
-        Note(pitch: const Pitch(step: 'B', octave: 4), duration: const Duration(DurationType.sixteenth)),
-        Note(pitch: const Pitch(step: 'C', octave: 5), duration: const Duration(DurationType.sixteenth)),
+        Note(
+            pitch: const Pitch(step: 'D', octave: 4),
+            duration: const Duration(DurationType.sixteenth)),
+        Note(
+            pitch: const Pitch(step: 'E', octave: 4),
+            duration: const Duration(DurationType.sixteenth)),
+        Note(
+            pitch: const Pitch(step: 'F', octave: 4),
+            duration: const Duration(DurationType.sixteenth)),
+        Note(
+            pitch: const Pitch(step: 'G', octave: 4),
+            duration: const Duration(DurationType.sixteenth)),
+        Note(
+            pitch: const Pitch(step: 'A', octave: 4),
+            duration: const Duration(DurationType.sixteenth)),
+        Note(
+            pitch: const Pitch(step: 'B', octave: 4),
+            duration: const Duration(DurationType.sixteenth)),
+        Note(
+            pitch: const Pitch(step: 'C', octave: 5),
+            duration: const Duration(DurationType.sixteenth)),
       ],
       timeSignature: TimeSignature(numerator: 4, denominator: 4),
     ));
@@ -252,8 +306,12 @@ class TupletsProfessionalExample extends StatelessWidget {
     measure.add(TimeSignature(numerator: 6, denominator: 8));
     measure.add(Tuplet.duplet(
       elements: [
-        Note(pitch: const Pitch(step: 'A', octave: 4), duration: const Duration(DurationType.eighth)),
-        Note(pitch: const Pitch(step: 'C', octave: 5), duration: const Duration(DurationType.eighth)),
+        Note(
+            pitch: const Pitch(step: 'A', octave: 4),
+            duration: const Duration(DurationType.eighth)),
+        Note(
+            pitch: const Pitch(step: 'C', octave: 5),
+            duration: const Duration(DurationType.eighth)),
       ],
       timeSignature: TimeSignature(numerator: 6, denominator: 8),
       numberConfig: const TupletNumber(showAsRatio: true),
@@ -272,10 +330,18 @@ class TupletsProfessionalExample extends StatelessWidget {
       actualNotes: 4,
       normalNotes: 6,
       elements: [
-        Note(pitch: const Pitch(step: 'E', octave: 4), duration: const Duration(DurationType.sixteenth)),
-        Note(pitch: const Pitch(step: 'F', octave: 4), duration: const Duration(DurationType.sixteenth)),
-        Note(pitch: const Pitch(step: 'G', octave: 4), duration: const Duration(DurationType.sixteenth)),
-        Note(pitch: const Pitch(step: 'A', octave: 4), duration: const Duration(DurationType.sixteenth)),
+        Note(
+            pitch: const Pitch(step: 'E', octave: 4),
+            duration: const Duration(DurationType.sixteenth)),
+        Note(
+            pitch: const Pitch(step: 'F', octave: 4),
+            duration: const Duration(DurationType.sixteenth)),
+        Note(
+            pitch: const Pitch(step: 'G', octave: 4),
+            duration: const Duration(DurationType.sixteenth)),
+        Note(
+            pitch: const Pitch(step: 'A', octave: 4),
+            duration: const Duration(DurationType.sixteenth)),
       ],
       timeSignature: TimeSignature(numerator: 6, denominator: 8),
       numberConfig: const TupletNumber(showAsRatio: true),
@@ -294,13 +360,27 @@ class TupletsProfessionalExample extends StatelessWidget {
       actualNotes: 7,
       normalNotes: 5,
       elements: [
-        Note(pitch: const Pitch(step: 'C', octave: 4), duration: const Duration(DurationType.sixteenth)),
-        Note(pitch: const Pitch(step: 'D', octave: 4), duration: const Duration(DurationType.sixteenth)),
-        Note(pitch: const Pitch(step: 'E', octave: 4), duration: const Duration(DurationType.sixteenth)),
-        Note(pitch: const Pitch(step: 'F', octave: 4), duration: const Duration(DurationType.sixteenth)),
-        Note(pitch: const Pitch(step: 'G', octave: 4), duration: const Duration(DurationType.sixteenth)),
-        Note(pitch: const Pitch(step: 'A', octave: 4), duration: const Duration(DurationType.sixteenth)),
-        Note(pitch: const Pitch(step: 'B', octave: 4), duration: const Duration(DurationType.sixteenth)),
+        Note(
+            pitch: const Pitch(step: 'C', octave: 4),
+            duration: const Duration(DurationType.sixteenth)),
+        Note(
+            pitch: const Pitch(step: 'D', octave: 4),
+            duration: const Duration(DurationType.sixteenth)),
+        Note(
+            pitch: const Pitch(step: 'E', octave: 4),
+            duration: const Duration(DurationType.sixteenth)),
+        Note(
+            pitch: const Pitch(step: 'F', octave: 4),
+            duration: const Duration(DurationType.sixteenth)),
+        Note(
+            pitch: const Pitch(step: 'G', octave: 4),
+            duration: const Duration(DurationType.sixteenth)),
+        Note(
+            pitch: const Pitch(step: 'A', octave: 4),
+            duration: const Duration(DurationType.sixteenth)),
+        Note(
+            pitch: const Pitch(step: 'B', octave: 4),
+            duration: const Duration(DurationType.sixteenth)),
       ],
       timeSignature: TimeSignature(numerator: 4, denominator: 4),
       numberConfig: const TupletNumber(showAsRatio: true, fontSize: 1.3),
@@ -317,9 +397,15 @@ class TupletsProfessionalExample extends StatelessWidget {
     measure.add(TimeSignature(numerator: 4, denominator: 4));
     measure.add(Tuplet.triplet(
       elements: [
-        Note(pitch: const Pitch(step: 'E', octave: 4), duration: const Duration(DurationType.eighth)),
-        Note(pitch: const Pitch(step: 'F', octave: 4), duration: const Duration(DurationType.eighth)),
-        Note(pitch: const Pitch(step: 'G', octave: 4), duration: const Duration(DurationType.eighth)),
+        Note(
+            pitch: const Pitch(step: 'E', octave: 4),
+            duration: const Duration(DurationType.eighth)),
+        Note(
+            pitch: const Pitch(step: 'F', octave: 4),
+            duration: const Duration(DurationType.eighth)),
+        Note(
+            pitch: const Pitch(step: 'G', octave: 4),
+            duration: const Duration(DurationType.eighth)),
       ],
       timeSignature: TimeSignature(numerator: 4, denominator: 4),
       bracketConfig: const TupletBracket(show: false),
@@ -336,9 +422,13 @@ class TupletsProfessionalExample extends StatelessWidget {
     measure.add(TimeSignature(numerator: 4, denominator: 4));
     measure.add(Tuplet.triplet(
       elements: [
-        Note(pitch: const Pitch(step: 'G', octave: 4), duration: const Duration(DurationType.eighth)),
+        Note(
+            pitch: const Pitch(step: 'G', octave: 4),
+            duration: const Duration(DurationType.eighth)),
         Rest(duration: const Duration(DurationType.eighth)),
-        Note(pitch: const Pitch(step: 'B', octave: 4), duration: const Duration(DurationType.eighth)),
+        Note(
+            pitch: const Pitch(step: 'B', octave: 4),
+            duration: const Duration(DurationType.eighth)),
       ],
       timeSignature: TimeSignature(numerator: 4, denominator: 4),
       bracketConfig: const TupletBracket(show: true),
@@ -355,9 +445,15 @@ class TupletsProfessionalExample extends StatelessWidget {
     measure.add(TimeSignature(numerator: 4, denominator: 4));
     measure.add(Tuplet.triplet(
       elements: [
-        Note(pitch: const Pitch(step: 'F', octave: 4), duration: const Duration(DurationType.quarter)),
-        Note(pitch: const Pitch(step: 'A', octave: 4), duration: const Duration(DurationType.quarter)),
-        Note(pitch: const Pitch(step: 'C', octave: 5), duration: const Duration(DurationType.quarter)),
+        Note(
+            pitch: const Pitch(step: 'F', octave: 4),
+            duration: const Duration(DurationType.quarter)),
+        Note(
+            pitch: const Pitch(step: 'A', octave: 4),
+            duration: const Duration(DurationType.quarter)),
+        Note(
+            pitch: const Pitch(step: 'C', octave: 5),
+            duration: const Duration(DurationType.quarter)),
       ],
       timeSignature: TimeSignature(numerator: 4, denominator: 4),
     ));
@@ -374,15 +470,33 @@ class TupletsProfessionalExample extends StatelessWidget {
       actualNotes: 9,
       normalNotes: 8,
       elements: [
-        Note(pitch: const Pitch(step: 'C', octave: 4), duration: const Duration(DurationType.thirtySecond)),
-        Note(pitch: const Pitch(step: 'D', octave: 4), duration: const Duration(DurationType.thirtySecond)),
-        Note(pitch: const Pitch(step: 'E', octave: 4), duration: const Duration(DurationType.thirtySecond)),
-        Note(pitch: const Pitch(step: 'F', octave: 4), duration: const Duration(DurationType.thirtySecond)),
-        Note(pitch: const Pitch(step: 'G', octave: 4), duration: const Duration(DurationType.thirtySecond)),
-        Note(pitch: const Pitch(step: 'A', octave: 4), duration: const Duration(DurationType.thirtySecond)),
-        Note(pitch: const Pitch(step: 'B', octave: 4), duration: const Duration(DurationType.thirtySecond)),
-        Note(pitch: const Pitch(step: 'C', octave: 5), duration: const Duration(DurationType.thirtySecond)),
-        Note(pitch: const Pitch(step: 'D', octave: 5), duration: const Duration(DurationType.thirtySecond)),
+        Note(
+            pitch: const Pitch(step: 'C', octave: 4),
+            duration: const Duration(DurationType.thirtySecond)),
+        Note(
+            pitch: const Pitch(step: 'D', octave: 4),
+            duration: const Duration(DurationType.thirtySecond)),
+        Note(
+            pitch: const Pitch(step: 'E', octave: 4),
+            duration: const Duration(DurationType.thirtySecond)),
+        Note(
+            pitch: const Pitch(step: 'F', octave: 4),
+            duration: const Duration(DurationType.thirtySecond)),
+        Note(
+            pitch: const Pitch(step: 'G', octave: 4),
+            duration: const Duration(DurationType.thirtySecond)),
+        Note(
+            pitch: const Pitch(step: 'A', octave: 4),
+            duration: const Duration(DurationType.thirtySecond)),
+        Note(
+            pitch: const Pitch(step: 'B', octave: 4),
+            duration: const Duration(DurationType.thirtySecond)),
+        Note(
+            pitch: const Pitch(step: 'C', octave: 5),
+            duration: const Duration(DurationType.thirtySecond)),
+        Note(
+            pitch: const Pitch(step: 'D', octave: 5),
+            duration: const Duration(DurationType.thirtySecond)),
       ],
       timeSignature: TimeSignature(numerator: 4, denominator: 4),
     ));
@@ -391,4 +505,3 @@ class TupletsProfessionalExample extends StatelessWidget {
     return staff;
   }
 }
-

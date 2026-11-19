@@ -124,9 +124,7 @@ class PdfExporter {
 
     // Add metadata page if enabled
     if (includeMetadata && (score.title != null || score.composer != null)) {
-      pdf.addPage(
-        _buildMetadataPage(),
-      );
+      pdf.addPage(_buildMetadataPage());
     }
 
     // Add music pages
@@ -255,9 +253,11 @@ class PdfExporter {
     );
 
     var addedAnyPage = false;
-    for (var groupIndex = 0;
-        groupIndex < score.staffGroups.length;
-        groupIndex++) {
+    for (
+      var groupIndex = 0;
+      groupIndex < score.staffGroups.length;
+      groupIndex++
+    ) {
       final group = score.staffGroups[groupIndex];
 
       // A group of two or more staves is ONE instrument on a braced system, not
@@ -568,10 +568,8 @@ class PdfExporter {
             if (warnings.isNotEmpty) ...[
               pw.SizedBox(height: 12),
               ...warnings.map(
-                (w) => pw.Bullet(
-                  text: w,
-                  style: const pw.TextStyle(fontSize: 10),
-                ),
+                (w) =>
+                    pw.Bullet(text: w, style: const pw.TextStyle(fontSize: 10)),
               ),
             ],
             if (outline.isNotEmpty) ...[
@@ -607,11 +605,7 @@ class PdfExporter {
     MusicScoreTheme theme = const MusicScoreTheme(),
     double staffSpace = 12.0,
   }) {
-    final score = Score.singleStaff(
-      staff,
-      title: title,
-      composer: composer,
-    );
+    final score = Score.singleStaff(staff, title: title, composer: composer);
 
     return PdfExporter(
       score: score,
@@ -628,11 +622,7 @@ class PdfExporter {
     PdfPageFormat format, {
     SmuflMetadata? metadata,
   }) {
-    return PdfExporter(
-      score: score,
-      pageFormat: format,
-      metadata: metadata,
-    );
+    return PdfExporter(score: score, pageFormat: format, metadata: metadata);
   }
 }
 

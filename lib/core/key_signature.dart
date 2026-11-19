@@ -14,6 +14,7 @@ enum KeyMode {
   mixolydian,
   aeolian,
   locrian,
+
   /// Armadura sem modo defined (e.g., music atonal, modal indeterminado)
   none,
 }
@@ -68,7 +69,6 @@ class KeySignature extends MusicalElement {
   /// note deliberately departs from it.
   Pitch pitch(String step, int octave) =>
       Pitch(step: step, octave: octave, alter: alterFor(step));
-
 
   KeySignature(this.count, {this.previousCount, this.mode});
 }

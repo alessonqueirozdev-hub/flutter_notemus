@@ -7,12 +7,12 @@ library;
 import 'spacing_model.dart';
 
 /// Preferences globais de spacing
-/// 
+///
 /// Use this class for controlar o comportamento of the spacing engine
 /// sem modificar o código interno.
 class SpacingPreferences {
   /// Modelo matemático de spacing
-  /// 
+  ///
   /// **Valores recomendados:**
   /// - `SpacingModel.squareRoot` (default): Melhor aproximação of the tabela de Gould
   /// - `SpacingModel.logarithmic`: For music very compacta
@@ -20,7 +20,7 @@ class SpacingPreferences {
   final SpacingModel model;
 
   /// Fator de spacing global (1.0 = normal)
-  /// 
+  ///
   /// **Valores típicos:**
   /// - `0.8 - 1.0`: Music compacta (livros, pocket scores)
   /// - `1.0 - 1.5`: Music normal (performance parts)
@@ -29,7 +29,7 @@ class SpacingPreferences {
   final double spacingFactor;
 
   /// Preference de densidade (0.0 = apertado, 1.0 = espaçado)
-  /// 
+  ///
   /// Controla o trade-off between compactação and clareza:
   /// - `0.0 - 0.3`: Máxima densidade (economizar papel)
   /// - `0.3 - 0.7`: Balanceado (default: 0.5)
@@ -37,17 +37,17 @@ class SpacingPreferences {
   final double densityPreference;
 
   /// Ativar compensação óptica
-  /// 
+  ///
   /// Ajusta spacing based on:
   /// - Direction de stems
   /// - Transições de duração
   /// - Proximidade de accidentals
-  /// 
+  ///
   /// **Recomendado: true** for aparência profissional
   final bool enableOpticalSpacing;
 
   /// Spacing mínimo between symbols (in staff spaces)
-  /// 
+  ///
   /// **Valores típicos:**
   /// - `0.15 - 0.20`: Music very compacta
   /// - `0.25 - 0.30`: Normal (default: 0.25)
@@ -55,33 +55,33 @@ class SpacingPreferences {
   final double minGap;
 
   /// Priorizar uniformidade vs. compactação (0.0 - 1.0)
-  /// 
+  ///
   /// - `0.0`: Máxima compactação (minimizar width)
   /// - `0.5`: Balanceado
   /// - `1.0`: Máxima uniformidade (notes de same duração always iguais)
-  /// 
+  ///
   /// **Recomendado: 0.7** for qualidade profissional
   final double consistencyWeight;
 
   /// Spacing de pausas relativo a notes (0.0 - 1.0)
-  /// 
+  ///
   /// Elaine Gould recomenda 80% of the note spacing equivalentes
-  /// 
+  ///
   /// **Default: 0.8**
   final double restSpacingRatio;
 
   /// Permitir sobreposition de symbols in casos extremos
-  /// 
+  ///
   /// When false, forçará spacing mínimo same that afete proporções
   /// When true, permitirá leve sobreposition for manter proporções
-  /// 
+  ///
   /// **Default: false** (segurança in first lugar)
   final bool allowSymbolOverlap;
 
   /// Ajuste de spacing for measures compostos (6/8, 9/8, 12/8)
-  /// 
+  ///
   /// Adds space extra between pulsos ternários for clareza visual
-  /// 
+  ///
   /// **Valores típicos:**
   /// - `0.0`: Sem ajuste
   /// - `0.1 - 0.15`: Subtle (default: 0.15)
@@ -154,7 +154,8 @@ class SpacingPreferences {
       consistencyWeight: consistencyWeight ?? this.consistencyWeight,
       restSpacingRatio: restSpacingRatio ?? this.restSpacingRatio,
       allowSymbolOverlap: allowSymbolOverlap ?? this.allowSymbolOverlap,
-      compoundMeterPulseSpacing: compoundMeterPulseSpacing ?? this.compoundMeterPulseSpacing,
+      compoundMeterPulseSpacing:
+          compoundMeterPulseSpacing ?? this.compoundMeterPulseSpacing,
     );
   }
 }
@@ -212,7 +213,7 @@ class SpacingConstants {
   }
 
   /// Arredonda value for múltiplos de 1/4 staff space
-  /// 
+  ///
   /// Ensures alinhamento visual with a grade of the staff
   static double roundToQuarterStaffSpace(double value, double staffSpace) {
     final double quarterSpace = staffSpace * 0.25;

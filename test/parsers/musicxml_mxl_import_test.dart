@@ -45,16 +45,16 @@ const _container = '''<?xml version="1.0" encoding="UTF-8"?>
 
 /// Pitches of every note, bar by bar, for comparing two imports.
 List<String> _signature(Score score) => [
-      for (final staff in score.allStaves)
-        for (final measure in staff.measures)
-          [
-            for (final e in measure.allElements)
-              if (e is Note)
-                '${e.pitch.step}${e.pitch.octave}:${e.duration.type.name}'
-              else if (e is Chord)
-                'chord${e.notes.length}',
-          ].join(' '),
-    ];
+  for (final staff in score.allStaves)
+    for (final measure in staff.measures)
+      [
+        for (final e in measure.allElements)
+          if (e is Note)
+            '${e.pitch.step}${e.pitch.octave}:${e.duration.type.name}'
+          else if (e is Chord)
+            'chord${e.notes.length}',
+      ].join(' '),
+];
 
 void main() {
   group('MuseScore 4.7.4 reference', () {
@@ -69,8 +69,11 @@ void main() {
       expect(signature, _signature(fromPlain));
       expect(
         _signature(fromPlain),
-        _signature(MusicXMLParser.scoreFromMusicXML(
-            File('$_dir/notemus_reference.musicxml').readAsStringSync())),
+        _signature(
+          MusicXMLParser.scoreFromMusicXML(
+            File('$_dir/notemus_reference.musicxml').readAsStringSync(),
+          ),
+        ),
       );
     });
 
@@ -105,8 +108,10 @@ void main() {
 
     test('a rootfile the archive does not hold is a FormatException', () {
       final bytes = _zip({'META-INF/container.xml': _container});
-      expect(() => MusicXMLParser.decodeBytes(bytes),
-          throwsA(isA<FormatException>()));
+      expect(
+        () => MusicXMLParser.decodeBytes(bytes),
+        throwsA(isA<FormatException>()),
+      );
     });
 
     test('a container naming no rootfile is a FormatException', () {
@@ -121,50 +126,67 @@ void main() {
           'decoy.xml': '<score-partwise version="4.0"/>',
           'score.xml': _tinyScore,
         });
-        expect(() => MusicXMLParser.decodeBytes(bytes),
-            throwsA(isA<FormatException>()));
+        expect(
+          () => MusicXMLParser.decodeBytes(bytes),
+          throwsA(isA<FormatException>()),
+        );
       }
     });
 
     test('a rootfile climbing out of the archive is refused', () {
       final bytes = _zip({
-        'META-INF/container.xml':
-            _container.replaceFirst('nested/score.xml', '../../etc/score.xml'),
+        'META-INF/container.xml': _container.replaceFirst(
+          'nested/score.xml',
+          '../../etc/score.xml',
+        ),
         'score.xml': _tinyScore,
       });
-      expect(() => MusicXMLParser.decodeBytes(bytes),
-          throwsA(isA<FormatException>()));
+      expect(
+        () => MusicXMLParser.decodeBytes(bytes),
+        throwsA(isA<FormatException>()),
+      );
     });
 
     test('an archive with no score is a FormatException', () {
       final bytes = _zip({'readme.txt': 'nothing here'});
-      expect(() => MusicXMLParser.decodeBytes(bytes),
-          throwsA(isA<FormatException>()));
+      expect(
+        () => MusicXMLParser.decodeBytes(bytes),
+        throwsA(isA<FormatException>()),
+      );
     });
 
     test('a truncated archive is a FormatException', () {
       final bytes = _zip({'score.xml': _tinyScore});
       expect(
-          () => MusicXMLParser.decodeBytes(
-              Uint8List.sublistView(bytes, 0, bytes.length ~/ 2)),
-          throwsA(isA<FormatException>()));
+        () => MusicXMLParser.decodeBytes(
+          Uint8List.sublistView(bytes, 0, bytes.length ~/ 2),
+        ),
+        throwsA(isA<FormatException>()),
+      );
     });
   });
 
   group('plain text encodings', () {
     test('a UTF-8 BOM is dropped', () {
-      final bytes = Uint8List.fromList([0xef, 0xbb, 0xbf, ...utf8.encode(_tinyScore)]);
+      final bytes = Uint8List.fromList([
+        0xef,
+        0xbb,
+        0xbf,
+        ...utf8.encode(_tinyScore),
+      ]);
       expect(MusicXMLParser.decodeBytes(bytes), startsWith('<?xml'));
     });
 
     test('UTF-16 with a byte-order mark is decoded, either endianness', () {
       final units = _tinyScore.codeUnits;
       final le = Uint8List.fromList([
-        0xff, 0xfe,
+        0xff,
+        0xfe,
         for (final u in units) ...[u & 0xff, u >> 8],
       ]);
       final be = Uint8List.fromList([
-        0xfe, 0xff,
+        0xfe,
+        0xff,
         for (final u in units) ...[u >> 8, u & 0xff],
       ]);
       expect(MusicXMLParser.decodeBytes(le), _tinyScore);

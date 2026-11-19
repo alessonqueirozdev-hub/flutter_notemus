@@ -102,7 +102,8 @@ class TupletRenderer extends BaseGlyphRenderer {
       tuplet,
       coordinates.staffSpace,
       leftExtent: leftExtent,
-      noteheadAdvanceSpaces: metadata.getGlyphAdvanceWidth('noteheadBlack') ??
+      noteheadAdvanceSpaces:
+          metadata.getGlyphAdvanceWidth('noteheadBlack') ??
           TupletGrid.defaultNoteheadAdvanceSpaces,
       contextSmallestLeafSpaces: contextSmallestLeafSpaces,
     );
@@ -172,7 +173,11 @@ class TupletRenderer extends BaseGlyphRenderer {
         allPositions.add(Offset(currentX + slotCenterOffset, noteY));
         noteOnlyPositions.add(position);
         if (beam != null) {
-          participants.add((index: index, position: position, element: element));
+          participants.add((
+            index: index,
+            position: position,
+            element: element,
+          ));
         }
         spanStartX ??= currentX;
         spanEndX = currentX + noteHeadWidth;
@@ -264,9 +269,7 @@ class TupletRenderer extends BaseGlyphRenderer {
           leftExtent: leftExtent,
         );
         final innerWidth = slots[index];
-        allPositions.add(
-          Offset(currentX + innerWidth / 2, basePosition.dy),
-        );
+        allPositions.add(Offset(currentX + innerWidth / 2, basePosition.dy));
         spanStartX ??= currentX;
         spanEndX = currentX + innerWidth;
       }
@@ -596,7 +599,8 @@ class TupletRenderer extends BaseGlyphRenderer {
         Rect.fromCenter(
           center: Offset(centerX, numberY),
           width: totalWidth + (coordinates.staffSpace * 0.3),
-          height: sampleBounds.heightInPixels(_numberSpace) +
+          height:
+              sampleBounds.heightInPixels(_numberSpace) +
               (coordinates.staffSpace * 0.2),
         ),
         Radius.circular(coordinates.staffSpace * 0.2),
@@ -676,7 +680,8 @@ class TupletRenderer extends BaseGlyphRenderer {
   }) {
     var runStart = 0;
     for (var i = 1; i <= participants.length; i++) {
-      final breaks = i == participants.length ||
+      final breaks =
+          i == participants.length ||
           participants[i].index != participants[i - 1].index + 1;
       if (!breaks) continue;
       if (i - runStart >= 2) {
@@ -887,7 +892,8 @@ class TupletRenderer extends BaseGlyphRenderer {
       // renderer was asked to suppress its own stem for exactly this reason).
       if (element is! Note && chordAnchor == null) continue;
       final stemX = stemXs[index];
-      final stemStartY = chordAnchor?.nearY ??
+      final stemStartY =
+          chordAnchor?.nearY ??
           positioningEngine.calculateStemStartY(
             noteY: notePositions[index].dy,
             noteheadGlyphName: glyphOf(element),
@@ -904,10 +910,9 @@ class TupletRenderer extends BaseGlyphRenderer {
     }
   }
 
-  static DurationType _durationTypeOf(MusicalElement element) =>
-      element is Note
-          ? element.duration.type
-          : (element as Chord).duration.type;
+  static DurationType _durationTypeOf(MusicalElement element) => element is Note
+      ? element.duration.type
+      : (element as Chord).duration.type;
 
   /// Number of beams a single duration needs.
   ///
