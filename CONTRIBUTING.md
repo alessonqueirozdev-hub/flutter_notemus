@@ -1,4 +1,4 @@
-# Contributing to Flutter Notemus
+﻿# Contributing to Flutter Notemus
 
 Thank you for considering a contribution. This document is short on ceremony and
 long on the two things that actually matter here: **how the project decides what
@@ -43,7 +43,9 @@ before and after your change.
 **Formatting is checked in CI.** Run `dart format lib test example` before you
 push. The `Format` job fails on any difference and prints the diff it wants. The
 formatter's style follows each package's language version, not your SDK, so the
-result should match CI on any machine.
+result should match CI on any machine. Run `flutter pub get` first, at the root
+and in `example/`: without a resolved package config the formatter falls back
+to the newest style and rewrites files that are already correct.
 
 > **Gotcha:** running `flutter analyze` inside `example/` rewrites the root's
 > package resolution and makes `package:pdf` unresolvable. If `dart analyze`

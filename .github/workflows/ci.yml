@@ -115,6 +115,16 @@ jobs:
           channel: stable
           cache: true
 
+      # The formatter takes each package's language version from its resolved
+      # package config. Without one it falls back to the newest style, which
+      # reformatted 120 files that are correct for their packages (root
+      # `sdk: ^3.8.1`, example `>=3.1.0`). Measured locally: with the example's
+      # package config removed, `dart format` rewrote 45 of its 52 files.
+      - name: Resolve dependencies
+        run: |
+          (cd example && flutter pub get)
+          flutter pub get
+
       - name: dart format
         run: |
           dart format lib test example
