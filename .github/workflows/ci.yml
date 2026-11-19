@@ -95,6 +95,32 @@ jobs:
           retention-days: 14
 
   # ---------------------------------------------------------------------------
+  # The tree was never formatted consistently, so `dart format` on one file
+  # rewrote dozens of unrelated lines and contributors could not tell their
+  # change from the noise (asked in #62). Formatting now has to hold.
+  #
+  # The formatter's style follows each package's language version, not the SDK,
+  # so a contributor's local `dart format lib test example` should match this
+  # job. When it fails, the diff printed below is the exact change to make.
+  # ---------------------------------------------------------------------------
+  format:
+    name: Format
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: dart format
+        run: |
+          dart format lib test example
+          git diff --exit-code -- lib test example
+
+  # ---------------------------------------------------------------------------
   # `flutter test` never opens ios/ or macos/, so nothing above can see a broken
   # Package.swift. Issue #58: a byte-order mark in front of the
   # `swift-tools-version` line made every macOS app depending on this package
