@@ -117,6 +117,9 @@ class JsonMusicExporter {
         'type': 'timesignature',
         'numerator': element.numerator,
         'denominator': element.denominator,
+        // Omitted when true, the default, so existing documents are unchanged.
+        if (!element.displayCommonTimeSignatureGlyphs)
+          'displayCommonTimeSignatureGlyphs': false,
         if (element.isFreeTime) 'isFreeTime': true,
         if (element.isAdditive)
           'additiveGroups': [

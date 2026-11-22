@@ -6,6 +6,26 @@ The format is based on Keep a Changelog and this project follows Semantic Versio
 
 ## [Unreleased]
 
+### Fixed — common and cut time in import and export (#64)
+
+- **Imported 4/4 and 2/2 follow the source's symbol.** The importers never
+  read it, so every imported 4/4 drew as C and every 2/2 as cut C, even where
+  the file engraves a fraction. MusicXML `<time symbol="common|cut">` and MEI
+  `@sym` (`<meterSig>`) / `@meter.sym` (`<staffDef>`, `<scoreDef>`) now set
+  `TimeSignature.displayCommonTimeSignatureGlyphs`. **Visible change:** a
+  MusicXML `<time>` with no `@symbol` means `normal`, and an MEI meter with no
+  `@sym` is numeric, so these now render as fractions. Scores built in Dart
+  keep the default (`true`).
+- MusicXML `symbol="single-number"`, `note` and `dotted-note` are drawn as
+  fractions and reported through `warnings`.
+- An MEI `meter.sym` / `sym` with no count or unit imports as 4/4 (`common`)
+  or 2/2 (`cut`) instead of being dropped.
+- **Export:** MusicXML writes `symbol="common"` / `symbol="cut"` for a 4/4 /
+  2/2 drawn as C, and `JsonMusicExporter` writes
+  `displayCommonTimeSignatureGlyphs: false` when it is off (and nothing when
+  it is on, so existing documents are unchanged). Both round trips keep the
+  choice.
+
 ### Changed — Flutter 3.47
 
 - **Most of the library no longer imports `package:flutter/material.dart`.**

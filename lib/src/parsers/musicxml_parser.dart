@@ -602,8 +602,10 @@ void _buildMeasureXml(
                   nest: () => builder.element('fifths', nest: element.count),
                 );
               } else if (element is TimeSignature) {
+                final symbol = _musicXmlTimeSymbol(element);
                 builder.element(
                   'time',
+                  attributes: {'symbol': ?symbol},
                   nest: () {
                     builder.element('beats', nest: element.numerator);
                     builder.element('beat-type', nest: element.denominator);
@@ -705,6 +707,24 @@ enum _TupletEdge { start, inner, stop, single }
 /// `bracket="no"` when the model says the bracket is hidden, else null (the
 /// MusicXML default depends on the beaming, so writing nothing is the honest
 /// encoding of "no opinion").
+/// The MusicXML `<time @symbol>` for [time], or `null` for a fraction.
+///
+/// Mirrors the renderer: only a plain 4/4 or 2/2 that asks for the C glyphs
+/// is drawn as C or cut C. Without the attribute a re-import reads `normal`
+/// and draws the fraction, so the glyph would not survive a round trip.
+String? _musicXmlTimeSymbol(TimeSignature time) {
+  if (!time.displayCommonTimeSignatureGlyphs ||
+      time.isFreeTime ||
+      time.isAdditive) {
+    return null;
+  }
+  return switch ((time.numerator, time.denominator)) {
+    (4, 4) => 'common',
+    (2, 2) => 'cut',
+    _ => null,
+  };
+}
+
 String? _tupletBracketAttribute(Tuplet tuplet) =>
     tuplet.bracketConfig != null && !tuplet.bracketConfig!.show ? 'no' : null;
 

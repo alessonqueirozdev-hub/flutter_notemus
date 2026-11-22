@@ -1078,8 +1078,19 @@ TimeSignature? _parseTimeSignatureMap(Map<String, dynamic>? map) {
   final numerator = _asInt(map['numerator']) ?? _asInt(map['count']);
   final denominator = _asInt(map['denominator']) ?? _asInt(map['unit']);
   if (numerator == null || denominator == null) return null;
-  return TimeSignature(numerator: numerator, denominator: denominator);
+  return TimeSignature(
+    numerator: numerator,
+    denominator: denominator,
+    displayCommonTimeSignatureGlyphs: _jsonCommonTimeGlyphs(map),
+  );
 }
+
+/// The `displayCommonTimeSignatureGlyphs` key of a JSON time signature.
+///
+/// `JsonMusicExporter` writes it only when it is `false`, so a document
+/// written before the key existed reads back with the constructor's default.
+bool _jsonCommonTimeGlyphs(Map<String, dynamic> map) =>
+    _asBool(map['displayCommonTimeSignatureGlyphs']) ?? true;
 
 class _JsonImportParser {
   _JsonImportParser({required this.staffIndex, this.warnings});
@@ -1355,6 +1366,7 @@ class _JsonImportParser {
         return TimeSignature(
           numerator: _asInt(map['numerator']) ?? 4,
           denominator: _asInt(map['denominator']) ?? 4,
+          displayCommonTimeSignatureGlyphs: _jsonCommonTimeGlyphs(map),
         );
       case 'note':
       case 'gracenote':
@@ -2253,6 +2265,9 @@ class _MusicXmlImportParser {
           for (final element in _parseMusicXmlAttributes(
             child,
             staffFilter: staffFilter,
+            warn: warnings == null
+                ? null
+                : (message) => _warn('Measure $_measureLabel: $message'),
           )) {
             appendLeadElement(element);
           }
@@ -2671,6 +2686,7 @@ class _MusicXmlImportParser {
 List<MusicalElement> _parseMusicXmlAttributes(
   XmlElement attributesElement, {
   int? staffFilter,
+  void Function(String message)? warn,
 }) {
   final List<MusicalElement> result = <MusicalElement>[];
 
@@ -2696,13 +2712,51 @@ List<MusicalElement> _parseMusicXmlAttributes(
         final beats = _asInt(_childText(child, 'beats'));
         final beatType = _asInt(_childText(child, 'beat-type'));
         if (beats != null && beatType != null) {
-          result.add(TimeSignature(numerator: beats, denominator: beatType));
+          result.add(
+            TimeSignature(
+              numerator: beats,
+              denominator: beatType,
+              displayCommonTimeSignatureGlyphs: _musicXmlTimeSymbolIsCommon(
+                child,
+                warn,
+              ),
+            ),
+          );
         }
         break;
     }
   }
 
   return result;
+}
+
+/// Whether a MusicXML `<time>` asks for the C or cut C glyph.
+///
+/// `@symbol` defaults to `normal`, a fraction, so a `<time>` without it is
+/// drawn as numbers. Reading it as `true` (the [TimeSignature] default) drew
+/// every imported 4/4 as C and every 2/2 as cut C, whatever the source
+/// engraved. `single-number`, `note` and `dotted-note` have no rendering here
+/// yet: they fall back to the fraction, and [warn] says so.
+bool _musicXmlTimeSymbolIsCommon(
+  XmlElement timeElement,
+  void Function(String message)? warn,
+) {
+  final symbol = timeElement.getAttribute('symbol')?.trim();
+  switch (symbol) {
+    case 'common':
+    case 'cut':
+      return true;
+    case null:
+    case '':
+    case 'normal':
+      return false;
+    default:
+      warn?.call(
+        '<time symbol="$symbol"> is not drawn as written; the time signature'
+        ' is shown as a fraction.',
+      );
+      return false;
+  }
 }
 
 /// A MusicXML `<attributes><transpose>` declaration for one part/staff.
@@ -4530,11 +4584,23 @@ List<int>? _meiMeterCounts(String? raw) {
 
 /// Builds a [TimeSignature] from [counts] + [denominator], choosing the
 /// additive form when the source declared more than one group.
-TimeSignature _meiMeterFromCounts(List<int> counts, int denominator) {
+///
+/// [commonGlyphs] is `true` only when the source asks for the C or cut C
+/// symbol: MEI draws a meter as numbers unless `@sym`/`@meter.sym` says
+/// otherwise.
+TimeSignature _meiMeterFromCounts(
+  List<int> counts,
+  int denominator, {
+  bool commonGlyphs = false,
+}) {
   if (counts.length > 1) {
     return TimeSignature.additive(groups: counts, denominator: denominator);
   }
-  return TimeSignature(numerator: counts.first, denominator: denominator);
+  return TimeSignature(
+    numerator: counts.first,
+    denominator: denominator,
+    displayCommonTimeSignatureGlyphs: commonGlyphs,
+  );
 }
 
 /// Meter from a `<meterSigGrp>` (MEI v5), i.e. several `<meterSig>` children
@@ -4560,6 +4626,12 @@ TimeSignature? _meiMeterSigGrp(XmlElement grpElement) {
 }
 
 TimeSignature? _meiTimeSignature(XmlElement meterSigElement) {
+  // `@sym` on <meterSig>, `@meter.sym` on <staffDef>/<scoreDef>.
+  final sym =
+      (meterSigElement.getAttribute('sym') ??
+              meterSigElement.getAttribute('meter.sym'))
+          ?.trim();
+  final commonGlyphs = sym == 'common' || sym == 'cut';
   // `meter.count` may be additive ("3+2+2"); a plain int is the single-group
   // case of the very same syntax.
   final counts = _meiMeterCounts(
@@ -4570,8 +4642,15 @@ TimeSignature? _meiTimeSignature(XmlElement meterSigElement) {
     meterSigElement.getAttribute('unit') ??
         meterSigElement.getAttribute('meter.unit'),
   );
-  if (counts == null || denominator == null) return null;
-  return _meiMeterFromCounts(counts, denominator);
+  if (counts == null || denominator == null) {
+    // The symbol alone is a complete meter: C is 4/4 and cut C is 2/2.
+    if (counts == null && denominator == null && commonGlyphs) {
+      final beats = sym == 'common' ? 4 : 2;
+      return _meiMeterFromCounts([beats], beats, commonGlyphs: true);
+    }
+    return null;
+  }
+  return _meiMeterFromCounts(counts, denominator, commonGlyphs: commonGlyphs);
 }
 
 /// Builds a [Note] from an MEI `<note>`.
