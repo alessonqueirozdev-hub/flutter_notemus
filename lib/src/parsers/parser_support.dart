@@ -1078,10 +1078,34 @@ TimeSignature? _parseTimeSignatureMap(Map<String, dynamic>? map) {
   final numerator = _asInt(map['numerator']) ?? _asInt(map['count']);
   final denominator = _asInt(map['denominator']) ?? _asInt(map['unit']);
   if (numerator == null || denominator == null) return null;
+  return _jsonTimeSignature(
+    map,
+    numerator: numerator,
+    denominator: denominator,
+  );
+}
+
+/// A JSON time signature with the optional keys `JsonMusicExporter` writes:
+/// `displayCommonTimeSignatureGlyphs`, `isFreeTime` and `additiveGroups` (the
+/// group numerators, e.g. `[3, 2, 2]` for (3+2+2)/8). Each is written only
+/// when it differs from the default, so a document without them reads back
+/// as a plain meter.
+TimeSignature _jsonTimeSignature(
+  Map<String, dynamic> map, {
+  required int numerator,
+  required int denominator,
+}) {
+  final groups = <AdditiveMeterGroup>[];
+  for (final value in _asList(map['additiveGroups'])) {
+    final group = _asInt(value);
+    if (group != null && group > 0) groups.add(AdditiveMeterGroup(group));
+  }
   return TimeSignature(
     numerator: numerator,
     denominator: denominator,
     displayCommonTimeSignatureGlyphs: _jsonCommonTimeGlyphs(map),
+    isFreeTime: _asBool(map['isFreeTime']) ?? false,
+    additiveGroups: groups.isEmpty ? null : groups,
   );
 }
 
@@ -1363,10 +1387,10 @@ class _JsonImportParser {
           previousCount: _asInt(map['previousCount']),
         );
       case 'timesignature':
-        return TimeSignature(
+        return _jsonTimeSignature(
+          map,
           numerator: _asInt(map['numerator']) ?? 4,
           denominator: _asInt(map['denominator']) ?? 4,
-          displayCommonTimeSignatureGlyphs: _jsonCommonTimeGlyphs(map),
         );
       case 'note':
       case 'gracenote':
