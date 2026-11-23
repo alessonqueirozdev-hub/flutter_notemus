@@ -26,6 +26,13 @@ The format is based on Keep a Changelog and this project follows Semantic Versio
   it is on, so existing documents are unchanged). Both round trips keep the
   choice.
 
+### Fixed — free and additive meters in JSON import
+
+- **`JsonMusicParser` reads `isFreeTime` and `additiveGroups`.**
+  `JsonMusicExporter` already wrote both, but the importer dropped them, so a
+  free meter or a (3+2+2)/8 came back from a round trip as a plain fraction.
+  A bar-level `"timeSignature"` map reads them too.
+
 ### Changed — Flutter 3.47
 
 - **Most of the library no longer imports `package:flutter/material.dart`.**
