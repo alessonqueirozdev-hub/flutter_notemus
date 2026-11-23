@@ -704,9 +704,6 @@ void _buildMeasureXml(
 /// `stop`, so that note carries two `<tuplet>` elements.
 enum _TupletEdge { start, inner, stop, single }
 
-/// `bracket="no"` when the model says the bracket is hidden, else null (the
-/// MusicXML default depends on the beaming, so writing nothing is the honest
-/// encoding of "no opinion").
 /// The MusicXML `<time @symbol>` for [time], or `null` for a fraction.
 ///
 /// Mirrors the renderer: only a plain 4/4 or 2/2 that asks for the C glyphs
@@ -725,6 +722,9 @@ String? _musicXmlTimeSymbol(TimeSignature time) {
   };
 }
 
+/// `bracket="no"` when the model says the bracket is hidden, else null (the
+/// MusicXML default depends on the beaming, so writing nothing is the honest
+/// encoding of "no opinion").
 String? _tupletBracketAttribute(Tuplet tuplet) =>
     tuplet.bracketConfig != null && !tuplet.bracketConfig!.show ? 'no' : null;
 
