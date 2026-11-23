@@ -67,3 +67,7 @@ doc/OPEN_ISSUES.md
 # has to know to use the API correctly), doc/MODEL_ONLY.md, doc/MEI_V5_AUDIT.md,
 # doc/json_schema.md, doc/MAGIC_NUMBERS_REFERENCE.md and the Gregorian design
 # notes — all of them answer questions about the public surface.
+
+# --- Handoff kit for cloud sessions: not package content ---
+scripts/
+doc/handoff/
