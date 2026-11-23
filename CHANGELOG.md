@@ -12,7 +12,8 @@ Common and cut time, end to end, from two first-time contributors.
 @axiopisty's #62 adds `TimeSignature.displayCommonTimeSignatureGlyphs`, so a
 4/4 or 2/2 can be drawn as a fraction instead of C or cut C (#61).
 @uveshm003's #66 has the MusicXML, MEI and JSON importers and exporters read
-and write that choice (#64).
+and write that choice (#64). In #67 they also fixed a JSON round trip that
+lost free and additive meters.
 
 **One visible change:** an imported MusicXML or MEI 4/4 or 2/2 that carries no
 symbol now renders as a fraction, as its source engraves it. It used to render
@@ -56,7 +57,8 @@ CI now checking formatting.
 - **`JsonMusicParser` reads `isFreeTime` and `additiveGroups`.**
   `JsonMusicExporter` already wrote both, but the importer dropped them, so a
   free meter or a (3+2+2)/8 came back from a round trip as a plain fraction.
-  A bar-level `"timeSignature"` map reads them too.
+  A bar-level `"timeSignature"` map reads them too. Contributed by
+  @uveshm003 (#67).
 
 ### Changed — Flutter 3.47
 
