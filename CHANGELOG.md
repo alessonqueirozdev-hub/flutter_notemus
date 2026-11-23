@@ -6,6 +6,31 @@ The format is based on Keep a Changelog and this project follows Semantic Versio
 
 ## [Unreleased]
 
+## [2.10.0] - 2026-11-23
+
+Common and cut time, end to end, from two first-time contributors.
+@axiopisty's #62 adds `TimeSignature.displayCommonTimeSignatureGlyphs`, so a
+4/4 or 2/2 can be drawn as a fraction instead of C or cut C (#61).
+@uveshm003's #66 has the MusicXML, MEI and JSON importers and exporters read
+and write that choice (#64).
+
+**One visible change:** an imported MusicXML or MEI 4/4 or 2/2 that carries no
+symbol now renders as a fraction, as its source engraves it. It used to render
+as C or cut C. Scores built in Dart keep the old default.
+
+Minor rather than patch, because the release adds public API. It also keeps CI
+green on Flutter 3.47 without dropping older Flutter, and formats the tree, with
+CI now checking formatting.
+
+### Added — fraction or symbol for 4/4 and 2/2 (#61, #62)
+
+- **`TimeSignature.displayCommonTimeSignatureGlyphs`.** Defaults to `true`, so
+  4/4 still draws as C and 2/2 as cut C. Set it to `false` for the fraction.
+  The layout reserves the same width either way, so nothing shifts. The flag
+  is part of `PositionedElement.structuralHash`, so flipping it repaints.
+  Contributed by @axiopisty, with two goldens: `m04f_fractional_time_glyphs`
+  and `m04g_common_time_glyphs`.
+
 ### Fixed — common and cut time in import and export (#64)
 
 - **Imported 4/4 and 2/2 follow the source's symbol.** The importers never
@@ -24,7 +49,7 @@ The format is based on Keep a Changelog and this project follows Semantic Versio
   2/2 drawn as C, and `JsonMusicExporter` writes
   `displayCommonTimeSignatureGlyphs: false` when it is off (and nothing when
   it is on, so existing documents are unchanged). Both round trips keep the
-  choice.
+  choice. Contributed by @uveshm003.
 
 ### Changed — Flutter 3.47
 
@@ -37,6 +62,17 @@ The format is based on Keep a Changelog and this project follows Semantic Versio
   `Scaffold`) keep the import with a targeted `ignore`, because the package
   supports Flutter `>=3.0.0` and `material_ui` exists only from 3.47. Tests
   and the example app take the same targeted `ignore`. Nothing public changes.
+
+### Tooling — formatting
+
+- **The tree is formatted, and CI checks it.** It had never been formatted
+  consistently: `dart format` on one file rewrote dozens of unrelated lines,
+  which a contributor ran into on #62. A `Format` job now fails on any
+  difference and prints the diff it wants. `.git-blame-ignore-revs` makes
+  `git blame` skip the formatting commit.
+- **CONTRIBUTING** explains that the goldens are recorded on Windows only, and
+  how a contributor on macOS or Linux gets theirs recorded. It also explains
+  how to format so the result matches CI.
 
 ## [2.9.1] - 2026-11-06
 
