@@ -54,9 +54,9 @@ qualquer coisa.**
 
 ### Colaboradores e conversas abertas
 
-- **axiopisty** (Elliot Huntington): abriu #58 (SwiftPM, corrigido no 2.9.1) e
+- **axiopisty**: abriu #58 (SwiftPM, corrigido no 2.9.1) e
   #61. Contribuiu o #62 (`displayCommonTimeSignatureGlyphs`) e aprovou o #65.
-- **uveshm003** (Uvesh Menpur): contribuiu o #66 (símbolo do compasso nos
+- **uveshm003**: contribuiu o #66 (símbolo do compasso nos
   importadores, fecha a #64) e o #67 (compasso livre e aditivo no JSON). Na
   aprovação do #67 sugerimos um acompanhamento: derivar o numerador dos grupos
   aditivos e avisar quando a soma não bater.
