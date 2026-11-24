@@ -660,6 +660,145 @@ void main() {
     });
   });
 
+  group('#29 the four formerly silent cases are reported', () {
+    ({Staff staff, List<String> warnings}) importWith(String body) {
+      final warnings = <String>[];
+      final staff = MusicXMLParser.parseMusicXML(
+        _partwise(body),
+        warnings: warnings,
+      );
+      return (staff: staff, warnings: warnings);
+    }
+
+    const attributes = '<attributes><divisions>4</divisions></attributes>';
+
+    Note singleNote(Staff staff) =>
+        staff.measures.single.elements.whereType<Note>().single;
+
+    test('known clef, type, alter and a part-list produce no warnings', () {
+      final result = importWith(
+        '<attributes><divisions>4</divisions>'
+        '<clef><sign>F</sign><line>4</line></clef></attributes>'
+        '<note><pitch><step>C</step><alter>1</alter><octave>4</octave></pitch>'
+        '<duration>4</duration><type>quarter</type></note>',
+      );
+
+      expect(result.warnings, isEmpty);
+    });
+
+    test('an unknown <clef><sign> is reported with its value', () {
+      final result = importWith(
+        '<attributes><divisions>4</divisions>'
+        '<clef><sign>Q</sign><line>2</line></clef></attributes>'
+        '<note><pitch><step>C</step><octave>4</octave></pitch>'
+        '<duration>4</duration><type>quarter</type></note>',
+      );
+
+      // Fail-soft is unchanged: no clef is added.
+      expect(result.staff.measures.single.elements.whereType<Clef>(), isEmpty);
+      expect(
+        result.warnings.where(
+          (w) => w.contains('<clef><sign>') && w.contains('"Q"'),
+        ),
+        hasLength(1),
+        reason: 'warnings: ${result.warnings}',
+      );
+    });
+
+    test('an unknown <type> is reported with its value', () {
+      final result = importWith(
+        '$attributes<note><pitch><step>C</step><octave>4</octave></pitch>'
+        '<duration>4</duration><type>quaver-ish</type></note>',
+      );
+
+      // The value still comes from <duration>: 4 ticks at divisions=4.
+      expect(singleNote(result.staff).duration.type, DurationType.quarter);
+      expect(
+        result.warnings.where(
+          (w) => w.contains('<type>') && w.contains('"quaver-ish"'),
+        ),
+        hasLength(1),
+        reason: 'warnings: ${result.warnings}',
+      );
+    });
+
+    test('a non-numeric <alter> is reported with its value', () {
+      final result = importWith(
+        '$attributes<note><pitch><step>C</step><alter>sharp</alter>'
+        '<octave>4</octave></pitch>'
+        '<duration>4</duration><type>quarter</type></note>',
+      );
+
+      expect(singleNote(result.staff).pitch.alter, 0.0);
+      expect(
+        result.warnings.where(
+          (w) => w.contains('<alter>') && w.contains('"sharp"'),
+        ),
+        hasLength(1),
+        reason: 'warnings: ${result.warnings}',
+      );
+    });
+
+    test('a missing <part-list> is reported, for a staff and a score', () {
+      const document =
+          '<?xml version="1.0"?><score-partwise version="4.0">'
+          '<part id="P1"><measure number="1">'
+          '<attributes><divisions>4</divisions></attributes>'
+          '<note><pitch><step>C</step><octave>4</octave></pitch>'
+          '<duration>4</duration><type>quarter</type></note>'
+          '</measure></part></score-partwise>';
+
+      final staffWarnings = <String>[];
+      MusicXMLParser.parseMusicXML(document, warnings: staffWarnings);
+      final scoreWarnings = <String>[];
+      final score = MusicXMLParser.scoreFromMusicXML(
+        document,
+        warnings: scoreWarnings,
+      );
+
+      expect(score.allStaves, hasLength(1));
+      for (final warnings in [staffWarnings, scoreWarnings]) {
+        expect(
+          warnings.where((w) => w.contains('<part-list>')),
+          hasLength(1),
+          reason: 'warnings: $warnings',
+        );
+      }
+    });
+
+    test('a valid <type>256th</type> is not reported as unknown', () {
+      final result = importWith(
+        '<attributes><divisions>64</divisions></attributes>'
+        '<note><pitch><step>C</step><octave>4</octave></pitch>'
+        '<duration>1</duration><type>256th</type></note>',
+      );
+
+      expect(
+        singleNote(result.staff).duration.type,
+        DurationType.twoHundredFiftySixth,
+      );
+      expect(result.warnings.where((w) => w.contains('<type>')), isEmpty);
+    });
+
+    test('a note on the second staff of a piano part is reported once', () {
+      final warnings = <String>[];
+      MusicXMLParser.scoreFromMusicXML(
+        _partwise(
+          '<attributes><divisions>4</divisions><staves>2</staves></attributes>'
+          '<note><pitch><step>C</step><octave>3</octave></pitch>'
+          '<duration>4</duration><type>bogus</type><staff>2</staff></note>',
+        ),
+        warnings: warnings,
+      );
+
+      expect(
+        warnings.where((w) => w.contains('"bogus"')),
+        hasLength(1),
+        reason: 'warnings: $warnings',
+      );
+    });
+  });
+
   group('M-21/M-20 the JSON round trip', () {
     Staff sourceStaff() {
       final staff = Staff(
