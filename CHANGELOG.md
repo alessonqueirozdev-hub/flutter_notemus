@@ -13,7 +13,8 @@ Common and cut time, end to end, from two first-time contributors.
 4/4 or 2/2 can be drawn as a fraction instead of C or cut C (#61).
 @uveshm003's #66 has the MusicXML, MEI and JSON importers and exporters read
 and write that choice (#64). In #67 they also fixed a JSON round trip that
-lost free and additive meters.
+lost free and additive meters, and in #70 they made the last four MusicXML
+defects that were absorbed in silence report a warning (#29).
 
 **One visible change:** an imported MusicXML or MEI 4/4 or 2/2 that carries no
 symbol now renders as a fraction, as its source engraves it. It used to render
@@ -31,6 +32,21 @@ CI now checking formatting.
   is part of `PositionedElement.structuralHash`, so flipping it repaints.
   Contributed by @axiopisty, with two goldens: `m04f_fractional_time_glyphs`
   and `m04g_common_time_glyphs`.
+
+### Fixed — the last four silent MusicXML cases now warn (#29)
+
+- **An unknown `<clef><sign>`, an unknown `<type>`, a non-numeric `<alter>`
+  and a missing `<part-list>` are reported.** Each adds one line to
+  `warnings` that names the element and the value it could not read. The
+  import itself is unchanged: the clef in force is kept, the note value comes
+  from `<duration>`, the alteration from `<accidental>`, and the parts import
+  without names or groups. Each case loses a detail and leaves the music
+  readable, so all four warn. A defect that makes the music unreadable, such
+  as a `<pitch>` with no `<octave>`, is still rejected.
+- The legal clef signs `none` and `jianpu`, which have no `ClefType` yet, are
+  reported as unsupported rather than unknown.
+- MusicXML `<type>256th</type>`, `512th` and `1024th` are read as note types.
+  They used to be unrecognised, so the value came from `<duration>`.
 
 ### Fixed — common and cut time in import and export (#64)
 
