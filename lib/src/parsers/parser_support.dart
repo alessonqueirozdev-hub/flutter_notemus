@@ -633,6 +633,11 @@ DurationType? _parseDurationType(String? raw) {
       '64th': DurationType.sixtyFourth,
       '128': DurationType.oneHundredTwentyEighth,
       '128th': DurationType.oneHundredTwentyEighth,
+      // MusicXML <type> spells the shortest values this way too; without
+      // these a valid `<type>256th</type>` was not recognised as a type.
+      '256th': DurationType.twoHundredFiftySixth,
+      '512th': DurationType.fiveHundredTwelfth,
+      '1024th': DurationType.thousandTwentyFourth,
       'semibreve': DurationType.whole,
       'minim': DurationType.half,
       'crotchet': DurationType.quarter,
@@ -1724,6 +1729,37 @@ class _MusicXmlImportParser {
   /// Measure number currently being read, used to locate a warning.
   String _measureLabel = '?';
 
+  /// Reports a `<type>` or a `<pitch><alter>` that is present but unreadable.
+  ///
+  /// Both used to be dropped in silence. An unknown `<type>` lost the notated
+  /// value: the note fell back to `<duration>`, or to a quarter note. A
+  /// non-numeric `<alter>` lost the alteration: the pitch fell back to its
+  /// `<accidental>`, or to no alteration at all. Each loses a detail of one
+  /// note and leaves the rest of the bar readable, so both warn rather than
+  /// reject, like a non-positive `<duration>`.
+  void _warnUnreadableNoteValues(XmlElement noteElement) {
+    if (warnings == null) return;
+    final String? rawType = _childText(noteElement, 'type')?.trim();
+    if (rawType != null &&
+        rawType.isNotEmpty &&
+        _parseDurationType(rawType) == null) {
+      _warn(
+        'Measure $_measureLabel: <type> is "$rawType", which is not a note'
+        ' type; the note value was taken from <duration> (or a quarter note).',
+      );
+    }
+    final pitch = noteElement.findElements('pitch').firstOrNull;
+    final String? rawAlter = _childText(pitch, 'alter')?.trim();
+    if (rawAlter != null &&
+        rawAlter.isNotEmpty &&
+        _asDouble(rawAlter) == null) {
+      _warn(
+        'Measure $_measureLabel: <alter> is "$rawAlter", which is not a'
+        ' number; the alteration was taken from <accidental> (or none).',
+      );
+    }
+  }
+
   /// Current `<divisions>` (ticks per quarter note) for the part being read.
   ///
   /// Declared by `<attributes><divisions>` and valid until redefined, so every
@@ -2003,6 +2039,13 @@ class _MusicXmlImportParser {
     final partAbbreviation = <String, String>{};
     final partList = root.findElements('part-list').firstOrNull;
     if (partList == null) {
+      // <part-list> is required by the MusicXML schema. Without it the parts
+      // still import, but with no names, abbreviations or groups: a detail is
+      // lost, the music is not, so this warns rather than rejects.
+      _warn(
+        'The document has no <part-list>; part names, abbreviations and'
+        ' groups were not read.',
+      );
       return (
         groupOf: groupOf,
         bracket: bracket,
@@ -2364,6 +2407,7 @@ class _MusicXmlImportParser {
           if (keep) {
             final int voiceNumber =
                 _asInt(_childText(child, 'voice')) ?? syntheticVoice;
+            _warnUnreadableNoteValues(child);
             if (advancesTime && sawForward) {
               _padVoiceToOnset(
                 accumulator: voice(voiceNumber),
@@ -2724,7 +2768,33 @@ List<MusicalElement> _parseMusicXmlAttributes(
           if (clefStaff != staffFilter) break;
         }
         final clef = _musicXmlClef(child);
-        if (clef != null) result.add(clef);
+        if (clef != null) {
+          result.add(clef);
+        } else {
+          // An unread clef keeps the previous one in force, so every pitch
+          // after it is drawn on the wrong line. The pitches themselves are
+          // still right (they are sounding pitches, ADR-003), and the score
+          // stays readable, so this warns rather than rejects.
+          final sign = _childText(child, 'sign')?.trim();
+          if (sign != null && sign.isNotEmpty) {
+            // `none` and `jianpu` are legal MusicXML clef signs with no
+            // ClefType here. They are not malformed, so they get their own
+            // message: the sign is unsupported, not unknown.
+            final normalizedSign = _normalizeToken(sign);
+            if (normalizedSign == 'none' || normalizedSign == 'jianpu') {
+              warn?.call(
+                '<clef><sign> is "$sign", a valid MusicXML clef sign this'
+                ' importer does not support yet; the clef in force was kept.',
+              );
+            } else {
+              warn?.call(
+                '<clef><sign> is "$sign", which is not a clef sign this'
+                ' importer reads; the clef in force was kept, so the notes'
+                ' after it may be drawn on the wrong lines.',
+              );
+            }
+          }
+        }
         break;
       case 'key':
         final fifths = _asInt(_childText(child, 'fifths'));

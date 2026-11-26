@@ -6,6 +6,21 @@ The format is based on Keep a Changelog and this project follows Semantic Versio
 
 ## [Unreleased]
 
+### Fixed — the last four silent MusicXML cases now warn (#29)
+
+- **An unknown `<clef><sign>`, an unknown `<type>`, a non-numeric `<alter>`
+  and a missing `<part-list>` are reported.** Each adds one line to
+  `warnings` that names the element and the value it could not read. The
+  import itself is unchanged: the clef in force is kept, the note value comes
+  from `<duration>`, the alteration from `<accidental>`, and the parts import
+  without names or groups. Each case loses a detail and leaves the music
+  readable, so all four warn. A defect that makes the music unreadable, such
+  as a `<pitch>` with no `<octave>`, is still rejected.
+- The legal clef signs `none` and `jianpu`, which have no `ClefType` yet, are
+  reported as unsupported rather than unknown.
+- MusicXML `<type>256th</type>`, `512th` and `1024th` are read as note types.
+  They used to be unrecognised, so the value came from `<duration>`.
+
 ### Fixed — common and cut time in import and export (#64)
 
 - **Imported 4/4 and 2/2 follow the source's symbol.** The importers never
