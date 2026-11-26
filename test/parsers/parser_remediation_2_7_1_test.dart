@@ -705,6 +705,29 @@ void main() {
       );
     });
 
+    test('a valid but unsupported <clef><sign> says so', () {
+      for (final sign in ['none', 'jianpu']) {
+        final result = importWith(
+          '<attributes><divisions>4</divisions>'
+          '<clef><sign>$sign</sign></clef></attributes>'
+          '<note><pitch><step>C</step><octave>4</octave></pitch>'
+          '<duration>4</duration><type>quarter</type></note>',
+        );
+
+        expect(
+          result.staff.measures.single.elements.whereType<Clef>(),
+          isEmpty,
+        );
+        final clefWarnings = result.warnings
+            .where((w) => w.contains('<clef><sign>'))
+            .toList();
+        expect(clefWarnings, hasLength(1), reason: 'sign: $sign');
+        expect(clefWarnings.single, contains('"$sign"'));
+        expect(clefWarnings.single, contains('does not support'));
+        expect(clefWarnings.single, isNot(contains('wrong lines')));
+      }
+    });
+
     test('an unknown <type> is reported with its value', () {
       final result = importWith(
         '$attributes<note><pitch><step>C</step><octave>4</octave></pitch>'

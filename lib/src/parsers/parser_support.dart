@@ -2777,11 +2777,22 @@ List<MusicalElement> _parseMusicXmlAttributes(
           // stays readable, so this warns rather than rejects.
           final sign = _childText(child, 'sign')?.trim();
           if (sign != null && sign.isNotEmpty) {
-            warn?.call(
-              '<clef><sign> is "$sign", which is not a clef sign this importer'
-              ' reads; the clef in force was kept, so the notes after it may be'
-              ' drawn on the wrong lines.',
-            );
+            // `none` and `jianpu` are legal MusicXML clef signs with no
+            // ClefType here. They are not malformed, so they get their own
+            // message: the sign is unsupported, not unknown.
+            final normalizedSign = _normalizeToken(sign);
+            if (normalizedSign == 'none' || normalizedSign == 'jianpu') {
+              warn?.call(
+                '<clef><sign> is "$sign", a valid MusicXML clef sign this'
+                ' importer does not support yet; the clef in force was kept.',
+              );
+            } else {
+              warn?.call(
+                '<clef><sign> is "$sign", which is not a clef sign this'
+                ' importer reads; the clef in force was kept, so the notes'
+                ' after it may be drawn on the wrong lines.',
+              );
+            }
           }
         }
         break;
