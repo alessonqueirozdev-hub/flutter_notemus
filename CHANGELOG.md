@@ -6,7 +6,7 @@ The format is based on Keep a Changelog and this project follows Semantic Versio
 
 ## [Unreleased]
 
-## [2.10.0] - 2026-11-23
+## [3.0.0] - 2026-11-28
 
 Common and cut time, end to end, from two first-time contributors.
 @axiopisty's #62 adds `TimeSignature.displayCommonTimeSignatureGlyphs`, so a
@@ -16,13 +16,16 @@ and write that choice (#64). In #67 they also fixed a JSON round trip that
 lost free and additive meters, and in #70 they made the last four MusicXML
 defects that were absorbed in silence report a warning (#29).
 
-**One visible change:** an imported MusicXML or MEI 4/4 or 2/2 that carries no
-symbol now renders as a fraction, as its source engraves it. It used to render
-as C or cut C. Scores built in Dart keep the old default.
+**Breaking change, in output only:** an imported MusicXML or MEI 4/4 or 2/2
+that carries no symbol now renders as a fraction, as its source engraves it. It
+used to render as C or cut C. No API is removed, and scores built in Dart keep
+the old default, but a golden test of such an imported score changes and has to
+be re-recorded. That is why this release is a major one, as @axiopisty pointed
+out in review of #68.
 
-Minor rather than patch, because the release adds public API. It also keeps CI
-green on Flutter 3.47 without dropping older Flutter, and formats the tree, with
-CI now checking formatting.
+It also keeps CI green on Flutter 3.47 without dropping older Flutter, and
+formats the tree, with CI now checking formatting. The legacy `Duration` alias
+is still exported; its removal (#33) moves to a later major version.
 
 ### Added — fraction or symbol for 4/4 and 2/2 (#61, #62)
 

@@ -64,7 +64,7 @@ import 'showcase_bootstrap.dart';
 /// because the example is a separate package and cannot see the parent's
 /// pubspec at build time without a generator. Bumping it belongs in the
 /// release checklist.
-const String kShowcaseRelease = '2.10.0';
+const String kShowcaseRelease = '3.0.0';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();

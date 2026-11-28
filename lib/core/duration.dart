@@ -152,11 +152,11 @@ enum DurationType {
 /// ```
 ///
 /// The [Duration] alias is kept so that no existing code breaks. It is
-/// scheduled to stop being exported in 3.0; `MusicDuration` will remain. There
-/// is no deprecation annotation on it yet precisely because that would emit a
-/// warning at every one of the several hundred call sites inside this package
-/// and in every app using it, before there is a major version to land the
-/// removal in.
+/// scheduled to stop being exported in a future major version (#33);
+/// `MusicDuration` will remain. There is no deprecation annotation on it yet
+/// precisely because that would emit a warning at every one of the several
+/// hundred call sites inside this package and in every app using it, before
+/// the removal has a major version to land in.
 class MusicDuration {
   /// O tipo de duração (semibreve, mínima, etc.).
   final DurationType type;
@@ -209,5 +209,5 @@ class MusicDuration {
 /// for anyone importing the package barrel; see [MusicDuration] for the two
 /// supported ways around that.
 ///
-/// Scheduled to stop being exported in 3.0.
+/// Scheduled to stop being exported in a future major version (#33).
 typedef Duration = MusicDuration;
